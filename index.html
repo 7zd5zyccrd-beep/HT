@@ -1,0 +1,3046 @@
+<!DOCTYPE html>
+<!--
+  BDS Betriebsnachweise – eine einzige Datei, wie der E-Assistent.
+
+  Fasst die wiederkehrenden Nachweise des Objektbetriebs zusammen – Kontrollen,
+  Prüfungen und Ablesungen. Aufzüge, Rollbandfilter und
+  Feststellanlagen folgen demselben Muster: eine Liste von Anlagen, je Anlage
+  Datum, Zustand und Bemerkung, am Ende die Checkliste und die Unterschrift.
+  Sprinkler/Feuerlöschanlage ist anders gebaut (Punkte abhaken, Werte eintragen,
+  wöchentlich und monatlich) und folgt später.
+
+  ÄNDERUNGEN
+  v0.85 01.09.2026  Bewegung im Grundriss neu, abgeschaut bei der SF E-Plan: der
+                    Bildlauf des Browsers wird nicht mehr benutzt. Die App fuehrt
+                    Verschiebung und Massstab selbst und setzt sie als ein
+                    einziges transform, einmal je Bildaufbau - ohne Layout, ohne
+                    neues Rastern. Zeigerereignisse mit Zeigerfang, Bezug fuers
+                    Kneifen je Bild neu, Zoomen und Schieben in einem Vorgang,
+                    Nachlauf beim Loslassen. Marken und das kleine Fenster
+                    bekommen eine Gegenskalierung; der Tipp kommt aus der Geste
+                    statt aus click.
+  v0.84 01.09.2026  Schnelles Tippen nacheinander (etwa beim Umsortieren mit den
+                    Pfeilen) loeste iOS' Zoom per Doppeltipp aus. Der ist jetzt
+                    im ganzen Aufbau abgeschaltet; Wischen und Zoomen mit zwei
+                    Fingern bleiben.
+  v0.83 01.09.2026  Fehler behoben: in der Grundrissauswahl standen "Abbrechen"
+                    und "Weiter" der gewoehnlichen Rueckfrage noch da und taten
+                    nichts. Ursache: eine eigene display-Angabe schlaegt die
+                    eingebaute Regel fuer [hidden], Knopf und Zeile liessen sich
+                    dadurch gar nicht ausblenden. Betraf auch den Knopf
+                    "Verschieben" im Streifen ueber dem Plan.
+  v0.82 01.09.2026  Der helle Streifen unter dem Plan kam von der leeren
+                    Fussleiste: sie klebte auch dort am unteren Rand, mit
+                    Polster und hellem Verlauf. Ohne Inhalt faellt sie jetzt
+                    ganz aus dem Aufbau. Symbol im Kopfknopf mittig gesetzt
+                    (die Zeichnung selbst lag im Feld zu hoch).
+  v0.81 01.09.2026  Grundriss: heller Streifen unter dem Plan entfaellt (die
+                    Hoehe wird ohne Reserve gerechnet, das untere Polster ruht
+                    in dieser Ansicht). Der Plan wird verdeckt aufgebaut und
+                    erst eingeblendet, wenn er an seiner Stelle steht - kein
+                    Springen mehr. Der Planname steht als Text; gewechselt wird
+                    ueber einen Knopf rechts in der Kopfzeile.
+  v0.80 01.09.2026  Steht die Stelle schon, rueckt der Plan beim Oeffnen so,
+                    dass die Marke mittig zwischen den Bildschirmraendern liegt;
+                    die Zoomstufe bleibt. Ein Tipp auf eine fremde Marke oeffnet
+                    dort ein kleines Fenster mit ihrer Bezeichnung.
+  v0.79 01.09.2026  Grundriss: nur noch eine Zeile ueber dem Plan (Ort und
+                    Auswahl), Hinweis und "Verschieben" liegen als Streifen auf
+                    dem Plan - der Plan gewinnt rund 140 px. Ausserdem bleibt
+                    die PDF im Speicher liegen: ab zweifachem Zoom wird der
+                    sichtbare Ausschnitt daraus neu gezeichnet und
+                    deckungsgleich darueber gelegt, also echte
+                    Originalaufloesung. pdf.js liegt dafuer im Geraet statt im
+                    Netz.
+  v0.78 28.08.2026  Versionsanzeige und Aenderungsliste berichtigt: beide
+                    standen seit v0.70 still, weil ein abgebrochener
+                    Aenderungslauf die Zeilen stehen liess und die spaeteren
+                    Erhoehungen ins Leere liefen.
+  v0.77 28.08.2026  Zoomen im Grundriss mit zwei Fingern; der lange Druck zum
+                    Verschieben ist entfallen, dafuer gibt es den Knopf.
+  v0.76 28.08.2026  Leerer weisser Rand wird beim Hinzufuegen erkannt und
+                    abgeschnitten.
+  v0.75 28.08.2026  Kein Safari-Menue mehr beim langen Druck, dazu ein Knopf
+                    "Verschieben" als Weg ohne Geste.
+  v0.74 28.08.2026  Grundriss fuellt die verfuegbare Hoehe und wird seitlich
+                    gewischt. Die eigene Stelle pulst, andere derselben
+                    Kategorie stehen still.
+  v0.73 28.08.2026  Grundrisse in 3200 statt 1600 px Kantenlaenge, PDF-Seiten
+                    bis sechsfach vergroessert.
+  v0.72 28.08.2026  Fehler behoben: Grundrisse wurden als Blob abgelegt, was
+                    Safari in IndexedDB nicht zuverlaessig traegt - der Plan kam
+                    als kaputtes Bild zurueck. Jetzt reine Bytes.
+  v0.71 28.08.2026  Umbenennen behaelt die Verknuepfung: Stelle im Grundriss,
+                    Erfasstes, Vorquartalsstand und Platz im Ableseweg wandern
+                    mit, solange die Zahl der Eintraege gleich bleibt.
+  v0.70 28.08.2026  Auch Tueren und die uebrigen Anlagen lassen sich auf einem
+                    Grundriss verorten; in der zugeklappten Karte steht der
+                    Knopf nicht.
+  v0.69 28.08.2026  Grundrisse duerfen PDF sein: jede Seite wird beim
+                    Hinzufuegen in ein Bild umgerechnet.
+  v0.68 28.08.2026  Zaehler lassen sich auf einem Grundriss verorten: Knopf in
+                    der Karte, Stelle antippen, Marke bleibt.
+  v0.67 28.08.2026  Die Grundrisse wandern mit in die Sicherungsdatei.
+  v0.66 28.08.2026  Grundrisse: eigener Bilderspeicher (IndexedDB), Verwaltung
+                    in den Einstellungen und ein Betrachter. Die Verknuepfung
+                    mit Zaehlern und Tueren folgt als naechste Stufe.
+  v0.65 28.08.2026  Geraetewechsel: alles in eine Datei sichern und auf dem
+                    neuen Geraet wieder einlesen.
+  v0.64 28.08.2026  Die beiden Blaetter werden gleichmaessig gefuellt, statt
+                    Seite 2 bis an den Rand zu packen.
+  v0.63 28.08.2026  Layout gestrafft, damit die Feststellanlagen auf zwei
+                    Blaetter passen: Zellpolster 8 statt 10, Checkliste etwas
+                    enger. Zwei Zeilen zu verschieben haette nicht gereicht.
+  v0.62 28.08.2026  Naeherungswerte auf die tatsaechliche Zeilenhoehe 1,45
+                    gestellt; sie greifen nur, wenn nicht gemessen werden kann.
+  v0.61 28.08.2026  Der Blattschnitt wird gemessen statt geschaetzt: das Blatt
+                    entsteht unsichtbar im Dokument, die echten Zeilenhoehen
+                    bestimmen die Aufteilung.
+  v0.60 28.08.2026  Der Blattschnitt der Feststellanlagen wird gerechnet statt
+                    festgelegt: Seite 2 bekommt so viele Zeilen, wie neben
+                    Checkliste und Unterschrift passen.
+  v0.59 28.08.2026  Die Spalte Anlage bekommt weitere 5 % (rund sechs Zeichen),
+                    aus Zustand und Bemerkung.
+  v0.58 28.08.2026  Im Protokoll stehen die Anlagen nach Bezeichnung sortiert,
+                    nicht nach Pruefablauf; Zahlen im Text werden dabei als
+                    Zahlen verglichen.
+  v0.57 28.08.2026  Spaltenbreiten im Protokoll neu verteilt: Datum und Zustand
+                    schmaler, Anlage und Bemerkung breiter.
+  v0.56 28.08.2026  "In Ordnung" laesst die Karte sofort schrumpfen, ein Mangel
+                    haelt sie offen.
+  v0.55 28.08.2026  Geprüfte Feststellanlagen zeigen sich klein (Name, darunter
+                    Datum und Urteil) und lassen sich jederzeit auf- und
+                    zuklappen.
+  v0.54 28.08.2026  Die Bezeichnung steht in den Karten als Ueberschrift ueber
+                    die volle Breite; laengere Angaben brachen vorher in eine
+                    schmale Spalte um.
+  v0.53 28.08.2026  Beim Verschieben bleibt das bewegte Element auf dem
+                    Bildschirm stehen, die anderen wandern daran vorbei.
+  v0.52 28.08.2026  Rueckfragen laufen ueber ein eigenes Fenster in der App.
+                    window.confirm wird in manchen Umgebungen unterdrueckt und
+                    gilt dann als abgelehnt - dann passierte scheinbar nichts.
+  v0.51 26.08.2026  Nur noch ein Knopf: "Tausch uebernehmen" entfaellt, der
+                    Tausch laeuft ueber "Speichern" - mit Rueckfrage, die
+                    auflistet, was vermerkt wird, und mit Hinweis auf angehakte
+                    Zaehler ohne neue Nummer.
+  v0.50 26.08.2026  Ein angehakter Zaehlertausch wird jetzt auch vom Knopf
+                    "Speichern" ausgefuehrt - vorher verfielen die Eingaben.
+                    Die Zeile wird ueber den Schluessel gesucht, nicht ueber
+                    ihre Nummer.
+  v0.49 26.08.2026  Beim Umbruch wandern so viele Parteien auf die zweite Seite,
+                    dass dort nicht der Wechselblock allein steht.
+  v0.48 26.08.2026  Getauschte Zaehler stehen im Blatt mit zwei Zeilen, die
+                    Wechsel gesammelt darunter. Die App teilt die Seiten selbst
+                    auf: Tabellenkopf auf jeder Seite, Seitenzaehlung, keine
+                    Partei wird zerrissen.
+  v0.47 26.08.2026  Zaehlertausch erfasst jetzt Datum, Ausbaustand des alten und
+                    Einbaustand des neuen Zaehlers.
+  v0.46 26.08.2026  Zaehlertausch: einzelne Zaehler anhaken, neue Nummer
+                    eintragen, uebernehmen. Nur deren Vorquartalsstand wird
+                    verworfen, der Platz im Ableseweg bleibt.
+  v0.45 26.08.2026  In den Einstellungen lassen sich die Ablesewerte
+                    zuruecksetzen - laufende Ablesung und gemerkte Staende des
+                    Vorquartals.
+  v0.44 26.08.2026  Fehler behoben: nach dem Aendern der Anlagenliste zaehlten
+                    die Eintraege geloeschter Anlagen weiter mit und
+                    verhinderten die Ausgabe.
+  v0.43 26.08.2026  Linien wieder 1 px stark. Die ungleiche Wirkung kam vom
+                    PDF-Betrachter, nicht aus der Datei - bei starkem Zoom sind
+                    sie gleich dick.
+  v0.42 26.08.2026  Der Bogen in Seitengroesse ist zurueckgenommen: der
+                    Umwandler legt eigene Raender an, dadurch kam ein leeres
+                    zweites Blatt und eingepasst wurde trotzdem. Zurueck zum
+                    Pixelbogen von v0.39.
+  v0.41 26.08.2026  Feststellanlagen: Reihenfolge mit Pfeilen verschiebbar wie
+                    bei den Zaehlern; geaendert wird die Liste selbst.
+  v0.40 26.08.2026  Der Bogen hat jetzt genau Seitengroesse (210x297 mm), damit
+                    beim Umwandeln nichts mehr eingepasst und gerundet wird.
+                    Alle Masse und Schriftgroessen entsprechend umgerechnet.
+  v0.39 26.08.2026  Auch Checklistenkasten und Unterschriftslinie folgen der
+                    Linienstaerke von 1,5 px.
+  v0.38 26.08.2026  Gleichmaessige Trennlinien im Ausdruck: jede Linie wird nur
+                    einmal erklaert und ist 1,5 statt 1 Pixel stark.
+  v0.37 26.08.2026  Die Ablesung passt auf ein Blatt: eine Tabelle mit einem
+                    Spaltenkopf, die Partei als Zwischenzeile, knapperes Polster.
+  v0.36 26.08.2026  Die Ablesung braucht keine Unterschrift mehr; im Blatt
+                    stehen gleichartige Zaehler einer Partei beieinander.
+  v0.35 26.08.2026  Die App heisst jetzt "Betriebsnachweise" - sie fuehrt nicht
+                    mehr nur Pruefungen, sondern auch Kontrollen und Ablesungen.
+  v0.34 26.08.2026  Die ueberholte Ueberschrift "Monatliche Nachweise" auf der
+                    Startseite ist entfallen.
+  v0.33 26.08.2026  Fehler behoben: die Helfer fuer den Ausgabevermerk fehlten,
+                    v0.31 war unvollstaendig eingebaut.
+  v0.32 26.08.2026  Mehrere Zaehler desselben Mediums bei einer Partei werden
+                    durchnummeriert (Waerme 1, Waerme 2).
+  v0.31 26.08.2026  Ueberzogene Runden: Ueberschrift, Dateiname und Ring richten
+                    sich nach dem BEGINN der Runde, nicht nach dem Tag des
+                    Abschlusses. Der Vermerk haelt den Zeitraum fest.
+  v0.30 26.08.2026  Im vierten Quartal steht hinter der Ueberschrift
+                    "(Jahresendwerte)".
+  v0.29 26.08.2026  Der Ring ist jetzt die Begrenzungslinie des Knopfes; die
+                    Aussenmasse bleiben unveraendert.
+  v0.28 26.08.2026  Farbige Ringe auf der Startseite zeigen den Stand der Runde:
+                    gruen erledigt, gelb angefangen, rot ueberfaellig.
+  v0.27 26.08.2026  Einstellungen liegen auf dem Zahnrad in der Kopfzeile,
+                    wie im E-Assistenten.
+  v0.26 26.08.2026  Startseite nach Takt geteilt (woechentlich, monatlich,
+                    quartalsweise); der Sprinkler steht in beiden Takten und
+                    springt beim monatlichen Eintrag gleich zum Abschnitt.
+                    Ablesedatum schmaler.
+  v0.25 26.08.2026  Zaehlstellen werden mit Semikolon getrennt (der alte
+                    Laengsstrich wird weiter gelesen); Beispielparteien heissen
+                    Partei 1 und Partei 2.
+  v0.24 26.08.2026  Fuenfter Nachweis: quartalsweise Ablesung der Medien.
+                    Zaehlstellen in den Einstellungen, Ablesereihenfolge beim
+                    Ablesen verschiebbar, Ausgabe parteiweise mit Verbrauch
+                    seit der letzten Ablesung.
+  v0.23 21.08.2026  Symbol fuer den Startbildschirm eingebaut (Klemmbrett mit
+                    Haken), als Bild in der Datei.
+  v0.22 21.08.2026  Sprinkler: Maengel und Bemerkungen sind ein Feld.
+  v0.21 21.08.2026  Grauer Grund der Tabellenkopfzeile bleibt in der PDF
+                    erhalten (print-color-adjust), dazu ein kraeftiger Strich
+                    als Rueckfallebene.
+  v0.20 21.08.2026  Ueberschrift der ersten drei Nachweise: "Kontrolle" statt
+                    "Pruefung". Groesserer Abstand hinter "Ueberpruefung von:".
+  v0.19 21.08.2026  Dateiname jetzt "26-08 Kontrolle Sprinkler.html" - Pruefmonat
+                    und Kurzname des Nachweises, sonst nichts.
+  v0.18 21.08.2026  Fehler behoben: Blatt und Dateiname des Sprinklernachweises
+                    suchten das Datum in der Zeilenliste der uebrigen Nachweise.
+  v0.17 21.08.2026  Vierter Nachweis: Sprinkler-/Spruehwasserloeschanlage mit
+                    bis zu fuenf woechentlichen Kontrollgaengen und einer
+                    monatlichen Kontrolle, Druckwerten in bar, Maengel- und
+                    Bemerkungsfeld. Kein Kurzzeichen, eine Unterschrift am Ende.
+  v0.16 21.08.2026  Die Checkliste bricht nur noch bei einem neuen Punkt um;
+                    Fortsetzungszeilen laufen weiter, solange Platz ist.
+  v0.15 21.08.2026  Ueberschrift "Checkliste" linksbuendig statt mittig.
+  v0.14 21.08.2026  Ueber dem Checklistenblock steht nur noch "Checkliste",
+                    mittig und unterstrichen.
+  v0.13 21.08.2026  Die Folgezeilen der Checkliste stehen buendig unter dem
+                    ersten Zeichen nach dem Doppelpunkt.
+  v0.12 21.08.2026  Im Blatt steht der erste Punkt hinter "Ueberpruefung von:",
+                    die folgenden direkt darunter.
+  v0.11 21.08.2026  Ueberschrift traegt den Pruefmonat, der Pruefername steht
+                    nur noch bei der Unterschrift, diese steht unten rechts.
+  v0.10 21.08.2026  Unterschrift bleibt blau. Im Protokoll steht das Datum in
+                    der ersten Spalte.
+  v0.9  21.08.2026  Schwarz-weisses Farbkonzept. Die beiden Unterschrift-Knoepfe
+                    stehen nebeneinander, "Jetzt unterschreiben" zuerst; der
+                    jeweils unpassende ist gesperrt.
+  v0.8  21.08.2026  "Feld leeren" entfaellt. "Jetzt unterschreiben" beginnt von
+                    vorn und verwirft eine schon uebernommene Unterschrift.
+  v0.7  21.08.2026  Unterschrift: das Feld steht immer da und ist ausgegraut.
+                    "Jetzt unterschreiben" macht es beschreibbar, danach stehen
+                    "Uebernehmen" und "Feld leeren" bereit.
+  v0.6  21.08.2026  Unterschrift: nur noch ein Knopf. Nach dem Uebernehmen
+                    heisst er ebenfalls "Feld leeren" und oeffnet das Feld neu.
+  v0.5  21.08.2026  Hinweiszeile unter "Unterschrift" entfernt.
+  v0.4  21.08.2026  Der Knopf heisst "Jetzt unterschreiben".
+  v0.3  21.08.2026  Rollbandfilter: "defekt" heisst jetzt "Mangel".
+  v0.2  21.08.2026  Datumfeld schmal neben dem Anlagennamen. Das Zeichenfeld
+                    klappt erst auf Knopfdruck auf und wird mit "Uebernehmen"
+                    festgeschrieben.
+  v0.1  19.08.2026  Grundgeruest: Startseite, Einstellungen (Objekt, Pruefer,
+                    Anlagenlisten, Checklisten), drei Nachweise vollstaendig,
+                    Unterschrift auf dem Geraet, Blatt und Uebergabe an den
+                    Kurzbefehl.
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nachweise">   <!-- kurz für den Startbildschirm -->
+<title>BDS Betriebsnachweise</title>
+<!-- Symbol für den Startbildschirm: Klemmbrett mit Haken, schwarz-weiß wie die
+     App. Es steckt als Bild in der Datei, damit die App eine einzige Datei
+     bleibt; iOS rundet die Ecken selbst. -->
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Schwarz-weißes Farbkonzept. Die Schriften bleiben die des E-Assistenten,
+   damit die beiden Apps auf demselben Gerät zusammengehören; die Farbe trennt
+   sie. Ohne Farbe muss der Zustand einer Zeile anders sprechen – erledigt über
+   einen grauen Grund, ein Mangel über den kräftigen Balken an der linken
+   Kante. */
+:root{
+  --enclosure:#F1F1F1;
+  --enclosure-2:#F8F8F8;
+  --ink:#111111;
+  --ink-soft:#5E5E5E;
+  --line:#D4D4D4;
+  --surface:#ffffff;
+  --strong:#111111;
+  --on-strong:#ffffff;
+  --bar:#111111;
+  --ok-bg:#EDEDED;
+  --warn-bg:#ffffff;
+  --field-border:#8A8A8A;
+  --f-label:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --pad:18px;
+  --col:720px;
+}
+/* touch-action:manipulation nimmt dem Browser genau eine Geste weg: das Zoomen
+   per Doppeltipp. iOS zaehlt dafuer zwei Tipps kurz nacheinander, auch wenn sie
+   verschiedene Knoepfe treffen – beim Umsortieren mit den Pfeilen sprang die
+   Seite deshalb in die Vergroesserung. Wischen und Zoomen mit zwei Fingern
+   bleiben unberuehrt; der Plan behaelt seine eigene, engere Regel, weil er das
+   Zoomen selbst uebernimmt. */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--f-body);color:var(--ink);background:var(--enclosure);
+  font-size:16px;line-height:1.45;
+  padding-bottom:env(safe-area-inset-bottom);
+  -webkit-text-size-adjust:100%;
+}
+.app{min-height:100vh;display:flex;flex-direction:column}
+
+header{
+  position:sticky;top:0;z-index:40;background:var(--bar);color:#fff;
+  display:flex;align-items:center;gap:10px;
+  padding:calc(env(safe-area-inset-top) + 10px) var(--pad) 10px;
+}
+header h1{
+  flex:1;margin:0;text-align:center;font-family:var(--f-label);
+  font-size:21px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
+}
+header .back{
+  flex:0 0 34px;width:34px;height:34px;border-radius:50%;
+  background:none;border:2px solid #ffffff;color:#ffffff;
+  font-size:18px;line-height:1;cursor:pointer;
+}
+header .back:disabled{visibility:hidden}
+header .back svg{display:block;margin:0 auto}   /* sonst sitzt es auf der Textgrundlinie */
+/* Rechts in der Kopfzeile: sieht aus wie der Zurück-Knopf, steht aber nur da,
+   wo er etwas tut. Ausgeblendet über die Sichtbarkeit, damit sein Platz bleibt
+   und der Titel mittig steht. */
+header .kopfKnopf{
+  flex:0 0 34px;width:34px;height:34px;border-radius:50%;padding:0;
+  background:none;border:2px solid #ffffff;color:#ffffff;cursor:pointer;
+  /* Ausdrücklich mittig: der Zurück-Pfeil kommt mit line-height aus, ein
+     Symbol nicht – es säße sonst an der Schriftgrundlinie. */
+  display:flex;align-items:center;justify-content:center;
+}
+header .kopfKnopf svg{display:block}
+header .kopfKnopf.unsichtbar{visibility:hidden}
+/* In der Grundrissansicht reicht der Plan bis an den unteren Rand – das untere
+   Polster würde sonst als heller Streifen darunter stehenbleiben. */
+body.planAn{padding-bottom:0}
+
+main{flex:1;padding:16px var(--pad) 0;width:100%;max-width:var(--col);margin:0 auto}
+.view{display:none}
+.view.active{display:block}
+
+.eyebrow{
+  font-family:var(--f-label);text-transform:uppercase;letter-spacing:.08em;
+  font-size:14px;color:var(--ink-soft);margin:18px 0 8px;
+}
+.muted{color:var(--ink-soft)}
+.small{font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+
+.btn{
+  display:block;width:100%;padding:14px 16px;border-radius:12px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  font:inherit;font-weight:500;text-align:center;cursor:pointer;
+}
+.btn.primary{background:var(--strong);color:var(--on-strong);border-color:var(--strong)}
+.btn.accent{background:var(--strong);color:var(--on-strong);border-color:var(--strong);font-weight:600}
+.btn.ghost{background:none}
+.btn.danger{color:var(--ink);border-color:var(--ink)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+/* Eigene display-Angaben schlagen die eingebaute Regel für [hidden] – ohne
+   diese beiden Zeilen bleiben ausgeblendete Knöpfe und Zeilen sichtbar (und
+   dann stehen dort Knöpfe, die nichts mehr tun). */
+.btn[hidden]{display:none}
+.btn + .btn{margin-top:10px}
+/* Der Ring ist die Begrenzungslinie des Knopfes selbst, nur kräftiger und
+   farbig. Die zwei zusätzlichen Pixel holt er sich aus dem Polster (14+1 = 12+3),
+   damit die Außenmaße gleich bleiben und die Liste nicht zuckt. */
+.btn.ring-rot,.btn.ring-gelb,.btn.ring-gruen{border-width:3px;padding:12px 14px}
+.btn.ring-rot{border-color:#C0392B}
+.btn.ring-gelb{border-color:#E3A81F}
+.btn.ring-gruen{border-color:#4E9A2F}
+
+.field{display:block;margin-bottom:14px}
+.field > span{
+  display:block;font-family:var(--f-label);text-transform:uppercase;
+  letter-spacing:.06em;font-size:13px;color:var(--ink-soft);margin-bottom:5px;
+}
+input,select,textarea{
+  width:100%;padding:12px;border:1px solid var(--field-border);border-radius:10px;
+  background:var(--surface);color:var(--ink);font:inherit;
+}
+textarea{min-height:150px;line-height:1.4}
+input:focus,select:focus,textarea:focus,button:focus-visible{
+  outline:3px solid var(--ink);outline-offset:1px;
+}
+.row{display:flex;gap:10px}
+.row[hidden]{display:none}
+.row > *{flex:1}
+input.schmal{width:170px}
+
+/* Eine Zeile je Anlage: Name, darunter Datum und Zustand nebeneinander. */
+.pos{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.pos.fertig{background:var(--ok-bg)}
+/* Zugeklappte Karte: nur Name, Datum und Urteil, dafür flach. */
+.pos.kompakt{padding:8px 12px;cursor:pointer}
+.pos.kompakt .name{margin-bottom:2px}
+.pos .name.zu{cursor:pointer}
+/* Ohne Farbe braucht der Mangel ein deutliches Zeichen: ein breiter Balken an
+   der linken Kante, den man auch aus der Entfernung sieht. */
+.pos.mangel{background:var(--surface);border-left:6px solid var(--ink);padding-left:10px}
+/* Die Bezeichnung läuft als Überschrift über die ganze Karte, darunter die
+   Bedienelemente nebeneinander. */
+.pos .name{font-weight:600;margin-bottom:8px}
+.pos .kopf{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.pos .kopf input{flex:0 0 auto;width:150px;padding:8px 10px;font-size:14px}
+.pos .seg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
+.pos .seg button{
+  flex:1;padding:11px 6px;border:0;background:var(--surface);color:var(--ink);
+  font:inherit;font-size:14px;cursor:pointer;border-left:1px solid var(--line);
+}
+.pos .seg button:first-child{border-left:0}
+.pos .seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
+.pos .bem{margin-top:8px}
+.pos .punkt{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
+.pos .punkt .ptext{font-size:14px;margin-bottom:6px}
+.pos .punkt input.bar{width:120px}
+.pos .pfeile{flex:0 0 auto;display:flex;gap:6px}
+.pos .pfeile button{
+  width:38px;height:38px;border:1px solid var(--line);border-radius:9px;
+  background:var(--surface);color:var(--ink);font:inherit;cursor:pointer;
+}
+.pos .pfeile button[disabled]{opacity:.3}
+.btn.klein{padding:9px 12px;font-size:14px}
+/* Eine Zeile je Zähler: Haken, Bezeichnung, Feld für die neue Nummer. */
+/* Eine Karte je Zähler: Haken mit Bezeichnung, darunter die Felder des
+   Wechsels – sie erscheinen erst mit dem Haken. */
+.tausch{padding:8px 0;border-top:1px solid var(--line)}
+.tausch .wer{display:flex;align-items:center;gap:10px;font-size:14px}
+.tausch .wer input{flex:0 0 22px;width:22px;height:22px}
+.tausch .felder{margin:10px 0 4px}
+.tausch .felder .field{margin-bottom:10px}
+
+.actionbar{
+  position:sticky;bottom:0;z-index:30;margin-top:auto;
+  padding:22px var(--pad) 26px;
+  background:linear-gradient(180deg,transparent 0%,var(--enclosure) 30%);
+}
+.actionbar[hidden]{display:none}
+.actionbar .inner{max-width:var(--col);margin:0 auto}
+
+/* Unterschrift – dasselbe Zeichenfeld wie im E-Assistenten, 3:1 */
+#sigpad{width:100%;aspect-ratio:3/1;background:var(--surface);border:1px solid var(--field-border);border-radius:10px;touch-action:none}
+/* Ausgegraut heißt: nicht beschreibbar. Eine übernommene Unterschrift bleibt
+   dabei sichtbar, sie steht nur hinter dem Schleier. */
+#sigpad.aus{background:var(--enclosure-2);opacity:.55;pointer-events:none}
+.row .btn + .btn{margin-top:0}
+
+#dlg{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.45);
+  display:flex;align-items:center;justify-content:center;padding:var(--pad)}
+#dlg[hidden]{display:none}
+.dlgbox{background:var(--surface);border-radius:14px;padding:16px;width:100%;max-width:460px;
+  max-height:80vh;overflow:auto}
+.dlgtitel{font-weight:600;margin-bottom:8px}
+.dlgtext{white-space:pre-wrap;font-size:15px;line-height:1.45}
+#toast{
+  position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);
+  transform:translateX(-50%) translateY(8px);
+  background:var(--strong);color:var(--on-strong);padding:10px 16px;border-radius:999px;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60;max-width:90vw;text-align:center;
+}
+#toast.on{opacity:1;transform:translateX(-50%)}
+
+/* --- Blattvorschau ---------------------------------------------------------
+   Aufbau wie im E-Assistenten: 1024 px breiter Bogen, keine @page-Regel, damit
+   die Umwandlung im Kurzbefehl den Bogen auf die Seitenbreite einpasst. */
+#blattWrap{background:#555;padding:12px;overflow:auto}
+/* Über dem Plan steht nur noch eine Zeile: links, wonach gesucht wird, rechts
+   der Name des Plans – als Text, gewechselt wird über die Kopfzeile. */
+#view-plan{margin-top:-8px}
+.planKopf{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.planKopf .eyebrow{min-width:0;margin:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#planName{flex:1}
+#planWelcher{flex:0 1 auto;max-width:45%;opacity:.75}
+
+/* Der Plan liegt im Querformat und wird auf die volle verfügbare Höhe gebracht;
+   in der Breite läuft er über den Bildschirm hinaus und wird gewischt. Die Höhe
+   setzt planHoehe(), weil sie vom Platz über dem Plan abhängt. */
+/* Der Rahmen ist nur noch ein Sichtfenster: kein Bildlauf des Browsers mehr,
+   touch-action:none - die App fuehrt jede Bewegung selbst. Die Ebene darin
+   traegt Bild, scharfe Auflage und Marken und wird als Ganzes verschoben und
+   skaliert; will-change haelt sie auf einer eigenen Schicht der Grafikeinheit. */
+.planBuehne{position:relative;margin:0 calc(var(--pad) * -1);background:#555}
+#planWrap{background:#555;position:relative;overflow:hidden;touch-action:none}
+/* Der Plan wird erst sichtbar, wenn er an seinem Platz steht: sonst erscheint er
+   kurz links oben und springt dann zur Stelle – ein Zucken, das man sieht. */
+#planBox{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;
+  --gegen:1;opacity:0;transition:opacity .18s ease}
+#planBox.bereit{opacity:1}
+/* Hinweis und Knopf liegen auf dem Plan statt darüber: sie werden nur gebraucht,
+   solange noch keine Stelle steht oder gerade verschoben wird. Danach blenden
+   sie sich aus; ein Tipp auf den Plan holt sie zurück. Der Streifen liegt in der
+   Bühne, nicht im Plan selbst – sonst würde er mitgewischt. */
+#planStreifen{position:absolute;left:0;right:0;top:0;z-index:5;
+  display:flex;align-items:center;gap:10px;padding:8px var(--pad);
+  background:rgba(255,255,255,.93);border-bottom:1px solid var(--line);
+  transition:opacity .25s;
+  /* Der Streifen liegt auf dem Plan, darf ihn aber nicht sperren: eine Stelle
+     am oberen Rand muss antippbar bleiben. Nur der Knopf nimmt Tipps an. */
+  pointer-events:none}
+#planStreifen[hidden]{display:none}
+#planStreifen.weg{opacity:0}
+#planStreifen p{flex:1;min-width:0;margin:0;font-size:14px;color:var(--ink-soft)}
+#planStreifen .btn{flex:0 0 auto;width:auto;background:var(--surface);pointer-events:auto}
+#planStreifen.weg .btn{pointer-events:none}
+/* Safari bietet beim langen Druck auf ein Bild Teilen und Kopieren an – hier
+   stört das, weil derselbe Druck das Verschieben freischaltet. */
+#planBox{position:relative;display:inline-block;height:100%;
+  -webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+/* Die Ebene hat eine feste Groesse in Pixeln, das Bild fuellt sie ganz aus. */
+#planBox img{display:block;width:100%;height:100%;
+  -webkit-touch-callout:none;pointer-events:none}
+/* Der aus der PDF neu gezeichnete Ausschnitt liegt deckungsgleich über dem
+   gespeicherten Bild, aber unter den Marken. */
+#planBox canvas.scharf{position:absolute;z-index:1;pointer-events:none}
+/* Die Marke sitzt in Anteilen der Bildkanten, nicht in Pixeln – so stimmt sie
+   bei jeder Größe. Die eigene pulst langsam, die übrigen der Kategorie stehen
+   still, damit man sieht, wo man ist, ohne die anderen zu verlieren. */
+#planBox .marke{
+  position:absolute;z-index:3;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
+  border:3px solid #C0392B;background:rgba(192,57,43,.25);pointer-events:none;
+  /* Gegen den Massstab der Ebene: die Marke soll die Stelle zeigen, nicht mit
+     dem Plan wachsen. */
+  transform:scale(var(--gegen));
+}
+#planBox .marke.andere{border-color:#333;background:rgba(0,0,0,.15);width:20px;height:20px;margin:-10px 0 0 -10px}
+#planBox .marke.aktiv::after{
+  content:'';position:absolute;inset:-4px;border-radius:50%;border:3px solid #C0392B;
+  animation:puls 2.4s ease-out infinite;
+}
+#planBox .marke.zieh{border-style:dashed;background:none}
+/* Das kleine Fenster an einer fremden Marke: hängt in Anteilen am Plan, sitzt
+   über der Marke und zeigt mit einer Spitze auf sie. */
+#planBox .planTipp{
+  position:absolute;z-index:4;margin-top:-16px;
+  transform:translate(-50%, -100%) scale(var(--gegen));transform-origin:50% 100%;
+  max-width:210px;padding:6px 10px;border-radius:10px;
+  background:rgba(20,20,20,.92);color:#fff;
+  font-family:var(--f-label);font-size:13px;line-height:1.3;text-align:center;
+  pointer-events:none;
+}
+#planBox .planTipp::after{
+  content:'';position:absolute;left:50%;top:100%;margin-left:-5px;
+  border:5px solid transparent;border-top-color:rgba(20,20,20,.92);
+}
+@keyframes puls{
+  0%{transform:scale(1);opacity:.85}
+  70%{transform:scale(2.4);opacity:0}
+  100%{transform:scale(2.4);opacity:0}
+}
+.plan{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.plan .wer{flex:1;min-width:0}
+.plan .wer input{width:100%;padding:8px 10px;font-size:14px}
+.plan .btn{flex:0 0 auto;width:auto;padding:8px 12px;font-size:14px}
+/* --- Der Bogen ---------------------------------------------------------------
+   In Pixeln, 1024 breit; die Exportdatei setzt ihn auf 1130, damit die
+   Umwandlung ihn auf die Seitenbreite einpasst. Das schafft zugleich Höhen-
+   reserve, weil die Höhe im selben Verhältnis schrumpft.
+
+   Ein Bogen in exakter Seitengröße (210x297 mm) wurde versucht, um das Einpassen
+   und damit das ungleiche Runden der Trennlinien loszuwerden – ohne Erfolg: der
+   Umwandler legt eigene Seitenränder an, der Bogen passte dann nicht mehr auf
+   eine Seite (leeres zweites Blatt) und wurde trotzdem eingepasst. Die
+   ungleichen Linien bleiben damit eine Eigenheit der Umwandlung. */
+.paper{
+  width:1024px;min-height:1448px;margin:0 auto 12px;background:#fff;color:#000;
+  padding:34px 38px;font-family:var(--f-body);font-size:11pt;
+}
+.paper h2{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;font-size:20pt;margin:0 0 4px}
+.paper .meta{font-size:10pt;color:#333;margin-bottom:18px}
+/* Jede Linie wird genau einmal erklärt: der Rahmen von der Tabelle, die
+   Trennlinien nur unten und rechts an den Zellen. Das bleibt so – es war zwar
+   nicht die Ursache der ungleich wirkenden Linien (die kommt vom Betrachter),
+   aber es ist der sauberere Aufbau. Die Stärke steht wieder auf einem Pixel. */
+.paper table{width:100%;border-collapse:collapse;margin-bottom:18px;border:1px solid #000}
+.paper th,.paper td{border:0;border-bottom:1px solid #000;border-right:1px solid #000;
+  padding:8px 10px;font-size:12pt;text-align:left;vertical-align:top}
+.paper th:last-child,.paper td:last-child{border-right:0}
+.paper tbody tr:last-child td{border-bottom:0}
+/* Die Umwandlung im Kurzbefehl wirft Hintergrundfarben weg, solange sie nicht
+   ausdrücklich verlangt werden – deshalb print-color-adjust. Zur Sicherheit
+   trägt die Kopfzeile zusätzlich einen kräftigen Strich nach unten. */
+.paper,.paper *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.paper th{background:#eee;font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;font-size:11pt;
+  border-bottom:2px solid #000}
+.paper .check{font-size:11pt;line-height:1.4;border:1px solid #000;padding:10px 12px;margin-bottom:14px}
+.paper .check .vor,.paper .check .txt{white-space:pre-wrap}
+/* Über dem Block steht nur das Wort, linksbündig und unterstrichen – was geprüft
+   wird, sagt schon die Überschrift des Blattes. */
+.paper .check .ctitel{text-decoration:underline;font-weight:600;margin-bottom:10px}
+/* Die Folgezeilen stehen bündig unter dem ersten Zeichen nach dem Doppelpunkt.
+   Zwei Spalten leisten das genauer als ein Einzug in Leerzeichen. */
+.paper .check .reihe{display:flex}
+.paper .check .lab{white-space:pre;flex:0 0 auto;padding-right:14px}
+.paper .check .txt{flex:1;min-width:0}
+/* Kontrollgänge stehen in Spalten; die Punktspalte trägt den Text, die schmalen
+   Spalten je einen Wert. */
+.paper table.sp td:first-child,.paper table.sp th:first-child{width:46%}
+.paper table.sp .mitte{text-align:center}
+/* Die Partei steht als Zwischenzeile über die volle Breite; die Zeilen der
+   Ablesung sind knapper gepolstert, damit die 26 Zähler auf ein Blatt gehen. */
+.paper table.med td{padding:7px 10px}
+.paper tr.mpartei td{background:#eee;font-weight:600;padding:5px 10px}
+/* Die Wechsel stehen gesammelt unter der Tabelle – eine Zeile je Vorgang, mit
+   allem, was die Abrechnung braucht. */
+.paper .wblock{border:1px solid #000;padding:10px;margin-bottom:18px}
+.paper .wtitel{text-decoration:underline;font-weight:600;margin-bottom:6px}
+.paper .wzeile{font-size:10pt;padding:5px 0}
+.paper .sig{margin-top:8px;display:flex;justify-content:flex-end}
+.paper .sig img{display:block;width:306px;height:102px;object-fit:contain;border-bottom:1px solid #000}
+.paper .sig .lbl{font-size:10pt;color:#333;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <button class="back" id="btnBack" aria-label="Zurück">←</button>
+    <h1 id="titel">Betriebsnachweise</h1>
+    <button class="kopfKnopf unsichtbar" id="btnPlanWahl" aria-label="Anderer Grundriss"></button>
+  </header>
+
+  <main>
+    <!-- Startseite -->
+    <section class="view active" id="view-home">
+      <!-- Die Überschriften kommen aus den Taktgruppen selbst, eine gemeinsame
+           gäbe es nicht mehr richtig: es sind nicht mehr nur monatliche. -->
+      <div id="homeListe"></div>
+      <p class="muted small" id="buildTag" style="margin-top:18px;opacity:.7"></p>
+    </section>
+
+    <!-- Ein Nachweis -->
+    <section class="view" id="view-nachweis">
+      <div class="eyebrow" id="nwObjekt"></div>
+      <div id="nwListe"></div>
+
+      <!-- Die Ablesung der Verbräuche braucht keine Unterschrift; dort fällt
+           dieser Block ganz weg. -->
+      <div id="sigBlock">
+        <div class="eyebrow">Unterschrift</div>
+        <canvas id="sigpad" class="aus"></canvas>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="btnSigStart">Jetzt unterschreiben</button>
+          <button class="btn primary" id="btnSigOk">Übernehmen</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Grundriss -->
+    <section class="view" id="view-plan">
+      <div class="planKopf">
+        <div class="eyebrow" id="planName"></div>
+        <div class="eyebrow" id="planWelcher"></div>
+      </div>
+      <div class="planBuehne">
+        <div id="planWrap"><div id="planBox"></div></div>
+        <div id="planStreifen" hidden>
+          <p id="planHinweis"></p>
+          <button class="btn ghost klein" id="btnPlanZieh">Verschieben</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Blattvorschau -->
+    <section class="view" id="view-blatt">
+      <div id="blattWrap"></div>
+    </section>
+
+    <!-- Einstellungen -->
+    <section class="view" id="view-settings">
+      <label class="field"><span>Objekt</span><input id="setObjekt" placeholder="z.B. Musterhaus, Musterstraße 1"></label>
+      <label class="field"><span>Prüfer</span><input id="setPruefer" placeholder="Vor- und Nachname"></label>
+      <div class="eyebrow">Anlagen und Prüfumfang</div>
+      <p class="muted small" style="margin:-4px 0 10px">Je Nachweis eine Anlage pro Zeile. Die Checkliste steht im Protokoll genau so, wie sie hier eingetragen ist.</p>
+      <div id="setNachweise"></div>
+
+      <!-- Gerätewechsel: alles, was die App weiß, in eine Datei und zurück. -->
+      <p class="muted small" style="margin:-4px 0 10px">Sichert Objekt, Prüfer, Anlagenlisten, Checklisten, Zählstellen samt Ablesereihenfolge, die laufenden Nachweise, die Stände des Vorquartals, die vermerkten Zählerwechsel und die Grundrisse in eine Datei. Auf dem neuen Gerät dieselbe Datei einlesen.</p>
+      <div class="eyebrow">Grundrisse</div>
+      <p class="muted small" style="margin:-4px 0 10px">Pläne des Objekts, damit zu jedem Zähler und jeder Tür die Stelle im Haus gezeigt werden kann. Bild oder PDF; eine mehrseitige PDF ergibt einen Grundriss je Seite. Für die Umwandlung einer PDF ist einmalig eine Netzverbindung nötig. Die Pläne liegen in einem eigenen Speicher und wandern mit in die Sicherungsdatei.</p>
+      <div id="planListe"><p class="muted small">wird geladen …</p></div>
+      <button class="btn ghost klein" id="btnPlanNeu" style="margin-top:10px">Grundriss hinzufügen</button>
+      <input type="file" id="planFile" accept="image/*,application/pdf,.pdf" hidden>
+
+      <div class="eyebrow" style="margin-top:14px">Gerätewechsel</div>
+      <button class="btn ghost klein" id="btnCfgAus">Alles sichern</button>
+      <button class="btn ghost klein" id="btnCfgEin" style="margin-top:10px">Aus Datei übernehmen</button>
+      <input type="file" id="cfgFile" accept="application/json,.json" hidden>
+    </section>
+  </main>
+
+  <div class="actionbar" id="bar"><div class="inner" id="barInner"></div></div>
+</div>
+<div id="toast"></div>
+<!-- Eigenes Rückfragefenster: window.confirm wird in manchen Umgebungen
+     unterdrückt und gilt dann als abgelehnt – dann passierte scheinbar nichts. -->
+<div id="dlg" hidden>
+  <div class="dlgbox">
+    <div class="dlgtitel" id="dlgTitel"></div>
+    <div class="dlgtext" id="dlgText"></div>
+    <div id="dlgListe" hidden></div>
+    <div class="row" id="dlgKnoepfe" style="margin-top:14px">
+      <button class="btn ghost" id="dlgNein">Abbrechen</button>
+      <button class="btn primary" id="dlgJa">Weiter</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const VERSION = 'v0.85';
+const BUILD   = VERSION + ' · 01.09.2026';
+/* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
+   das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
+/* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
+   Feld 24×24 mittig ausfüllt (x 3–21, y 4,5–19,5): sonst sitzt das Symbol im
+   runden Knopf sichtbar zu hoch, auch wenn der Knopf selbst mittig ist. */
+const PLAN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5 3 9l9 4.5L21 9z"/><path d="M3 15l9 4.5L21 15"/></svg>';
+const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- Speicher ---------- */
+const Store = {
+  get(k, f){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : f; }catch(e){ return f; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+};
+
+/* --- Bilderspeicher ---------------------------------------------------------
+   Grundrisse liegen nicht im gewöhnlichen Speicher der App: der fasst bei Safari
+   nur wenige Megabyte, und die teilt er sich mit allen Ablesewerten. Ein
+   abfotografierter Plan wäre schnell alles. IndexedDB ist derselbe Browser auf
+   demselben Gerät, nur für größere Sachen gedacht – kein Server, keine Cloud.
+
+   Umgezogen sind ausschließlich die Bilder. Alles Kleinteilige bleibt, wo es
+   ist, damit die App ihr Verhalten behält; nur wer einen Plan ansieht, wartet
+   einen Wimpernschlag. */
+const Bilder = {
+  db:null,
+  oeffnen(){
+    if(this.db) return Promise.resolve(this.db);
+    return new Promise((ok, fehl) => {
+      /* Fassung 2: neben den Bildern liegen jetzt die PDF-Quellen (für das
+         scharfe Nachzeichnen) und pdf.js selbst (damit es ohne Netz geht). */
+      const r = indexedDB.open('nwBilder', 2);
+      r.onupgradeneeded = () => {
+        const db = r.result;
+        ['plaene', 'quellen', 'lib'].forEach(n => {
+          if(!db.objectStoreNames.contains(n)) db.createObjectStore(n, {keyPath:'id'});
+        });
+      };
+      r.onsuccess = () => { this.db = r.result; ok(this.db); };
+      r.onerror   = () => fehl(r.error);
+    });
+  },
+  async lauf(modus, fn, bereich = 'plaene'){
+    const db = await this.oeffnen();
+    return new Promise((ok, fehl) => {
+      const t = db.transaction(bereich, modus), anfrage = fn(t.objectStore(bereich));
+      t.oncomplete = () => ok(anfrage ? anfrage.result : null);
+      t.onerror    = () => fehl(t.error);
+    });
+  },
+  put(o){ return this.lauf('readwrite', st => st.put(o)); },
+  /* Die PDF liegt einmal je Datei, nicht einmal je Seite: ein fünfseitiger
+     Plansatz belegt sie also nur einmal. */
+  quellePut(o){  return this.lauf('readwrite', st => st.put(o),    'quellen'); },
+  quelleGet(id){ return this.lauf('readonly',  st => st.get(id),   'quellen'); },
+  quellenAlle(){ return this.lauf('readonly',  st => st.getAll(),  'quellen'); },
+  quelleWeg(id){ return this.lauf('readwrite', st => st.delete(id),'quellen'); },
+  libPut(o){     return this.lauf('readwrite', st => st.put(o),    'lib'); },
+  libGet(id){    return this.lauf('readonly',  st => st.get(id),   'lib'); },
+  /* Safari legt Blobs in IndexedDB nicht zuverlässig ab – zurück kommt dann
+     etwas, das kein gültiges Bild mehr ist (Safari zeigt ein Fragezeichen).
+     Gespeichert werden deshalb die reinen Bytes samt Typ; der Blob entsteht
+     erst beim Anzeigen neu. Ältere Einträge mit Blob werden weiter gelesen. */
+  async ablegen(o, bild){
+    const daten = await bild.arrayBuffer();
+    return this.put(Object.assign({}, o, {daten, typ:bild.type || 'image/jpeg'}));
+  },
+  get(id){ return this.lauf('readonly',  st => st.get(id)); },
+  alle(){  return this.lauf('readonly',  st => st.getAll()); },
+  weg(id){ return this.lauf('readwrite', st => st.delete(id)); }
+};
+/* --- PDF-Pläne --------------------------------------------------------------
+   Grundrisse liegen meist als PDF vor. Eingebettet ließe sich eine PDF zwar
+   anzeigen, aber nicht verorten: der Anzeigebereich des Browsers meldet nicht,
+   wo getippt wurde – und genau das braucht die Marke. Deshalb wird beim
+   Hinzufügen jede Seite in ein Bild umgerechnet; ein mehrseitiger Plan ergibt
+   dabei mehrere Grundrisse, was bei mehreren Etagen in einer Datei gerade recht
+   ist.
+
+   Die Bibliothek wird nicht mehr bei jedem Mal aus dem Netz geholt: sie wird
+   beim ersten Gebrauch mitgespeichert und läuft danach vom Gerät. Sonst wäre
+   das scharfe Nachzeichnen im Keller ohne Empfang wertlos. Fehlt sie – etwa
+   nach einem Gerätewechsel –, wird sie beim nächsten Plan im Hintergrund
+   nachgeholt; ohne Netz bleibt es still beim gespeicherten Bild. */
+const PDF_LIB    = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const PDF_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const PDF_ID     = 'pdfjs-3.11.174';
+let pdfHolen = null;
+/* Aus dem gespeicherten Text wieder eine laufende Bibliothek machen. */
+function pdfEinsetzen(code, worker){
+  return new Promise((ok, fehl) => {
+    const url = URL.createObjectURL(new Blob([code], {type:'text/javascript'}));
+    const sk = document.createElement('script');
+    sk.src = url;
+    sk.onload = () => {
+      URL.revokeObjectURL(url);
+      if(!window.pdfjsLib) return fehl(new Error('pdf'));
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        URL.createObjectURL(new Blob([worker], {type:'text/javascript'}));
+      ok(window.pdfjsLib);
+    };
+    sk.onerror = () => { URL.revokeObjectURL(url); fehl(new Error('pdf')); };
+    document.head.appendChild(sk);
+  });
+}
+/* Rückfallebene: geht das Holen als Text nicht (etwa weil die Gegenstelle es
+   nicht erlaubt), läuft es wie früher direkt aus dem Netz – dann eben ohne
+   Ablage und ohne Nutzen offline. */
+function pdfVomNetz(){
+  return new Promise((ok, fehl) => {
+    const sk = document.createElement('script');
+    sk.src = PDF_LIB;
+    sk.onload  = () => {
+      if(!window.pdfjsLib) return fehl(new Error('pdf'));
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER;
+      ok(window.pdfjsLib);
+    };
+    sk.onerror = () => fehl(new Error('pdf'));
+    document.head.appendChild(sk);
+  });
+}
+function pdfLib(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(pdfHolen) return pdfHolen;
+  pdfHolen = (async () => {
+    let abgelegt = null;
+    try{ abgelegt = await Bilder.libGet(PDF_ID); }catch(e){ /* ohne Ablage weiter */ }
+    if(abgelegt && abgelegt.code) return pdfEinsetzen(abgelegt.code, abgelegt.worker);
+    let code, worker;
+    try{
+      [code, worker] = await Promise.all([
+        fetch(PDF_LIB).then(a => a.text()),
+        fetch(PDF_WORKER).then(a => a.text())
+      ]);
+    }catch(e){ return pdfVomNetz(); }
+    try{ await Bilder.libPut({id:PDF_ID, code, worker, stand:heute()}); }catch(e){ /* egal */ }
+    return pdfEinsetzen(code, worker);
+  })().catch(e => { pdfHolen = null; throw e; });
+  return pdfHolen;
+}
+/* Safari führt über alle Canvas ein gemeinsames Speicherkonto; ist es voll,
+   kommen die nächsten leer zurück. Ein gebrauchter Canvas wird deshalb auf
+   1×1 gesetzt – das gibt den Platz sofort wieder her. */
+function canvasFrei(c){ if(c){ c.width = 1; c.height = 1; } }
+
+async function pdfSeiten(datei){
+  const lib = await pdfLib();
+  const doc = await lib.getDocument({data:new Uint8Array(await datei.arrayBuffer())}).promise;
+  const seiten = [];
+  for(let i = 1; i <= doc.numPages; i++){
+    const seite = await doc.getPage(i);
+    const roh = seite.getViewport({scale:1});
+    /* Auf dieselbe Kantenlänge wie ein Foto, aber höchstens sechsfach vergrößert –
+       eine kleine Vektorseite soll scharf werden, ohne ins Uferlose zu wachsen. */
+    const f = Math.min(6, PLAN_MAX / Math.max(roh.width, roh.height));
+    const vp = seite.getViewport({scale:f});
+    const c = document.createElement('canvas');
+    c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);   // PDF ist durchsichtig
+    await seite.render({canvasContext:ctx, viewport:vp}).promise;
+    /* Auch hier den leeren Rand weg – Pläne bringen ihn aus dem Zeichenprogramm
+       mit, und auf dem Telefon zählt jeder Millimeter. */
+    const roh_rah = inhaltsRahmen(c, c.width, c.height);
+    /* Wurde nicht geschnitten, entspricht das Bild der ganzen Seite – dann muss
+       auch der gemerkte Rahmen die ganze Seite nennen, sonst zeichnet das
+       Nachschärfen später den falschen Ausschnitt. */
+    let rah = {x:0, y:0, w:1, h:1};
+    let fertig = c;
+    if(roh_rah.w < 0.98 || roh_rah.h < 0.98){
+      rah = roh_rah;
+      const z = document.createElement('canvas');
+      z.width  = Math.round(rah.w * c.width);
+      z.height = Math.round(rah.h * c.height);
+      const zc = z.getContext('2d');
+      zc.fillStyle = '#ffffff'; zc.fillRect(0, 0, z.width, z.height);
+      zc.drawImage(c, Math.round(rah.x * c.width), Math.round(rah.y * c.height),
+                      z.width, z.height, 0, 0, z.width, z.height);
+      fertig = z;
+    }
+    const bild = await new Promise(ok => fertig.toBlob(ok, 'image/jpeg', 0.85));
+    if(fertig !== c) canvasFrei(fertig);
+    canvasFrei(c);
+    seiten.push({bild, rahmen:rah});
+  }
+  return seiten;
+}
+
+/* --- Weißen Rand abschneiden ------------------------------------------------
+   Pläne bringen breite leere Ränder mit – bei einem Querformat-Grundriss gut ein
+   Fünftel der Fläche, das auf dem Telefon fehlt. Gesucht wird der Rand an einer
+   kleinen Kopie: für die Frage, wo der Inhalt beginnt, genügen 400 px, und das
+   Suchen bleibt schnell. Bleibt zu wenig übrig, wird nicht geschnitten – lieber
+   ein Rand zu viel als ein abgeschnittener Plan. */
+function inhaltsRahmen(quelle, breite, hoehe){
+  const ganz = {x:0, y:0, w:1, h:1};
+  try{
+    const k = document.createElement('canvas');
+    const f = Math.min(1, 400 / Math.max(breite, hoehe));
+    k.width  = Math.max(1, Math.round(breite * f));
+    k.height = Math.max(1, Math.round(hoehe  * f));
+    const ctx = k.getContext('2d', {willReadFrequently:true});
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, k.width, k.height);
+    ctx.drawImage(quelle, 0, 0, k.width, k.height);
+    const d = ctx.getImageData(0, 0, k.width, k.height).data;
+    const hell = (x, y) => { const i = (y * k.width + x) * 4;
+      return d[i] > 238 && d[i + 1] > 238 && d[i + 2] > 238; };
+    const zeileLeer  = y => { for(let x = 0; x < k.width;  x++) if(!hell(x, y)) return false; return true; };
+    const spalteLeer = x => { for(let y = 0; y < k.height; y++) if(!hell(x, y)) return false; return true; };
+    let o = 0, u = k.height - 1, l = 0, r = k.width - 1;
+    while(o < u && zeileLeer(o))  o++;
+    while(u > o && zeileLeer(u))  u--;
+    while(l < r && spalteLeer(l)) l++;
+    while(r > l && spalteLeer(r)) r--;
+    const luft = Math.round(Math.max(k.width, k.height) * 0.01);
+    o = Math.max(0, o - luft); l = Math.max(0, l - luft);
+    u = Math.min(k.height - 1, u + luft); r = Math.min(k.width - 1, r + luft);
+    const rahmen = {x:l / k.width, y:o / k.height,
+                    w:(r - l + 1) / k.width, h:(u - o + 1) / k.height};
+    /* Sicherheitshalber: ein Plan, von dem kaum etwas übrig bliebe, wird nicht
+       beschnitten – dann stimmte eher die Erkennung nicht als der Plan. */
+    if(rahmen.w < 0.25 || rahmen.h < 0.25) return ganz;
+    return rahmen;
+  }catch(e){ return ganz; }
+}
+
+/* Aus dem Gespeicherten wieder ein Bild machen – neue Einträge tragen Bytes,
+   ältere noch einen Blob. */
+const planBlob = pl => !pl ? null
+  : (pl.daten ? new Blob([pl.daten], {type:pl.typ || 'image/jpeg'}) : pl.bild);
+
+/* Ein Foto vom Plan hat leicht vier Megapixel; für den Bildschirm reicht ein
+   Bruchteil. Verkleinert wird beim Hinzufügen, nicht bei jeder Anzeige. */
+/* Ein Grundriss wird nicht nur überflogen, sondern hineingezoomt: Raumnummern
+   und Türbezeichnungen sollen dabei lesbar bleiben. 1600 px reichten dafür
+   nicht. Bei 3200 px liegt ein Plan bei ein bis zwei Megabyte – für den
+   Bilderspeicher unerheblich, in der Sicherungsdatei spürbar, aber tragbar. */
+const PLAN_MAX = 3200;
+function planVerkleinern(datei){
+  return new Promise((ok, fehl) => {
+    const leser = new FileReader();
+    leser.onload = () => {
+      const bild = new Image();
+      bild.onload = () => {
+        const rah = inhaltsRahmen(bild, bild.width, bild.height);
+        const sx = rah.x * bild.width,  sy = rah.y * bild.height;
+        const sw = rah.w * bild.width,  sh = rah.h * bild.height;
+        const f = Math.min(1, PLAN_MAX / Math.max(sw, sh));
+        const c = document.createElement('canvas');
+        c.width = Math.round(sw * f); c.height = Math.round(sh * f);
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(bild, sx, sy, sw, sh, 0, 0, c.width, c.height);
+        c.toBlob(b => b ? ok(b) : fehl(new Error('kein Bild')), 'image/jpeg', 0.85);
+      };
+      bild.onerror = () => fehl(new Error('kein Bild'));
+      bild.src = leser.result;
+    };
+    leser.onerror = () => fehl(leser.error);
+    leser.readAsDataURL(datei);
+  });
+}
+
+/* ---------- Die Nachweise ---------------------------------------------------
+   Alle vier stehen hier beisammen. Anlagenliste und Checkliste sind nur
+   Startwerte – geändert wird beides in den Einstellungen, weil Anlagen
+   dazukommen und der Prüfumfang sich ändert. */
+const NACHWEISE = [
+  {
+    k:'aufzuege', label:'Aufzüge', datei:'Prüfung Aufzüge', takt:['monat'],
+    titel:'Monatliche Kontrolle Personenaufzüge',
+    status:['In Ordnung','Mangel'],
+    anlagen:['Aufzug 1','Aufzug 2','Aufzug 3','Aufzug 4'],
+    checkliste:
+`Checkliste Monatliche Prüfung Personenaufzüge
+
+Überprüfung von:
+
+1. Notruf (manuelle Auslösung und Gegensprechfunktion)
+2. Fahrkorbbeleuchtung
+3. Türen (reibungslose Funktion von öffnen/ schließen, Lichtschranke)
+4. Bündigkeit beim Etagenhalt`
+  },
+  {
+    k:'rollband', label:'Rollbandfilter', datei:'Prüfung Rollbandfilter', takt:['monat'],
+    titel:'Monatliche Kontrolle Rollbandfilter',
+    status:['Weitergedreht/ausgetauscht','In Ordnung','Mangel'],
+    anlagen:['Anlage 1','Anlage 2','Anlage 3','Anlage 4'],
+    checkliste:
+`Checkliste Monatliche Prüfung Rollbandfilter
+
+Überprüfung des:
+
+1. Filterfließ auf Verschmutzung.
+     – bei hoher Verschmutzung weiterdrehen oder Wechsel der Filterrolle
+
+2. Korrekten Sitz des Filterfliesses in der Anlage.`
+  },
+  {
+    k:'feststell', label:'Feststellanlagen', datei:'Prüfung Feststellanlagen', takt:['monat'],
+    sortierbar:true,                   // 42 Türen – die Reihenfolge ist der Weg
+    kompakt:true,                      // Geprüftes schrumpft, damit die Liste kurz bleibt
+    titel:'Monatliche Kontrolle Feststellanlagen',
+    status:['In Ordnung','Mangel'],
+    /* 42 Einheiten – die Bezeichnungen trägt Jean in den Einstellungen ein. */
+    anlagen: Array.from({length:42}, (_, i) => 'Tür ' + (i + 1)),
+    checkliste:
+`Checkliste Monatliche Prüfung Feststellanlagen
+
+1. Umfeld der Tür prüfen
+     – Allgemeine Brandschutzanforderungen.
+     – Beeinträchtigung der Feststellanlage durch Umgebungseinflüsse oder Nutzung
+       der angrenzenden Räume sowie baulichen Veränderungen.
+     – Offensichtliche Mängel an der Tür, die die Brandschutzfunktion beeinflussen.
+
+2. Feststellanlage
+
+> Montage/ Installation/ Einstellungen
+     – Qualität der Funkverbindungen überprüfen (bei Verwendung GC 171)
+     – Ladezustand der Batterien in den Funkkomponenten GC 172, GC 173 und GC 175 prüfen.
+
+> Funktion (Auslösung und Schließfunktion prüfen, ggf. einstellen.
+  Feststellanlage (FSA) muss unverzüglich schließen.)
+     – über Brandmelder (durch Brandkenngröße --> Rauch/ Wärme) mit anschließender
+       automatischer Rückstellung
+     – manuell durch ausrücken/ zuziehen der Tür (falls möglich)
+     – durch Taster (falls vorhanden)
+     – Bei 2-flügeligen Türen Funktion der Schließfolgeregelung prüfen (Gang- und
+       Standflügel öffnen und Standflügel festhalten. Gangflügel bleibt in der
+       Warteposition der Schließfolgeregelung stehen und schließt erst, sobald der
+       Standflügel geschlossen ist).
+
+> Dokumentation
+     – Prüfung aufzeichnen und unterschreiben.`
+  },
+  {
+    k:'sprinkler', label:'Sprinkler / Feuerlöschanlage', datei:'Kontrolle Sprinkler', art:'sprinkler', takt:['woche','monat'],
+    titel:'Kontrollen der Sprühwasser-Löschanlage',
+    /* Ein Punkt, dessen Text auf "(bar)" endet, bekommt ein Zahlenfeld statt der
+       Zustandswahl. Das Kennzeichen steckt damit im Text selbst und bleibt
+       erhalten, wenn die Liste in den Einstellungen geändert wird. */
+    woch:[
+      'Druck vor Alarmventil (Seite Wasserversorgung) (bar)',
+      'Druck nach Alarmventil (Seite Sprinklernetz) (bar)',
+      'Absperrschieber offen, gesichert bzw. überwacht',
+      'Interne Alarmvorrichtungen überprüft (Glocke, Sirene)',
+      'Wasserstände (Druckluftwasserbehälter, Vorrats- und Zwischenbehälter, Pumpenauffüllbehälter)',
+      'Funktion der automatischen und manuellen Startvorrichtungen von Pumpen'
+    ],
+    mon:[
+      'Zulässige Lagerhöhe und Mindestabstände',
+      'Funktion von Signalgebern (Druckgeber, Strömungsmelder, Schieberüberwachung)',
+      'Funktion und Zustand von Kompressoren',
+      'Funktion der automatischen Auffüll- und Nachspeisevorrichtung für Pumpenauffüll-, Vorrats- und Zwischenbehälter'
+    ]
+  },
+  {
+    k:'medien', label:'Medienverbräuche', datei:'Ablesung Medien', art:'medien', takt:['quartal'],
+    titel:'Quartalsablesung Medienverbräuche',
+    /* Eine Zählstelle je Zeile: Partei ; Medium ; Zählernummer ; Ort ; Einheit.
+       Ort und Einheit dürfen fehlen; Wasser rechnet immer in m³, Strom und Wärme
+       in kWh, sofern nicht MWh danebensteht. Die Reihenfolge dieser Liste ist
+       der Ausgangspunkt der Ablesereihenfolge; verschoben wird beim Ablesen. */
+    stellen:[
+      'Partei 1 ; Kaltwasser ; 21-4711 ; Keller, Nische links ; m³',
+      'Partei 1 ; Wärme ; W-8802 ; Keller, Nische links ; kWh',
+      'Partei 2 ; Strom ; 1EZ0034 ; Zählerschrank Treppenhaus ; kWh'
+    ]
+  }
+];
+const NW = k => NACHWEISE.find(n => n.k === k);
+
+/* ---------- Einstellungen und Daten ---------- */
+/* Wo etwas im Haus sitzt: Schlüssel der Zählstelle bzw. Name der Anlage auf
+   Grundriss und Punkt darin (Anteile der Bildbreite und -höhe). */
+const CFG_STD = { objekt:'', pruefer:'', teile:{}, orte:{} };
+let CFG = Object.assign({}, CFG_STD, Store.get('nwCfg', {}));
+CFG.teile = CFG.teile || {};
+CFG.orte  = CFG.orte  || {};
+const teilCfg = k => {
+  const n = NW(k);
+  CFG.teile[k] = CFG.teile[k] || {};
+  const t = CFG.teile[k];
+  if(n.art === 'medien'){
+    if(!Array.isArray(t.stellen) || !t.stellen.length) t.stellen = n.stellen.slice();
+    if(!Array.isArray(t.folge)) t.folge = [];
+    return t;
+  }
+  if(n.art === 'sprinkler'){
+    if(!Array.isArray(t.woch) || !t.woch.length) t.woch = n.woch.slice();
+    if(!Array.isArray(t.mon)  || !t.mon.length)  t.mon  = n.mon.slice();
+    return t;
+  }
+  if(!Array.isArray(t.anlagen) || !t.anlagen.length) t.anlagen = (n.anlagen || []).slice();
+  if(typeof t.checkliste !== 'string')               t.checkliste = n.checkliste || '';
+  return t;
+};
+const istBar = p => /\(bar\)\s*$/i.test(p);
+
+/* --- Zählstellen -----------------------------------------------------------
+   Aus "Partei | Medium | Nummer | Ort | Einheit" wird ein Satz Felder. Der
+   Schlüssel aus Partei, Medium und Nummer verbindet die Ablesung mit der des
+   Vorquartals – daran hängt der Verbrauch. */
+function stelleLesen(zeile){
+  /* Getrennt wird mit Semikolon; der frühere Längsstrich wird weiter gelesen,
+     damit schon eingetragene Listen nicht neu getippt werden müssen. */
+  const f = String(zeile).split(/[;|]/).map(x => x.trim());
+  const medium = f[1] || '', roh = (f[4] || '').trim();
+  const wasser = /wasser/i.test(medium);
+  const einheit = wasser ? 'm³' : (/^mwh$/i.test(roh) ? 'MWh' : roh || 'kWh');
+  return {partei:f[0] || '', medium, nr:f[2] || '', ort:f[3] || '', einheit,
+          key:[f[0] || '', medium, f[2] || ''].join('|')};
+}
+/* Die Zeilennummer wird mitgeführt: beim Zählertausch muss genau diese Zeile in
+   den Einstellungen umgeschrieben werden. Vergeben wird sie vor dem Aussieben
+   leerer Zeilen, damit sie auch dann stimmt. */
+const stellen = () => teilCfg('medien').stellen
+  .map((z, i) => Object.assign(stelleLesen(z), {zeile:i}))
+  .filter(z => z.partei || z.medium);
+/* Nur das dritte Feld – die Zählernummer – wird ersetzt, der Rest der Zeile
+   bleibt inhaltlich, wie er war. */
+function nummerErsetzen(zeile, neu){
+  const f = String(zeile).split(/[;|]/).map(x => x.trim());
+  if(f.length < 3) return zeile;
+  f[2] = neu.trim();
+  return f.join(' ; ');
+}
+/* Hat eine Partei mehrere Zähler desselben Mediums, werden sie durchnummeriert:
+   "Wärme 1", "Wärme 2". Bei nur einem bleibt es beim schlichten Namen. Gezählt
+   wird in der Reihenfolge der Einstellungen, nicht in der des Weges – sonst
+   hieße derselbe Zähler nach dem Umsortieren plötzlich anders. */
+function medienNamen(){
+  const liste = stellen(), anzahl = {}, lauf = {}, namen = {};
+  liste.forEach(z => { const g = z.partei + '|' + z.medium; anzahl[g] = (anzahl[g] || 0) + 1; });
+  liste.forEach(z => {
+    const g = z.partei + '|' + z.medium;
+    if(anzahl[g] > 1){ lauf[g] = (lauf[g] || 0) + 1; namen[z.key] = `${z.medium} ${lauf[g]}`; }
+    else namen[z.key] = z.medium;
+  });
+  return namen;
+}
+/* Die gemerkte Reihenfolge gilt, neue Zählstellen hängen sich hinten an. */
+function stellenSortiert(){
+  const alle = stellen(), folge = teilCfg('medien').folge || [];
+  const rang = k => { const i = folge.indexOf(k); return i < 0 ? 1e6 : i; };
+  return alle.map((z, i) => ({z, i})).sort((a, b) => rang(a.z.key) - rang(b.z.key) || a.i - b.i).map(x => x.z);
+}
+function folgeSpeichern(liste){
+  teilCfg('medien').folge = liste.map(z => z.key);
+  saveCfg();
+}
+/* Zahlen mit Komma – gelesen wie geschrieben, gerechnet wie üblich. */
+const zahl = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isFinite(n) ? n : null; };
+const zahlText = n => n == null ? '' : String(Math.round(n * 1000) / 1000).replace('.', ',');
+/* Die Stände des Vorquartals überleben das Ausgeben – aus ihnen entsteht der
+   Verbrauch. Sie liegen deshalb neben den laufenden Daten. */
+let MED_ALT = Store.get('nwMedAlt', {});
+const saveAlt = () => Store.set('nwMedAlt', MED_ALT);
+/* Zählerwechsel des laufenden Quartals. Jeder Vorgang hält fest, was die
+   Abrechnung braucht: Datum, alte und neue Nummer, Ausbau- und Einbaustand und
+   den Stand des Vorquartals, gegen den der alte Zähler gerechnet wird. Nach der
+   Ausgabe des Quartals, in dem das Wechseldatum liegt, verfällt der Vermerk –
+   danach läuft der neue Zähler normal weiter. */
+let TAUSCH = Store.get('nwTausch', []);
+const saveTausch = () => Store.set('nwTausch', TAUSCH);
+const WOCH_MAX = 5;                  // mehr wöchentliche Gänge hat kein Monat
+const saveCfg = () => Store.set('nwCfg', CFG);
+
+/* Der laufende Nachweis: je Anlage Datum, Zustand, Bemerkung, dazu die
+   Unterschrift. Bleibt liegen, bis er ausgegeben wurde – eine Prüfung kann sich
+   über mehrere Tage ziehen. */
+let DAT = Store.get('nwDat', {});
+const saveDat = () => Store.set('nwDat', DAT);
+/* Welche RUNDE zuletzt hinausging – nicht, an welchem Tag das geschah. Wer die
+   August-Runde am 2. September abschließt, hätte sonst den September als
+   erledigt markiert und bekäme dort keine Mahnung mehr. Vermerkt wird deshalb
+   "2026-08" bzw. "2026-Q3". Die Daten selbst werden beim Ausgeben geleert – ohne
+   diesen Vermerk wüsste die Startseite nichts vom Stand der Runde. */
+let EXP = Store.get('nwExp', {});
+const saveExp = () => Store.set('nwExp', EXP);
+const monatVon   = iso => String(iso || '').slice(0, 7);
+const quartalVon = iso => { const [j, m] = String(iso || '').split('-');
+  return `${j}-Q${Math.floor((+m - 1) / 3) + 1}`; };
+/* Ältere Vermerke tragen noch ein volles Datum – sie werden umgerechnet. */
+const expMonat   = k => { const v = EXP[k] || ''; return v.length >= 10 ? monatVon(v) : v; };
+const expQuartal = k => { const v = EXP[k] || ''; return v.length >= 10 ? quartalVon(v) : v; };
+const heute = () => { const d = new Date(), z = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; };
+const dText = t => { if(!t) return ''; const [j, m, d] = t.split('-'); return `${d}.${m}.${j}`; };
+const MONATE = ['Januar','Februar','März','April','Mai','Juni','Juli','August',
+                'September','Oktober','November','Dezember'];
+/* Die Ablesung läuft je Quartal – in der Überschrift steht deshalb "3. Quartal
+   2026" statt eines Monats. Die Ablesung im vierten Quartal liefert zugleich die
+   Jahresendwerte; das steht dahinter, weil diese Zahlen weiterverwendet werden. */
+function quartalText(t){
+  const [j, m] = (t || heute()).split('-');
+  const q = Math.floor((+m - 1) / 3) + 1;
+  return `${q}. Quartal ${j}${q === 4 ? ' (Jahresendwerte)' : ''}`;
+}
+/* Alle erfassten Daten eines Nachweises – die drei ersten führen sie je Anlage,
+   die Sprinkleranlage je Kontrollgang. Ohne diese Weiche liefen Überschrift und
+   Dateiname bei ihr auf eine nicht vorhandene Zeilenliste. */
+function alleDaten(k){
+  const d = DAT[k]; if(!d) return [];
+  if(d.datum) return [d.datum];                      // Ablesung: ein Datum je Runde
+  if(d.zeilen) return zeilenJetzt(k).map(z => z.datum).filter(Boolean);
+  return [...(d.woch || []), ...(d.mon || [])].map(g => g.datum).filter(Boolean);
+}
+/* Prüfmonat für die Überschrift: der Monat, in dem geprüft wurde. Genommen wird
+   das späteste erfasste Datum; steht noch keines da, der laufende Monat. */
+/* Maßgeblich ist der BEGINN der Runde: wird sie überzogen und erst am 2. des
+   Folgemonats abgeschlossen, bleibt sie die Runde des Vormonats. Das späteste
+   Datum würde sie fälschlich in den neuen Monat schieben. */
+function monatText(k){
+  const t = alleDaten(k).sort().shift();
+  const [j, m] = (t || heute()).split('-');
+  return `${MONATE[+m - 1]} ${j}`;
+}
+function datenFuer(k){
+  const t = teilCfg(k);
+  if(NW(k).art === 'medien'){
+    DAT[k] = DAT[k] || {datum:'', stand:{}, signatur:null};
+    return DAT[k];
+  }
+  if(NW(k).art === 'sprinkler'){
+    DAT[k] = DAT[k] || {woch:[], mon:[], maengel:'', signatur:null};
+    /* Früher waren es zwei Felder – ein vorhandener Bemerkungstext wandert
+       einmalig in das gemeinsame Feld, damit nichts verlorengeht. */
+    if(DAT[k].bem){
+      DAT[k].maengel = [DAT[k].maengel, DAT[k].bem].filter(Boolean).join('\n');
+      delete DAT[k].bem; saveDat();
+    }
+    return DAT[k];
+  }
+  DAT[k] = DAT[k] || {zeilen:{}, signatur:null};
+  const d = DAT[k];
+  t.anlagen.forEach(a => { d.zeilen[a] = d.zeilen[a] || {datum:'', status:'', bem:''}; });
+  return d;
+}
+/* Nur die Zeilen der Anlagen, die es heute gibt. Wird eine Anlage in den
+   Einstellungen umbenannt oder gestrichen, bleibt ihr alter Eintrag in den Daten
+   liegen – gezählt werden darf er nicht, sonst gälte der Nachweis als
+   unvollständig und ließe sich nicht ausgeben. Liegenlassen statt löschen hat
+   einen Vorteil: wer sich vertippt und den Namen zurücksetzt, findet seinen
+   Eintrag wieder. */
+const zeilenJetzt = k => {
+  const d = DAT[k]; if(!d || !d.zeilen) return [];
+  return teilCfg(k).anlagen.map(a => d.zeilen[a]).filter(Boolean);
+};
+/* Ein Kontrollgang: Datum und je Punkt ein Wert – Zahl bei den Druckpunkten,
+   sonst "io" oder "mangel". */
+const gangVoll = (g, punkte) => punkte.every((p, i) => String(g.w[i] ?? '').trim() !== '');
+const sprinklerVoll = d =>
+  d.woch.length > 0 && d.mon.length > 0 &&
+  d.woch.every(g => gangVoll(g, teilCfg('sprinkler').woch)) &&
+  d.mon.every(g => gangVoll(g, teilCfg('sprinkler').mon));
+
+/* --- Stand der Runde als farbiger Ring --------------------------------------
+   Grün: die Runde ist erledigt. Gelb: angefangen, aber nicht fertig. Rot: es
+   wird knapp und es liegt noch nichts vor – bei den wöchentlichen Kontrollen ab
+   Donnerstag, bei den monatlichen in den letzten sieben Tagen des Monats, bei
+   der Ablesung in den letzten vierzehn Tagen des Quartals. Vorher bleibt der
+   Knopf schlicht: eine Mahnung, die immer leuchtet, sieht bald niemand mehr. */
+const tagAnfang = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const TAG_MS = 86400000;
+function wochenBeginn(d){                       // Montag der laufenden Woche
+  const t = tagAnfang(d), w = (t.getDay() + 6) % 7;
+  return new Date(t.getTime() - w * TAG_MS);
+}
+const inWoche = (iso, jetzt) => {
+  if(!iso) return false;
+  const a = wochenBeginn(jetzt);
+  const d = new Date(iso + 'T00:00:00');
+  return d >= a && d < new Date(a.getTime() + 7 * TAG_MS);
+};
+const tageBis = ende => Math.ceil((ende - tagAnfang(new Date())) / TAG_MS);
+const monatsEnde   = j => new Date(j.getFullYear(), j.getMonth() + 1, 1);
+const quartalsEnde = j => new Date(j.getFullYear(), (Math.floor(j.getMonth() / 3) + 1) * 3, 1);
+/* Ist überhaupt etwas erfasst? */
+function begonnen(n){
+  const d = DAT[n.k]; if(!d) return false;
+  if(n.art === 'medien')    return Object.values(d.stand || {}).some(v => String(v).trim() !== '');
+  if(n.art === 'sprinkler') return (d.woch || []).length > 0 || (d.mon || []).length > 0;
+  return zeilenJetzt(n.k).some(z => z.status);
+}
+function ring(n, takt){
+  const jetzt = new Date();
+  if(takt === 'woche'){
+    /* Die wöchentliche Runde des Sprinklers: sie geht erst am Monatsende mit
+       hinaus, deshalb zählt hier der Kontrollgang dieser Woche selbst. */
+    const d = DAT[n.k], gaenge = (d && d.woch || []).filter(g => inWoche(g.datum, jetzt));
+    if(!gaenge.length) return jetzt.getDay() >= 4 || jetzt.getDay() === 0 ? 'rot' : '';
+    const punkte = teilCfg(n.k).woch;
+    return gaenge.every(g => gangVoll(g, punkte)) ? 'gruen' : 'gelb';
+  }
+  const jetztMonat   = `${jetzt.getFullYear()}-${String(jetzt.getMonth() + 1).padStart(2, '0')}`;
+  const jetztQuartal = `${jetzt.getFullYear()}-Q${Math.floor(jetzt.getMonth() / 3) + 1}`;
+  if(takt === 'monat'){
+    if(expMonat(n.k) === jetztMonat) return 'gruen';
+    if(begonnen(n)) return 'gelb';
+    return tageBis(monatsEnde(jetzt)) <= 7 ? 'rot' : '';
+  }
+  if(expQuartal(n.k) === jetztQuartal) return 'gruen';
+  if(begonnen(n)) return 'gelb';
+  return tageBis(quartalsEnde(jetzt)) <= 14 ? 'rot' : '';
+}
+
+/* ---------- Ansichten ---------- */
+const TITEL = {home:'Betriebsnachweise', nachweis:'Nachweis', blatt:'Blatt',
+               settings:'Einstellungen', plan:'Grundriss'};
+let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
+function go(name, push = true){
+  if(push && current !== name) stack.push(current);
+  current = name;
+  $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+  $('#titel').textContent = name === 'nachweis' && offen ? NW(offen).label : TITEL[name];
+  const start = name === 'home', bb = $('#btnBack');
+  bb.innerHTML = start ? GEAR_SVG : '&#8592;';
+  bb.setAttribute('aria-label', start ? 'Einstellungen' : 'Zurück');
+  bb.disabled = !start && !stack.length;
+  /* Der Knopf rechts gehört allein der Grundrissansicht; sie zeigt ihn selbst,
+     sobald feststeht, dass es überhaupt etwas zu wechseln gibt. */
+  $('#btnPlanWahl').classList.add('unsichtbar');
+  document.body.classList.toggle('planAn', name === 'plan');
+  window.scrollTo(0, 0);
+  if(name === 'home')     renderHome();
+  if(name === 'nachweis') renderNachweis();
+  if(name === 'settings'){ renderSettings(); renderPlaene(); }
+  renderBar();
+}
+$('#btnBack').onclick = () => {
+  if(current === 'home'){ go('settings'); return; }     // Startseite: Einstellungen
+  const p = stack.pop(); if(p) go(p, false);
+};
+
+/* Rückfrage im eigenen Fenster. Der Aufruf übergibt, was bei Zustimmung
+   geschehen soll – abgelehnt wird durch Nichtstun. */
+function frage(titel, text, jaText, aufJa){
+  dlgZuruecksetzen();
+  $('#dlgTitel').textContent = titel;
+  $('#dlgText').textContent  = text;
+  $('#dlgJa').textContent    = jaText;
+  $('#dlg').hidden = false;
+  const zu = () => { $('#dlg').hidden = true; };
+  $('#dlgJa').onclick   = () => { zu(); aufJa(); };
+  $('#dlgNein').onclick = zu;
+}
+/* Dasselbe Fenster, nur mit einer Liste statt Ja und Nein. */
+function dlgZuruecksetzen(){
+  $('#dlgText').hidden = false;
+  $('#dlgKnoepfe').hidden = false;
+  $('#dlgListe').hidden = true;
+  $('#dlgListe').innerHTML = '';
+  /* Die Belegung der beiden Knöpfe stammt aus der vorigen Rückfrage – sie darf
+     nicht liegenbleiben, sonst tut ein Knopf etwas Fremdes oder gar nichts. */
+  $('#dlgJa').onclick = $('#dlgNein').onclick = null;
+}
+function wahlFenster(titel, eintraege, aufWahl){
+  dlgZuruecksetzen();
+  $('#dlgTitel').textContent = titel;
+  $('#dlgText').hidden = true;
+  $('#dlgKnoepfe').hidden = true;
+  const liste = $('#dlgListe');
+  liste.hidden = false;
+  liste.innerHTML = eintraege.map((e, i) =>
+      `<button class="btn${e.aktiv ? ' primary' : ''}" data-i="${i}">${esc(e.text)}</button>`).join('') +
+    `<button class="btn ghost" data-ab="1" style="margin-top:14px">Abbrechen</button>`;
+  $('#dlg').hidden = false;
+  const zu = () => { $('#dlg').hidden = true; dlgZuruecksetzen(); };
+  liste.querySelectorAll('button').forEach(b => {
+    b.onclick = () => { zu(); if(!b.dataset.ab) aufWahl(eintraege[+b.dataset.i]); };
+  });
+}
+
+/* Beim Verschieben soll das bewegte Element auf dem Bildschirm stehen bleiben –
+   die anderen wandern daran vorbei. Sonst tippt man sich bei 42 Türen durch die
+   ganze Liste und muss nach jedem Schritt nachscrollen. Dasselbe Muster wie beim
+   Plus und Minus in der Materialliste des E-Assistenten: Lage merken, umbauen,
+   Bildlaufposition absolut wiederherstellen. */
+function lageHalten(vorherTop, wiederfinden){
+  const el = wiederfinden();
+  if(!el || vorherTop == null) return;
+  const imDokument = el.getBoundingClientRect().top + window.scrollY;
+  window.scrollTo(0, Math.max(0, Math.round(imDokument - vorherTop)));
+}
+
+let toastTimer = null;
+function toast(t){
+  const el = $('#toast'); el.textContent = t; el.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), 1800);
+}
+
+/* ---------- Startseite ---------- */
+/* Der Zusatz zeigt nur an, dass etwas angefangen wurde – die Sprinkleranlage
+   zählt Kontrollgänge, die Ablesung die erfassten Zähler, die übrigen die noch
+   offenen Anlagen. */
+function homeStand(n){
+    const d = DAT[n.k];
+    let stand = '';
+    if(d && n.art === 'medien'){
+      const l = stellen(), fertig = l.filter(z => String(d.stand[z.key] ?? '').trim() !== '').length;
+      if(fertig) stand = medienVoll(d) ? ' · vollständig' : ` · ${fertig} von ${l.length} abgelesen`;
+    }else if(d && n.art === 'sprinkler'){
+      const g = d.woch.length + d.mon.length;
+      if(g) stand = sprinklerVoll(d) ? ' · vollständig' : ` · ${g} Kontrollgang${g === 1 ? '' : 'gänge'}`;
+    }else if(d){
+      const zs   = zeilenJetzt(n.k);
+      const alle = zs.length;
+      const off  = zs.filter(z => !z.status).length;
+      if(off === 0)        stand = ' · vollständig';
+      else if(off < alle)  stand = ` · ${alle - off} von ${alle} erfasst`;
+    }
+    return stand;
+}
+/* Sortiert nach Takt, weil der die Runde bestimmt: was diese Woche ansteht,
+   steht oben. Die Sprinkleranlage taucht zweimal auf – wöchentlich und
+   monatlich –, weil beides zu verschiedenen Zeiten fällig ist. Der monatliche
+   Eintrag springt in der Ansicht gleich zum passenden Abschnitt, sonst müsste
+   man an bis zu fünf Wochenkarten vorbeiblättern. */
+const TAKTE = [['woche','Wöchentlich'], ['monat','Monatlich'], ['quartal','Quartalsweise']];
+function renderHome(){
+  $('#homeListe').innerHTML = TAKTE.map(([t, titel]) => {
+    const teile = NACHWEISE.filter(n => (n.takt || ['monat']).includes(t));
+    if(!teile.length) return '';
+    return `<div class="eyebrow" style="margin-top:6px">${titel}</div>` + teile.map(n => {
+      if(n.spaeter) return `<button class="btn" disabled>${esc(n.label)} · folgt</button>`;
+      const ziel = n.art === 'sprinkler' ? (t === 'monat' ? 'mon' : 'woch') : '';
+      const r = ring(n, t);
+      return `<button class="btn${r ? ' ring-' + r : ''}" data-nw="${n.k}" data-ziel="${ziel}">${esc(n.label)}${homeStand(n)}</button>`;
+    }).join('');
+  }).join('');
+  $$('#homeListe [data-nw]').forEach(b => b.onclick = () => {
+    offen = b.dataset.nw; datenFuer(offen);
+    sigAktiv = false; sprungZiel = b.dataset.ziel || '';
+    offenKarten = new Set();          // Bewertetes aus früheren Runden zeigt sich klein
+    go('nachweis');
+  });
+  $('#buildTag').textContent = BUILD;
+}
+let sprungZiel = '';
+
+/* ---------- Ein Nachweis ---------------------------------------------------
+   Je Anlage eine Zeile: Datum, Zustand, Bemerkung. Das Datum steht je Position,
+   nicht einmal je Nachweis – eine monatliche Runde zieht sich über Tage. Beim
+   ersten Antippen eines Zustands wird das heutige Datum eingesetzt, solange
+   keines dasteht; ändern lässt es sich trotzdem. */
+/* Karten, die gerade offenstehen sollen, obwohl sie schon bewertet sind. Wird
+   beim Betreten eines Nachweises geleert: was aus einer früheren Runde bewertet
+   dasteht, zeigt sich klein. Wer in dieser Sitzung etwas bewertet, behält die
+   Karte offen, um noch eine Bemerkung nachzutragen. */
+let offenKarten = new Set();
+function renderNachweis(){
+  const n = NW(offen), t = teilCfg(offen), d = datenFuer(offen);
+  $('#nwObjekt').textContent = CFG.objekt || 'Objekt in den Einstellungen eintragen';
+  $('#sigBlock').hidden = n.art === 'medien';
+  if(n.art === 'medien'){    renderMedien();    return; }
+  if(n.art === 'sprinkler'){ renderSprinkler(); renderSig(); return; }
+  $('#nwListe').innerHTML = t.anlagen.map((a, i) => {
+    const z = d.zeilen[a];
+    const mangel = z.status && /mangel|defekt/i.test(z.status);
+    const klasse = !z.status ? '' : mangel ? ' mangel' : ' fertig';
+    /* Bei langen Listen lässt sich die Reihenfolge wie bei den Zählern
+       verschieben – bei 42 Türen ist der Weg durchs Haus wichtiger als die
+       Nummer. Geändert wird dabei die Liste in den Einstellungen selbst, damit
+       die neue Ordnung beim nächsten Mal steht. */
+    /* Werkzeuge der Karte: die Stelle im Grundriss und, wo die Reihenfolge
+       zählt, die Pfeile. In der zugeklappten Karte steht davon nichts – dort
+       geht es ums Nachsehen, nicht ums Ändern. */
+    const pfeile = `<span class="pfeile">
+          <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>${n.sortierbar ? `
+          <button type="button" data-hoch="1" aria-label="nach oben"${i ? '' : ' disabled'}>↑</button>
+          <button type="button" data-runter="1" aria-label="nach unten"${i === t.anlagen.length - 1 ? ' disabled' : ''}>↓</button>` : ''}
+        </span>`;
+    /* Bewertete Anlagen zeigen sich klein: Name, darunter Datum und Urteil. Ein
+       Tipp auf die Karte holt sie in voller Größe zurück, ein Tipp auf die
+       Überschrift schrumpft sie wieder. Bei 42 Türen ist das der Unterschied
+       zwischen überblickbar und endlosem Blättern. */
+    if(n.kompakt && z.status && !offenKarten.has(a))
+      return `<div class="pos${klasse} kompakt" data-i="${i}">
+        <div class="name">${esc(a)}</div>
+        <div class="muted small">${esc(dText(z.datum))}${z.datum ? ' · ' : ''}${esc(z.status)}${
+          z.bem ? ' · ' + esc(z.bem) : ''}</div>
+      </div>`;
+    /* Die Bezeichnung steht als Überschrift über der ganzen Karte. Neben dem
+       Datumsfeld eingeklemmt rutschte eine längere Angabe wie "Tür 1,
+       Erdgeschoss, Gang neben Treppenhaus" in eine schmale Spalte und brach in
+       viele kurze Zeilen um. */
+    return `<div class="pos${klasse}" data-i="${i}">
+      <div class="name${n.kompakt ? ' zu' : ''}">${esc(a)}</div>
+      <div class="kopf">
+        <input type="date" data-feld="datum" value="${esc(z.datum)}" aria-label="Datum">
+        ${pfeile}
+      </div>
+      <div class="seg">${n.status.map(s =>
+        `<button type="button" data-status="${esc(s)}" aria-pressed="${z.status === s}">${esc(s)}</button>`).join('')}</div>
+      <input class="bem" data-feld="bem" placeholder="Bemerkung (wenn nötig)" value="${esc(z.bem)}">
+    </div>`;
+  }).join('');
+  $$('#nwListe .pos').forEach(box => {
+    const a = t.anlagen[+box.dataset.i], z = d.zeilen[a];
+    /* Auf- und Zuklappen; die Karte bleibt dabei an ihrem Platz auf dem Schirm. */
+    const umschalten = auf => {
+      const top = box.getBoundingClientRect().top;
+      if(auf) offenKarten.add(a); else offenKarten.delete(a);
+      renderNachweis();
+      lageHalten(top, () => $(`#nwListe .pos[data-i="${box.dataset.i}"]`));
+    };
+    if(box.classList.contains('kompakt')){ box.onclick = () => umschalten(true); return; }
+    const kopf = box.querySelector('.name.zu');
+    if(kopf) kopf.onclick = () => umschalten(false);
+    /* Der Schlüssel trägt den Nachweis mit: "Anlage 1" gibt es in mehreren
+       Listen, die Stellen im Haus sind aber verschiedene. */
+    box.querySelector('[data-ort]').onclick = () => verorten(offen + '|' + a, a);
+    box.querySelectorAll('[data-status]').forEach(b => b.onclick = () => {
+      const top = box.getBoundingClientRect().top;
+      z.status = z.status === b.dataset.status ? '' : b.dataset.status;
+      if(z.status && !z.datum) z.datum = heute();
+      /* "In Ordnung" ist der Regelfall und braucht keine Bemerkung – die Karte
+         schrumpft sofort. Bei einem Mangel bleibt sie offen, dort will man in
+         aller Regel etwas dazuschreiben. Aufklappen geht jederzeit wieder. */
+      const mangel = /mangel|defekt/i.test(z.status || '');
+      if(z.status && mangel) offenKarten.add(a); else offenKarten.delete(a);
+      saveDat(); renderNachweis();
+      lageHalten(top, () => $(`#nwListe .pos[data-i="${box.dataset.i}"]`));
+    });
+    box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
+    box.querySelector('[data-feld="bem"]').oninput    = e => { z.bem   = e.target.value; saveDat(); };
+    if(n.sortierbar){
+      const i = +box.dataset.i;
+      const tausch = j => {
+        if(j < 0 || j >= t.anlagen.length) return;
+        const top = box.getBoundingClientRect().top;
+        t.anlagen.splice(j, 0, t.anlagen.splice(i, 1)[0]);
+        saveCfg(); renderNachweis();
+        lageHalten(top, () => $(`#nwListe .pos[data-i="${j}"]`));
+      };
+      box.querySelector('[data-hoch]').onclick   = () => tausch(i - 1);
+      box.querySelector('[data-runter]').onclick = () => tausch(i + 1);
+    }
+  });
+  renderSig();
+}
+
+/* ---------- Medienverbräuche -----------------------------------------------
+   Abgelesen wird in der Reihenfolge des Weges durch den Gebäudekomplex, nicht
+   parteiweise – wer im Keller steht, liest dort alles ab. Die Reihenfolge lässt
+   sich mit den Pfeilen an jeder Karte verschieben und gilt dann auch beim
+   nächsten Quartal. Ausgegeben wird später parteiweise, das liest sich besser.
+
+   Ein Datum für die ganze Runde: 26 Ablesungen an einem Tag brauchen nicht 26
+   Datumsfelder. */
+function renderMedien(){
+  const d = datenFuer('medien'), liste = stellenSortiert(), namen = medienNamen();
+  const kopf = `<label class="field"><span>Ablesedatum</span>
+      <input type="date" id="medDatum" class="schmal" value="${esc(d.datum)}"></label>
+    <div class="eyebrow">Ablesereihenfolge</div>`;
+  $('#nwListe').innerHTML = kopf + liste.map((z, i) => {
+    const alt = MED_ALT[z.key];
+    const v = zahl(d.stand[z.key]) != null && alt && zahl(alt.stand) != null
+      ? zahlText(zahl(d.stand[z.key]) - zahl(alt.stand)) : '';
+    return `<div class="pos${d.stand[z.key] ? ' fertig' : ''}" data-i="${i}">
+      <div class="name">${esc(z.partei)} · ${esc(namen[z.key] || z.medium)}</div>
+      <div class="muted small">Nr. ${esc(z.nr)}${z.ort ? ' · ' + esc(z.ort) : ''}</div>
+      <div class="row" style="margin-top:8px;align-items:center">
+        <input inputmode="decimal" data-stand="1" value="${esc(d.stand[z.key] || '')}" placeholder="Zählerstand">
+        <span class="muted small" style="flex:0 0 auto">${esc(z.einheit)}</span>
+        <span class="pfeile">
+          <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>
+          <button type="button" data-hoch="1" aria-label="nach oben"${i ? '' : ' disabled'}>↑</button>
+          <button type="button" data-runter="1" aria-label="nach unten"${i === liste.length - 1 ? ' disabled' : ''}>↓</button>
+        </span>
+      </div>
+      <div class="muted small" style="margin-top:6px">${
+        alt ? `Vorquartal ${esc(zahlText(zahl(alt.stand)))} ${esc(z.einheit)}${
+                v ? ` · Verbrauch ${esc(v)} ${esc(z.einheit)}` : ''}`
+            : 'Keine Ablesung aus dem Vorquartal'}</div>
+    </div>`;
+  }).join('');
+
+  $$('#nwListe .pos').forEach(box => {
+    const i = +box.dataset.i, z = liste[i];
+    box.querySelector('[data-stand]').oninput = e => {
+      d.stand[z.key] = e.target.value.trim(); saveDat(); renderBar();
+      box.classList.toggle('fertig', !!d.stand[z.key]);
+    };
+    const tausch = j => {
+      if(j < 0 || j >= liste.length) return;
+      const top = box.getBoundingClientRect().top;
+      const neu = liste.slice();
+      neu.splice(j, 0, neu.splice(i, 1)[0]);
+      folgeSpeichern(neu); renderMedien();
+      lageHalten(top, () => $(`#nwListe .pos[data-i="${j}"]`));
+    };
+    box.querySelector('[data-hoch]').onclick   = () => tausch(i - 1);
+    box.querySelector('[data-runter]').onclick = () => tausch(i + 1);
+    box.querySelector('[data-ort]').onclick = () =>
+      verorten(z.key, `${z.partei} · ${namen[z.key] || z.medium}`);
+  });
+  $('#medDatum').onchange = e => { d.datum = e.target.value; saveDat(); renderBar(); };
+}
+const medienVoll = d => {
+  const l = stellen();
+  return !!d.datum && l.length > 0 && l.every(z => String(d.stand[z.key] ?? '').trim() !== '');
+};
+
+/* ---------- Sprinkler: zwei Abschnitte mit Kontrollgängen -------------------
+   Höchstens fünf wöchentliche Gänge und einer monatlich – deshalb je Gang eine
+   Karte statt einer Tabelle. Die beiden Druckpunkte bekommen ein Zahlenfeld,
+   alle übrigen die Wahl zwischen In Ordnung und Mangel. Das Kurzzeichen des
+   Papierformulars entfällt; unterschrieben wird einmal am Ende. */
+function gangKarte(art, punkte, g, idx){
+  return `<div class="pos" data-art="${art}" data-g="${idx}">
+    <div class="kopf">
+      <span class="name">${art === 'woch' ? 'Kontrollgang ' + (idx + 1) : 'Monatliche Kontrolle'}</span>
+      <input type="date" data-feld="datum" value="${esc(g.datum)}" aria-label="Datum">
+    </div>
+    ${punkte.map((p, i) => {
+      const wert = g.w[i] ?? '';
+      return `<div class="punkt">
+        <div class="ptext">${esc(p)}</div>
+        ${istBar(p)
+          ? `<input inputmode="decimal" data-p="${i}" value="${esc(wert)}" placeholder="bar" class="bar">`
+          : `<div class="seg" data-p="${i}">
+               <button type="button" data-w="io"     aria-pressed="${wert === 'io'}">In Ordnung</button>
+               <button type="button" data-w="mangel" aria-pressed="${wert === 'mangel'}">Mangel</button>
+             </div>`}
+      </div>`;
+    }).join('')}
+    <button class="btn ghost klein" data-weg="1" style="margin-top:10px">Kontrollgang entfernen</button>
+  </div>`;
+}
+function renderSprinkler(){
+  const t = teilCfg('sprinkler'), d = datenFuer('sprinkler');
+  const abschnitt = (art, punkte, titel, max) => {
+    const gaenge = d[art];
+    return `<div class="eyebrow" id="ab-${art}">${titel}</div>`
+      + gaenge.map((g, i) => gangKarte(art, punkte, g, i)).join('')
+      + (gaenge.length < max
+          ? `<button class="btn" data-neu="${art}">Kontrollgang hinzufügen</button>`
+          : `<p class="muted small">Mehr als ${max} sind nicht vorgesehen.</p>`);
+  };
+  $('#nwListe').innerHTML =
+      abschnitt('woch', t.woch, 'Wöchentliche Kontrollen', WOCH_MAX)
+    + abschnitt('mon',  t.mon,  'Monatliche Kontrollen', 1)
+    + `<div class="eyebrow">Mängel und Bemerkungen</div>
+       <textarea id="spMaengel" style="min-height:120px"
+         placeholder="Mängel, die nicht sofort behoben wurden, und sonstige Bemerkungen">${esc(d.maengel)}</textarea>`;
+
+  $$('#nwListe [data-neu]').forEach(b => b.onclick = () => {
+    d[b.dataset.neu].push({datum: heute(), w:{}});
+    saveDat(); renderSprinkler(); renderBar();
+  });
+  $$('#nwListe .pos').forEach(box => {
+    const art = box.dataset.art, g = d[art][+box.dataset.g];
+    box.querySelector('[data-feld="datum"]').onchange = e => { g.datum = e.target.value; saveDat(); };
+    box.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
+      const i = seg.dataset.p;
+      g.w[i] = g.w[i] === b.dataset.w ? '' : b.dataset.w;
+      saveDat(); renderSprinkler(); renderBar();
+    }));
+    box.querySelectorAll('input.bar').forEach(inp => inp.oninput = () => {
+      g.w[inp.dataset.p] = inp.value.trim(); saveDat(); renderBar();
+    });
+    box.querySelector('[data-weg]').onclick = () => {
+      d[art].splice(+box.dataset.g, 1); saveDat(); renderSprinkler(); renderBar();
+    };
+  });
+  $('#spMaengel').oninput = e => { d.maengel = e.target.value; saveDat(); };
+  /* Kommt der Aufruf vom monatlichen Eintrag der Startseite, gleich dorthin. */
+  if(sprungZiel === 'mon'){
+    const ziel = $('#ab-mon');
+    if(ziel) window.scrollTo(0, Math.max(0, ziel.offsetTop - 70));
+  }
+  sprungZiel = '';
+}
+
+/* ---------- Unterschrift ----------------------------------------------------
+   Das Feld steht immer da, ist aber ausgegraut und nimmt nichts an. Erst "Jetzt
+   unterschreiben" macht es beschreibbar; dann stehen "Übernehmen" und "Feld
+   leeren" bereit. Übernehmen graut es wieder aus, die Unterschrift bleibt darin
+   stehen. So kann beim Blättern durch die Anlagen kein Strich hineingeraten, und
+   die Unterschrift bleibt der bewusste letzte Schritt. */
+let padCtx = null, drawing = false, sigAktiv = false, gezeichnet = false;
+function renderSig(){
+  /* Beide Knöpfe stehen nebeneinander; der jeweils unpassende ist gesperrt,
+     damit die Reihe nicht springt. */
+  $('#sigpad').classList.toggle('aus', !sigAktiv);
+  $('#btnSigStart').disabled = sigAktiv;
+  $('#btnSigOk').disabled    = !sigAktiv;
+  initPad();
+}
+/* Beschreibbar machen heißt: von vorn anfangen. Deshalb wird eine schon
+   übernommene Unterschrift dabei verworfen – ein eigener Knopf zum Leeren
+   erübrigt sich damit. */
+$('#btnSigStart').onclick = () => {
+  if(offen && DAT[offen] && DAT[offen].signatur){ DAT[offen].signatur = null; saveDat(); renderBar(); }
+  sigAktiv = true; gezeichnet = false; renderSig();
+};
+$('#btnSigOk').onclick = () => {
+  if(!gezeichnet){ toast('Noch nichts gezeichnet'); return; }
+  DAT[offen].signatur = $('#sigpad').toDataURL('image/png');
+  saveDat(); sigAktiv = false; renderSig(); renderBar(); toast('Unterschrift übernommen');
+};
+function initPad(){
+  const cv = $('#sigpad'); if(!cv || drawing) return;
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+  if(cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
+  padCtx = cv.getContext('2d');
+  padCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  /* Die Unterschrift bleibt blau: eine mit Königsblau geleistete Unterschrift
+     ist auch im Ausdruck als Original erkennbar. Die einzige Farbe der App. */
+  padCtx.lineWidth = 2.2; padCtx.lineCap = 'round'; padCtx.lineJoin = 'round'; padCtx.strokeStyle = '#4169E1';
+  /* Was übernommen wurde, wird wieder eingezeichnet – auch im ausgegrauten
+     Zustand, sonst stünde die Unterschrift in den Daten, aber nicht im Bild. */
+  padCtx.clearRect(0, 0, r.width, r.height);
+  const d = offen ? DAT[offen] : null;
+  if(d && d.signatur){
+    const img = new Image();
+    img.onload = () => padCtx.drawImage(img, 0, 0, r.width, r.height);
+    img.src = d.signatur;
+  }
+}
+(function bindPad(){
+  const cv = $('#sigpad');
+  const xy = p => { const r = cv.getBoundingClientRect(); return [p.clientX - r.left, p.clientY - r.top]; };
+  const start = p => { if(!padCtx) return; drawing = true; gezeichnet = true;
+    const [x, y] = xy(p); padCtx.beginPath(); padCtx.moveTo(x, y); };
+  const move  = p => { if(!drawing || !padCtx) return; const [x, y] = xy(p); padCtx.lineTo(x, y); padCtx.stroke(); };
+  const end   = () => { if(!drawing) return; drawing = false; };
+  cv.addEventListener('touchstart', e => { if(e.cancelable) e.preventDefault(); start(e.touches[0]); }, {passive:false});
+  cv.addEventListener('touchmove',  e => { if(e.cancelable) e.preventDefault(); move(e.touches[0]);  }, {passive:false});
+  ['touchend','touchcancel'].forEach(t => cv.addEventListener(t, end));
+  cv.addEventListener('mousedown', start);
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+})();
+window.addEventListener('resize', () => { if(current === 'nachweis') initPad(); });
+
+/* ---------- Einstellungen ---------- */
+function renderSettings(){
+  $('#setObjekt').value  = CFG.objekt  || '';
+  $('#setPruefer').value = CFG.pruefer || '';
+  $('#setNachweise').innerHTML = NACHWEISE.filter(n => !n.spaeter).map(n => {
+    // (Aufbau je Nachweis; der Rücksetzknopf wird unten angebunden)
+    const t = teilCfg(n.k);
+    const kopf = `<div class="name" style="font-weight:600;margin-bottom:10px">${esc(n.label)}</div>`;
+    if(n.art === 'medien') return `<div class="card">${kopf}
+      <p class="muted small" style="margin:-4px 0 10px">Eine Zählstelle je Zeile: Partei ; Medium ; Zählernummer ; Ort ; Einheit. Ort und Einheit dürfen fehlen; Wasser rechnet immer in m³, Strom und Wärme in kWh, sofern nicht MWh danebensteht. Die Ablesereihenfolge stellst du beim Ablesen mit den Pfeilen ein.</p>
+      <label class="field"><span>Zählstellen</span>
+        <textarea data-set="stellen" data-k="${n.k}" style="min-height:200px">${esc((t.stellen || []).join('\n'))}</textarea></label>
+      <div class="eyebrow" style="margin-top:4px">Zählertausch</div>
+      <p class="muted small" style="margin:-4px 0 10px">Zähler anhaken, neue Nummer eintragen, übernehmen. Für die getauschten Zähler wird der Stand des Vorquartals verworfen – der neue beginnt bei null, der Verbrauch erscheint wieder mit der übernächsten Ablesung. Alle anderen bleiben unberührt.</p>
+      <div id="tauschListe">${medienNamenListe()}</div>
+      <p class="muted small" style="margin:10px 0 0">Der Tausch wird mit „Speichern“ unten übernommen – mit einer Rückfrage, die noch einmal auflistet, was vermerkt wird.</p>
+      <div class="eyebrow" style="margin-top:14px">Alles zurücksetzen</div>
+      <button class="btn ghost klein" id="btnMedReset">Ablesewerte zurücksetzen</button>
+      <p class="muted small" style="margin:8px 0 0">Löscht die laufende Ablesung und die gemerkten Stände sämtlicher Zähler. Für einen einzelnen Zählertausch ist das der zu große Hammer – dafür ist die Auswahl darüber da.</p>
+    </div>`;
+    if(n.art === 'sprinkler') return `<div class="card">${kopf}
+      <p class="muted small" style="margin:-4px 0 10px">Ein Punkt, dessen Text auf „(bar)“ endet, bekommt ein Zahlenfeld statt der Zustandswahl.</p>
+      <label class="field"><span>Wöchentliche Punkte (einer je Zeile)</span>
+        <textarea data-set="woch" data-k="${n.k}" style="min-height:120px">${esc(t.woch.join('\n'))}</textarea></label>
+      <label class="field" style="margin-bottom:0"><span>Monatliche Punkte (einer je Zeile)</span>
+        <textarea data-set="mon" data-k="${n.k}" style="min-height:100px">${esc(t.mon.join('\n'))}</textarea></label>
+    </div>`;
+    return `<div class="card">${kopf}
+      <label class="field"><span>Anlagen (eine je Zeile)</span>
+        <textarea data-set="anlagen" data-k="${n.k}" style="min-height:120px">${esc(t.anlagen.join('\n'))}</textarea></label>
+      <label class="field" style="margin-bottom:0"><span>Checkliste</span>
+        <textarea data-set="check" data-k="${n.k}">${esc(t.checkliste)}</textarea></label>
+    </div>`;
+  }).join('');
+  const rs = $('#btnMedReset');
+  if(rs) rs.onclick = medienZuruecksetzen;
+  /* Das Nummernfeld öffnet sich erst mit dem Haken – so ist auf einen Blick zu
+     sehen, welche Zähler wirklich gemeint sind. */
+  $$('#tauschListe .tausch').forEach(r => {
+    const an = r.querySelector('[data-an]'), felder = r.querySelector('.felder');
+    an.onchange = () => {
+      felder.hidden = !an.checked;
+      if(an.checked){
+        r.querySelector('[data-datum]').value = heute();
+        r.querySelector('[data-nr]').focus();
+      }
+    };
+  });
+}
+/* --- Zählertausch -----------------------------------------------------------
+   26 Zähler werden nie gemeinsam getauscht. Deshalb eine Auswahl: anhaken, neue
+   Nummer eintragen, übernehmen. Betroffen ist nur, was angehakt ist.
+
+   Der Schlüssel einer Zählstelle enthält die Zählernummer – mit der neuen Nummer
+   entsteht also ein neuer Schlüssel. Der Stand des Vorquartals gehört zum alten
+   Zähler und wird verworfen; die Ablesereihenfolge wird auf den neuen Schlüssel
+   umgeschrieben, damit der Zähler an seinem Platz im Weg bleibt. */
+function medienNamenListe(){
+  const namen = medienNamen();
+  return stellen().map(z => `<div class="tausch" data-zeile="${z.zeile}" data-key="${esc(z.key)}">
+      <label class="wer"><input type="checkbox" data-an="1">
+        <span>${esc(z.partei)} · ${esc(namen[z.key] || z.medium)}
+          <span class="muted small">· bisher ${esc(z.nr || '–')}</span></span></label>
+      <div class="felder" hidden>
+        <label class="field"><span>Wechsel am</span><input type="date" data-datum="1" class="schmal"></label>
+        <label class="field"><span>Neue Zählernummer</span><input type="text" data-nr="1"></label>
+        <div class="row">
+          <label class="field" style="margin:0"><span>Ausbaustand alt (${esc(z.einheit)})</span>
+            <input inputmode="decimal" data-aus="1"></label>
+          <label class="field" style="margin:0"><span>Einbaustand neu (${esc(z.einheit)})</span>
+            <input inputmode="decimal" data-ein="1" placeholder="0"></label>
+        </div>
+      </div>
+    </div>`).join('');
+}
+/* Was in der Tauschliste angehakt und ausgefüllt ist – ohne es schon
+   anzuwenden. So kann sowohl "Tausch übernehmen" als auch das Speichern der
+   Einstellungen darauf zugreifen. */
+function tauschSammeln(){
+  const voll = [], unvoll = [];
+  $$('#tauschListe .tausch').forEach(r => {
+    if(!r.querySelector('[data-an]').checked) return;
+    const feld = q => r.querySelector(q).value.trim();
+    const neu = feld('[data-nr]');
+    const wer = r.querySelector('.wer span').textContent.trim();
+    if(neu) voll.push({key:r.dataset.key, neu, wer,
+                       datum:feld('[data-datum]') || heute(),
+                       aus:feld('[data-aus]'), ein:feld('[data-ein]') || '0'});
+    else unvoll.push(wer);
+  });
+  return {voll, unvoll};
+}
+/* Gesucht wird über den Schlüssel, nicht über die Zeilennummer: wer zwischendurch
+   die Liste bearbeitet hat, verschiebt sonst den falschen Eintrag. */
+const zeileFuerKey = key => teilCfg('medien').stellen
+  .findIndex(z => stelleLesen(z).key === key);
+function tauschAnwenden(dran){
+  const t = teilCfg('medien'), d = DAT.medien;
+  let getan = 0;
+  dran.forEach(x => {
+    const zi = zeileFuerKey(x.key);
+    if(zi < 0) return;
+    getan++;
+    const alt = stelleLesen(t.stellen[zi]);
+    t.stellen[zi] = nummerErsetzen(t.stellen[zi], x.neu);
+    const neuStelle = stelleLesen(t.stellen[zi]);
+    /* Was für die Abrechnung zählt, wandert in den Vermerk: der Stand des
+       Vorquartals gehört zum alten Zähler und wird dort aufgehoben. */
+    TAUSCH.push({key:x.key, neuKey:neuStelle.key, partei:alt.partei, medium:alt.medium,
+                 altNr:alt.nr, neuNr:x.neu, einheit:neuStelle.einheit,
+                 datum:x.datum, aus:x.aus, ein:x.ein,
+                 vor:(MED_ALT[x.key] || {}).stand || ''});
+    delete MED_ALT[x.key];
+    /* Der Einbaustand ist der Ausgangswert des neuen Zählers – daraus entsteht
+       sein Verbrauch bis zum Quartalsende. */
+    MED_ALT[neuStelle.key] = {stand:x.ein, datum:x.datum};
+    if(d && d.stand){ d.stand[neuStelle.key] = d.stand[x.key] || ''; delete d.stand[x.key]; }
+    const i = (t.folge || []).indexOf(x.key);    // Platz im Ableseweg behalten
+    if(i >= 0) t.folge[i] = neuStelle.key;
+  });
+  saveCfg(); saveAlt(); saveDat(); saveTausch();
+  return getan;
+}
+
+/* Die Wechsel eines Quartals – maßgeblich ist das Wechseldatum, nicht wann es
+   eingetragen wurde. Wird der Tausch erst nach der Ablesung erfasst, wandert er
+   dadurch von selbst ins richtige Protokoll. */
+const tauscheIm = quartal => TAUSCH.filter(x => quartalVon(x.datum) === quartal);
+/* Das Zurücksetzen wirkt sofort, nicht erst mit "Speichern" – es ist kein
+   Einstellwert, sondern ein Eingriff in die Daten. Deshalb auch die Rückfrage. */
+function medienZuruecksetzen(){
+  frage('Ablesewerte zurücksetzen',
+    'Laufende Ablesung, die gemerkten Stände des Vorquartals und die vermerkten '
+    + 'Zählerwechsel werden gelöscht.\n\nDer Verbrauch wird danach erst mit der '
+    + 'übernächsten Ablesung wieder ausgewiesen.',
+    'Löschen', zuruecksetzenAusfuehren);
+}
+function zuruecksetzenAusfuehren(){
+  delete DAT.medien; saveDat();
+  Object.keys(MED_ALT).forEach(x => delete MED_ALT[x]);   // an Ort und Stelle leeren
+  saveAlt();
+  TAUSCH.length = 0; saveTausch();
+  delete EXP.medien; saveExp();
+  toast('Ablesewerte zurückgesetzt');
+}
+/* --- Umbenennen ------------------------------------------------------------
+   Am Namen hängen die Stelle im Grundriss und das bereits Erfasste. Wer eine
+   Tür von "Tür 1" auf "Tür 1, Erdgeschoss, Gang neben Treppenhaus" ändert, will
+   beides behalten. Erkannt wird am Platz in der Liste: bleibt deren Länge
+   gleich, gilt ein geänderter Eintrag an derselben Stelle als Umbenennung.
+   Ändert sich auch die Zahl der Einträge, lässt sich nicht mehr sicher sagen,
+   was wohin gehört – dann bleibt alles, wie es ist. */
+function anlagenUmbenennen(k, alt, neu){
+  if(alt.length !== neu.length) return 0;
+  const d = DAT[k]; let n = 0;
+  alt.forEach((a, i) => {
+    const b = neu[i];
+    if(a === b) return;
+    const va = k + '|' + a, vb = k + '|' + b;
+    if(CFG.orte[va]){ CFG.orte[vb] = CFG.orte[va]; delete CFG.orte[va]; }
+    if(d && d.zeilen && d.zeilen[a]){ d.zeilen[b] = d.zeilen[a]; delete d.zeilen[a]; }
+    n++;
+  });
+  if(n) saveDat();
+  return n;
+}
+/* Dasselbe für die Zählstellen: hier hängt am Schlüssel zusätzlich der Stand des
+   Vorquartals und der Platz im Ableseweg. Die Zählernummer wird über den
+   Zählertausch geändert, nicht hier – aber eine Partei kann umziehen. */
+function stellenUmbenennen(alt, neu){
+  if(alt.length !== neu.length) return 0;
+  const t = teilCfg('medien'), d = DAT.medien; let n = 0;
+  alt.forEach((za, i) => {
+    const ka = stelleLesen(za).key, kb = stelleLesen(neu[i]).key;
+    if(ka === kb) return;
+    if(CFG.orte[ka]){ CFG.orte[kb] = CFG.orte[ka]; delete CFG.orte[ka]; }
+    if(MED_ALT[ka]){ MED_ALT[kb] = MED_ALT[ka]; delete MED_ALT[ka]; }
+    if(d && d.stand && d.stand[ka] != null){ d.stand[kb] = d.stand[ka]; delete d.stand[ka]; }
+    const j = (t.folge || []).indexOf(ka);
+    if(j >= 0) t.folge[j] = kb;
+    n++;
+  });
+  if(n){ saveDat(); saveAlt(); }
+  return n;
+}
+function settingsSichern(){
+  CFG.objekt  = $('#setObjekt').value.trim();
+  CFG.pruefer = $('#setPruefer').value.trim();
+  $$('#setNachweise [data-set]').forEach(el => {
+    const t = teilCfg(el.dataset.k), art = el.dataset.set;
+    if(art === 'check'){ t.checkliste = el.value; return; }
+    const neu = el.value.split('\n').map(s => s.trim()).filter(Boolean);
+    if(!neu.length) return;
+    const feld = art === 'anlagen' ? 'anlagen' : art;
+    const vorher = (t[feld] || []).slice();
+    if(feld === 'anlagen') anlagenUmbenennen(el.dataset.k, vorher, neu);
+    if(feld === 'stellen') stellenUmbenennen(vorher, neu);
+    t[feld] = neu;
+  });
+  /* Ein angehakter Zählertausch wird beim Speichern mit ausgeführt – erst nach
+     den Textfeldern, damit er auf der gerade gesicherten Liste arbeitet. Weil
+     ein Tausch den Stand des Vorquartals verwirft, wird vorher gefragt und
+     aufgelistet, was vermerkt wird. Ist ein Haken gesetzt, aber keine Nummer
+     eingetragen, wäre der Vorgang stillschweigend verloren – auch das kommt zur
+     Sprache, statt es geschehen zu lassen. */
+  saveCfg();                                  // die Textfelder sind damit sicher
+  const {voll, unvoll} = tauschSammeln();
+  const fertig = n => {
+    toast(n ? `Gespeichert, ${n} Zähler getauscht` : 'Einstellungen gespeichert');
+    go('home', false); stack = [];
+  };
+  const tauschFragen = () => {
+    if(!voll.length){ fertig(0); return; }
+    frage('Zählertausch vermerken',
+      'Folgende Zähler werden als getauscht vermerkt:\n\n'
+      + voll.map(x => `• ${x.wer}\n   neue Nummer ${x.neu}, Wechsel am ${dText(x.datum)}`).join('\n')
+      + '\n\nDer Stand des Vorquartals wird dabei verworfen; gerechnet wird ab dem Einbaustand.',
+      'Vermerken', () => { const n = tauschAnwenden(voll); saveCfg(); fertig(n); });
+  };
+  /* Ein Haken ohne neue Nummer ginge sonst stillschweigend verloren. */
+  if(unvoll.length){
+    frage('Neue Nummer fehlt',
+      `Bei ${unvoll.length === 1 ? 'einem angehakten Zähler' : unvoll.length + ' angehakten Zählern'} fehlt die neue Nummer:\n\n`
+      + unvoll.map(w => '• ' + w).join('\n')
+      + '\n\nOhne Nummer lässt sich der Tausch nicht vermerken. Die Einstellungen sind gespeichert.',
+      'Trotzdem weiter', tauschFragen);
+    return;
+  }
+  tauschFragen();
+}
+
+/* --- Grundrisse -------------------------------------------------------------
+   Verwaltung in den Einstellungen: hinzufügen, benennen, ansehen, löschen. Die
+   Namen stehen bei den Bildern selbst, nicht in den Einstellungen – so bleibt
+   alles zum Plan an einer Stelle. */
+async function renderPlaene(){
+  const box = $('#planListe'); if(!box) return;
+  let liste = [];
+  try{ liste = (await Bilder.alle()) || []; }
+  catch(e){ box.innerHTML = `<p class="muted small">Bilderspeicher nicht verfügbar.</p>`; return; }
+  liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
+  box.innerHTML = liste.length ? liste.map(pl => `<div class="plan" data-id="${esc(pl.id)}">
+      <span class="wer"><input type="text" data-name="1" value="${esc(pl.name)}" aria-label="Name"></span>
+      <button class="btn" data-sehen="1">Ansehen</button>
+      <button class="btn danger" data-weg="1">Löschen</button>
+    </div>`).join('') : `<p class="muted small">Noch kein Grundriss hinterlegt.</p>`;
+  $$('#planListe .plan').forEach(r => {
+    const id = r.dataset.id;
+    r.querySelector('[data-name]').onchange = async e => {
+      const pl = await Bilder.get(id);
+      if(pl){ pl.name = e.target.value.trim() || pl.name; await Bilder.put(pl); }
+    };
+    r.querySelector('[data-sehen]').onclick = () => {
+      planListe = [];                         // von hier aus wird nicht gewechselt
+      planZeigen(id, null);
+    };
+
+    r.querySelector('[data-weg]').onclick = () => frage('Grundriss löschen',
+      'Der Plan wird aus dem Gerät entfernt.', 'Löschen',
+      async () => { await Bilder.weg(id); await quellenAufraeumen();
+                    toast('Gelöscht'); renderPlaene(); });
+  });
+}
+/* Eine PDF trägt oft mehrere Etagen und damit mehrere Pläne. Sie darf deshalb
+   erst weg, wenn die letzte Seite gelöscht ist. */
+async function quellenAufraeumen(){
+  try{
+    const plaene  = (await Bilder.alle()) || [];
+    const quellen = (await Bilder.quellenAlle()) || [];
+    const gebraucht = new Set(plaene.map(p => p.quelle).filter(Boolean));
+    for(const q of quellen) if(!gebraucht.has(q.id)) await Bilder.quelleWeg(q.id);
+  }catch(e){ /* ohne Aufräumen liegt eben eine Quelle zu viel herum */ }
+}
+let planUrl = null, planZiel = null;      // planZiel: Schlüssel der Sache, die verortet wird
+async function planBild(id){
+  const pl = await Bilder.get(id);
+  const b = planBlob(pl);
+  if(!pl || !b || !b.size) return null;
+  if(planUrl) URL.revokeObjectURL(planUrl);
+  planUrl = URL.createObjectURL(b);
+  return pl;
+}
+/* --- Bewegung im Grundriss --------------------------------------------------
+   Abgeschaut bei der SF E-Plan, wo sich das Zoomen butterweich anfuehlt. Der
+   Kern dort: der Bildlauf des Browsers wird gar nicht benutzt. Die App fuehrt
+   drei Zahlen mit - Verschiebung x, y und Vergroesserung m - und setzt sie
+   einmal je Bildaufbau. Vorher rechnete hier jeder einzelne Fingerimpuls die
+   Bildhoehe neu; Safari musste dann Layout und Rasterung wiederholen, und genau
+   davon kam das Ruckeln.
+
+   Uebertragen heisst das: ein einziges transform auf der Planebene. Das laeuft
+   auf der Grafikeinheit, ohne Layout und ohne neues Rastern. Das Bild wird
+   dabei beim Hineingehen fuer einen Moment weich - scharf wird es wieder,
+   sobald die Finger ruhen und der Ausschnitt aus der PDF nachgezeichnet ist.
+   Das ist der bewusste Tausch: weiche Bewegung statt scharfer Einzelbilder. */
+const PLAN_ZOOM_MAX = 6;
+let sicht = {x:0, y:0, m:1};      // Verschiebung in CSS-Pixeln, m = 1 ist eingepasst
+let basisB = 0, basisH = 0;       // Masse der Planebene bei m = 1
+
+/* Die Ebene traegt Bild, scharfe Auflage und Marken zugleich - eine
+   Verschiebung, ein Massstab, alles bleibt deckungsgleich. --gegen halten die
+   Marken auf ihrer Groesse, sonst wuechsen sie beim Zoomen mit. */
+function sichtAnwenden(){
+  const box = $('#planBox'); if(!box) return;
+  box.style.transform = `translate3d(${sicht.x}px, ${sicht.y}px, 0) scale(${sicht.m})`;
+  box.style.setProperty('--gegen', 1 / sicht.m);
+}
+/* Nur einmal je Bild setzen, nicht je Fingerimpuls. */
+let zeichenAuftrag = false;
+function neuZeichnen(){
+  if(zeichenAuftrag) return;
+  zeichenAuftrag = true;
+  requestAnimationFrame(() => { zeichenAuftrag = false; sichtAnwenden(); });
+}
+/* Kleiner als eingepasst wird nicht, und aus dem Bild geschoben auch nicht.
+   Was in eine Richtung ganz hineinpasst, steht dort mittig. */
+function sichtBegrenzen(){
+  const wrap = $('#planWrap'); if(!wrap || !basisB) return;
+  sicht.m = Math.max(1, Math.min(PLAN_ZOOM_MAX, sicht.m));
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  const bw = basisB * sicht.m, bh = basisH * sicht.m;
+  sicht.x = bw <= W ? (W - bw) / 2 : Math.min(0, Math.max(W - bw, sicht.x));
+  sicht.y = bh <= H ? (H - bh) / 2 : Math.min(0, Math.max(H - bh, sicht.y));
+}
+/* Die Masse der Ebene bei m = 1: der Plan fuellt die Hoehe des Rahmens und
+   laeuft in der Breite darueber hinaus. */
+function planMasse(){
+  const wrap = $('#planWrap'), box = $('#planBox');
+  const bild = box && box.querySelector('img');
+  if(!wrap || !bild || !bild.naturalWidth) return false;
+  basisH = wrap.clientHeight;
+  basisB = basisH * (bild.naturalWidth / bild.naturalHeight);
+  box.style.width  = basisB + 'px';
+  box.style.height = basisH + 'px';
+  sichtBegrenzen(); sichtAnwenden();
+  return true;
+}
+/* Um einen Punkt zoomen: was unter "von" lag, liegt danach unter "nach".
+   Zoomen und Mitschieben sind damit ein Vorgang, nicht zwei. */
+function zoomen(f, von, nach){
+  const vorher = sicht.m;
+  sicht.m = Math.max(1, Math.min(PLAN_ZOOM_MAX, sicht.m * f));
+  const wirklich = sicht.m / vorher;
+  sicht.x = nach.x - (von.x - sicht.x) * wirklich;
+  sicht.y = nach.y - (von.y - sicht.y) * wirklich;
+  sichtBegrenzen();
+}
+/* Der Plan bekommt die volle verfuegbare Hoehe: Unterkante Bildschirm, Oberkante
+   dort, wo der Platz beginnt. Gerechnet wird bei jeder Anzeige neu, weil die
+   Zeile darueber mal laenger und mal kuerzer ist. Abgerundet und ohne Reserve -
+   jede Reserve stuende als heller Streifen unter dem Plan. */
+function planHoehe(){
+  const wrap = $('#planWrap'); if(!wrap || current !== 'plan') return;
+  const oben = wrap.getBoundingClientRect().top + window.scrollY;
+  const hoch = Math.max(200, Math.floor(window.innerHeight - oben));
+  wrap.style.height = hoch + 'px';
+  planMasse();
+}
+window.addEventListener('resize', planHoehe);
+
+/* --- Die Geste selbst -------------------------------------------------------
+   Zeigerereignisse statt Beruehrungsereignisse: mit Zeigerfang geht kein Finger
+   verloren, und Maus und Finger laufen ueber denselben Weg. Der Bezug fuers
+   Kneifen wird bei JEDEM Bild neu gesetzt, nicht am Gestenanfang - hebt ein
+   Finger ab oder kommt einer dazu, wird nur der Bezug nachgezogen statt die
+   Geste abzubrechen. Daher kommt die Ruhe: es gibt keinen Sprung. */
+const TIPP_SCHWELLE = 6;          // ab hier gilt es als Wischen, nicht als Tipp
+let planTippen = null;            // wird beim Aufbau der Ansicht gesetzt
+(function gesteBinden(){
+  const wrap = $('#planWrap'); if(!wrap) return;
+  const zeiger = new Map();
+  let zieht = false, bewegt = false, rahmen = null;
+  let letzterX = 0, letzterY = 0, startX = 0, startY = 0;
+  let kneifAbstand = 0, kneifMitte = null;
+  let vx = 0, vy = 0, schwungId = 0;
+
+  const imRahmen = () => [...zeiger.values()].map(p => ({x:p.x - rahmen.left, y:p.y - rahmen.top}));
+  function bezugNeu(){
+    const pk = imRahmen();
+    if(pk.length >= 2){
+      kneifAbstand = Math.hypot(pk[0].x - pk[1].x, pk[0].y - pk[1].y);
+      kneifMitte   = {x:(pk[0].x + pk[1].x) / 2, y:(pk[0].y + pk[1].y) / 2};
+    }else{ kneifAbstand = 0; kneifMitte = null; }
+    if(pk.length === 1){ letzterX = pk[0].x + rahmen.left; letzterY = pk[0].y + rahmen.top; }
+  }
+  /* Nachlauf beim Loslassen: der Plan gleitet aus, statt zu stehen wie
+     angenagelt. Am Anschlag wird die Richtung sofort still. */
+  function schwung(){
+    cancelAnimationFrame(schwungId);
+    const schritt = () => {
+      vx *= 0.92; vy *= 0.92;
+      if(Math.hypot(vx, vy) < 0.15){ scharfSpaeter(); return; }
+      const vorX = sicht.x, vorY = sicht.y;
+      sicht.x += vx; sicht.y += vy;
+      sichtBegrenzen();
+      if(sicht.x === vorX) vx = 0;
+      if(sicht.y === vorY) vy = 0;
+      sichtAnwenden();
+      schwungId = requestAnimationFrame(schritt);
+    };
+    schwungId = requestAnimationFrame(schritt);
+  }
+
+  wrap.addEventListener('pointerdown', ev => {
+    cancelAnimationFrame(schwungId); vx = vy = 0;
+    wrap.setPointerCapture(ev.pointerId);
+    rahmen = wrap.getBoundingClientRect();
+    zeiger.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
+    zieht = true;
+    if(zeiger.size === 1){ bewegt = false; startX = ev.clientX; startY = ev.clientY; }
+    bezugNeu();
+  });
+
+  wrap.addEventListener('pointermove', ev => {
+    if(!zieht || !zeiger.has(ev.pointerId)) return;
+    zeiger.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
+
+    if(zeiger.size >= 2){                     // kneifen
+      bewegt = true;
+      const pk = imRahmen();
+      const abstand = Math.hypot(pk[0].x - pk[1].x, pk[0].y - pk[1].y);
+      const mitte = {x:(pk[0].x + pk[1].x) / 2, y:(pk[0].y + pk[1].y) / 2};
+      if(kneifAbstand > 0 && abstand > 0)
+        zoomen(Math.max(0.5, Math.min(2, abstand / kneifAbstand)), kneifMitte, mitte);
+      kneifAbstand = abstand; kneifMitte = mitte;
+      vx = vy = 0;
+      neuZeichnen();
+      return;
+    }
+
+    /* Geschoben wird ab dem ersten Pixel – eine tote Zone am Anfang fuehlt sich
+       zaeh an. Ob es ein Tipp war, entscheidet der Abstand zum Startpunkt. */
+    const dx = ev.clientX - letzterX, dy = ev.clientY - letzterY;
+    if(Math.abs(ev.clientX - startX) > TIPP_SCHWELLE ||
+       Math.abs(ev.clientY - startY) > TIPP_SCHWELLE) bewegt = true;
+    sicht.x += dx; sicht.y += dy;
+    sichtBegrenzen();
+    /* Geglaettet, damit ein einzelner Ruckler den Nachlauf nicht bestimmt. */
+    vx = vx * 0.7 + dx * 0.3; vy = vy * 0.7 + dy * 0.3;
+    letzterX = ev.clientX; letzterY = ev.clientY;
+    neuZeichnen();
+  });
+
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(n =>
+    wrap.addEventListener(n, ev => {
+      if(!zeiger.has(ev.pointerId)) return;
+      zeiger.delete(ev.pointerId);
+      if(zeiger.size){ bezugNeu(); return; }   // ein Finger liegt noch auf
+      zieht = false; kneifAbstand = 0; kneifMitte = null;
+      if(n !== 'pointerup'){ vx = vy = 0; scharfSpaeter(); return; }
+      if(!bewegt){
+        /* Ein Tipp - selbst behandelt statt ueber click: mit touch-action:none
+           waere ein nachgereichtes click-Ereignis nicht verlaesslich. */
+        vx = vy = 0;
+        if(planTippen) planTippen(ev);
+        scharfSpaeter();
+        return;
+      }
+      if(Math.hypot(vx, vy) > 1.5) schwung(); else scharfSpaeter();
+    }));
+})();
+
+/* --- Scharf nachzeichnen ----------------------------------------------------
+   Das gespeicherte Bild ist die Grundlage: es ist sofort da und in jeder Lage
+   brauchbar. Wer aber tiefer als zweifach hineingeht, sieht dessen Körnung –
+   ein Bild hat nun einmal eine feste Auflösung. Deshalb wird ab da der sichtbare
+   Ausschnitt aus der PDF neu gezeichnet und deckungsgleich darüber gelegt.
+   Vektoren kennen keine Auflösung: das bleibt scharf, so tief man auch geht.
+
+   Gerechnet wird immer nur der Ausschnitt, nie der ganze Plan – ein paar
+   Millionen Pixel statt einiger hundert. Ringsum ein Viertel Zugabe, damit
+   kleines Wischen nicht sofort neu rechnet. */
+const SCHARF_AB   = 2;        // ab dieser Zoomstufe wird nachgezeichnet
+const SCHARF_LUFT = 0.25;     // Zugabe ringsum, in Anteilen des Ausschnitts
+const SCHARF_MAX  = 16e6;     // Sicherheitsgrenze, weit unter Safaris Canvas-Grenze
+let scharfPlan = null;        // der gerade gezeigte Plan, wenn er eine PDF hat
+let scharfUhr = null, scharfLauf = 0, scharfDoc = {id:null, doc:null};
+
+function scharfWeg(){
+  const alt = $('#planBox canvas.scharf');
+  if(alt){ canvasFrei(alt); alt.remove(); }
+}
+function scharfSpaeter(){
+  clearTimeout(scharfUhr);
+  if(!scharfPlan) return;
+  scharfUhr = setTimeout(scharfZeichnen, 250);
+}
+async function scharfDocHolen(qid, lib){
+  if(scharfDoc.id === qid && scharfDoc.doc) return scharfDoc.doc;
+  const q = await Bilder.quelleGet(qid);
+  if(!q || !q.daten) return null;
+  /* pdf.js nimmt den Puffer an sich – deshalb eine eigene Kopie übergeben. */
+  const doc = await lib.getDocument({data:new Uint8Array(q.daten).slice(0)}).promise;
+  scharfDoc = {id:qid, doc};
+  return doc;
+}
+async function scharfZeichnen(){
+  const wrap = $('#planWrap'), box = $('#planBox');
+  const bild = box && box.querySelector('img');
+  if(!wrap || !bild || !scharfPlan || current !== 'plan') return;
+  if(sicht.m < SCHARF_AB){ scharfWeg(); return; }
+
+  const bw = basisB * sicht.m, bh = basisH * sicht.m;
+  if(!bw || !bh) return;
+  /* Sichtbarer Ausschnitt in Anteilen der Ebene, mit Zugabe. Die Lage steht im
+     Sichtzustand, nicht mehr im Bildlauf. */
+  let x = -sicht.x / bw, y = -sicht.y / bh;
+  let w = Math.min(1, wrap.clientWidth / bw), h = Math.min(1, wrap.clientHeight / bh);
+  x = Math.max(0, x - w * SCHARF_LUFT); y = Math.max(0, y - h * SCHARF_LUFT);
+  w = Math.min(1 - x, w * (1 + 2 * SCHARF_LUFT));
+  h = Math.min(1 - y, h * (1 + 2 * SCHARF_LUFT));
+  if(w <= 0 || h <= 0) return;
+
+  const lauf = ++scharfLauf;
+  let lib;
+  try{ lib = await pdfLib(); }catch(e){ return; }      // kein Netz, kein Ärger
+  if(lauf !== scharfLauf) return;
+  let doc;
+  try{ doc = await scharfDocHolen(scharfPlan.quelle, lib); }catch(e){ return; }
+  if(!doc || lauf !== scharfLauf) return;
+
+  try{
+    const seite = await doc.getPage(scharfPlan.seite || 1);
+    if(lauf !== scharfLauf) return;
+    const roh = seite.getViewport({scale:1});
+    /* Das Bild zeigt nur den beschnittenen Teil der Seite: der Ausschnitt muss
+       erst in Anteile der ganzen Rohseite umgerechnet werden. */
+    const r  = scharfPlan.rahmen || {x:0, y:0, w:1, h:1};
+    const rx = (r.x + x * r.w) * roh.width,  ry = (r.y + y * r.h) * roh.height;
+    const rw = w * r.w * roh.width,          rh = h * r.h * roh.height;
+
+    const px = Math.min(3, window.devicePixelRatio || 1);
+    let s = (w * bw * px) / rw;                        // Bildschirmauflösung des Ausschnitts
+    const flaeche = rw * s * rh * s;
+    if(flaeche > SCHARF_MAX) s *= Math.sqrt(SCHARF_MAX / flaeche);
+    const cw = Math.max(1, Math.round(rw * s)), ch = Math.max(1, Math.round(rh * s));
+
+    const c = document.createElement('canvas');
+    c.width = cw; c.height = ch;
+    const ctx = c.getContext('2d');
+    if(!ctx){ canvasFrei(c); return; }                 // Speicherkonto voll
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cw, ch);
+    await seite.render({canvasContext:ctx,
+      viewport:seite.getViewport({scale:s, offsetX:-rx * s, offsetY:-ry * s})}).promise;
+    if(lauf !== scharfLauf || current !== 'plan'){ canvasFrei(c); return; }
+
+    c.className = 'scharf';
+    c.style.left = (x * 100) + '%';  c.style.top    = (y * 100) + '%';
+    c.style.width = (w * 100) + '%'; c.style.height = (h * 100) + '%';
+    scharfWeg();
+    box.appendChild(c);
+    markenZeichnen(scharfPlan.id, planZiehen);         // Marken bleiben obenauf
+  }catch(e){ /* ein misslungener Ausschnitt lässt einfach das Grundbild stehen */ }
+}
+
+/* Alle Marken neu zeichnen: die eigene pulsend, die übrigen der Kategorie
+   still. So sieht man beim Verorten zugleich, was ringsum schon eingetragen
+   ist – und setzt den Punkt nicht versehentlich auf einen Nachbarn. */
+function markenZeichnen(planId, ziehen){
+  const box = $('#planBox'); if(!box) return;
+  box.querySelectorAll('.marke').forEach(m => m.remove());
+  const eigen = planZiel ? (CFG.orte[planZiel.key] || {}) : {};
+  const punkt = (x, y, klassen) => {
+    const m = document.createElement('div');
+    m.className = 'marke ' + klassen;
+    m.style.left = (x * 100) + '%';
+    m.style.top  = (y * 100) + '%';
+    box.appendChild(m);
+  };
+  if(planZiel) andereOrte(planId, planZiel.key).forEach(o => punkt(o.x, o.y, 'andere'));
+  if(eigen.plan === planId && eigen.x != null)
+    punkt(eigen.x, eigen.y, ziehen ? 'zieh' : 'aktiv');
+}
+/* Was gehört zur selben Kategorie? Bei den Zählern alle übrigen Zählstellen,
+   sonst alles, dessen Schlüssel mit demselben Nachweis beginnt. */
+function andereOrte(planId, key){
+  const istZaehler = stellen().some(z => z.key === key);
+  const passt = k => k !== key && (CFG.orte[k] || {}).plan === planId &&
+    (istZaehler ? stellen().some(z => z.key === k)
+                : k.startsWith(String(key).split('|')[0] + '|'));
+  /* Der Schlüssel reist mit: er wird gebraucht, wenn jemand die Marke antippt
+     und wissen will, was dort steht. */
+  return Object.keys(CFG.orte).filter(passt).map(k => Object.assign({key:k}, CFG.orte[k]));
+}
+/* Wie heißt, was an dieser Stelle steht? Bei Zählern Partei und Zähler wie in
+   der Karte, sonst der Name der Anlage – der Nachweis steht schon im Schlüssel
+   und ist bei allen Nachbarn derselbe. */
+function ortName(key){
+  const z = stellen().find(s => s.key === key);
+  if(z) return `${z.partei} · ${medienNamen()[z.key] || z.medium}`;
+  const t = String(key).split('|');
+  return t.length > 1 ? t.slice(1).join('|') : String(key);
+}
+/* Ein Tipp auf eine fremde Marke öffnet ein kleines Fenster mit ihrem Namen.
+   Es hängt in Anteilen am Plan, sitzt also bei jeder Zoomstufe richtig, und
+   verschwindet beim nächsten Tipp irgendwo anders. */
+function tippWeg(){
+  const f = $('#planBox') && $('#planBox').querySelector('.planTipp');
+  if(f) f.remove();
+}
+function tippZeigen(o){
+  tippWeg();
+  const box = $('#planBox'); if(!box) return;
+  const f = document.createElement('div');
+  f.className = 'planTipp';
+  f.textContent = ortName(o.key);
+  f.style.left = (o.x * 100) + '%';
+  f.style.top  = (o.y * 100) + '%';
+  box.appendChild(f);
+}
+/* Zwei Aufgaben, eine Ansicht: nur ansehen (aus den Einstellungen) oder eine
+   Stelle festlegen (aus einer Karte heraus). Der Unterschied ist planZiel. */
+let planZiehen = false, streifenUhr = null, planAktuell = null, planListe = [];
+const MARKE_FANG = 16;        // wie nah ein Tipp an einer Marke liegen muss
+
+/* Gewechselt wird über den Knopf rechts in der Kopfzeile – ein Auswahlfeld über
+   dem Plan hätte eine ganze Zeile gekostet, und gewechselt wird selten. */
+function planWechseln(){
+  if(!planZiel || planListe.length < 2) return;
+  wahlFenster('Grundriss',
+    planListe.map(p => ({id:p.id, text:p.name, aktiv:p.id === planAktuell})),
+    w => { if(w.id !== planAktuell) planZeigen(w.id, planZiel); });
+}
+
+/* Steht die Stelle schon, soll man sie beim Öffnen gleich sehen und nicht erst
+   suchen: der Plan rückt so, dass die Marke mittig zwischen den Bildschirmrändern
+   liegt. Die Zoomstufe bleibt unberührt – man will erst den Zusammenhang sehen,
+   das Hineingehen kommt danach. In der Höhe gibt es bei voller Ansicht nichts zu
+   rücken; nach dem Zoomen wird auch dort mittig gestellt. */
+function planZurStelle(){
+  const wrap = $('#planWrap'), box = $('#planBox');
+  const bild = box && box.querySelector('img');
+  if(!wrap || !bild || !planZiel || !basisB) return;
+  const o = CFG.orte[planZiel.key];
+  if(!o || o.x == null || o.plan !== planAktuell) return;
+  /* Die Stelle soll in die Mitte des Sichtfensters: die Verschiebung ist genau
+     die halbe Fensterbreite minus die Lage der Stelle in der Ebene. Die Grenzen
+     fangen ab, wenn sie zu nah am Rand liegt. */
+  sicht.x = wrap.clientWidth  / 2 - o.x * basisB * sicht.m;
+  sicht.y = wrap.clientHeight / 2 - o.y * basisH * sicht.m;
+  sichtBegrenzen();
+  sichtAnwenden();
+}
+/* Der Streifen steht, solange er gebraucht wird, und blendet sich sonst nach
+   vier Sekunden aus – der Plan soll die Fläche haben, nicht der Hinweis. */
+function streifenZeigen(dauerhaft){
+  const s = $('#planStreifen');
+  clearTimeout(streifenUhr);
+  s.hidden = false; s.classList.remove('weg');
+  if(!dauerhaft) streifenUhr = setTimeout(() => s.classList.add('weg'), 4000);
+}
+async function planZeigen(id, ziel){
+  planZiel = ziel || null;
+  planZiehen = false;
+  planAktuell = id;
+  sicht = {x:0, y:0, m:1};                     // jeder Plan beginnt ganz
+  scharfWeg(); scharfPlan = null; tippWeg();
+  const pl = await planBild(id);
+  if(!pl){ toast('Plan nicht gefunden'); return; }
+  /* Erst die Ansicht, dann das Bild: planHoehe() rechnet nur, wenn die
+     Grundrissansicht schon die aktuelle ist. Gemalt wird ohnehin erst am Ende
+     dieses Durchlaufs, ein Zwischenbild sieht davon niemand. */
+  go('plan');
+  /* Links steht, wonach gesucht wird, rechts der Plan – beim bloßen Ansehen
+     trägt die linke Seite den Plannamen, sonst bliebe er ungenannt. */
+  $('#planName').textContent    = planZiel ? planZiel.titel : pl.name;
+  $('#planWelcher').textContent = planZiel ? pl.name : '';
+  $('#btnPlanWahl').classList.toggle('unsichtbar', !planZiel || planListe.length < 2);
+  scharfPlan = pl.quelle ? pl : null;
+  const box = $('#planBox');
+  box.classList.remove('bereit');             // verdeckt aufbauen
+  box.innerHTML = `<img src="${planUrl}" alt="${esc(pl.name)}">`;
+  /* Erst wenn das Bild da ist, steht seine Breite fest – vorher ließe sich nicht
+     rechnen, wohin gerückt werden muss. Sichtbar wird es danach, mit einem
+     kurzen Aufblenden statt eines Sprungs. */
+  const bild = box.querySelector('img');
+  const fertig = () => {
+    planHoehe(); planZurStelle();
+    box.classList.add('bereit');
+    scharfSpaeter();
+  };
+  bild.onload = fertig;
+  bild.onerror = fertig;                      // sonst bliebe die Ansicht leer
+  if(bild.complete && bild.naturalWidth) fertig();
+  const gesetzt = () => { const o = CFG.orte[planZiel.key] || {}; return o.plan === id && o.x != null; };
+  const hinweis = () => {
+    const kn = $('#btnPlanZieh'), s = $('#planStreifen');
+    if(!planZiel){ clearTimeout(streifenUhr); s.hidden = true; return; }
+    $('#planHinweis').textContent =
+        planZiehen ? 'Auf die neue Stelle tippen.'
+      : gesetzt()  ? 'Eingetragen.'
+                   : 'Auf die Stelle tippen, an der sich das Objekt befindet.';
+    kn.hidden = !gesetzt() || planZiehen;
+    /* Solange nichts steht, wird der Hinweis gebraucht – dann bleibt er. */
+    streifenZeigen(!gesetzt() || planZiehen);
+  };
+  hinweis();
+
+  const setzen = e => {
+    const bild = box.querySelector('img');
+    const r = bild.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    const y = Math.min(1, Math.max(0, (e.clientY - r.top)  / r.height));
+    CFG.orte[planZiel.key] = {plan:id, x, y};
+    saveCfg(); planZiehen = false;
+    markenZeichnen(id, false); hinweis(); toast('Stelle gemerkt');
+  };
+  /* Ein Tipp setzt nur, solange noch nichts eingetragen ist oder gerade
+     verschoben wird – sonst verrutschte die Stelle beim bloßen Nachsehen. */
+  /* Liegt der Tipp auf einer fremden Marke, will jemand wissen, was dort steht –
+     und nicht seinen eigenen Punkt daraufsetzen. Das Fenster geht deshalb vor,
+     auch solange noch nichts eingetragen ist. Wer wirklich dicht daneben setzen
+     muss, zoomt vorher hinein; dann liegen die Marken weit auseinander. */
+  const nachbarTreffer = e => {
+    const bild = box.querySelector('img'); if(!bild) return null;
+    const r = bild.getBoundingClientRect();
+    let nah = null, best = MARKE_FANG;
+    andereOrte(id, planZiel.key).forEach(o => {
+      const d = Math.hypot(e.clientX - (r.left + o.x * r.width),
+                           e.clientY - (r.top  + o.y * r.height));
+      if(d < best){ best = d; nah = o; }
+    });
+    return nah;
+  };
+  /* Der Tipp kommt jetzt aus der Geste (planTippen), nicht mehr aus click:
+     die App fuehrt die Bewegung selbst und weiss dadurch genau, ob gewischt
+     oder getippt wurde – die alte Sperre nach einer Zoomgeste entfaellt. */
+  planTippen = !planZiel ? null : e => {
+    const nachbar = nachbarTreffer(e);
+    if(nachbar){ tippZeigen(nachbar); return; }
+    tippWeg();
+    if(!gesetzt() || planZiehen) setzen(e);
+    else hinweis();                           // steht schon: Streifen zurückholen
+  };
+  /* Verschoben wird über den Knopf. Der lange Druck ist entfallen – er stritt
+     sich mit Safaris eigenem Menü und mit dem Zoomen, und der Knopf sagt
+     ohnehin deutlicher, was er tut. */
+  box.oncontextmenu = e => e.preventDefault();
+  $('#btnPlanZieh').onclick = () => {
+    planZiehen = true; markenZeichnen(id, true); hinweis();
+  };
+
+  markenZeichnen(id, false);
+  planHoehe();
+}
+/* Aus einer Karte heraus: gibt es mehrere Pläne, wird oben gewählt. */
+async function verorten(key, titel){
+  let liste = [];
+  try{ liste = (await Bilder.alle()) || []; }catch(e){}
+  if(!liste.length){ toast('Erst einen Grundriss hinterlegen'); return; }
+  liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
+  const ort = CFG.orte[key] || {};
+  const id = liste.some(p => p.id === ort.plan) ? ort.plan : liste[0].id;
+  planListe = liste;
+  await planZeigen(id, {key, titel});
+}
+$('#btnPlanWahl').innerHTML = PLAN_SVG;
+$('#btnPlanWahl').onclick = planWechseln;
+$('#btnPlanNeu').onclick = () => $('#planFile').click();
+$('#planFile').onchange = async e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!f) return;
+  const name = (f.name || 'Grundriss').replace(/\.[^.]+$/, '');
+  const pdf = /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name || '');
+  try{
+    if(pdf){
+      toast('PDF wird umgewandelt …');
+      const roh = await f.arrayBuffer();
+      const seiten = await pdfSeiten(f);
+      /* Die PDF bleibt liegen: aus ihr wird beim Hineinzoomen scharf
+         nachgezeichnet. Sie liegt einmal je Datei, nicht einmal je Seite. */
+      const qid = 'q' + Date.now();
+      let quelle = null;
+      try{ await Bilder.quellePut({id:qid, daten:roh, stand:heute()}); quelle = qid; }
+      catch(e){ /* ohne Quelle bleibt es beim gespeicherten Bild */ }
+      for(let i = 0; i < seiten.length; i++){
+        await Bilder.ablegen({id:'p' + Date.now() + '-' + i, stand:heute(),
+          name: seiten.length > 1 ? `${name} S. ${i + 1}` : name,
+          quelle, seite:i + 1, rahmen:seiten[i].rahmen}, seiten[i].bild);
+      }
+      /* kurz warten, damit die Liste die frisch abgelegten Seiten schon sieht */
+      setTimeout(renderPlaene, 300);
+      toast(seiten.length > 1 ? `${seiten.length} Seiten hinzugefügt` : 'Grundriss hinzugefügt');
+      return;
+    }
+    const bild = await planVerkleinern(f);
+    await Bilder.ablegen({id:'p' + Date.now(), name, stand:heute()}, bild);
+    toast('Grundriss hinzugefügt');
+    renderPlaene();
+  }catch(x){
+    toast(pdf ? 'PDF konnte nicht umgewandelt werden' : 'Bild konnte nicht gelesen werden');
+  }
+};
+
+/* --- Gerätewechsel ----------------------------------------------------------
+   Eine Datei trägt alles, was die App weiß: Einstellungen, laufende Nachweise,
+   die Stände des Vorquartals und die vermerkten Zählerwechsel. Ohne die beiden
+   letzten wäre der Verbrauch nach einem Gerätewechsel nicht mehr zu rechnen.
+   Der Weg ist derselbe wie bei den Blättern – teilen, was das Gerät anbietet. */
+const CFG_FORMAT = 'bds-nachweise-v1';
+/* Bilder reisen als Text mit: eine JSON-Datei kann nichts anderes tragen. Das
+   bläht sie um rund ein Drittel auf, dafür ist nach einem Gerätewechsel wirklich
+   alles wieder da. */
+const blobZuText = b => new Promise((ok, fehl) => {
+  const l = new FileReader();
+  l.onload = () => ok(l.result); l.onerror = () => fehl(l.error);
+  l.readAsDataURL(b);
+});
+const textZuBlob = t => fetch(t).then(r => r.blob());
+async function alsDateiSichern(){
+  let plaene = [], quellen = [];
+  try{
+    plaene = await Promise.all(((await Bilder.alle()) || []).map(async pl =>
+      ({id:pl.id, name:pl.name, stand:pl.stand, quelle:pl.quelle, seite:pl.seite,
+        rahmen:pl.rahmen, bild:await blobZuText(planBlob(pl))})));
+    /* Die PDF-Quellen reisen mit, sonst könnte das neue Gerät nicht mehr scharf
+       nachzeichnen. Sie sind klein gegen die Bilder. pdf.js selbst bleibt
+       draußen – das holt sich das neue Gerät bei Gelegenheit selbst. */
+    quellen = await Promise.all(((await Bilder.quellenAlle()) || []).map(async q =>
+      ({id:q.id, stand:q.stand,
+        daten:await blobZuText(new Blob([q.daten], {type:'application/pdf'}))})));
+  }catch(e){ /* ohne Bilderspeicher eben ohne Pläne */ }
+  const paket = {format:CFG_FORMAT, stand:heute(),
+                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, plaene, quellen};
+  const name = `Nachweise ${heute().slice(2)}.json`;
+  void plaene;
+  const datei = new File([new Blob([JSON.stringify(paket, null, 1)], {type:'application/json'})],
+                         name, {type:'application/json'});
+  try{
+    if(navigator.canShare && navigator.canShare({files:[datei]})){
+      try{ await navigator.share({files:[datei]}); }catch(e){ /* Abbruchmeldung von iOS */ }
+    }else{
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(datei); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }
+    toast('Gesichert');
+  }catch(e){ toast('Sichern nicht möglich'); }
+}
+async function paketUebernehmen(paket){
+  CFG = Object.assign({}, CFG_STD, paket.cfg || {});
+  CFG.teile = CFG.teile || {};
+  CFG.orte  = CFG.orte  || {};
+  DAT     = paket.dat    || {};
+  MED_ALT = paket.alt    || {};
+  TAUSCH  = Array.isArray(paket.tausch) ? paket.tausch : [];
+  EXP     = paket.exp    || {};
+  saveCfg(); saveDat(); saveAlt(); saveTausch(); saveExp();
+  /* Die Pläne kommen zurück in den Bilderspeicher; vorhandene gleichen Namens
+     werden ersetzt, weil die Kennung mitreist. */
+  let n = 0;
+  for(const q of (paket.quellen || [])){
+    try{ await Bilder.quellePut({id:q.id, stand:q.stand,
+           daten:await (await textZuBlob(q.daten)).arrayBuffer()}); }
+    catch(e){ /* ohne Quelle bleibt das Bild, nur ohne Nachzeichnen */ }
+  }
+  for(const pl of (paket.plaene || [])){
+    try{ await Bilder.ablegen({id:pl.id, name:pl.name, stand:pl.stand,
+           quelle:pl.quelle, seite:pl.seite, rahmen:pl.rahmen},
+           await textZuBlob(pl.bild)); n++; }
+    catch(e){ /* einzelnes Bild überspringen */ }
+  }
+  toast(n ? `Übernommen, ${n} Grundriss${n === 1 ? '' : 'e'}` : 'Übernommen');
+  renderSettings(); renderPlaene();
+}
+$('#btnCfgAus').onclick = alsDateiSichern;
+$('#btnCfgEin').onclick = () => $('#cfgFile').click();
+$('#cfgFile').onchange = e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';                       // dieselbe Datei soll erneut wählbar sein
+  if(!f) return;
+  const leser = new FileReader();
+  leser.onload = () => {
+    let paket = null;
+    try{ paket = JSON.parse(leser.result); }catch(x){ /* unten abgefangen */ }
+    if(!paket || paket.format !== CFG_FORMAT){ toast('Keine Datei dieser App'); return; }
+    frage('Alles übernehmen',
+      `Die Datei vom ${dText(paket.stand || '')} ersetzt sämtliche Einstellungen und Daten `
+      + 'dieses Geräts: Objekt, Prüfer, Anlagenlisten, Checklisten, Zählstellen, laufende '
+      + 'Nachweise, Stände des Vorquartals und vermerkte Zählerwechsel.',
+      'Übernehmen', () => paketUebernehmen(paket));
+  };
+  leser.readAsText(f);
+};
+
+/* ---------- Fußleiste je Ansicht ---------- */
+function renderBar(){
+  const b = $('#barInner');
+  if(current === 'settings'){
+    b.innerHTML = `<button class="btn primary" id="barA">Speichern</button>`;
+    $('#barA').onclick = settingsSichern;
+  }else if(current === 'nachweis'){
+    const d = datenFuer(offen);
+    let voll, hinweis;
+    if(NW(offen).art === 'medien'){
+      /* Ohne Unterschrift reicht die vollständige Ablesung zum Ausgeben. */
+      voll = medienVoll(d);
+      const l0 = stellen(), off0 = l0.filter(z => String(d.stand[z.key] ?? '').trim() === '').length;
+      b.innerHTML =
+        `<button class="btn primary" id="barA"${voll ? '' : ' disabled'}>Nachweis ausgeben</button>
+         <button class="btn ghost" id="barB">Blatt ansehen</button>
+         <p class="muted small" style="margin:10px 0 0;text-align:center">${
+           !d.datum ? 'Ablesedatum fehlt' : off0 ? `${off0} von ${l0.length} Zählern offen` : 'Vollständig'}</p>`;
+      $('#barA').onclick = ausgeben;
+      $('#barB').onclick = () => { blattZeigen(); go('blatt'); };
+      return;
+    }
+    if(NW(offen).art === 'sprinkler'){
+      voll = sprinklerVoll(d);
+      hinweis = !d.woch.length ? 'Noch kein wöchentlicher Kontrollgang'
+              : !d.mon.length  ? 'Monatliche Kontrolle fehlt'
+              : !voll          ? 'Noch nicht alle Punkte erfasst' : '';
+    }else{
+      const fehlt = zeilenJetzt(offen).filter(z => !z.status).length;
+      voll = !fehlt;
+      hinweis = fehlt ? fehlt + ' Anlage' + (fehlt === 1 ? '' : 'n') + ' ohne Zustand' : '';
+    }
+    const bereit = voll && !!d.signatur;
+    b.innerHTML =
+      `<button class="btn primary" id="barA"${bereit ? '' : ' disabled'}>Nachweis ausgeben</button>
+       <button class="btn ghost" id="barB">Blatt ansehen</button>
+       <p class="muted small" style="margin:10px 0 0;text-align:center">${
+         hinweis || (d.signatur ? 'Vollständig' : 'Unterschrift fehlt')}</p>`;
+    $('#barA').onclick = ausgeben;
+    $('#barB').onclick = () => { blattZeigen(); go('blatt'); };
+  }else if(current === 'blatt'){
+    b.innerHTML = `<button class="btn ghost" id="barA">Zurück zur Eingabe</button>`;
+    $('#barA').onclick = () => { const p = stack.pop(); go(p || 'nachweis', false); };
+  }else b.innerHTML = '';
+  /* Ohne Inhalt darf die Leiste nicht bloß leer dastehen: sie klebt am unteren
+     Rand und brächte mit Polster und hellem Verlauf einen Streifen über den
+     Grundriss – und ihre Höhe im Aufbau würde den Plan nach oben drücken. */
+  $('#bar').hidden = !b.innerHTML;
+}
+
+/* ---------- Das Blatt -------------------------------------------------------
+   Erst die Tabelle, dann die Checkliste, darunter die Unterschrift. Nur die
+   Feststellanlagen gehen wegen ihrer Zahl auf zwei Bögen: die Tabelle bricht
+   nach der gerechneten Grenze um, Checkliste und Unterschrift stehen am Ende. */
+/* Im Blatt rückt der erste Punkt hinter "Überprüfung von:" bzw. "des:", und die
+   folgenden Punkte stehen bündig darunter – die Einleitung steht dafür in einer
+   eigenen Spalte. In den Einstellungen bleibt der Text, wie er eingegeben wurde;
+   gerückt wird erst bei der Ausgabe. Listen ohne diese Einleitung, etwa die
+   Feststellanlagen, bleiben unangetastet. */
+/* Ein neuer Punkt beginnt mit einer Nummer, einem Strich oder dem Zeichen ">".
+   Alles andere ist die Fortsetzung des Punktes darüber und gehört auf dieselbe
+   Zeile – im Kasten ist Platz genug, umgebrochen wird erst, wenn er ausgeht.
+   Die Umbrüche im Einstellungstext dienen nur der Lesbarkeit beim Eingeben. */
+const neuerPunkt = z => !z.trim() || /^\s*(\d+[.)]|[-–—>•*])/.test(z);
+function fliessen(zeilen){
+  const aus = [];
+  zeilen.forEach(z => {
+    const vor = aus.length ? aus[aus.length - 1] : '';
+    if(aus.length && vor.trim() && !neuerPunkt(z)) aus[aus.length - 1] = vor.replace(/\s+$/, '') + ' ' + z.trim();
+    else aus.push(z);
+  });
+  return aus;
+}
+function checklisteHtml(txt){
+  let zeilen = fliessen(String(txt || '').split('\n'));
+  /* Die ausgeschriebene Titelzeile im Text wird durch die schlichte Überschrift
+     ersetzt; steht dort keine, kommt sie einfach oben drauf. */
+  const erste = zeilen.findIndex(z => z.trim());
+  if(erste >= 0 && /^Checkliste\b/i.test(zeilen[erste].trim())) zeilen.splice(0, erste + 1);
+  while(zeilen.length && !zeilen[0].trim()) zeilen.shift();
+  const titel = `<div class="ctitel">Checkliste</div>`;
+  const i = zeilen.findIndex(z => /^Überprüfung\b.*:\s*$/.test(z.trim()));
+  if(i < 0) return titel + `<div class="vor">${esc(zeilen.join('\n'))}</div>`;
+  const vor   = zeilen.slice(0, i).join('\n').replace(/\s+$/, '');
+  const liste = zeilen.slice(i + 1).filter(z => z.trim()).join('\n');
+  return titel
+    + (vor ? `<div class="vor">${esc(vor)}\n</div>` : '')
+    + `<div class="reihe"><span class="lab">${esc(zeilen[i].trim())} </span>`
+    + `<span class="txt">${esc(liste)}</span></div>`;
+}
+/* Das Blatt der Sprinkleranlage: je Abschnitt eine Tabelle, links der Punkt,
+   daneben eine Spalte je Kontrollgang mit dem Datum ohne Jahr im Kopf. Darunter
+   Mängel und Bemerkungen, jeweils nur wenn etwas dasteht, und die Unterschrift.
+   Ein Kurzzeichen je Spalte gibt es nicht mehr – dafür steht die Unterschrift. */
+function sprinklerBlatt(k){
+  const n = NW(k), t = teilCfg(k), d = datenFuer(k);
+  const kurzDat = t2 => { if(!t2) return ''; const [, m, tg] = t2.split('-'); return `${tg}.${m}`; };
+  const wert = (g, i, p) => {
+    const v = String(g.w[i] ?? '');
+    if(istBar(p)) return esc(v);
+    return v === 'io' ? 'i.O.' : v === 'mangel' ? 'Mangel' : '';
+  };
+  const tabelle = (titel, punkte, gaenge) => !gaenge.length ? '' : `
+    <table class="sp"><thead><tr><th>${esc(titel)}</th>${
+      gaenge.map(g => `<th>${esc(kurzDat(g.datum))}</th>`).join('')}</tr></thead>
+    <tbody>${punkte.map((p, i) =>
+      `<tr><td>${esc(p)}</td>${gaenge.map(g => `<td class="mitte">${wert(g, i, p)}</td>`).join('')}</tr>`
+    ).join('')}</tbody></table>`;
+  const feld = (titel, txt) => !String(txt || '').trim() ? '' :
+    `<div class="check"><div class="ctitel">${esc(titel)}</div><div class="vor">${esc(txt.trim())}</div></div>`;
+  return `<div class="paper">
+    <h2>${esc(n.titel)} – ${esc(monatText(k))}</h2>
+    <div class="meta">${esc(CFG.objekt || '')}</div>
+    ${tabelle('Wöchentliche Kontrollen', t.woch, d.woch)}
+    ${tabelle('Monatliche Kontrollen',  t.mon,  d.mon)}
+    ${feld('Mängel und Bemerkungen', d.maengel)}
+    <div class="sig"><div>
+      ${d.signatur ? `<img src="${d.signatur}" alt="Unterschrift">`
+                   : `<div style="width:306px;height:102px;border-bottom:1px solid #000"></div>`}
+      <div class="lbl">Unterschrift${CFG.pruefer ? ' · ' + esc(CFG.pruefer) : ''}</div>
+    </div></div></div>`;
+}
+/* Das Blatt der Ablesung: je Partei ein Block, darin eine Zeile je Zähler mit
+   Stand und Verbrauch seit der letzten Ablesung. Der Weg durch das Haus spielt
+   hier keine Rolle mehr – gelesen wird parteiweise. */
+/* Maße des Bogens für die Seitenaufteilung. Gerechnet statt gemessen: das Blatt
+   entsteht als Text. Die Werte folgen den Stilregeln oben – ändert sich dort die
+   Schrift oder das Polster, gehören sie hier nachgezogen. */
+const BOGEN_HOCH = 1448 - 2 * 34;
+/* Näherungswerte für den Fall, dass nicht gemessen werden kann. Die Zeilenhöhe
+   1,45 erbt der Bogen vom Grundstil der App – mit 1,2 gerechnet lagen alle
+   Schätzungen rund ein Fünftel zu niedrig. */
+const ZH = 1.333 * 1.45;
+const H_KOPF   = 20 * ZH + 4 + 10 * ZH + 18;
+const H_TABKOPF= 11 * ZH + 16 + 2;
+const H_PARTEI = 12 * ZH + 10 + 1;
+const H_ZEILE  = 12 * ZH + 14 + 1;
+const H_ZEILE_L= 12 * ZH + 16 + 1;               // Listenblätter, Polster 8
+const H_WTITEL = 24;
+const H_WZEILE = 10 * 1.333 * 1.2 + 10 + 1;
+const H_FUSS   = 20;
+const H_SIG    = 130;                            // Unterschriftsfeld samt Zeile darunter
+/* Statt zu schätzen wird gemessen: das Blatt entsteht unsichtbar im Dokument,
+   und die tatsächlichen Höhen werden abgefragt. Meine Schätzungen lagen zweimal
+   daneben – zuletzt, weil der Bogen die Zeilenhöhe 1,45 der App erbt und nicht,
+   wie angenommen, 1,2 verwendet. Steht kein Dokument zur Verfügung, greifen die
+   Näherungswerte oben. */
+/* Grobe Höhe des Checklistenkastens, falls nicht gemessen werden kann: Zeilen
+   nach dem Zusammenführen der Fortsetzungen, bei 11 pt rund 126 Zeichen je
+   Zeile. */
+const hCheckGrob = txt => 26 + 24 + fliessen(String(txt || '').split('\n'))
+  .reduce((n, z) => n + Math.max(1, Math.ceil(z.trim().length / 126)), 0) * (11 * 1.333 * 1.4);
+function blattMasse(kopfHtml, tabelleHtml, fussHtml, anzahl, zeilenHoehe, checkText){
+  /* Ohne Dokument: gleichmäßige Zeilen und ein aus dem Text geschätzter Kasten. */
+  const grob = {kopf:H_KOPF, thead:H_TABKOPF, sig:H_SIG,
+                check: checkText ? hCheckGrob(checkText) : 0,
+                zeilen:Array.from({length:anzahl || 0}, () => zeilenHoehe || H_ZEILE_L)};
+  try{
+    const box = document.createElement('div');
+    box.className = 'paper';
+    box.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;min-height:0';
+    box.innerHTML = kopfHtml + tabelleHtml + fussHtml;
+    document.body.appendChild(box);
+    const tab = box.querySelector('table');
+    if(!tab || !tab.tBodies || !tab.tBodies[0]){ document.body.removeChild(box); return grob; }
+    const masse = {
+      kopf:  Math.max(0, tab.offsetTop - 34),      // ohne das Polster des Bogens
+      thead: tab.tHead ? tab.tHead.offsetHeight : H_TABKOPF,
+      zeilen:[...tab.tBodies[0].rows].map(r => r.offsetHeight),
+      check: (box.querySelector('.check') || {}).offsetHeight || 0,
+      sig:   (box.querySelector('.sig')   || {}).offsetHeight || 0
+    };
+    document.body.removeChild(box);
+    if(!masse.zeilen.length || !masse.zeilen[0]) return grob;
+    return masse;
+  }catch(e){ return grob; }
+}
+
+function medienBlatt(k){
+  const n = NW(k), d = datenFuer(k);
+  const liste = stellen(), namen = medienNamen();
+  const quartal = quartalVon(d.datum || heute());
+  const wechsel = tauscheIm(quartal);
+  const wZu = key => wechsel.filter(w => w.neuKey === key);
+
+  /* Ein getauschter Zähler bekommt zwei Zeilen: der alte bis zum Ausbau, der
+     neue vom Einbau bis zum Quartalsende. Der Gesamtverbrauch steht unten im
+     Wechselblock, wo auch das Datum steht. */
+  const zeilenFuer = z => {
+    const jetzt = zahl(d.stand[z.key]);
+    const name = namen[z.key] || z.medium;
+    const w = wZu(z.key);
+    if(!w.length){
+      const alt = MED_ALT[z.key] ? zahl(MED_ALT[z.key].stand) : null;
+      const verb = jetzt != null && alt != null ? zahlText(jetzt - alt) : '';
+      return [[name, z.nr, jetzt, verb]];
+    }
+    const raus = [];
+    w.forEach(x => {
+      const vor = zahl(x.vor), aus = zahl(x.aus);
+      raus.push([name, x.altNr + ' (ausgebaut)', aus,
+                 aus != null && vor != null ? zahlText(aus - vor) : '']);
+    });
+    const ein = zahl(w[w.length - 1].ein);
+    raus.push([name, z.nr + ' (neu)', jetzt,
+               jetzt != null && ein != null ? zahlText(jetzt - ein) : '']);
+    return raus;
+  };
+  const zelle = (r, z) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td>
+      <td>${esc(zahlText(r[2]))} ${esc(z.einheit)}</td>
+      <td>${r[3] ? esc(r[3]) + ' ' + esc(z.einheit) : '–'}</td></tr>`;
+
+  /* Je Partei ein Bündel Zeilen, das nie über zwei Seiten reißt. */
+  const parteien = [...new Set(liste.map(z => z.partei))];
+  const bloecke = parteien.map(pa => {
+    const roh = liste.filter(z => z.partei === pa);
+    const medien = [];
+    roh.forEach(z => { if(!medien.includes(z.medium)) medien.push(z.medium); });
+    const zs = medien.flatMap(m => roh.filter(z => z.medium === m));
+    const html = `<tr class="mpartei"><td colspan="4">${esc(pa)}</td></tr>`
+      + zs.map(z => zeilenFuer(z).map(r => zelle(r, z)).join('')).join('');
+    const zeilen = zs.reduce((n2, z) => n2 + zeilenFuer(z).length, 0);
+    return {html, hoehe: H_PARTEI + zeilen * H_ZEILE};
+  });
+
+  const wechselHtml = !wechsel.length ? '' :
+    `<div class="wblock"><div class="wtitel">Zählerwechsel im Quartal</div>` +
+    wechsel.map(w => {
+      const vor = zahl(w.vor), aus = zahl(w.aus), ein = zahl(w.ein);
+      const jetzt = zahl(d.stand[w.neuKey]);
+      const teil1 = aus != null && vor != null ? aus - vor : null;
+      const teil2 = jetzt != null && ein != null ? jetzt - ein : null;
+      const summe = teil1 != null && teil2 != null ? zahlText(teil1 + teil2) : '';
+      return `<div class="wzeile">${esc(w.partei)} · ${esc(w.medium)} · Wechsel am ${esc(dText(w.datum))}
+        · alt ${esc(w.altNr)} Ausbaustand ${esc(zahlText(aus))} ${esc(w.einheit)}
+        · neu ${esc(w.neuNr)} Einbaustand ${esc(zahlText(ein))} ${esc(w.einheit)}${
+        summe ? ` · Verbrauch im Quartal ${esc(summe)} ${esc(w.einheit)}` : ''}</div>`;
+    }).join('') + `</div>`;
+  const hWechsel = wechsel.length ? H_WTITEL + wechsel.length * H_WZEILE : 0;
+
+  /* Aufteilen: die Parteien der Reihe nach auf Seiten verteilen, keine wird
+     zerrissen. Auf der letzten Seite müssen Wechselblock und Schlusszeile noch
+     Platz finden, sonst bekommen sie eine eigene. */
+  const seiten = [[]];
+  let hoehe = H_KOPF + H_TABKOPF;
+  bloecke.forEach(b => {
+    if(hoehe + b.hoehe > BOGEN_HOCH && seiten[seiten.length - 1].length){
+      seiten.push([]); hoehe = H_KOPF + H_TABKOPF;
+    }
+    seiten[seiten.length - 1].push(b); hoehe += b.hoehe;
+  });
+  /* Passen Wechselblock und Schlusszeile nicht mehr, beginnt eine neue Seite.
+     Damit dort nicht der Block allein steht, wandern so viele Parteien mit, wie
+     Platz finden – die Tabelle endet dann auf derselben Seite wie die Wechsel. */
+  if(hoehe + hWechsel + H_FUSS > BOGEN_HOCH && seiten[seiten.length - 1].length){
+    const vorher = seiten[seiten.length - 1], neue = [];
+    const platz = BOGEN_HOCH - (H_KOPF + H_TABKOPF + hWechsel + H_FUSS);
+    /* Genau eine Partei mitnehmen, nicht mehr: die Tabelle soll so weit wie
+       möglich auf der ersten Seite bleiben. */
+    if(vorher.length > 1 && vorher[vorher.length - 1].hoehe <= platz) neue.push(vorher.pop());
+    seiten.push(neue);
+  }
+
+  const kopf = nr => `<h2>${esc(n.titel)} – ${esc(quartalText(d.datum))}</h2>
+    <div class="meta">${esc(CFG.objekt || '')}${d.datum ? ' · Ablesung am ' + esc(dText(d.datum)) : ''}${
+      seiten.length > 1 ? ` · Seite ${nr} von ${seiten.length}` : ''}</div>`;
+  const tabkopf = `<thead><tr>
+      <th style="width:26%">Medium</th><th style="width:24%">Zählernummer</th>
+      <th style="width:25%">Stand</th><th>Verbrauch</th></tr></thead>`;
+  return seiten.map((teil, i) => `<div class="paper">
+    ${kopf(i + 1)}
+    ${teil.length ? `<table class="med">${tabkopf}<tbody>${teil.map(b => b.html).join('')}</tbody></table>` : ''}
+    ${i === seiten.length - 1 ? wechselHtml : ''}
+    ${i === seiten.length - 1 && CFG.pruefer ? `<div class="meta">Abgelesen von ${esc(CFG.pruefer)}</div>` : ''}
+  </div>`).join('');
+}
+function blattHtml(k){
+  if(NW(k).art === 'medien')    return medienBlatt(k);
+  if(NW(k).art === 'sprinkler') return sprinklerBlatt(k);
+  const n = NW(k), t = teilCfg(k), d = datenFuer(k);
+  const zeile = a => { const z = d.zeilen[a];
+    return `<tr><td>${esc(dText(z.datum))}</td><td>${esc(a)}</td><td>${esc(z.status)}</td><td>${esc(z.bem)}</td></tr>`; };
+  const tabelle = liste => `<table>
+      <!-- Breiten nachgerechnet: "26.08.2026" und "In Ordnung" brauchen je rund
+           90 px, 13 % lassen beiden 103 – knapp, aber einzeilig. Der ganze Rest
+           geht an die Anlage, denn dort stehen die langen Beschreibungen wie
+           "Tür 1, Erdgeschoss, Gang neben Treppenhaus": 44 % fassen rund 45
+           Zeichen je Zeile. Mehr wäre nur über eine kürzere Datumsangabe zu
+           holen (das Jahr steht schon in der Überschrift). -->
+      <thead><tr><th style="width:13%">Datum</th><th style="width:44%">Anlage</th>
+        <th style="width:13%">Zustand</th><th>Bemerkung</th></tr></thead>
+      <tbody>${liste.map(zeile).join('')}</tbody></table>`;
+  /* Der Prüfmonat gehört in die Überschrift, der Name des Prüfers nur unter die
+     Unterschrift – über der Tabelle steht er sonst zweimal. */
+  const kopf = seite => `<h2>${esc(n.titel)} – ${esc(monatText(k))}</h2>
+    <div class="meta">${esc(CFG.objekt || '')}${seite}</div>`;
+  const fuss = `<div class="check">${checklisteHtml(t.checkliste)}</div>
+    <div class="sig"><div>
+      ${d.signatur ? `<img src="${d.signatur}" alt="Unterschrift">`
+                   : `<div style="width:306px;height:102px;border-bottom:1px solid #000"></div>`}
+      <div class="lbl">Unterschrift${CFG.pruefer ? ' · ' + esc(CFG.pruefer) : ''}</div>
+    </div></div>`;
+  /* Im Protokoll stehen die Anlagen nach Bezeichnung, nicht nach Prüfablauf –
+     der Weg durchs Haus interessiert nur beim Prüfen, im Nachweis sucht man
+     eine bestimmte Tür. Verglichen wird mit Rücksicht auf Zahlen im Text, sonst
+     stünde "Tür 10" vor "Tür 2". */
+  const nachName = (a, b) => String(a).localeCompare(String(b), 'de', {numeric:true, sensitivity:'base'});
+  const sortiert = t.anlagen.slice().sort(nachName);
+
+  /* Der Schnitt wird gerechnet, nicht festgelegt. Ein fester Wert ließ Seite 1
+     zu einem Drittel leer, während Seite 2 mit dem Rest, der Checkliste und der
+     Unterschrift überlief und eine dritte Seite anfing. Jetzt bekommt Seite 2
+     genau so viele Zeilen, wie neben Checkliste und Unterschrift Platz finden;
+     alles davor steht auf Seite 1. Wächst die Checkliste, wandert der Schnitt
+     von selbst nach hinten. */
+  const m = blattMasse(kopf(' · Blatt 1 von 2'), tabelle(sortiert), fuss,
+                       sortiert.length, H_ZEILE_L, t.checkliste);
+  const platz1 = BOGEN_HOCH - m.kopf - m.thead;
+  const platz2 = platz1 - m.check - m.sig;
+  /* Wie viele Zeilen tragen die Seiten? Gerechnet mit den gemessenen Höhen der
+     Zeilen selbst, nicht mit einem Mittelwert – eine umbrechende Bezeichnung
+     ist höher als die anderen. */
+  const passen = (hoehen, platz) => {
+    let h = 0, n2 = 0;
+    for(const x of hoehen){ if(h + x > platz) break; h += x; n2++; }
+    return n2;
+  };
+  const max1 = passen(m.zeilen, platz1);
+  const max2 = passen(m.zeilen.slice().reverse(), platz2);
+  if(sortiert.length > max1){
+    /* Der kleinste Schnitt, bei dem Seite 2 noch passt, füllt sie bis an den
+       Rand und lässt Seite 1 halb leer. Deshalb wird von dort aus so lange eine
+       Zeile nach vorn gezogen, wie sich die beiden Seiten dadurch gleichmäßiger
+       füllen. */
+    const summe = (von, bis) => m.zeilen.slice(von, bis).reduce((a, b) => a + b, 0);
+    const frei1 = k => platz1 - summe(0, k);
+    const frei2 = k => platz2 - summe(k, sortiert.length);
+    let erste = Math.min(max1, Math.max(1, sortiert.length - max2));
+    while(erste + 1 <= max1 &&
+          Math.abs(frei1(erste + 1) - frei2(erste + 1)) < Math.abs(frei1(erste) - frei2(erste))) erste++;
+    return `<div class="paper">${kopf(' · Blatt 1 von 2')}${tabelle(sortiert.slice(0, erste))}</div>`
+         + `<div class="paper">${kopf(' · Blatt 2 von 2')}${tabelle(sortiert.slice(erste))}${fuss}</div>`;
+  }
+  return `<div class="paper">${kopf('')}${tabelle(sortiert)}${fuss}</div>`;
+}
+function blattZeigen(){ $('#blattWrap').innerHTML = blattHtml(offen); }
+
+/* ---------- Übergabe an den Kurzbefehl --------------------------------------
+   Wie im E-Assistenten: die Blätter gehen als HTML mit der Gestaltung im Kopf
+   hinaus, der Kurzbefehl wandelt sie in PDF. Ohne Titel im Teilen-Vorgang, sonst
+   kommt er als zusätzliches Textobjekt an. */
+const nameTeil = s => String(s || '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+function exportHtml(k){
+  const stil = [...document.querySelectorAll('style')].map(s => s.textContent).join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  return `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8">
+<title>${esc(NW(k).titel)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>${stil}\nbody{background:#fff;padding:0}\n.paper{width:1130px;margin:0 auto}</style>
+</head><body>${blattHtml(k)}</body></html>`;
+}
+async function ausgeben(){
+  const n = NW(offen);
+  /* Der Dateiname ist fertig, wie er ist: Prüfmonat und der Kurzname des
+     Nachweises, z.B. "26-08 Kontrolle Sprinkler". Der Kurzbefehl muss ihn nur
+     durchreichen – kommen später weitere Nachweise dazu, ändert sich dort
+     nichts. Eine Ordnerstruktur gibt es nicht, das Blatt geht per Mail hinaus. */
+  const d0 = datenFuer(offen);
+  /* Die Ablesung trägt das Quartal im Namen, alles andere den Prüfmonat. */
+  /* Maßgeblich ist wie in der Überschrift der Beginn der Runde, nicht der Tag
+     des Abschlusses – sonst rutschte eine überzogene Runde in den neuen Monat. */
+  const stichtag = (alleDaten(offen).sort().shift() || heute());
+  const teil = n.art === 'medien'
+    ? stichtag.slice(2, 4) + '-Q' + (Math.floor((+stichtag.slice(5, 7) - 1) / 3) + 1)
+    : stichtag.slice(2, 7);
+  const name = `${teil} ${nameTeil(n.datei || n.label)}.html`;
+  const datei = new File([new Blob([exportHtml(offen)], {type:'text/html'})], name, {type:'text/html'});
+  try{
+    if(navigator.canShare && navigator.canShare({files:[datei]})){
+      try{ await navigator.share({files:[datei]}); }
+      catch(e){ /* iOS meldet auch bei Erfolg einen Abbruch – bewusst übergangen */ }
+    }else{
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(datei); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }
+  }catch(e){ toast('Übergabe nicht möglich'); return; }
+  /* Vor dem Leeren die Zählerstände sichern: aus ihnen entsteht im nächsten
+     Quartal der Verbrauch. */
+  if(n.art === 'medien'){
+    stellen().forEach(z => {
+      const v = String(d0.stand[z.key] ?? '').trim();
+      if(v) MED_ALT[z.key] = {stand:v, datum:d0.datum};
+    });
+    saveAlt();
+  }
+  EXP[offen] = n.art === 'medien' ? quartalVon(stichtag) : monatVon(stichtag);
+  saveExp();
+  /* Nach der Ausgabe steht der Nachweis wieder leer bereit – die nächste Runde
+     beginnt von vorn. */
+  delete DAT[offen]; saveDat();
+  stack = []; go('home', false);
+  toast('Nachweis ausgegeben');
+}
+
+renderHome(); go('home', false);
+</script>
+</body>
+</html>
