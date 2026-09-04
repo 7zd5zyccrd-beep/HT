@@ -10,6 +10,14 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.86 04.09.2026  Zugangsabfrage vor der App, weil die Datei oeffentlich liegt.
+                    Pruefwert ueber PBKDF2 mit 250.000 Runden und eigenem Salz;
+                    ein Geraet bleibt nach der Eingabe offen, "Geraet sperren"
+                    steht in den Einstellungen. Passwort festlegen ueber das
+                    Werkzeug auf dem Schlossbildschirm. Dazu eine robots-Zeile
+                    gegen die Aufnahme in Suchmaschinen. HINWEIS: das ist ein
+                    Schild, kein Schloss - wer den Quelltext liest, kommt daran
+                    vorbei.
   v0.85 02.09.2026  Im Blatt der Sprinkleranlage fehlte in den Spaltenkoepfen
                     der Punkt hinter dem Monat: "04.09." statt "04.09".
   v0.84 01.09.2026  Schnelles Tippen nacheinander (etwa beim Umsortieren mit den
@@ -244,6 +252,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Nachweise">   <!-- kurz für den Startbildschirm -->
+<!-- Die Datei liegt in einem öffentlichen Repository. Diese Zeile hält sie aus
+     Suchmaschinen heraus – der realistische Weg, auf dem jemand hier landet. -->
+<meta name="robots" content="noindex, nofollow">
 <title>BDS Betriebsnachweise</title>
 <!-- Symbol für den Startbildschirm: Klemmbrett mit Haken, schwarz-weiß wie die
      App. Es steckt als Bild in der Datei, damit die App eine einzige Datei
@@ -442,6 +453,25 @@ input.schmal{width:170px}
   max-height:80vh;overflow:auto}
 .dlgtitel{font-weight:600;margin-bottom:8px}
 .dlgtext{white-space:pre-wrap;font-size:15px;line-height:1.45}
+/* --- Zugangsabfrage --------------------------------------------------------- */
+#schloss{
+  position:fixed;inset:0;z-index:100;background:var(--enclosure);
+  display:flex;align-items:center;justify-content:center;padding:var(--pad);
+  padding-top:calc(env(safe-area-inset-top) + var(--pad));
+}
+.schlossbox{width:100%;max-width:360px;text-align:center}
+.schlosstitel{
+  font-family:var(--f-label);font-size:21px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;
+}
+.schlosstext{font-size:14px;color:var(--ink-soft);margin:0 0 14px;line-height:1.45}
+#schloss input, #schloss textarea{
+  width:100%;padding:12px;border:1px solid var(--line);border-radius:14px;
+  background:var(--surface);font:inherit;font-size:16px;   /* 16px: sonst zoomt iOS beim Tippen */
+}
+#schloss textarea{margin-top:10px;font-size:12px;word-break:break-all}
+#schlossWerk{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
+#schlossWerk[hidden]{display:none}
 #toast{
   position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);
   transform:translateX(-50%) translateY(8px);
@@ -669,10 +699,32 @@ input.schmal{width:170px}
       <button class="btn ghost klein" id="btnCfgAus">Alles sichern</button>
       <button class="btn ghost klein" id="btnCfgEin" style="margin-top:10px">Aus Datei übernehmen</button>
       <input type="file" id="cfgFile" accept="application/json,.json" hidden>
+
+      <div class="eyebrow" style="margin-top:14px">Zugang</div>
+      <p class="muted small" style="margin:-4px 0 10px">Dieses Gerät bleibt nach der einmaligen Eingabe offen. Sperren heißt: beim nächsten Öffnen wird das Passwort wieder verlangt. Auf anderen Geräten ändert sich nichts.</p>
+      <button class="btn ghost klein" id="btnSperren">Gerät sperren</button>
     </section>
   </main>
 
   <div class="actionbar" id="bar"><div class="inner" id="barInner"></div></div>
+</div>
+<!-- Zugangsabfrage. Liegt über allem und wird nach dem Öffnen aus dem Aufbau
+     genommen. Sie steht schon im HTML, damit sie da ist, bevor Code läuft. -->
+<div id="schloss">
+  <div class="schlossbox">
+    <div class="schlosstitel">Betriebsnachweise</div>
+    <p class="schlosstext" id="schlossText">Bitte Passwort eingeben.</p>
+    <input type="password" id="schlossFeld" autocomplete="current-password" placeholder="Passwort">
+    <button class="btn primary" id="schlossOk" style="margin-top:12px">Öffnen</button>
+    <button class="btn ghost klein" id="schlossWerkzeug" style="margin-top:18px">Prüfwert berechnen</button>
+    <div id="schlossWerk" hidden>
+      <p class="schlosstext">Passwort eintippen, Prüfwert berechnen und die
+        ausgegebene Zeile in der Datei einsetzen – dort, wo <code>const ZUGANG</code> steht.</p>
+      <input type="text" id="werkFeld" placeholder="neues Passwort">
+      <button class="btn ghost klein" id="werkOk" style="margin-top:10px">Berechnen</button>
+      <textarea id="werkAus" rows="3" readonly hidden></textarea>
+    </div>
+  </div>
 </div>
 <div id="toast"></div>
 <!-- Eigenes Rückfragefenster: window.confirm wird in manchen Umgebungen
@@ -691,8 +743,8 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.85';
-const BUILD   = VERSION + ' · 02.09.2026';
+const VERSION = 'v0.86';
+const BUILD   = VERSION + ' · 04.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -1768,6 +1820,10 @@ function renderSettings(){
         <textarea data-set="check" data-k="${n.k}">${esc(t.checkliste)}</textarea></label>
     </div>`;
   }).join('');
+  const sp = $('#btnSperren');
+  if(sp) sp.onclick = () => frage('Gerät sperren',
+    'Beim nächsten Öffnen wird das Passwort wieder verlangt.', 'Sperren',
+    () => { Store.set('nwFrei', ''); location.reload(); });
   const rs = $('#btnMedReset');
   if(rs) rs.onclick = medienZuruecksetzen;
   /* Das Nummernfeld öffnet sich erst mit dem Haken – so ist auf einen Blick zu
@@ -2907,7 +2963,77 @@ async function ausgeben(){
   toast('Nachweis ausgegeben');
 }
 
-renderHome(); go('home', false);
+/* --- Zugang -----------------------------------------------------------------
+   Ehrlich gesagt ein Schild, kein Schloss: die Datei liegt öffentlich, wer den
+   Quelltext liest, kommt daran vorbei. Sie hält den ab, der die Adresse zufällig
+   öffnet – und genau das ist hier der realistische Fall.
+
+   Der Prüfwert entsteht nicht aus einer einfachen Prüfsumme, sondern über eine
+   langsame Ableitung mit 250.000 Runden. Eine schlichte Prüfsumme liesse sich
+   offline in Minuten durchprobieren, das hier dauert Wochen.
+
+   PASSWORT ÄNDERN: unten auf "Prüfwert berechnen", das Ergebnis ersetzt die
+   folgende Zeile. Ein neues Passwort sperrt alle Geräte wieder zu, weil der
+   gemerkte Wert dann nicht mehr passt. */
+const ZUGANG = { salz:'', pruef:'' };
+const RUNDEN = 250000;
+
+const alsHex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+async function ableiten(pw, salzHex){
+  const salz = new Uint8Array(salzHex.match(/../g).map(h => parseInt(h, 16)));
+  const roh = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw),
+                                            'PBKDF2', false, ['deriveBits']);
+  return alsHex(await crypto.subtle.deriveBits(
+    {name:'PBKDF2', salt:salz, iterations:RUNDEN, hash:'SHA-256'}, roh, 256));
+}
+
+(function zugang(){
+  const schloss = $('#schloss'), feld = $('#schlossFeld'), ok = $('#schlossOk');
+  const auf = () => { schloss.remove(); renderHome(); go('home', false); };
+
+  if(!window.crypto || !crypto.subtle){
+    $('#schlossText').textContent = 'Dieser Browser kann die Prüfung nicht ausführen.';
+    feld.hidden = ok.hidden = true; return;
+  }
+  /* Werkzeug zum Festlegen des Passworts – es rechnet nur, es verrät nichts. */
+  $('#schlossWerkzeug').onclick = () => { $('#schlossWerk').hidden = !$('#schlossWerk').hidden; };
+  $('#werkOk').onclick = async () => {
+    const pw = $('#werkFeld').value;
+    if(!pw) return;
+    const salz = alsHex(crypto.getRandomValues(new Uint8Array(16)));
+    const aus = $('#werkAus');
+    aus.hidden = false; aus.value = 'wird berechnet …';
+    aus.value = `const ZUGANG = { salz:'${salz}', pruef:'${await ableiten(pw, salz)}' };`;
+    aus.select();
+  };
+
+  if(!ZUGANG.pruef){
+    $('#schlossText').textContent = 'Es ist noch kein Passwort hinterlegt. Unten den '
+      + 'Prüfwert berechnen und in die Datei eintragen.';
+    feld.hidden = ok.hidden = true;
+    $('#schlossWerk').hidden = false;
+    return;                                  // ohne hinterlegtes Passwort bleibt zu
+  }
+  if(Store.get('nwFrei', '') === ZUGANG.pruef){ auf(); return; }
+
+  const pruefen = async () => {
+    const pw = feld.value;
+    if(!pw) return;
+    ok.disabled = true; ok.textContent = 'einen Moment …';
+    let stimmt = false;
+    try{ stimmt = await ableiten(pw, ZUGANG.salz) === ZUGANG.pruef; }catch(e){}
+    ok.disabled = false; ok.textContent = 'Öffnen';
+    if(!stimmt){
+      $('#schlossText').textContent = 'Passwort stimmt nicht.';
+      feld.value = ''; feld.focus(); return;
+    }
+    Store.set('nwFrei', ZUGANG.pruef);       // dieses Gerät bleibt offen
+    auf();
+  };
+  ok.onclick = pruefen;
+  feld.onkeydown = e => { if(e.key === 'Enter') pruefen(); };
+  setTimeout(() => feld.focus(), 300);
+})();
 </script>
 </body>
 </html>
