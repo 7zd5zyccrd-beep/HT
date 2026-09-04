@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.90 04.09.2026  Planblatt: in der Uebersicht gibt der Knopf "Ausgeben" den
+                    Plan mit den eingeblendeten Marken heraus - wahlweise nur
+                    den offenen oder alle Plaene. Blatt 1 traegt den Plan
+                    (Querformat um 90 Grad gedreht, dafuer wird das Bild einmal
+                    gedreht neu gezeichnet), dahinter die zweispaltige Legende
+                    mit Nummer und Bezeichnung. Vor dem Teilen steht das Blatt
+                    in der Vorschau. Dateiname "Grundriss <Planname>", bei
+                    mehreren "Grundrisse". Der Teilen-Weg ist jetzt fuer
+                    Nachweis- und Planblatt derselbe.
   v0.89 04.09.2026  Uebersicht im Grundriss: beim Ansehen eines Plans aus den
                     Einstellungen lassen sich ueber den Knopf "Objekte" die
                     Kategorien einblenden - Aufzuege blau, Rollbandfilter
@@ -683,6 +692,32 @@ input.schmal{width:170px}
 .paper .sig{margin-top:8px;display:flex;justify-content:flex-end}
 .paper .sig img{display:block;width:306px;height:102px;object-fit:contain;border-bottom:1px solid #000}
 .paper .sig .lbl{font-size:10pt;color:#333;margin-top:4px}
+/* --- Planblatt --------------------------------------------------------------
+   Das Bild kommt gedreht und fertig aus der Leinwand; hier wird es nur auf die
+   Blattbreite gebracht. Die Marken liegen als eigene Elemente darüber, damit
+   die Ziffern scharf bleiben statt im Bild mitskaliert zu werden. Weißer Rand
+   statt Schlagschatten: Ränder überstehen die Umwandlung verlässlich. */
+.paper .planblatt{position:relative;display:block;border:1px solid #000}
+.paper .planblatt img{display:block;width:100%;height:auto}
+.paper .planblatt .pm{
+  position:absolute;transform:translate(-50%, -50%);
+  width:26px;height:26px;border-radius:50%;border:2px solid #fff;
+  background:var(--kat,#333);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--f-label);font-size:12px;font-weight:700;line-height:1;
+}
+/* Die Legende steht zweispaltig – 42 Türen und 26 Zähler passen so auf ein
+   Blatt. Eine Überschrift bleibt bei ihrer ersten Zeile. */
+.paper .legende{columns:2;column-gap:26px}
+.paper .lgruppe{margin-bottom:12px}
+.paper .ltitel{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;
+  font-size:11pt;font-weight:600;margin-bottom:4px;break-after:avoid}
+.paper .lzeile{font-size:10pt;line-height:1.5;display:flex;gap:8px;break-inside:avoid}
+.paper .lnr{
+  flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--kat,#333);
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-family:var(--f-label);font-size:11px;font-weight:700;line-height:1;
+}
 </style>
 </head>
 <body>
@@ -730,6 +765,7 @@ input.schmal{width:170px}
         <div id="planStreifen" hidden>
           <p id="planHinweis"></p>
           <button class="btn ghost klein" id="btnPlanObjekte" hidden>Objekte</button>
+          <button class="btn ghost klein" id="btnPlanBlatt" hidden>Ausgeben</button>
           <button class="btn ghost klein" id="btnPlanZieh">Verschieben</button>
         </div>
       </div>
@@ -804,7 +840,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.89';
+const VERSION = 'v0.90';
 const BUILD   = VERSION + ' · 04.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -2630,7 +2666,7 @@ async function planZeigen(id, ziel){
   if(bild.complete && bild.naturalWidth) fertig();
   const gesetzt = () => { const o = CFG.orte[planZiel.key] || {}; return o.plan === id && o.x != null; };
   const hinweis = () => {
-    const kn = $('#btnPlanZieh'), ob = $('#btnPlanObjekte');
+    const kn = $('#btnPlanZieh'), ob = $('#btnPlanObjekte'), au = $('#btnPlanBlatt');
     if(!planZiel){
       /* In der Übersicht trägt der Streifen, was eingeblendet ist, und den Weg
          zur Auswahl. Solange nichts steht, bleibt er stehen – er ist der
@@ -2640,10 +2676,11 @@ async function planZeigen(id, ziel){
         ? gewaehlt.map(kat => NW(kat.k).label).join(', ')
         : 'Nichts eingeblendet.';
       kn.hidden = true; ob.hidden = false;
+      au.hidden = !gewaehlt.length;            // ohne Marken gäbe es nichts auszugeben
       streifenZeigen(!gewaehlt.length);
       return;
     }
-    ob.hidden = true;
+    ob.hidden = au.hidden = true;
     $('#planHinweis').textContent =
         planZiehen ? 'Auf die neue Stelle tippen.'
       : gesetzt()  ? 'Eingetragen.'
@@ -2654,6 +2691,15 @@ async function planZeigen(id, ziel){
   };
   hinweis();
 
+  $('#btnPlanBlatt').onclick = () => {
+    /* Ein Plan oder alle: gefragt wird erst beim Ausgeben, weil es mal so und
+       mal so gebraucht wird. Pläne ohne eingeblendete Marken bleiben draußen. */
+    if(planListe.length < 2){ planBlattZeigen([id]); return; }
+    wahlFenster('Ausgeben', [
+        {alle:false, text:'Nur dieser Plan'},
+        {alle:true,  text:`Alle Pläne (${planListe.length})`}],
+      w => planBlattZeigen(w.alle ? planListe.map(p => p.id) : [id]));
+  };
   $('#btnPlanObjekte').onclick = () => {
     const eintraege = KATEGORIEN.map(kat => ({
       k:kat.k, farbe:kat.farbe,
@@ -2904,8 +2950,17 @@ function renderBar(){
     $('#barA').onclick = ausgeben;
     $('#barB').onclick = () => { blattZeigen(); go('blatt'); };
   }else if(current === 'blatt'){
-    b.innerHTML = `<button class="btn ghost" id="barA">Zurück zur Eingabe</button>`;
-    $('#barA').onclick = () => { const p = stack.pop(); go(p || 'nachweis', false); };
+    /* Das Planblatt entsteht auf Zuruf und wird von hier aus geteilt; das Blatt
+       eines Nachweises geht dagegen über die Leiste der Liste hinaus. */
+    if(blattDatei){
+      b.innerHTML = `<button class="btn primary" id="barA">Teilen</button>
+         <button class="btn ghost" id="barB">Zurück</button>`;
+      $('#barA').onclick = () => dateiTeilen(blattDatei.name, blattDatei.html);
+      $('#barB').onclick = () => { const p = stack.pop(); go(p || 'plan', false); };
+    }else{
+      b.innerHTML = `<button class="btn ghost" id="barA">Zurück zur Eingabe</button>`;
+      $('#barA').onclick = () => { const p = stack.pop(); go(p || 'nachweis', false); };
+    }
   }else b.innerHTML = '';
   /* Ohne Inhalt darf die Leiste nicht bloß leer dastehen: sie klebt am unteren
      Rand und brächte mit Polster und hellem Verlauf einen Streifen über den
@@ -3210,21 +3265,145 @@ function blattHtml(k){
   }
   return `<div class="paper">${kopf('')}${tabelle(sortiert)}${fuss}</div>`;
 }
-function blattZeigen(){ $('#blattWrap').innerHTML = blattHtml(offen); }
+function blattZeigen(){ blattDatei = null; $('#blattWrap').innerHTML = blattHtml(offen); }
+
+/* --- Planblatt --------------------------------------------------------------
+   Der Plan als Blatt mit den nummerierten Marken, dahinter die Legende. Gedreht
+   wird das Bild selbst über eine Leinwand, nicht die Anzeige: eine Drehung im
+   Stylesheet übersteht die Umwandlung im Kurzbefehl nicht verlässlich, ein
+   gedrehtes Bild schon. Ein Querformat nutzt so die lange Seite des Blattes und
+   wird rund anderthalbmal so groß – zum Lesen wird das Blatt gedreht. */
+let blattDatei = null;                  // gesetzt, solange die Vorschau ein Planblatt zeigt
+const LEGENDE_PLATZ = 88;               // Zeilen je Legendenblatt, zweispaltig
+const PLAN_BOGEN  = 1024;               // Blattbreite: beim Planblatt in Vorschau und Ausgabe gleich
+const PLAN_PLATZ_B = 948;               // 1024 abzüglich der Ränder
+const PLAN_PLATZ_H = 1290;              // 1448 abzüglich Ränder und Kopfzeile
+
+function bildLaden(url){
+  return new Promise(ok => {
+    const i = new Image();
+    i.onload = () => ok(i); i.onerror = () => ok(null);
+    i.src = url;
+  });
+}
+async function planBlattHtml(id){
+  const pl = await Bilder.get(id);
+  const b = pl && planBlob(pl);
+  if(!b || !b.size) return '';
+  const url = URL.createObjectURL(b);
+  const bild = await bildLaden(url);
+  if(!bild){ URL.revokeObjectURL(url); return ''; }
+  const quer = bild.naturalWidth > bild.naturalHeight;
+  let daten;
+  if(quer){
+    const c = document.createElement('canvas');
+    c.width = bild.naturalHeight; c.height = bild.naturalWidth;
+    const g = c.getContext('2d');
+    g.translate(c.width, 0); g.rotate(Math.PI / 2);
+    g.drawImage(bild, 0, 0);
+    daten = c.toDataURL('image/jpeg', 0.9);
+  }else{
+    daten = await blobZuText(b);
+  }
+  URL.revokeObjectURL(url);
+
+  /* Nach der Drehung liegt oben links, was vorher unten links lag: aus (x,y)
+     wird (1-y, x). Die Nummern bleiben, was sie am Bildschirm waren. */
+  const gruppen = katWahl()
+    .map(kat => ({kat, orte:katOrte(kat.k, id)}))
+    .filter(g => g.orte.length);
+  if(!gruppen.length) return '';
+  const marken = gruppen.reduce((alle, g) => alle.concat(g.orte.map(o => {
+    const x = quer ? 1 - o.y : o.x, y = quer ? o.x : o.y;
+    return `<div class="pm" style="--kat:${g.kat.farbe};left:${(x * 100).toFixed(3)}%;top:${(y * 100).toFixed(3)}%">${o.nr}</div>`;
+  })), []).join('');
+
+  const kopf = (titel, zusatz) => `<h2>${esc(titel)}</h2>
+    <div class="meta">${esc(CFG.objekt || '')} · ${esc(pl.name)}${zusatz} · ${esc(dText(heute()))}</div>`;
+  /* Der Plan bekommt, was das Blatt nach Kopfzeile und Rändern übrig lässt, und
+     zwar in beiden Richtungen: quer wird er von der Breite begrenzt, hochkant
+     von der Höhe. Gerechnet in Pixeln des Bogens – Vorschau und Ausgabe sind
+     beim Planblatt gleich breit, das Bild sitzt also in beiden gleich. */
+  const bw = quer ? bild.naturalHeight : bild.naturalWidth;
+  const bh = quer ? bild.naturalWidth  : bild.naturalHeight;
+  const breit = Math.round(Math.min(PLAN_PLATZ_B, PLAN_PLATZ_H * (bw / bh)));
+  let raus = `<div class="paper">${kopf('Grundriss', '')}
+    <div class="planblatt" style="width:${breit}px"><img src="${daten}" alt="${esc(pl.name)}">${marken}</div>
+  </div>`;
+
+  /* Die Legende blattweise: jede Überschrift zählt wie zwei Zeilen, sonst
+     stünde sie am Ende eines Blattes ohne ihre Einträge. */
+  const zeilen = [];
+  gruppen.forEach(g => {
+    zeilen.push({titel:NW(g.kat.k).label});
+    g.orte.forEach(o => zeilen.push({farbe:g.kat.farbe, nr:o.nr, text:ortName(o.key)}));
+  });
+  const seiten = [];
+  let seite = [], platz = LEGENDE_PLATZ;
+  zeilen.forEach(z => {
+    const braucht = z.titel ? 2 : 1;
+    if(braucht > platz){ seiten.push(seite); seite = []; platz = LEGENDE_PLATZ; }
+    seite.push(z); platz -= braucht;
+  });
+  if(seite.length) seiten.push(seite);
+  seiten.forEach((eintraege, i) => {
+    const inhalt = eintraege.map(z => z.titel
+      ? `</div><div class="lgruppe"><div class="ltitel">${esc(z.titel)}</div>`
+      : `<div class="lzeile"><span class="lnr" style="--kat:${z.farbe}">${z.nr}</span><span>${esc(z.text)}</span></div>`).join('');
+    raus += `<div class="paper">${kopf('Legende',
+        seiten.length > 1 ? ` · Blatt ${i + 1} von ${seiten.length}` : '')}
+      <div class="legende"><div class="lgruppe">${inhalt}</div></div>
+    </div>`;
+  });
+  return raus;
+}
+async function planBlattZeigen(ids){
+  toast('Blatt wird gebaut …');
+  let raus = '';
+  for(const id of ids){ raus += await planBlattHtml(id); }
+  if(!raus){ toast('Auf diesem Plan steht nichts Eingeblendetes'); return; }
+  const pl = ids.length === 1 ? await Bilder.get(ids[0]) : null;
+  const roh = pl ? String(pl.name || 'Grundriss') : 'Grundrisse';
+  blattDatei = {
+    name: (/^grundriss/i.test(roh) ? nameTeil(roh) : 'Grundriss ' + nameTeil(roh)) + '.html',
+    html: blattDokument('Grundriss', raus, PLAN_BOGEN)
+  };
+  $('#blattWrap').innerHTML = raus;
+  go('blatt');
+}
 
 /* ---------- Übergabe an den Kurzbefehl --------------------------------------
    Wie im E-Assistenten: die Blätter gehen als HTML mit der Gestaltung im Kopf
    hinaus, der Kurzbefehl wandelt sie in PDF. Ohne Titel im Teilen-Vorgang, sonst
    kommt er als zusätzliches Textobjekt an. */
 const nameTeil = s => String(s || '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
-function exportHtml(k){
+function blattDokument(titel, inhalt, breite){
   const stil = [...document.querySelectorAll('style')].map(s => s.textContent).join('\n')
     .replace(/\/\*[\s\S]*?\*\//g, '');
   return `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8">
-<title>${esc(NW(k).titel)}</title>
+<title>${esc(titel)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>${stil}\nbody{background:#fff;padding:0}\n.paper{width:1130px;margin:0 auto}</style>
-</head><body>${blattHtml(k)}</body></html>`;
+<style>${stil}\nbody{background:#fff;padding:0}\n.paper{width:${breite || 1130}px;margin:0 auto}</style>
+</head><body>${inhalt}</body></html>`;
+}
+function exportHtml(k){ return blattDokument(NW(k).titel, blattHtml(k)); }
+/* Hinausgereicht wird immer gleich: eine Datei, geteilt, wie das Gerät es
+   anbietet. Ohne Titel im Teilen-Vorgang, sonst kommt er als zusätzliches
+   Textobjekt an. */
+async function dateiTeilen(name, inhalt){
+  const datei = new File([new Blob([inhalt], {type:'text/html'})], name, {type:'text/html'});
+  try{
+    if(navigator.canShare && navigator.canShare({files:[datei]})){
+      try{ await navigator.share({files:[datei]}); }
+      catch(e){ /* iOS meldet auch bei Erfolg einen Abbruch – bewusst übergangen */ }
+    }else{
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(datei); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }
+    return true;
+  }catch(e){ toast('Übergabe nicht möglich'); return false; }
 }
 async function ausgeben(){
   const n = NW(offen);
@@ -3241,18 +3420,7 @@ async function ausgeben(){
     ? stichtag.slice(2, 4) + '-Q' + (Math.floor((+stichtag.slice(5, 7) - 1) / 3) + 1)
     : stichtag.slice(2, 7);
   const name = `${teil} ${nameTeil(n.datei || n.label)}.html`;
-  const datei = new File([new Blob([exportHtml(offen)], {type:'text/html'})], name, {type:'text/html'});
-  try{
-    if(navigator.canShare && navigator.canShare({files:[datei]})){
-      try{ await navigator.share({files:[datei]}); }
-      catch(e){ /* iOS meldet auch bei Erfolg einen Abbruch – bewusst übergangen */ }
-    }else{
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(datei); a.download = name;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    }
-  }catch(e){ toast('Übergabe nicht möglich'); return; }
+  if(!await dateiTeilen(name, exportHtml(offen))) return;
   /* Vor dem Leeren die Zählerstände sichern: aus ihnen entsteht im nächsten
      Quartal der Verbrauch. */
   if(n.art === 'medien'){
