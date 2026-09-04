@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.88 04.09.2026  Die eigene Marke im Grundriss hat jetzt einen gefuellten
+                    Kern und einen weissen Trennring, der Puls schlaegt in
+                    einer Kontrastfarbe (gruen/blau, gelb/orange, rot/feurig);
+                    die fremden Marken treten etwas zurueck. In den Listen
+                    wandert Geprueftes an den Anfang, sobald die Karte
+                    zugeklappt ist - die naechste offene rueckt damit an die
+                    Stelle, auf die man ohnehin schaut. Bei einem Mangel erst
+                    nach dem Zuklappen, damit die Bemerkung in Ruhe
+                    geschrieben werden kann. Die Pfeile stehen nur noch an
+                    offenen Karten und tauschen mit der naechsten offenen.
   v0.87 04.09.2026  Die Marken im Grundriss tragen den Pruefstand: gruen
                     geprueft, gelb in dieser Runde noch offen, rot offen und die
                     Frist laeuft ab - dieselben Schwellen wie die Ringe auf der
@@ -545,16 +555,26 @@ input.schmal{width:170px}
   position:absolute;z-index:3;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
   border:3px solid;color:#C0392B;background:rgba(192,57,43,.25);pointer-events:none;
 }
-#planBox .marke.andere{width:20px;height:20px;margin:-10px 0 0 -10px}
+#planBox .marke.andere{width:20px;height:20px;margin:-10px 0 0 -10px;opacity:.62}
 /* Die Farbe sagt den Prüfstand: grün geprüft, gelb in dieser Runde noch offen,
    rot offen und die Frist läuft ab. Es sind dieselben drei Farben wie bei den
    Ringen der Startseite – dort steht der Nachweis, hier das einzelne Objekt.
-   Gesetzt wird nur die Textfarbe, Rand und Puls nehmen sie von dort. */
-#planBox .marke.st-gruen{color:#4E9A2F;background:rgba(78,154,47,.22)}
-#planBox .marke.st-gelb {color:#E3A81F;background:rgba(227,168,31,.25)}
-#planBox .marke.st-rot  {color:#C0392B;background:rgba(192,57,43,.22)}
+   Gesetzt wird nur die Textfarbe, Rand und Kern nehmen sie von dort; --puls ist
+   die Kontrastfarbe, in der die eigene Marke schlägt. */
+#planBox .marke.st-gruen{color:#4E9A2F;background:rgba(78,154,47,.22);--puls:#1F6FB2}
+#planBox .marke.st-gelb {color:#E3A81F;background:rgba(227,168,31,.25);--puls:#E8590C}
+#planBox .marke.st-rot  {color:#C0392B;background:rgba(192,57,43,.22);--puls:#FF3B12}
+/* Die eigene Marke hebt sich nicht durch die Farbe ab – die ist ja belegt –,
+   sondern durch Bauart: gefüllter Kern gegen leere Ringe, dazu ein weißer
+   Trennring gegen Planlinien und dicht danebenliegende Marken. Das steht
+   dauerhaft im Bild, der Puls ist die meiste Zeit durchsichtig. */
+#planBox .marke.aktiv{box-shadow:0 0 0 2px #fff, 0 1px 4px rgba(0,0,0,.35)}
+#planBox .marke.aktiv::before{
+  content:'';position:absolute;inset:3px;border-radius:50%;background:currentColor;
+}
 #planBox .marke.aktiv::after{
-  content:'';position:absolute;inset:-4px;border-radius:50%;border:3px solid;
+  content:'';position:absolute;inset:-4px;border-radius:50%;
+  border:3px solid var(--puls, currentColor);
   animation:puls 2.4s ease-out infinite;
 }
 #planBox .marke.zieh{border-style:dashed;background:none}
@@ -757,7 +777,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.87';
+const VERSION = 'v0.88';
 const BUILD   = VERSION + ' · 04.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1447,6 +1467,11 @@ function lageHalten(vorherTop, wiederfinden){
   window.scrollTo(0, Math.max(0, Math.round(imDokument - vorherTop)));
 }
 
+/* Laufnummer innerhalb der Runde: sie ordnet das Geprüfte nach der Folge des
+   Rundgangs – das Datum kann das nicht, es wird alles am selben Tag geprüft.
+   Sie steht in den Daten der Runde und verschwindet mit ihr bei der Ausgabe. */
+const laufNr = d => (d.lauf = (d.lauf || 0) + 1);
+
 /* --- Wohin die Liste beim Aufbau springt ------------------------------------
    Zwei Fälle, sonst keiner: aus dem Grundriss zurück an die Stelle, von der aus
    verortet wurde (listenLage), und beim Betreten aus der Startseite zur ersten
@@ -1550,7 +1575,34 @@ function renderNachweis(){
   $('#sigBlock').hidden = n.art === 'medien';
   if(n.art === 'medien'){    renderMedien();    return; }
   if(n.art === 'sprinkler'){ renderSprinkler(); renderSig(); return; }
-  $('#nwListe').innerHTML = t.anlagen.map((a, i) => {
+  /* --- Reihenfolge während des Rundgangs -----------------------------------
+     Zugeklappt Bewertetes wandert an den Anfang, zuletzt Geprüftes zuoberst;
+     die offenen Karten behalten unter sich den Weg durchs Haus. So rückt nach
+     jedem Urteil die nächste Karte an die Stelle, auf die man ohnehin schaut.
+     Die Laufnummer hält fest, in welcher Folge geprüft wurde – das Datum kann
+     das nicht, es wird ja alles am selben Tag geprüft. Sie fällt mit der Runde
+     bei der Ausgabe weg. Vergeben wird sie erst, wenn die Karte zugeklappt
+     ist: bei einem Mangel bleibt sie offen, bis die Bemerkung geschrieben ist,
+     und darf so lange nicht wegrutschen. In Listen ohne kompakte Karten bleibt
+     alles, wie es ist – dort steht ohnehin kein Rundgang dahinter. */
+  let neueNr = false;
+  if(n.kompakt) t.anlagen.forEach(a => {
+    const z = d.zeilen[a];
+    if(z.status && !offenKarten.has(a)){ if(!z.n){ z.n = laufNr(d); neueNr = true; } }
+    else if(!z.status && z.n){ delete z.n; neueNr = true; }   // Urteil zurückgenommen
+  });
+  if(neueNr) saveDat();
+  const reihe = t.anlagen.map((a, i) => i).sort((x, y) =>
+    ((d.zeilen[t.anlagen[y]].n || 0) - (d.zeilen[t.anlagen[x]].n || 0)) || (x - y));
+  /* Die Pfeile ändern den Weg, nicht die Prüffolge: sie tauschen mit der
+     nächsten noch offenen Karte – also mit dem, was daneben zu sehen ist. */
+  const nachbarOffen = (i, richtung) => {
+    for(let j = i + richtung; j >= 0 && j < t.anlagen.length; j += richtung)
+      if(!d.zeilen[t.anlagen[j]].n) return j;
+    return -1;
+  };
+  $('#nwListe').innerHTML = reihe.map(i => {
+    const a = t.anlagen[i];
     const z = d.zeilen[a];
     const mangel = z.status && /mangel|defekt/i.test(z.status);
     const klasse = !z.status ? '' : mangel ? ' mangel' : ' fertig';
@@ -1562,9 +1614,9 @@ function renderNachweis(){
        zählt, die Pfeile. In der zugeklappten Karte steht davon nichts – dort
        geht es ums Nachsehen, nicht ums Ändern. */
     const pfeile = `<span class="pfeile">
-          <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>${n.sortierbar ? `
-          <button type="button" data-hoch="1" aria-label="nach oben"${i ? '' : ' disabled'}>↑</button>
-          <button type="button" data-runter="1" aria-label="nach unten"${i === t.anlagen.length - 1 ? ' disabled' : ''}>↓</button>` : ''}
+          <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>${n.sortierbar && !z.n ? `
+          <button type="button" data-hoch="1" aria-label="nach oben"${nachbarOffen(i, -1) < 0 ? ' disabled' : ''}>↑</button>
+          <button type="button" data-runter="1" aria-label="nach unten"${nachbarOffen(i, 1) < 0 ? ' disabled' : ''}>↓</button>` : ''}
         </span>`;
     /* Bewertete Anlagen zeigen sich klein: Name, darunter Datum und Urteil. Ein
        Tipp auf die Karte holt sie in voller Größe zurück, ein Tipp auf die
@@ -1592,13 +1644,23 @@ function renderNachweis(){
     </div>`;
   }).join('');
   $$('#nwListe .pos').forEach(box => {
-    const a = t.anlagen[+box.dataset.i], z = d.zeilen[a];
+    const i = +box.dataset.i, a = t.anlagen[i], z = d.zeilen[a];
+    /* Wer nach oben wandert, gibt seinen Platz ab: dann wird nicht die eigene
+       Karte gehalten, sondern die nächste offene an die frei werdende Stelle
+       gesetzt. Sonst bleibt alles, wo es ist. */
+    const halten = (top, wandert) => {
+      const j = wandert ? nachbarOffen(i, 1) : i;
+      lageHalten(top, () => $(`#nwListe .pos[data-i="${j < 0 ? i : j}"]`));
+    };
     /* Auf- und Zuklappen; die Karte bleibt dabei an ihrem Platz auf dem Schirm. */
     const umschalten = auf => {
       const top = box.getBoundingClientRect().top;
       if(auf) offenKarten.add(a); else offenKarten.delete(a);
+      /* Vor dem Neuaufbau festhalten: dort wird die Laufnummer vergeben, danach
+         wäre nicht mehr zu erkennen, dass die Karte gerade wandert. */
+      const wandert = !auf && !!n.kompakt && !!z.status && !z.n;
       renderNachweis();
-      lageHalten(top, () => $(`#nwListe .pos[data-i="${box.dataset.i}"]`));
+      halten(top, wandert);
     };
     if(box.classList.contains('kompakt')){ box.onclick = () => umschalten(true); return; }
     const kopf = box.querySelector('.name.zu');
@@ -1615,13 +1677,13 @@ function renderNachweis(){
          aller Regel etwas dazuschreiben. Aufklappen geht jederzeit wieder. */
       const mangel = /mangel|defekt/i.test(z.status || '');
       if(z.status && mangel) offenKarten.add(a); else offenKarten.delete(a);
+      const wandert = !!n.kompakt && !!z.status && !mangel && !z.n;
       saveDat(); renderNachweis();
-      lageHalten(top, () => $(`#nwListe .pos[data-i="${box.dataset.i}"]`));
+      halten(top, wandert);
     });
     box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
     box.querySelector('[data-feld="bem"]').oninput    = e => { z.bem   = e.target.value; saveDat(); };
-    if(n.sortierbar){
-      const i = +box.dataset.i;
+    if(n.sortierbar && !z.n){
       const tausch = j => {
         if(j < 0 || j >= t.anlagen.length) return;
         const top = box.getBoundingClientRect().top;
@@ -1629,14 +1691,14 @@ function renderNachweis(){
         saveCfg(); renderNachweis();
         lageHalten(top, () => $(`#nwListe .pos[data-i="${j}"]`));
       };
-      box.querySelector('[data-hoch]').onclick   = () => tausch(i - 1);
-      box.querySelector('[data-runter]').onclick = () => tausch(i + 1);
+      box.querySelector('[data-hoch]').onclick   = () => tausch(nachbarOffen(i, -1));
+      box.querySelector('[data-runter]').onclick = () => tausch(nachbarOffen(i, 1));
     }
   });
   renderSig();
   /* Erst jetzt springen: die Unterschrift unter der Liste trägt zur Höhe des
      Dokuments bei, ohne sie käme der Bildlauf womöglich nicht weit genug. */
-  listenSprung(i => !d.zeilen[t.anlagen[i]] || !d.zeilen[t.anlagen[i]].status);
+  listenSprung(p => !d.zeilen[t.anlagen[reihe[p]]].status);
 }
 
 /* ---------- Medienverbräuche -----------------------------------------------
@@ -1649,10 +1711,30 @@ function renderNachweis(){
    Datumsfelder. */
 function renderMedien(){
   const d = datenFuer('medien'), liste = stellenSortiert(), namen = medienNamen();
+  const steht = z => String(d.stand[z.key] ?? '').trim() !== '';
+  /* Wie in den Anlagenlisten: Abgelesenes wandert an den Anfang, zuletzt
+     Abgelesenes zuoberst, die offenen Zähler behalten unter sich den Weg. Ein
+     wieder geleertes Feld gibt die Nummer zurück und die Karte damit ihren
+     Platz im Weg. */
+  d.n = d.n || {};
+  let neueNr = false;
+  liste.forEach(z => {
+    if(steht(z)){ if(!d.n[z.key]){ d.n[z.key] = laufNr(d); neueNr = true; } }
+    else if(d.n[z.key]){ delete d.n[z.key]; neueNr = true; }
+  });
+  if(neueNr) saveDat();
+  const reihe = liste.map((z, i) => i).sort((x, y) =>
+    ((d.n[liste[y].key] || 0) - (d.n[liste[x].key] || 0)) || (x - y));
+  const nachbarOffen = (i, richtung) => {
+    for(let j = i + richtung; j >= 0 && j < liste.length; j += richtung)
+      if(!d.n[liste[j].key]) return j;
+    return -1;
+  };
   const kopf = `<label class="field"><span>Ablesedatum</span>
       <input type="date" id="medDatum" class="schmal" value="${esc(d.datum)}"></label>
     <div class="eyebrow">Ablesereihenfolge</div>`;
-  $('#nwListe').innerHTML = kopf + liste.map((z, i) => {
+  $('#nwListe').innerHTML = kopf + reihe.map(i => {
+    const z = liste[i];
     const alt = MED_ALT[z.key];
     const v = zahl(d.stand[z.key]) != null && alt && zahl(alt.stand) != null
       ? zahlText(zahl(d.stand[z.key]) - zahl(alt.stand)) : '';
@@ -1663,9 +1745,9 @@ function renderMedien(){
         <input inputmode="decimal" data-stand="1" value="${esc(d.stand[z.key] || '')}" placeholder="Zählerstand">
         <span class="muted small" style="flex:0 0 auto">${esc(z.einheit)}</span>
         <span class="pfeile">
-          <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>
-          <button type="button" data-hoch="1" aria-label="nach oben"${i ? '' : ' disabled'}>↑</button>
-          <button type="button" data-runter="1" aria-label="nach unten"${i === liste.length - 1 ? ' disabled' : ''}>↓</button>
+          <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>${d.n[z.key] ? '' : `
+          <button type="button" data-hoch="1" aria-label="nach oben"${nachbarOffen(i, -1) < 0 ? ' disabled' : ''}>↑</button>
+          <button type="button" data-runter="1" aria-label="nach unten"${nachbarOffen(i, 1) < 0 ? ' disabled' : ''}>↓</button>`}
         </span>
       </div>
       <div class="muted small" style="margin-top:6px">${
@@ -1675,11 +1757,38 @@ function renderMedien(){
     </div>`;
   }).join('');
 
+  /* Die Pfeile stehen nur an den offenen Karten; ihre Sperren richten sich nach
+     dem, was nach einem Umhängen noch offen darüber oder darunter liegt. */
+  const pfeileFrisch = () => {
+    const offene = $$('#nwListe .pos').filter(el => !d.n[liste[+el.dataset.i].key]);
+    offene.forEach((el, k) => {
+      const h = el.querySelector('[data-hoch]'), r = el.querySelector('[data-runter]');
+      if(h) h.disabled = k === 0;
+      if(r) r.disabled = k === offene.length - 1;
+    });
+  };
+
   $$('#nwListe .pos').forEach(box => {
     const i = +box.dataset.i, z = liste[i];
-    box.querySelector('[data-stand]').oninput = e => {
+    const feld = box.querySelector('[data-stand]');
+    feld.oninput = e => {
       d.stand[z.key] = e.target.value.trim(); saveDat(); renderBar();
       box.classList.toggle('fertig', !!d.stand[z.key]);
+    };
+    /* Beim Verlassen des Feldes wandert der abgelesene Zähler an den Anfang –
+       aber als Umhängen der einen Karte, nicht als Neuaufbau der Liste: steht
+       der Daumen schon im nächsten Feld, risse ein Neuaufbau Feld und Tastatur
+       mit weg. Ein geleertes Feld ordnet sich erst beim nächsten Aufbau zurück,
+       das kommt selten vor und darf warten. */
+    feld.onblur = () => {
+      if(!steht(z) || d.n[z.key]) return;
+      d.n[z.key] = laufNr(d); saveDat();
+      const top = box.getBoundingClientRect().top, nach = box.nextElementSibling;
+      const erste = $('#nwListe .pos');
+      if(erste && erste !== box) $('#nwListe').insertBefore(box, erste);
+      box.querySelectorAll('[data-hoch],[data-runter]').forEach(b => b.remove());
+      pfeileFrisch();
+      if(nach) lageHalten(top, () => nach);
     };
     const tausch = j => {
       if(j < 0 || j >= liste.length) return;
@@ -1689,13 +1798,14 @@ function renderMedien(){
       folgeSpeichern(neu); renderMedien();
       lageHalten(top, () => $(`#nwListe .pos[data-i="${j}"]`));
     };
-    box.querySelector('[data-hoch]').onclick   = () => tausch(i - 1);
-    box.querySelector('[data-runter]').onclick = () => tausch(i + 1);
+    const hoch = box.querySelector('[data-hoch]'), runter = box.querySelector('[data-runter]');
+    if(hoch)   hoch.onclick   = () => tausch(nachbarOffen(i, -1));
+    if(runter) runter.onclick = () => tausch(nachbarOffen(i, 1));
     box.querySelector('[data-ort]').onclick = () =>
       verorten(z.key, `${z.partei} · ${namen[z.key] || z.medium}`);
   });
   $('#medDatum').onchange = e => { d.datum = e.target.value; saveDat(); renderBar(); };
-  listenSprung(i => String(d.stand[liste[i].key] ?? '').trim() === '');
+  listenSprung(p => String(d.stand[liste[reihe[p]].key] ?? '').trim() === '');
 }
 const medienVoll = d => {
   const l = stellen();
@@ -3048,7 +3158,8 @@ async function ausgeben(){
 
    PASSWORT ÄNDERN: unten auf "Prüfwert berechnen", das Ergebnis ersetzt die
    folgende Zeile. Ein neues Passwort sperrt alle Geräte wieder zu, weil der
-   gemerkte Wert dann nicht mehr passt. */const ZUGANG = { salz:'ad6f001e43fb770a30320c3023d797cd', pruef:'7458d6d0dd9e9c0bc975a6b88e6307d380029a46f3485c2ff23176018ab816e0' };
+   gemerkte Wert dann nicht mehr passt. */
+const ZUGANG = { salz:'a64df89c1f68e0878833c4d55fa064c9', pruef:'cf9dc2c005b1020c829b416babc4de3b87b1cc5a5ba7134160f96492216e2d9c' };
 const RUNDEN = 250000;
 
 const alsHex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
