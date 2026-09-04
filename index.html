@@ -10,15 +10,8 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
-  v0.85 01.09.2026  Bewegung im Grundriss neu, abgeschaut bei der SF E-Plan: der
-                    Bildlauf des Browsers wird nicht mehr benutzt. Die App fuehrt
-                    Verschiebung und Massstab selbst und setzt sie als ein
-                    einziges transform, einmal je Bildaufbau - ohne Layout, ohne
-                    neues Rastern. Zeigerereignisse mit Zeigerfang, Bezug fuers
-                    Kneifen je Bild neu, Zoomen und Schieben in einem Vorgang,
-                    Nachlauf beim Loslassen. Marken und das kleine Fenster
-                    bekommen eine Gegenskalierung; der Tipp kommt aus der Geste
-                    statt aus click.
+  v0.85 02.09.2026  Im Blatt der Sprinkleranlage fehlte in den Spaltenkoepfen
+                    der Punkt hinter dem Monat: "04.09." statt "04.09".
   v0.84 01.09.2026  Schnelles Tippen nacheinander (etwa beim Umsortieren mit den
                     Pfeilen) loeste iOS' Zoom per Doppeltipp aus. Der ist jetzt
                     im ganzen Aufbau abgeschaltet; Wischen und Zoomen mit zwei
@@ -473,16 +466,15 @@ input.schmal{width:170px}
 /* Der Plan liegt im Querformat und wird auf die volle verfügbare Höhe gebracht;
    in der Breite läuft er über den Bildschirm hinaus und wird gewischt. Die Höhe
    setzt planHoehe(), weil sie vom Platz über dem Plan abhängt. */
-/* Der Rahmen ist nur noch ein Sichtfenster: kein Bildlauf des Browsers mehr,
-   touch-action:none - die App fuehrt jede Bewegung selbst. Die Ebene darin
-   traegt Bild, scharfe Auflage und Marken und wird als Ganzes verschoben und
-   skaliert; will-change haelt sie auf einer eigenen Schicht der Grafikeinheit. */
 .planBuehne{position:relative;margin:0 calc(var(--pad) * -1);background:#555}
-#planWrap{background:#555;position:relative;overflow:hidden;touch-action:none}
+/* font-size und line-height auf null: das Bild sitzt als inline-block sonst auf
+   einer Schriftgrundlinie und lässt darunter eine Unterlänge frei – der Plan
+   ließe sich um ein paar Pixel hochschieben und gäbe unten Grau frei. */
+#planWrap{background:#555;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;
+  font-size:0;line-height:0}
 /* Der Plan wird erst sichtbar, wenn er an seinem Platz steht: sonst erscheint er
    kurz links oben und springt dann zur Stelle – ein Zucken, das man sieht. */
-#planBox{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;
-  --gegen:1;opacity:0;transition:opacity .18s ease}
+#planBox{opacity:0;transition:opacity .18s ease}
 #planBox.bereit{opacity:1}
 /* Hinweis und Knopf liegen auf dem Plan statt darüber: sie werden nur gebraucht,
    solange noch keine Stelle steht oder gerade verschoben wird. Danach blenden
@@ -504,8 +496,7 @@ input.schmal{width:170px}
    stört das, weil derselbe Druck das Verschieben freischaltet. */
 #planBox{position:relative;display:inline-block;height:100%;
   -webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-/* Die Ebene hat eine feste Groesse in Pixeln, das Bild fuellt sie ganz aus. */
-#planBox img{display:block;width:100%;height:100%;
+#planBox img{display:block;height:100%;width:auto;max-width:none;
   -webkit-touch-callout:none;pointer-events:none}
 /* Der aus der PDF neu gezeichnete Ausschnitt liegt deckungsgleich über dem
    gespeicherten Bild, aber unter den Marken. */
@@ -516,9 +507,6 @@ input.schmal{width:170px}
 #planBox .marke{
   position:absolute;z-index:3;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
   border:3px solid #C0392B;background:rgba(192,57,43,.25);pointer-events:none;
-  /* Gegen den Massstab der Ebene: die Marke soll die Stelle zeigen, nicht mit
-     dem Plan wachsen. */
-  transform:scale(var(--gegen));
 }
 #planBox .marke.andere{border-color:#333;background:rgba(0,0,0,.15);width:20px;height:20px;margin:-10px 0 0 -10px}
 #planBox .marke.aktiv::after{
@@ -529,8 +517,7 @@ input.schmal{width:170px}
 /* Das kleine Fenster an einer fremden Marke: hängt in Anteilen am Plan, sitzt
    über der Marke und zeigt mit einer Spitze auf sie. */
 #planBox .planTipp{
-  position:absolute;z-index:4;margin-top:-16px;
-  transform:translate(-50%, -100%) scale(var(--gegen));transform-origin:50% 100%;
+  position:absolute;z-index:4;transform:translate(-50%, -100%);margin-top:-16px;
   max-width:210px;padding:6px 10px;border-radius:10px;
   background:rgba(20,20,20,.92);color:#fff;
   font-family:var(--f-label);font-size:13px;line-height:1.3;text-align:center;
@@ -705,7 +692,7 @@ input.schmal{width:170px}
 <script>
 'use strict';
 const VERSION = 'v0.85';
-const BUILD   = VERSION + ' · 01.09.2026';
+const BUILD   = VERSION + ' · 02.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -2029,185 +2016,69 @@ async function planBild(id){
   planUrl = URL.createObjectURL(b);
   return pl;
 }
-/* --- Bewegung im Grundriss --------------------------------------------------
-   Abgeschaut bei der SF E-Plan, wo sich das Zoomen butterweich anfuehlt. Der
-   Kern dort: der Bildlauf des Browsers wird gar nicht benutzt. Die App fuehrt
-   drei Zahlen mit - Verschiebung x, y und Vergroesserung m - und setzt sie
-   einmal je Bildaufbau. Vorher rechnete hier jeder einzelne Fingerimpuls die
-   Bildhoehe neu; Safari musste dann Layout und Rasterung wiederholen, und genau
-   davon kam das Ruckeln.
-
-   Uebertragen heisst das: ein einziges transform auf der Planebene. Das laeuft
-   auf der Grafikeinheit, ohne Layout und ohne neues Rastern. Das Bild wird
-   dabei beim Hineingehen fuer einen Moment weich - scharf wird es wieder,
-   sobald die Finger ruhen und der Ausschnitt aus der PDF nachgezeichnet ist.
-   Das ist der bewusste Tausch: weiche Bewegung statt scharfer Einzelbilder. */
-const PLAN_ZOOM_MAX = 6;
-let sicht = {x:0, y:0, m:1};      // Verschiebung in CSS-Pixeln, m = 1 ist eingepasst
-let basisB = 0, basisH = 0;       // Masse der Planebene bei m = 1
-
-/* Die Ebene traegt Bild, scharfe Auflage und Marken zugleich - eine
-   Verschiebung, ein Massstab, alles bleibt deckungsgleich. --gegen halten die
-   Marken auf ihrer Groesse, sonst wuechsen sie beim Zoomen mit. */
-function sichtAnwenden(){
-  const box = $('#planBox'); if(!box) return;
-  box.style.transform = `translate3d(${sicht.x}px, ${sicht.y}px, 0) scale(${sicht.m})`;
-  box.style.setProperty('--gegen', 1 / sicht.m);
-}
-/* Nur einmal je Bild setzen, nicht je Fingerimpuls. */
-let zeichenAuftrag = false;
-function neuZeichnen(){
-  if(zeichenAuftrag) return;
-  zeichenAuftrag = true;
-  requestAnimationFrame(() => { zeichenAuftrag = false; sichtAnwenden(); });
-}
-/* Kleiner als eingepasst wird nicht, und aus dem Bild geschoben auch nicht.
-   Was in eine Richtung ganz hineinpasst, steht dort mittig. */
-function sichtBegrenzen(){
-  const wrap = $('#planWrap'); if(!wrap || !basisB) return;
-  sicht.m = Math.max(1, Math.min(PLAN_ZOOM_MAX, sicht.m));
-  const W = wrap.clientWidth, H = wrap.clientHeight;
-  const bw = basisB * sicht.m, bh = basisH * sicht.m;
-  sicht.x = bw <= W ? (W - bw) / 2 : Math.min(0, Math.max(W - bw, sicht.x));
-  sicht.y = bh <= H ? (H - bh) / 2 : Math.min(0, Math.max(H - bh, sicht.y));
-}
-/* Die Masse der Ebene bei m = 1: der Plan fuellt die Hoehe des Rahmens und
-   laeuft in der Breite darueber hinaus. */
-function planMasse(){
-  const wrap = $('#planWrap'), box = $('#planBox');
-  const bild = box && box.querySelector('img');
-  if(!wrap || !bild || !bild.naturalWidth) return false;
-  basisH = wrap.clientHeight;
-  basisB = basisH * (bild.naturalWidth / bild.naturalHeight);
-  box.style.width  = basisB + 'px';
-  box.style.height = basisH + 'px';
-  sichtBegrenzen(); sichtAnwenden();
-  return true;
-}
-/* Um einen Punkt zoomen: was unter "von" lag, liegt danach unter "nach".
-   Zoomen und Mitschieben sind damit ein Vorgang, nicht zwei. */
-function zoomen(f, von, nach){
-  const vorher = sicht.m;
-  sicht.m = Math.max(1, Math.min(PLAN_ZOOM_MAX, sicht.m * f));
-  const wirklich = sicht.m / vorher;
-  sicht.x = nach.x - (von.x - sicht.x) * wirklich;
-  sicht.y = nach.y - (von.y - sicht.y) * wirklich;
-  sichtBegrenzen();
-}
-/* Der Plan bekommt die volle verfuegbare Hoehe: Unterkante Bildschirm, Oberkante
+/* Der Plan bekommt die volle verfügbare Höhe: Unterkante Bildschirm, Oberkante
    dort, wo der Platz beginnt. Gerechnet wird bei jeder Anzeige neu, weil die
-   Zeile darueber mal laenger und mal kuerzer ist. Abgerundet und ohne Reserve -
-   jede Reserve stuende als heller Streifen unter dem Plan. */
+   Zeile darüber mal länger und mal kürzer ist. Abgerundet und ohne Reserve –
+   jede Reserve stünde als heller Streifen unter dem Plan. */
 function planHoehe(){
   const wrap = $('#planWrap'); if(!wrap || current !== 'plan') return;
   const oben = wrap.getBoundingClientRect().top + window.scrollY;
   const hoch = Math.max(200, Math.floor(window.innerHeight - oben));
   wrap.style.height = hoch + 'px';
-  planMasse();
+  planZoomAnwenden();
 }
 window.addEventListener('resize', planHoehe);
 
-/* --- Die Geste selbst -------------------------------------------------------
-   Zeigerereignisse statt Beruehrungsereignisse: mit Zeigerfang geht kein Finger
-   verloren, und Maus und Finger laufen ueber denselben Weg. Der Bezug fuers
-   Kneifen wird bei JEDEM Bild neu gesetzt, nicht am Gestenanfang - hebt ein
-   Finger ab oder kommt einer dazu, wird nur der Bezug nachgezogen statt die
-   Geste abzubrechen. Daher kommt die Ruhe: es gibt keinen Sprung. */
-const TIPP_SCHWELLE = 6;          // ab hier gilt es als Wischen, nicht als Tipp
-let planTippen = null;            // wird beim Aufbau der Ansicht gesetzt
-(function gesteBinden(){
+/* --- Zoom im Grundriss ------------------------------------------------------
+   Die übliche Zwei-Finger-Geste, aber im Rahmen des Plans statt auf der ganzen
+   Seite: das Bild wächst über die Höhe des Rahmens hinaus, gescrollt wird dann
+   in beide Richtungen. Die Marken sitzen in Anteilen und wachsen von selbst mit.
+   Der Punkt zwischen den Fingern bleibt dabei stehen – sonst rutscht einem beim
+   Zoomen die Stelle aus dem Bild, die man gerade ansieht. */
+let planZoom = 1;
+function planZoomAnwenden(){
+  const wrap = $('#planWrap'), box = $('#planBox');
+  if(!wrap || !box) return;
+  box.style.height = Math.round(wrap.clientHeight * planZoom) + 'px';
+  /* Die vorhandene Nachzeichnung wächst mit, bis die neue steht – sonst
+     blitzte beim Zoomen kurz das unscharfe Grundbild auf. */
+  scharfSpaeter();
+}
+(function zoomBinden(){
   const wrap = $('#planWrap'); if(!wrap) return;
-  const zeiger = new Map();
-  let zieht = false, bewegt = false, rahmen = null;
-  let letzterX = 0, letzterY = 0, startX = 0, startY = 0;
-  let kneifAbstand = 0, kneifMitte = null;
-  let vx = 0, vy = 0, schwungId = 0;
-
-  const imRahmen = () => [...zeiger.values()].map(p => ({x:p.x - rahmen.left, y:p.y - rahmen.top}));
-  function bezugNeu(){
-    const pk = imRahmen();
-    if(pk.length >= 2){
-      kneifAbstand = Math.hypot(pk[0].x - pk[1].x, pk[0].y - pk[1].y);
-      kneifMitte   = {x:(pk[0].x + pk[1].x) / 2, y:(pk[0].y + pk[1].y) / 2};
-    }else{ kneifAbstand = 0; kneifMitte = null; }
-    if(pk.length === 1){ letzterX = pk[0].x + rahmen.left; letzterY = pk[0].y + rahmen.top; }
-  }
-  /* Nachlauf beim Loslassen: der Plan gleitet aus, statt zu stehen wie
-     angenagelt. Am Anschlag wird die Richtung sofort still. */
-  function schwung(){
-    cancelAnimationFrame(schwungId);
-    const schritt = () => {
-      vx *= 0.92; vy *= 0.92;
-      if(Math.hypot(vx, vy) < 0.15){ scharfSpaeter(); return; }
-      const vorX = sicht.x, vorY = sicht.y;
-      sicht.x += vx; sicht.y += vy;
-      sichtBegrenzen();
-      if(sicht.x === vorX) vx = 0;
-      if(sicht.y === vorY) vy = 0;
-      sichtAnwenden();
-      schwungId = requestAnimationFrame(schritt);
-    };
-    schwungId = requestAnimationFrame(schritt);
-  }
-
-  wrap.addEventListener('pointerdown', ev => {
-    cancelAnimationFrame(schwungId); vx = vy = 0;
-    wrap.setPointerCapture(ev.pointerId);
-    rahmen = wrap.getBoundingClientRect();
-    zeiger.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
-    zieht = true;
-    if(zeiger.size === 1){ bewegt = false; startX = ev.clientX; startY = ev.clientY; }
-    bezugNeu();
+  const abstand = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  let d0 = 0, z0 = 1, mx = 0, my = 0;
+  wrap.addEventListener('touchstart', e => {
+    if(e.touches.length !== 2) return;
+    const t = e.touches, r = wrap.getBoundingClientRect();
+    d0 = abstand(t) || 1; z0 = planZoom;
+    mx = wrap.scrollLeft + (t[0].clientX + t[1].clientX) / 2 - r.left;
+    my = wrap.scrollTop  + (t[0].clientY + t[1].clientY) / 2 - r.top;
+    planGezoomt = true;
+  }, {passive:false});
+  wrap.addEventListener('touchmove', e => {
+    if(e.touches.length !== 2) return;
+    e.preventDefault();                       // sonst zoomt die ganze Seite mit
+    const t = e.touches, r = wrap.getBoundingClientRect();
+    const neu = Math.min(6, Math.max(1, z0 * (abstand(t) / d0)));
+    const v = neu / planZoom;
+    planZoom = neu; planZoomAnwenden();
+    const mitteX = (t[0].clientX + t[1].clientX) / 2 - r.left;
+    const mitteY = (t[0].clientY + t[1].clientY) / 2 - r.top;
+    mx *= v; my *= v;
+    wrap.scrollLeft = mx - mitteX;
+    wrap.scrollTop  = my - mitteY;
+  }, {passive:false});
+  /* Nach einer Geste soll der abschließende Tipp nicht als Setzen gelten. */
+  wrap.addEventListener('touchend', () => {
+    if(planGezoomt) setTimeout(() => { planGezoomt = false; }, 250);
+    scharfSpaeter();
   });
-
-  wrap.addEventListener('pointermove', ev => {
-    if(!zieht || !zeiger.has(ev.pointerId)) return;
-    zeiger.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
-
-    if(zeiger.size >= 2){                     // kneifen
-      bewegt = true;
-      const pk = imRahmen();
-      const abstand = Math.hypot(pk[0].x - pk[1].x, pk[0].y - pk[1].y);
-      const mitte = {x:(pk[0].x + pk[1].x) / 2, y:(pk[0].y + pk[1].y) / 2};
-      if(kneifAbstand > 0 && abstand > 0)
-        zoomen(Math.max(0.5, Math.min(2, abstand / kneifAbstand)), kneifMitte, mitte);
-      kneifAbstand = abstand; kneifMitte = mitte;
-      vx = vy = 0;
-      neuZeichnen();
-      return;
-    }
-
-    /* Geschoben wird ab dem ersten Pixel – eine tote Zone am Anfang fuehlt sich
-       zaeh an. Ob es ein Tipp war, entscheidet der Abstand zum Startpunkt. */
-    const dx = ev.clientX - letzterX, dy = ev.clientY - letzterY;
-    if(Math.abs(ev.clientX - startX) > TIPP_SCHWELLE ||
-       Math.abs(ev.clientY - startY) > TIPP_SCHWELLE) bewegt = true;
-    sicht.x += dx; sicht.y += dy;
-    sichtBegrenzen();
-    /* Geglaettet, damit ein einzelner Ruckler den Nachlauf nicht bestimmt. */
-    vx = vx * 0.7 + dx * 0.3; vy = vy * 0.7 + dy * 0.3;
-    letzterX = ev.clientX; letzterY = ev.clientY;
-    neuZeichnen();
-  });
-
-  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(n =>
-    wrap.addEventListener(n, ev => {
-      if(!zeiger.has(ev.pointerId)) return;
-      zeiger.delete(ev.pointerId);
-      if(zeiger.size){ bezugNeu(); return; }   // ein Finger liegt noch auf
-      zieht = false; kneifAbstand = 0; kneifMitte = null;
-      if(n !== 'pointerup'){ vx = vy = 0; scharfSpaeter(); return; }
-      if(!bewegt){
-        /* Ein Tipp - selbst behandelt statt ueber click: mit touch-action:none
-           waere ein nachgereichtes click-Ereignis nicht verlaesslich. */
-        vx = vy = 0;
-        if(planTippen) planTippen(ev);
-        scharfSpaeter();
-        return;
-      }
-      if(Math.hypot(vx, vy) > 1.5) schwung(); else scharfSpaeter();
-    }));
+  /* Auch beim bloßen Wischen wandert der Ausschnitt – dann muss nachgezeichnet
+     werden, sobald der Finger einen Augenblick ruht. */
+  wrap.addEventListener('scroll', scharfSpaeter, {passive:true});
 })();
+let planGezoomt = false;
 
 /* --- Scharf nachzeichnen ----------------------------------------------------
    Das gespeicherte Bild ist die Grundlage: es ist sofort da und in jeder Lage
@@ -2247,13 +2118,12 @@ async function scharfZeichnen(){
   const wrap = $('#planWrap'), box = $('#planBox');
   const bild = box && box.querySelector('img');
   if(!wrap || !bild || !scharfPlan || current !== 'plan') return;
-  if(sicht.m < SCHARF_AB){ scharfWeg(); return; }
+  if(planZoom < SCHARF_AB){ scharfWeg(); return; }
 
-  const bw = basisB * sicht.m, bh = basisH * sicht.m;
+  const bw = bild.offsetWidth, bh = bild.offsetHeight;
   if(!bw || !bh) return;
-  /* Sichtbarer Ausschnitt in Anteilen der Ebene, mit Zugabe. Die Lage steht im
-     Sichtzustand, nicht mehr im Bildlauf. */
-  let x = -sicht.x / bw, y = -sicht.y / bh;
+  /* Sichtbarer Ausschnitt in Anteilen des angezeigten Bildes, mit Zugabe. */
+  let x = wrap.scrollLeft / bw, y = wrap.scrollTop / bh;
   let w = Math.min(1, wrap.clientWidth / bw), h = Math.min(1, wrap.clientHeight / bh);
   x = Math.max(0, x - w * SCHARF_LUFT); y = Math.max(0, y - h * SCHARF_LUFT);
   w = Math.min(1 - x, w * (1 + 2 * SCHARF_LUFT));
@@ -2379,16 +2249,13 @@ function planWechseln(){
 function planZurStelle(){
   const wrap = $('#planWrap'), box = $('#planBox');
   const bild = box && box.querySelector('img');
-  if(!wrap || !bild || !planZiel || !basisB) return;
+  if(!wrap || !bild || !planZiel) return;
   const o = CFG.orte[planZiel.key];
   if(!o || o.x == null || o.plan !== planAktuell) return;
-  /* Die Stelle soll in die Mitte des Sichtfensters: die Verschiebung ist genau
-     die halbe Fensterbreite minus die Lage der Stelle in der Ebene. Die Grenzen
-     fangen ab, wenn sie zu nah am Rand liegt. */
-  sicht.x = wrap.clientWidth  / 2 - o.x * basisB * sicht.m;
-  sicht.y = wrap.clientHeight / 2 - o.y * basisH * sicht.m;
-  sichtBegrenzen();
-  sichtAnwenden();
+  const bw = bild.offsetWidth, bh = bild.offsetHeight;
+  if(!bw || !bh) return;
+  wrap.scrollLeft = Math.max(0, Math.min(bw - wrap.clientWidth,  o.x * bw - wrap.clientWidth  / 2));
+  wrap.scrollTop  = Math.max(0, Math.min(bh - wrap.clientHeight, o.y * bh - wrap.clientHeight / 2));
 }
 /* Der Streifen steht, solange er gebraucht wird, und blendet sich sonst nach
    vier Sekunden aus – der Plan soll die Fläche haben, nicht der Hinweis. */
@@ -2402,7 +2269,7 @@ async function planZeigen(id, ziel){
   planZiel = ziel || null;
   planZiehen = false;
   planAktuell = id;
-  sicht = {x:0, y:0, m:1};                     // jeder Plan beginnt ganz
+  planZoom = 1;                                // jeder Plan beginnt ganz
   scharfWeg(); scharfPlan = null; tippWeg();
   const pl = await planBild(id);
   if(!pl){ toast('Plan nicht gefunden'); return; }
@@ -2471,10 +2338,8 @@ async function planZeigen(id, ziel){
     });
     return nah;
   };
-  /* Der Tipp kommt jetzt aus der Geste (planTippen), nicht mehr aus click:
-     die App fuehrt die Bewegung selbst und weiss dadurch genau, ob gewischt
-     oder getippt wurde – die alte Sperre nach einer Zoomgeste entfaellt. */
-  planTippen = !planZiel ? null : e => {
+  box.onclick = !planZiel ? null : e => {
+    if(planGezoomt) return;                   // das war das Ende einer Zoom-Geste
     const nachbar = nachbarTreffer(e);
     if(nachbar){ tippZeigen(nachbar); return; }
     tippWeg();
@@ -2730,7 +2595,9 @@ function checklisteHtml(txt){
    Ein Kurzzeichen je Spalte gibt es nicht mehr – dafür steht die Unterschrift. */
 function sprinklerBlatt(k){
   const n = NW(k), t = teilCfg(k), d = datenFuer(k);
-  const kurzDat = t2 => { if(!t2) return ''; const [, m, tg] = t2.split('-'); return `${tg}.${m}`; };
+  /* Tag und Monat ohne Jahr, mit Punkt hinter dem Monat: "04.09." – ohne ihn
+     liest sich die Angabe wie eine Uhrzeit oder eine unfertige Zahl. */
+  const kurzDat = t2 => { if(!t2) return ''; const [, m, tg] = t2.split('-'); return `${tg}.${m}.`; };
   const wert = (g, i, p) => {
     const v = String(g.w[i] ?? '');
     if(istBar(p)) return esc(v);
