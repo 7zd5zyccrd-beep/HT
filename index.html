@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.89 04.09.2026  Uebersicht im Grundriss: beim Ansehen eines Plans aus den
+                    Einstellungen lassen sich ueber den Knopf "Objekte" die
+                    Kategorien einblenden - Aufzuege blau, Rollbandfilter
+                    violett, Feststellanlagen tuerkis, Zaehler braun, je Marke
+                    ihre Nummer, je Plan von 1 an. Die Auswahl wird gemerkt.
+                    Ein Tipp auf eine Marke nennt Nummer, Kategorie und
+                    Bezeichnung. Zwischen den Plaenen wird jetzt auch hier
+                    ueber die Kopfzeile geblaettert. Der Pruefstand laeuft in
+                    der Uebersicht nicht mit, er bleibt dem Verorten.
   v0.88 04.09.2026  Die eigene Marke im Grundriss hat jetzt einen gefuellten
                     Kern und einen weissen Trennring, der Puls schlaegt in
                     einer Kontrastfarbe (gruen/blau, gelb/orange, rot/feurig);
@@ -578,6 +587,23 @@ input.schmal{width:170px}
   animation:puls 2.4s ease-out infinite;
 }
 #planBox .marke.zieh{border-style:dashed;background:none}
+/* Übersicht: hier wird nicht gesucht, sondern gezeigt. Die Marke ist gefüllt
+   und trägt ihre Nummer; die Farbe steht für die Kategorie, nicht für den
+   Prüfstand. Der weiße Ring hält sie über den Planlinien lesbar. Die Größe
+   bleibt beim Zoomen dieselbe, damit die Ziffer auch weit draußen zu lesen ist. */
+#planBox .marke.nummer{
+  width:22px;height:22px;margin:-11px 0 0 -11px;border:none;
+  background:var(--kat,#333);color:#fff;
+  box-shadow:0 0 0 2px #fff, 0 1px 4px rgba(0,0,0,.35);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--f-label);font-size:12px;font-weight:700;line-height:1;
+}
+/* Zeile mit Kästchen im Auswahlfenster: links der Farbpunkt der Kategorie. */
+#dlgListe .kasten{text-align:left;padding-left:40px;position:relative}
+#dlgListe .kasten::before{
+  content:'';position:absolute;left:16px;top:50%;width:12px;height:12px;
+  margin-top:-6px;border-radius:50%;background:var(--kat,#999);
+}
 /* Das kleine Fenster an einer fremden Marke: hängt in Anteilen am Plan, sitzt
    über der Marke und zeigt mit einer Spitze auf sie. */
 #planBox .planTipp{
@@ -703,6 +729,7 @@ input.schmal{width:170px}
         <div id="planWrap"><div id="planBox"></div></div>
         <div id="planStreifen" hidden>
           <p id="planHinweis"></p>
+          <button class="btn ghost klein" id="btnPlanObjekte" hidden>Objekte</button>
           <button class="btn ghost klein" id="btnPlanZieh">Verschieben</button>
         </div>
       </div>
@@ -777,7 +804,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.88';
+const VERSION = 'v0.89';
 const BUILD   = VERSION + ' · 04.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1452,6 +1479,34 @@ function wahlFenster(titel, eintraege, aufWahl){
   const zu = () => { $('#dlg').hidden = true; dlgZuruecksetzen(); };
   liste.querySelectorAll('button').forEach(b => {
     b.onclick = () => { zu(); if(!b.dataset.ab) aufWahl(eintraege[+b.dataset.i]); };
+  });
+}
+
+/* Dieselbe Liste, aber mit Kästchen: die Einträge schalten sich um, statt das
+   Fenster zu schließen. Geschlossen wird über "Fertig" – so lassen sich mehrere
+   Kategorien in einem Zug ein- und ausschalten. */
+function kastenFenster(titel, eintraege, aufFertig){
+  dlgZuruecksetzen();
+  $('#dlgTitel').textContent = titel;
+  $('#dlgText').hidden = true;
+  $('#dlgKnoepfe').hidden = true;
+  const liste = $('#dlgListe');
+  liste.hidden = false;
+  const zeile = e => `${e.an ? '☑' : '☐'}\u2002${esc(e.text)}`;
+  liste.innerHTML = eintraege.map((e, i) =>
+      `<button class="btn kasten${e.an ? ' primary' : ''}" data-i="${i}" style="--kat:${esc(e.farbe || '#999')}">${zeile(e)}</button>`).join('') +
+    `<button class="btn primary" data-fertig="1" style="margin-top:14px">Fertig</button>`;
+  $('#dlg').hidden = false;
+  liste.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      if(b.dataset.fertig){
+        $('#dlg').hidden = true; dlgZuruecksetzen(); aufFertig(eintraege); return;
+      }
+      const e = eintraege[+b.dataset.i];
+      e.an = !e.an;
+      b.innerHTML = zeile(e);
+      b.classList.toggle('primary', e.an);
+    };
   });
 }
 
@@ -2203,7 +2258,7 @@ async function renderPlaene(){
       if(pl){ pl.name = e.target.value.trim() || pl.name; await Bilder.put(pl); }
     };
     r.querySelector('[data-sehen]').onclick = () => {
-      planListe = [];                         // von hier aus wird nicht gewechselt
+      planListe = liste;                      // von hier aus wird geblättert
       planZeigen(id, null);
     };
 
@@ -2394,15 +2449,24 @@ async function scharfZeichnen(){
 function markenZeichnen(planId, ziehen){
   const box = $('#planBox'); if(!box) return;
   box.querySelectorAll('.marke').forEach(m => m.remove());
-  const eigen = planZiel ? (CFG.orte[planZiel.key] || {}) : {};
-  const punkt = (x, y, klassen) => {
+  const punkt = (x, y, klassen, text, farbe) => {
     const m = document.createElement('div');
     m.className = 'marke ' + klassen;
     m.style.left = (x * 100) + '%';
     m.style.top  = (y * 100) + '%';
+    if(farbe) m.style.setProperty('--kat', farbe);
+    if(text != null) m.textContent = text;
     box.appendChild(m);
   };
-  if(planZiel) andereOrte(planId, planZiel.key)
+  /* Übersicht: es wird keine Stelle gesucht, sondern gezeigt, was auf diesem
+     Plan steht – je Kategorie eine Farbe, je Marke ihre Nummer. */
+  if(!planZiel){
+    katWahl().forEach(kat => katOrte(kat.k, planId)
+      .forEach(o => punkt(o.x, o.y, 'nummer', o.nr, kat.farbe)));
+    return;
+  }
+  const eigen = CFG.orte[planZiel.key] || {};
+  andereOrte(planId, planZiel.key)
     .forEach(o => punkt(o.x, o.y, 'andere st-' + ortStatus(o.key)));
   if(eigen.plan === planId && eigen.x != null)
     punkt(eigen.x, eigen.y, (ziehen ? 'zieh' : 'aktiv') + ' st-' + ortStatus(planZiel.key));
@@ -2426,6 +2490,32 @@ function ortStatus(key){
   const d = DAT[t[0]], z = d && d.zeilen && d.zeilen[t.slice(1).join('|')];
   if(z && z.status) return 'gruen';
   return tageBis(monatsEnde(jetzt)) <= 7 ? 'rot' : 'gelb';
+}
+/* --- Kategorien der Übersicht ----------------------------------------------
+   Objekte mit einer Stelle im Grundriss gibt es in vier Listen; der Sprinkler
+   hat keine. Die Farben liegen bewusst abseits von Grün, Gelb und Rot: dort
+   steht der Prüfstand, und dieselbe Farbe soll nicht zweierlei sagen. */
+const KATEGORIEN = [
+  {k:'aufzuege',  farbe:'#1F6FB2'},          // Blau
+  {k:'rollband',  farbe:'#7B3FA0'},          // Violett
+  {k:'feststell', farbe:'#0F8B8D'},          // Türkis
+  {k:'medien',    farbe:'#8A5A2B'}           // Braun
+];
+const katWahl = () => KATEGORIEN.filter(kat => (CFG.planWahl || []).includes(kat.k));
+/* Die Objekte einer Kategorie in der Reihenfolge ihrer Liste – also des Weges. */
+const katSchluessel = k => k === 'medien'
+  ? stellenSortiert().map(z => z.key)
+  : (teilCfg(k).anlagen || []).map(a => k + '|' + a);
+/* Was davon auf diesem Plan liegt, von 1 an durchgezählt: die Nummer gehört zum
+   Blatt, und dessen Legende soll bei 1 anfangen und keine Lücken haben. */
+function katOrte(k, planId){
+  const raus = [];
+  katSchluessel(k).forEach(key => {
+    const o = CFG.orte[key];
+    if(o && o.plan === planId && o.x != null)
+      raus.push({key, kat:k, x:o.x, y:o.y, nr:raus.length + 1});
+  });
+  return raus;
 }
 /* Was gehört zur selben Kategorie? Bei den Zählern alle übrigen Zählstellen,
    sonst alles, dessen Schlüssel mit demselben Nachweis beginnt. */
@@ -2459,7 +2549,10 @@ function tippZeigen(o){
   const box = $('#planBox'); if(!box) return;
   const f = document.createElement('div');
   f.className = 'planTipp';
-  f.textContent = ortName(o.key);
+  /* In der Übersicht steht vor dem Namen, was die Marke selbst sagt: ihre
+     Nummer und die Kategorie – sonst müsste man die Farbe im Kopf zuordnen. */
+  f.textContent = o.nr ? `${o.nr} · ${NW(o.kat).label} · ${ortName(o.key)}`
+                       : ortName(o.key);
   f.style.left = (o.x * 100) + '%';
   f.style.top  = (o.y * 100) + '%';
   box.appendChild(f);
@@ -2472,7 +2565,7 @@ const MARKE_FANG = 16;        // wie nah ein Tipp an einer Marke liegen muss
 /* Gewechselt wird über den Knopf rechts in der Kopfzeile – ein Auswahlfeld über
    dem Plan hätte eine ganze Zeile gekostet, und gewechselt wird selten. */
 function planWechseln(){
-  if(!planZiel || planListe.length < 2) return;
+  if(planListe.length < 2) return;
   wahlFenster('Grundriss',
     planListe.map(p => ({id:p.id, text:p.name, aktiv:p.id === planAktuell})),
     w => { if(w.id !== planAktuell) planZeigen(w.id, planZiel); });
@@ -2518,7 +2611,7 @@ async function planZeigen(id, ziel){
      trägt die linke Seite den Plannamen, sonst bliebe er ungenannt. */
   $('#planName').textContent    = planZiel ? planZiel.titel : pl.name;
   $('#planWelcher').textContent = planZiel ? pl.name : '';
-  $('#btnPlanWahl').classList.toggle('unsichtbar', !planZiel || planListe.length < 2);
+  $('#btnPlanWahl').classList.toggle('unsichtbar', planListe.length < 2);
   scharfPlan = pl.quelle ? pl : null;
   const box = $('#planBox');
   box.classList.remove('bereit');             // verdeckt aufbauen
@@ -2537,8 +2630,20 @@ async function planZeigen(id, ziel){
   if(bild.complete && bild.naturalWidth) fertig();
   const gesetzt = () => { const o = CFG.orte[planZiel.key] || {}; return o.plan === id && o.x != null; };
   const hinweis = () => {
-    const kn = $('#btnPlanZieh'), s = $('#planStreifen');
-    if(!planZiel){ clearTimeout(streifenUhr); s.hidden = true; return; }
+    const kn = $('#btnPlanZieh'), ob = $('#btnPlanObjekte');
+    if(!planZiel){
+      /* In der Übersicht trägt der Streifen, was eingeblendet ist, und den Weg
+         zur Auswahl. Solange nichts steht, bleibt er stehen – er ist der
+         einzige Zugang dazu; danach macht er dem Plan Platz. */
+      const gewaehlt = katWahl();
+      $('#planHinweis').textContent = gewaehlt.length
+        ? gewaehlt.map(kat => NW(kat.k).label).join(', ')
+        : 'Nichts eingeblendet.';
+      kn.hidden = true; ob.hidden = false;
+      streifenZeigen(!gewaehlt.length);
+      return;
+    }
+    ob.hidden = true;
     $('#planHinweis').textContent =
         planZiehen ? 'Auf die neue Stelle tippen.'
       : gesetzt()  ? 'Eingetragen.'
@@ -2548,6 +2653,18 @@ async function planZeigen(id, ziel){
     streifenZeigen(!gesetzt() || planZiehen);
   };
   hinweis();
+
+  $('#btnPlanObjekte').onclick = () => {
+    const eintraege = KATEGORIEN.map(kat => ({
+      k:kat.k, farbe:kat.farbe,
+      an:(CFG.planWahl || []).includes(kat.k),
+      text:`${NW(kat.k).label} (${katOrte(kat.k, id).length})`
+    }));
+    kastenFenster('Objekte einblenden', eintraege, gewaehlt => {
+      CFG.planWahl = gewaehlt.filter(e => e.an).map(e => e.k);
+      saveCfg(); tippWeg(); markenZeichnen(id, false); hinweis();
+    });
+  };
 
   const setzen = e => {
     const bild = box.querySelector('img');
@@ -2564,20 +2681,27 @@ async function planZeigen(id, ziel){
      und nicht seinen eigenen Punkt daraufsetzen. Das Fenster geht deshalb vor,
      auch solange noch nichts eingetragen ist. Wer wirklich dicht daneben setzen
      muss, zoomt vorher hinein; dann liegen die Marken weit auseinander. */
-  const nachbarTreffer = e => {
+  const nahAn = (e, orte) => {
     const bild = box.querySelector('img'); if(!bild) return null;
     const r = bild.getBoundingClientRect();
     let nah = null, best = MARKE_FANG;
-    andereOrte(id, planZiel.key).forEach(o => {
+    orte.forEach(o => {
       const d = Math.hypot(e.clientX - (r.left + o.x * r.width),
                            e.clientY - (r.top  + o.y * r.height));
       if(d < best){ best = d; nah = o; }
     });
     return nah;
   };
-  box.onclick = !planZiel ? null : e => {
+  box.onclick = e => {
     if(planGezoomt) return;                   // das war das Ende einer Zoom-Geste
-    const nachbar = nachbarTreffer(e);
+    /* In der Übersicht sagt ein Tipp auf eine Marke, was dort steht; daneben
+       holt er den Streifen zurück. Gesetzt wird hier nichts. */
+    if(!planZiel){
+      const o = nahAn(e, katWahl().reduce((alle, kat) => alle.concat(katOrte(kat.k, id)), []));
+      if(o) tippZeigen(o); else { tippWeg(); hinweis(); }
+      return;
+    }
+    const nachbar = nahAn(e, andereOrte(id, planZiel.key));
     if(nachbar){ tippZeigen(nachbar); return; }
     tippWeg();
     if(!gesetzt() || planZiehen) setzen(e);
