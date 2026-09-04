@@ -1,0 +1,18 @@
+# Sicherungsdateien der App. Sie enthalten Objekt, Parteien, Zaehlernummern und
+# die Grundrisse - das darf nie in ein oeffentliches Repository geraten. Was
+# einmal committet ist, bleibt in der Versionsgeschichte, auch nach dem Loeschen.
+*.json
+
+# Ausgegebene Nachweise und Plaene
+*.pdf
+*.jpg
+*.jpeg
+*.png
+
+# Falls doch einmal eine Fassung mit echten Daten entsteht
+*.privat.html
+*-privat.html
+
+# Uebliches vom Betriebssystem
+.DS_Store
+Thumbs.db
