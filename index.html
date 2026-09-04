@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.87 04.09.2026  Die Marken im Grundriss tragen den Pruefstand: gruen
+                    geprueft, gelb in dieser Runde noch offen, rot offen und die
+                    Frist laeuft ab - dieselben Schwellen wie die Ringe auf der
+                    Startseite. Beim Betreten eines Nachweises steht die Liste
+                    bei der ersten offenen Karte; die letzte gepruefte davor
+                    bleibt oben im Bild. Aus dem Grundriss kehrt man an die
+                    Stelle zurueck, von der aus verortet wurde.
   v0.86 04.09.2026  Zugangsabfrage vor der App, weil die Datei oeffentlich liegt.
                     Pruefwert ueber PBKDF2 mit 250.000 Runden und eigenem Salz;
                     ein Geraet bleibt nach der Eingabe offen, "Geraet sperren"
@@ -536,11 +543,18 @@ input.schmal{width:170px}
    still, damit man sieht, wo man ist, ohne die anderen zu verlieren. */
 #planBox .marke{
   position:absolute;z-index:3;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
-  border:3px solid #C0392B;background:rgba(192,57,43,.25);pointer-events:none;
+  border:3px solid;color:#C0392B;background:rgba(192,57,43,.25);pointer-events:none;
 }
-#planBox .marke.andere{border-color:#333;background:rgba(0,0,0,.15);width:20px;height:20px;margin:-10px 0 0 -10px}
+#planBox .marke.andere{width:20px;height:20px;margin:-10px 0 0 -10px}
+/* Die Farbe sagt den Prüfstand: grün geprüft, gelb in dieser Runde noch offen,
+   rot offen und die Frist läuft ab. Es sind dieselben drei Farben wie bei den
+   Ringen der Startseite – dort steht der Nachweis, hier das einzelne Objekt.
+   Gesetzt wird nur die Textfarbe, Rand und Puls nehmen sie von dort. */
+#planBox .marke.st-gruen{color:#4E9A2F;background:rgba(78,154,47,.22)}
+#planBox .marke.st-gelb {color:#E3A81F;background:rgba(227,168,31,.25)}
+#planBox .marke.st-rot  {color:#C0392B;background:rgba(192,57,43,.22)}
 #planBox .marke.aktiv::after{
-  content:'';position:absolute;inset:-4px;border-radius:50%;border:3px solid #C0392B;
+  content:'';position:absolute;inset:-4px;border-radius:50%;border:3px solid;
   animation:puls 2.4s ease-out infinite;
 }
 #planBox .marke.zieh{border-style:dashed;background:none}
@@ -743,7 +757,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.86';
+const VERSION = 'v0.87';
 const BUILD   = VERSION + ' · 04.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1433,6 +1447,35 @@ function lageHalten(vorherTop, wiederfinden){
   window.scrollTo(0, Math.max(0, Math.round(imDokument - vorherTop)));
 }
 
+/* --- Wohin die Liste beim Aufbau springt ------------------------------------
+   Zwei Fälle, sonst keiner: aus dem Grundriss zurück an die Stelle, von der aus
+   verortet wurde (listenLage), und beim Betreten aus der Startseite zur ersten
+   Karte, die in dieser Runde noch offen ist (sprungOffen). Beides gilt genau
+   einmal – bei jedem Neuaufbau zu springen hieße, dass die Liste nach jeder
+   Bewertung davonliefe; dort hält lageHalten die Karte an ihrem Platz.
+
+   Zur ersten offenen Karte gehört die letzte geprüfte davor mit ins Bild: sie
+   sitzt oben unter der Kopfzeile, die offene steht darunter. So sieht man auf
+   einen Blick, dass davor nichts übersprungen wurde. */
+let sprungOffen = false, listenLage = null;
+function listenSprung(istOffen){
+  if(listenLage != null){
+    const y = listenLage;
+    listenLage = null; sprungOffen = false;
+    window.scrollTo(0, y);
+    return;
+  }
+  if(!sprungOffen) return;
+  sprungOffen = false;
+  const karten = $$('#nwListe .pos');
+  let i = -1;
+  for(let n = 0; n < karten.length; n++) if(istOffen(n)){ i = n; break; }
+  if(i <= 0) return;                    // gleich die erste ist offen, oder alles erledigt
+  const kopf = $('header') ? $('header').getBoundingClientRect().height : 0;
+  const oben = karten[i - 1].getBoundingClientRect().top + window.scrollY;
+  window.scrollTo(0, Math.max(0, Math.round(oben - kopf - 8)));
+}
+
 let toastTimer = null;
 function toast(t){
   const el = $('#toast'); el.textContent = t; el.classList.add('on');
@@ -1481,6 +1524,9 @@ function renderHome(){
   $$('#homeListe [data-nw]').forEach(b => b.onclick = () => {
     offen = b.dataset.nw; datenFuer(offen);
     sigAktiv = false; sprungZiel = b.dataset.ziel || '';
+    /* Von hier aus wird die erste offene Karte angesteuert; eine gemerkte Lage
+       aus einem früheren Grundrissbesuch gilt dann nicht mehr. */
+    sprungOffen = true; listenLage = null;
     offenKarten = new Set();          // Bewertetes aus früheren Runden zeigt sich klein
     go('nachweis');
   });
@@ -1588,6 +1634,9 @@ function renderNachweis(){
     }
   });
   renderSig();
+  /* Erst jetzt springen: die Unterschrift unter der Liste trägt zur Höhe des
+     Dokuments bei, ohne sie käme der Bildlauf womöglich nicht weit genug. */
+  listenSprung(i => !d.zeilen[t.anlagen[i]] || !d.zeilen[t.anlagen[i]].status);
 }
 
 /* ---------- Medienverbräuche -----------------------------------------------
@@ -1646,6 +1695,7 @@ function renderMedien(){
       verorten(z.key, `${z.partei} · ${namen[z.key] || z.medium}`);
   });
   $('#medDatum').onchange = e => { d.datum = e.target.value; saveDat(); renderBar(); };
+  listenSprung(i => String(d.stand[liste[i].key] ?? '').trim() === '');
 }
 const medienVoll = d => {
   const l = stellen();
@@ -2242,9 +2292,30 @@ function markenZeichnen(planId, ziehen){
     m.style.top  = (y * 100) + '%';
     box.appendChild(m);
   };
-  if(planZiel) andereOrte(planId, planZiel.key).forEach(o => punkt(o.x, o.y, 'andere'));
+  if(planZiel) andereOrte(planId, planZiel.key)
+    .forEach(o => punkt(o.x, o.y, 'andere st-' + ortStatus(o.key)));
   if(eigen.plan === planId && eigen.x != null)
-    punkt(eigen.x, eigen.y, ziehen ? 'zieh' : 'aktiv');
+    punkt(eigen.x, eigen.y, (ziehen ? 'zieh' : 'aktiv') + ' st-' + ortStatus(planZiel.key));
+}
+/* Wie steht dieses eine Objekt in der laufenden Runde da? Grün, sobald etwas
+   erfasst ist – ein Zustand bei den Anlagen, ein Zählerstand bei den Zählern;
+   ein Mangel zählt dabei als geprüft. Sonst gelb, und rot, wenn nichts dasteht
+   und die Frist knapp wird: dieselben Schwellen wie bei den Ringen (letzte
+   sieben Tage des Monats, bei der Ablesung letzte vierzehn des Quartals).
+   Nach der Ausgabe löscht die App die Runde – damit stehen alle Marken von
+   selbst wieder gelb, und das ist genau "im laufenden Zyklus noch nicht
+   geprüft". */
+function ortStatus(key){
+  const jetzt = new Date();
+  if(stellen().some(z => z.key === key)){
+    const d = DAT.medien;
+    if(d && String((d.stand || {})[key] ?? '').trim() !== '') return 'gruen';
+    return tageBis(quartalsEnde(jetzt)) <= 14 ? 'rot' : 'gelb';
+  }
+  const t = String(key).split('|');
+  const d = DAT[t[0]], z = d && d.zeilen && d.zeilen[t.slice(1).join('|')];
+  if(z && z.status) return 'gruen';
+  return tageBis(monatsEnde(jetzt)) <= 7 ? 'rot' : 'gelb';
 }
 /* Was gehört zur selben Kategorie? Bei den Zählern alle übrigen Zählstellen,
    sonst alles, dessen Schlüssel mit demselben Nachweis beginnt. */
@@ -2421,6 +2492,9 @@ async function verorten(key, titel){
   liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
   const ort = CFG.orte[key] || {};
   const id = liste.some(p => p.id === ort.plan) ? ort.plan : liste[0].id;
+  /* Erst hier merken, nicht schon beim Antippen: gibt es keinen Plan, bleibt
+     die Liste stehen und dürfte beim nächsten Aufbau nicht springen. */
+  listenLage = window.scrollY;
   planListe = liste;
   await planZeigen(id, {key, titel});
 }
@@ -2975,7 +3049,7 @@ async function ausgeben(){
    PASSWORT ÄNDERN: unten auf "Prüfwert berechnen", das Ergebnis ersetzt die
    folgende Zeile. Ein neues Passwort sperrt alle Geräte wieder zu, weil der
    gemerkte Wert dann nicht mehr passt. */
-const ZUGANG = { salz:'924edf5ac54480518ee7d30ce2ff43b4', pruef:'649e47dbc1d395707d433596666487cc9a1287a933a218a89af4df3a5cac1ba1' };
+const ZUGANG = { salz:'', pruef:'' };
 const RUNDEN = 250000;
 
 const alsHex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
