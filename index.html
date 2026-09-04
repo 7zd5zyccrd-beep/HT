@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.91 04.09.2026  Streifen: der Text steht einzeilig, die Knoepfe sitzen als
+                    Gruppe rechts. Auszugebende Plaene werden per Kaestchen
+                    gewaehlt, mit einem Schalter fuer alle. Die Nummern laufen
+                    jetzt durchgehend ueber alle Plaene, damit Bildschirm und
+                    Blatt stets dasselbe zeigen. Die Legenden gleicher Art
+                    stehen zusammen auf einem Blatt, hinter allen Planblaettern,
+                    bei mehreren Plaenen mit dem Plannamen je Zeile. Die
+                    Farbkreise der Legende sind weg: die Farbe steht am
+                    Abschnitt, die Nummer als Text davor.
   v0.90 04.09.2026  Planblatt: in der Uebersicht gibt der Knopf "Ausgeben" den
                     Plan mit den eingeblendeten Marken heraus - wahlweise nur
                     den offenen oder alle Plaene. Blatt 1 traegt den Plan
@@ -554,7 +563,11 @@ input.schmal{width:170px}
   pointer-events:none}
 #planStreifen[hidden]{display:none}
 #planStreifen.weg{opacity:0}
-#planStreifen p{flex:1;min-width:0;margin:0;font-size:14px;color:var(--ink-soft)}
+#planStreifen p{flex:1;min-width:0;margin:0;font-size:14px;color:var(--ink-soft);
+  /* Einzeilig mit Auslassungspunkten: bräche der Text um, schöbe er die Knöpfe
+     auseinander und der Streifen wüchse über den Plan. */
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#planStreifen .knoepfe{flex:0 0 auto;display:flex;align-items:center;gap:8px}
 #planStreifen .btn{flex:0 0 auto;width:auto;background:var(--surface);pointer-events:auto}
 #planStreifen.weg .btn{pointer-events:none}
 /* Safari bietet beim langen Druck auf ein Bild Teilen und Kopieren an – hier
@@ -607,9 +620,11 @@ input.schmal{width:170px}
   display:flex;align-items:center;justify-content:center;
   font-family:var(--f-label);font-size:12px;font-weight:700;line-height:1;
 }
-/* Zeile mit Kästchen im Auswahlfenster: links der Farbpunkt der Kategorie. */
-#dlgListe .kasten{text-align:left;padding-left:40px;position:relative}
-#dlgListe .kasten::before{
+/* Zeile mit Kästchen im Auswahlfenster; wo es eine Kategoriefarbe gibt, steht
+   links ihr Punkt – bei den Plänen gibt es keine, dort bleibt die Zeile schlicht. */
+#dlgListe .kasten{text-align:left}
+#dlgListe .kasten.farbig{padding-left:40px;position:relative}
+#dlgListe .kasten.farbig::before{
   content:'';position:absolute;left:16px;top:50%;width:12px;height:12px;
   margin-top:-6px;border-radius:50%;background:var(--kat,#999);
 }
@@ -707,17 +722,18 @@ input.schmal{width:170px}
   font-family:var(--f-label);font-size:12px;font-weight:700;line-height:1;
 }
 /* Die Legende steht zweispaltig – 42 Türen und 26 Zähler passen so auf ein
-   Blatt. Eine Überschrift bleibt bei ihrer ersten Zeile. */
+   Blatt. Die Farbe sitzt am Abschnitt, nicht an jeder Zeile: als Kreis an jeder
+   Nummer stießen die Kreise aneinander, und gesagt ist sie einmal genug. */
 .paper .legende{columns:2;column-gap:26px}
-.paper .lgruppe{margin-bottom:12px}
+.paper .lgruppe{margin-bottom:14px}
 .paper .ltitel{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;
-  font-size:11pt;font-weight:600;margin-bottom:4px;break-after:avoid}
-.paper .lzeile{font-size:10pt;line-height:1.5;display:flex;gap:8px;break-inside:avoid}
-.paper .lnr{
-  flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--kat,#333);
-  color:#fff;display:flex;align-items:center;justify-content:center;
-  font-family:var(--f-label);font-size:11px;font-weight:700;line-height:1;
-}
+  font-size:11pt;font-weight:600;margin-bottom:5px;break-after:avoid;
+  display:flex;align-items:center;gap:8px}
+.paper .ltitel .lpunkt{flex:0 0 auto;width:12px;height:12px;border-radius:50%;
+  background:var(--kat,#333)}
+.paper .lzeile{font-size:10pt;line-height:1.5;display:flex;gap:8px;
+  padding:1px 0;break-inside:avoid}
+.paper .lnr{flex:0 0 auto;width:26px;text-align:right;font-weight:700}
 </style>
 </head>
 <body>
@@ -764,9 +780,11 @@ input.schmal{width:170px}
         <div id="planWrap"><div id="planBox"></div></div>
         <div id="planStreifen" hidden>
           <p id="planHinweis"></p>
-          <button class="btn ghost klein" id="btnPlanObjekte" hidden>Objekte</button>
-          <button class="btn ghost klein" id="btnPlanBlatt" hidden>Ausgeben</button>
-          <button class="btn ghost klein" id="btnPlanZieh">Verschieben</button>
+          <div class="knoepfe">
+            <button class="btn ghost klein" id="btnPlanObjekte" hidden>Objekte</button>
+            <button class="btn ghost klein" id="btnPlanBlatt" hidden>Ausgeben</button>
+            <button class="btn ghost klein" id="btnPlanZieh">Verschieben</button>
+          </div>
         </div>
       </div>
     </section>
@@ -840,7 +858,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.90';
+const VERSION = 'v0.91';
 const BUILD   = VERSION + ' · 04.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1530,9 +1548,18 @@ function kastenFenster(titel, eintraege, aufFertig){
   liste.hidden = false;
   const zeile = e => `${e.an ? '☑' : '☐'}\u2002${esc(e.text)}`;
   liste.innerHTML = eintraege.map((e, i) =>
-      `<button class="btn kasten${e.an ? ' primary' : ''}" data-i="${i}" style="--kat:${esc(e.farbe || '#999')}">${zeile(e)}</button>`).join('') +
+      `<button class="btn kasten${e.farbe ? ' farbig' : ''}" data-i="${i}"${
+        e.farbe ? ` style="--kat:${esc(e.farbe)}"` : ''}>${zeile(e)}</button>`).join('') +
     `<button class="btn primary" data-fertig="1" style="margin-top:14px">Fertig</button>`;
   $('#dlg').hidden = false;
+  /* Ein Eintrag kann für alle stehen: dann schaltet er alle übrigen mit, und
+     umgekehrt hakt er sich selbst ab, sobald einer fehlt. Neu gezeichnet wird
+     die ganze Liste, sonst stünde die Anzeige der übrigen Zeilen falsch. */
+  const zeichnen = () => liste.querySelectorAll('[data-i]').forEach(b => {
+    const e = eintraege[+b.dataset.i];
+    b.innerHTML = zeile(e);
+    b.classList.toggle('primary', !!e.an);
+  });
   liste.querySelectorAll('button').forEach(b => {
     b.onclick = () => {
       if(b.dataset.fertig){
@@ -1540,8 +1567,13 @@ function kastenFenster(titel, eintraege, aufFertig){
       }
       const e = eintraege[+b.dataset.i];
       e.an = !e.an;
-      b.innerHTML = zeile(e);
-      b.classList.toggle('primary', e.an);
+      if(e.alle){
+        eintraege.forEach(x => { x.an = e.an; });
+      }else{
+        const schalter = eintraege.find(x => x.alle);
+        if(schalter) schalter.an = eintraege.filter(x => !x.alle).every(x => x.an);
+      }
+      zeichnen();
     };
   });
 }
@@ -2542,15 +2574,22 @@ const katWahl = () => KATEGORIEN.filter(kat => (CFG.planWahl || []).includes(kat
 const katSchluessel = k => k === 'medien'
   ? stellenSortiert().map(z => z.key)
   : (teilCfg(k).anlagen || []).map(a => k + '|' + a);
-/* Was davon auf diesem Plan liegt, von 1 an durchgezählt: die Nummer gehört zum
-   Blatt, und dessen Legende soll bei 1 anfangen und keine Lücken haben. */
+/* Was davon auf diesem Plan liegt. Die Nummer gehört zum Objekt, nicht zum
+   Blatt: sie läuft über alle Pläne in deren fester Ordnung (nach Namen sortiert,
+   wie in den Einstellungen). Deshalb zeigt der Bildschirm dieselbe Nummer wie
+   das Blatt – auch dann, wenn erst beim Ausgeben feststeht, welche Pläne
+   mitkommen. Ein zweites Geschoss fängt also nicht wieder bei 1 an. */
 function katOrte(k, planId){
+  const ids = planListe.map(p => p.id);
+  if(!ids.includes(planId)) ids.push(planId);   // Plan noch nicht in der Liste
   const raus = [];
-  katSchluessel(k).forEach(key => {
+  let nr = 0;
+  ids.forEach(id => katSchluessel(k).forEach(key => {
     const o = CFG.orte[key];
-    if(o && o.plan === planId && o.x != null)
-      raus.push({key, kat:k, x:o.x, y:o.y, nr:raus.length + 1});
-  });
+    if(!o || o.plan !== id || o.x == null) return;
+    nr++;
+    if(id === planId) raus.push({key, kat:k, x:o.x, y:o.y, nr});
+  }));
   return raus;
 }
 /* Was gehört zur selben Kategorie? Bei den Zählern alle übrigen Zählstellen,
@@ -2692,13 +2731,18 @@ async function planZeigen(id, ziel){
   hinweis();
 
   $('#btnPlanBlatt').onclick = () => {
-    /* Ein Plan oder alle: gefragt wird erst beim Ausgeben, weil es mal so und
-       mal so gebraucht wird. Pläne ohne eingeblendete Marken bleiben draußen. */
+    /* Welche Pläne mitkommen, wird hier gewählt – mit denselben Kästchen wie bei
+       den Objekten. Der offene Plan steht angehakt da, "Alle" schaltet alles um.
+       Pläne ohne eingeblendete Marken bleiben beim Bauen ohnehin draußen. */
     if(planListe.length < 2){ planBlattZeigen([id]); return; }
-    wahlFenster('Ausgeben', [
-        {alle:false, text:'Nur dieser Plan'},
-        {alle:true,  text:`Alle Pläne (${planListe.length})`}],
-      w => planBlattZeigen(w.alle ? planListe.map(p => p.id) : [id]));
+    const zahl = pid => katWahl().reduce((n, kat) => n + katOrte(kat.k, pid).length, 0);
+    const eintraege = [{alle:true, an:false, text:'Alle Pläne'}].concat(
+      planListe.map(p => ({id:p.id, an:p.id === id, text:`${p.name} (${zahl(p.id)})`})));
+    kastenFenster('Pläne ausgeben', eintraege, gewaehlt => {
+      const ids = gewaehlt.filter(e => e.an && !e.alle).map(e => e.id);
+      if(!ids.length){ toast('Kein Plan gewählt'); return; }
+      planBlattZeigen(ids);
+    });
   };
   $('#btnPlanObjekte').onclick = () => {
     const eintraege = KATEGORIEN.map(kat => ({
@@ -3286,13 +3330,17 @@ function bildLaden(url){
     i.src = url;
   });
 }
-async function planBlattHtml(id){
+async function planSeite(id){
   const pl = await Bilder.get(id);
   const b = pl && planBlob(pl);
-  if(!b || !b.size) return '';
+  if(!b || !b.size) return null;
+  const gruppen = katWahl()
+    .map(kat => ({kat, orte:katOrte(kat.k, id)}))
+    .filter(g => g.orte.length);
+  if(!gruppen.length) return null;              // auf diesem Plan steht nichts Eingeblendetes
   const url = URL.createObjectURL(b);
   const bild = await bildLaden(url);
-  if(!bild){ URL.revokeObjectURL(url); return ''; }
+  if(!bild){ URL.revokeObjectURL(url); return null; }
   const quer = bild.naturalWidth > bild.naturalHeight;
   let daten;
   if(quer){
@@ -3307,19 +3355,12 @@ async function planBlattHtml(id){
   }
   URL.revokeObjectURL(url);
 
-  /* Nach der Drehung liegt oben links, was vorher unten links lag: aus (x,y)
+  /* Nach der Drehung liegt oben rechts, was vorher oben links lag: aus (x,y)
      wird (1-y, x). Die Nummern bleiben, was sie am Bildschirm waren. */
-  const gruppen = katWahl()
-    .map(kat => ({kat, orte:katOrte(kat.k, id)}))
-    .filter(g => g.orte.length);
-  if(!gruppen.length) return '';
   const marken = gruppen.reduce((alle, g) => alle.concat(g.orte.map(o => {
     const x = quer ? 1 - o.y : o.x, y = quer ? o.x : o.y;
     return `<div class="pm" style="--kat:${g.kat.farbe};left:${(x * 100).toFixed(3)}%;top:${(y * 100).toFixed(3)}%">${o.nr}</div>`;
   })), []).join('');
-
-  const kopf = (titel, zusatz) => `<h2>${esc(titel)}</h2>
-    <div class="meta">${esc(CFG.objekt || '')} · ${esc(pl.name)}${zusatz} · ${esc(dText(heute()))}</div>`;
   /* Der Plan bekommt, was das Blatt nach Kopfzeile und Rändern übrig lässt, und
      zwar in beiden Richtungen: quer wird er von der Breite begrenzt, hochkant
      von der Höhe. Gerechnet in Pixeln des Bogens – Vorschau und Ausgabe sind
@@ -3327,16 +3368,27 @@ async function planBlattHtml(id){
   const bw = quer ? bild.naturalHeight : bild.naturalWidth;
   const bh = quer ? bild.naturalWidth  : bild.naturalHeight;
   const breit = Math.round(Math.min(PLAN_PLATZ_B, PLAN_PLATZ_H * (bw / bh)));
-  let raus = `<div class="paper">${kopf('Grundriss', '')}
-    <div class="planblatt" style="width:${breit}px"><img src="${daten}" alt="${esc(pl.name)}">${marken}</div>
-  </div>`;
+  return {
+    name: pl.name,
+    gruppen,
+    html: `<div class="paper">${blattKopf('Grundriss', pl.name)}
+      <div class="planblatt" style="width:${breit}px"><img src="${daten}" alt="${esc(pl.name)}">${marken}</div>
+    </div>`
+  };
+}
+const blattKopf = (titel, zusatz, teil) => `<h2>${esc(titel)}</h2>
+  <div class="meta">${esc(CFG.objekt || '')}${zusatz ? ' · ' + esc(zusatz) : ''}${
+    teil || ''} · ${esc(dText(heute()))}</div>`;
 
-  /* Die Legende blattweise: jede Überschrift zählt wie zwei Zeilen, sonst
-     stünde sie am Ende eines Blattes ohne ihre Einträge. */
+/* Die Legende liegt hinter allen Planblättern und fasst zusammen, was zusammen
+   gehört: je Kategorie ein Abschnitt über alle ausgegebenen Pläne hinweg. Der
+   Planname steht nur dann in der Zeile, wenn mehrere Pläne mitkommen – bei
+   einem steht er schon in der Kopfzeile und wäre siebzigmal dasselbe Wort. */
+function legendeHtml(abschnitte, planName){
   const zeilen = [];
-  gruppen.forEach(g => {
-    zeilen.push({titel:NW(g.kat.k).label});
-    g.orte.forEach(o => zeilen.push({farbe:g.kat.farbe, nr:o.nr, text:ortName(o.key)}));
+  abschnitte.forEach(a => {
+    zeilen.push({titel:NW(a.k).label, farbe:a.farbe});
+    a.eintraege.sort((x, y) => x.nr - y.nr).forEach(e => zeilen.push(e));
   });
   const seiten = [];
   let seite = [], platz = LEGENDE_PLATZ;
@@ -3346,29 +3398,43 @@ async function planBlattHtml(id){
     seite.push(z); platz -= braucht;
   });
   if(seite.length) seiten.push(seite);
-  seiten.forEach((eintraege, i) => {
+  return seiten.map((eintraege, i) => {
     const inhalt = eintraege.map(z => z.titel
-      ? `</div><div class="lgruppe"><div class="ltitel">${esc(z.titel)}</div>`
-      : `<div class="lzeile"><span class="lnr" style="--kat:${z.farbe}">${z.nr}</span><span>${esc(z.text)}</span></div>`).join('');
-    raus += `<div class="paper">${kopf('Legende',
+      ? `</div><div class="lgruppe"><div class="ltitel"><span class="lpunkt" style="--kat:${z.farbe}"></span>${esc(z.titel)}</div>`
+      : `<div class="lzeile"><span class="lnr">${z.nr}</span><span>${esc(z.text)}${
+          z.plan ? ' · ' + esc(z.plan) : ''}</span></div>`).join('');
+    return `<div class="paper">${blattKopf('Legende', planName,
         seiten.length > 1 ? ` · Blatt ${i + 1} von ${seiten.length}` : '')}
       <div class="legende"><div class="lgruppe">${inhalt}</div></div>
     </div>`;
-  });
-  return raus;
+  }).join('');
 }
 async function planBlattZeigen(ids){
   toast('Blatt wird gebaut …');
-  let raus = '';
-  for(const id of ids){ raus += await planBlattHtml(id); }
-  if(!raus){ toast('Auf diesem Plan steht nichts Eingeblendetes'); return; }
-  const pl = ids.length === 1 ? await Bilder.get(ids[0]) : null;
-  const roh = pl ? String(pl.name || 'Grundriss') : 'Grundrisse';
+  let blaetter = '', namen = [];
+  const abschnitte = [];
+  for(const id of ids){
+    const teil = await planSeite(id);
+    if(!teil) continue;
+    blaetter += teil.html;
+    namen.push(teil.name);
+    teil.gruppen.forEach(g => {
+      let a = abschnitte.find(x => x.k === g.kat.k);
+      if(!a){ a = {k:g.kat.k, farbe:g.kat.farbe, eintraege:[]}; abschnitte.push(a); }
+      g.orte.forEach(o => a.eintraege.push({nr:o.nr, text:ortName(o.key), plan:teil.name}));
+    });
+  }
+  if(!blaetter){ toast('Auf den gewählten Plänen steht nichts Eingeblendetes'); return; }
+  /* Bei einem einzigen Plan trägt die Kopfzeile seinen Namen, die Zeilen nicht. */
+  if(namen.length === 1) abschnitte.forEach(a => a.eintraege.forEach(e => { delete e.plan; }));
+  blaetter += legendeHtml(abschnitte, namen.length === 1 ? namen[0] : '');
+  const roh = namen.length === 1 ? namen[0] : '';
   blattDatei = {
-    name: (/^grundriss/i.test(roh) ? nameTeil(roh) : 'Grundriss ' + nameTeil(roh)) + '.html',
-    html: blattDokument('Grundriss', raus, PLAN_BOGEN)
+    name: (roh ? (/^grundriss/i.test(roh) ? nameTeil(roh) : 'Grundriss ' + nameTeil(roh))
+               : 'Grundrisse') + '.html',
+    html: blattDokument('Grundriss', blaetter, PLAN_BOGEN)
   };
-  $('#blattWrap').innerHTML = raus;
+  $('#blattWrap').innerHTML = blaetter;
   go('blatt');
 }
 
