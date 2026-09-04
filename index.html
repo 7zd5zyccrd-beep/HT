@@ -3049,7 +3049,7 @@ async function ausgeben(){
    PASSWORT ÄNDERN: unten auf "Prüfwert berechnen", das Ergebnis ersetzt die
    folgende Zeile. Ein neues Passwort sperrt alle Geräte wieder zu, weil der
    gemerkte Wert dann nicht mehr passt. */
-const ZUGANG = { salz:'', pruef:'' };
+const ZUGANG = { salz:'0241b0f81329f3e14a6eab607061e4cc', pruef:'6dac3477de6e61cfac00e1191c88210ccda434d9183ac8258867385f950b5b67' };
 const RUNDEN = 250000;
 
 const alsHex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
