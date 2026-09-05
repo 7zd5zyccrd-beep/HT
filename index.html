@@ -10,6 +10,10 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.92 04.09.2026  Die Knoepfe im Streifen ueber dem Grundriss haben eine
+                    feste Hoehe und mittig gesetzte Beschriftung - vorher ergab
+                    sich die Hoehe aus den Schriftmassen, und "Ausgeben" sass
+                    dadurch tiefer als "Objekte".
   v0.91 04.09.2026  Streifen: der Text steht einzeilig, die Knoepfe sitzen als
                     Gruppe rechts. Auszugebende Plaene werden per Kaestchen
                     gewaehlt, mit einem Schalter fuer alle. Die Nummern laufen
@@ -568,7 +572,14 @@ input.schmal{width:170px}
      auseinander und der Streifen wüchse über den Plan. */
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #planStreifen .knoepfe{flex:0 0 auto;display:flex;align-items:center;gap:8px}
-#planStreifen .btn{flex:0 0 auto;width:auto;background:var(--surface);pointer-events:auto}
+/* Feste Höhe und mittig gesetzte Beschriftung: liefe die Höhe über die
+   Schriftmaße, säße ein längeres Wort schon wegen anderer Ober- und Unterlängen
+   ein paar Punkte tiefer als das kürzere daneben. */
+#planStreifen .btn{
+  flex:0 0 auto;align-self:center;width:auto;height:36px;padding:0 12px;
+  display:inline-flex;align-items:center;justify-content:center;line-height:1;
+  background:var(--surface);pointer-events:auto;
+}
 #planStreifen.weg .btn{pointer-events:none}
 /* Safari bietet beim langen Druck auf ein Bild Teilen und Kopieren an – hier
    stört das, weil derselbe Druck das Verschieben freischaltet. */
@@ -858,7 +869,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.91';
+const VERSION = 'v0.92';
 const BUILD   = VERSION + ' · 04.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
