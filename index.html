@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.96 04.09.2026  Die eigentliche Ursache der verschobenen Knoepfe gefunden:
+                    ".btn + .btn" gibt jedem Knopf ab dem zweiten zehn Pixel
+                    Abstand nach oben - gemeint fuer untereinander stehende
+                    Knoepfe, in einer waagerechten Reihe setzt es sie tiefer.
+                    Die Ausnahme galt bisher nur fuer .row, jetzt auch fuer die
+                    Planzeile in den Einstellungen und den Streifen ueber dem
+                    Grundriss.
   v0.95 04.09.2026  Der Knopf zum Neuladen steht nur noch in den Einstellungen,
                     der Grundrisswechsel nur in der Grundrissansicht. Beide
                     teilen sich keinen Platz mehr: der jeweils andere ist ganz
@@ -436,6 +443,12 @@ main{flex:1;padding:16px var(--pad) 0;width:100%;max-width:var(--col);margin:0 a
    dann stehen dort Knöpfe, die nichts mehr tun). */
 .btn[hidden]{display:none}
 .btn + .btn{margin-top:10px}
+/* Untereinander ja, nebeneinander nicht: in einer waagerechten Reihe schöbe der
+   obere Abstand jeden Knopf ab dem zweiten um zehn Pixel nach unten – er säße
+   dann sichtbar tiefer als sein Nachbar. */
+.row .btn + .btn,
+.plan .btn + .btn,
+#planStreifen .btn + .btn{margin-top:0}
 /* Der Ring ist die Begrenzungslinie des Knopfes selbst, nur kräftiger und
    farbig. Die zwei zusätzlichen Pixel holt er sich aus dem Polster (14+1 = 12+3),
    damit die Außenmaße gleich bleiben und die Liste nicht zuckt. */
@@ -517,7 +530,6 @@ input.schmal{width:170px}
 /* Ausgegraut heißt: nicht beschreibbar. Eine übernommene Unterschrift bleibt
    dabei sichtbar, sie steht nur hinter dem Schleier. */
 #sigpad.aus{background:var(--enclosure-2);opacity:.55;pointer-events:none}
-.row .btn + .btn{margin-top:0}
 
 #dlg{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.45);
   display:flex;align-items:center;justify-content:center;padding:var(--pad)}
@@ -901,7 +913,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.95';
+const VERSION = 'v0.96';
 const BUILD   = VERSION + ' · 04.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
