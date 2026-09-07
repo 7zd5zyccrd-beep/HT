@@ -10,6 +10,22 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.97 07.09.2026  Die Einstellungen sind nur noch ein Menue: jeder Eintrag
+                    oeffnet eine eigene Ansicht, die der Zurueck-Pfeil wieder
+                    verlaesst. Anlagen, Pruefpunkte und Zaehlstellen stehen
+                    dort in einer Zeile je Eintrag mit Loeschen-Knopf und
+                    "+ hinzufuegen" statt in einem Textfeld; die Zaehlstelle
+                    hat fuenf Einzelfelder, Medium und Einheit zur Auswahl.
+                    Gesichert wird sofort beim Verlassen des Feldes - der
+                    Speichern-Knopf entfaellt und mit ihm die alte Falle aus
+                    v0.50. Weil jede Zeile fuer sich gesichert wird, behalten
+                    Erfasstes und Grundriss-Marke ihre Verknuepfung auch dann,
+                    wenn im selben Zug umbenannt und hinzugefuegt wird (die
+                    Regel "nur bei gleicher Zeilenzahl" ist hinfaellig). Der
+                    Zaehlertausch hat eine eigene Seite mit einem einzigen
+                    Knopf. Eine geleerte Liste bleibt jetzt leer, statt die
+                    Startwerte zurueckzuholen, und die Marke einer geloeschten
+                    Anlage steht im Plan nicht mehr als Nachbar herum.
   v0.96 04.09.2026  Die eigentliche Ursache der verschobenen Knoepfe gefunden:
                     ".btn + .btn" gibt jedem Knopf ab dem zweiten zehn Pixel
                     Abstand nach oben - gemeint fuer untereinander stehende
@@ -517,6 +533,27 @@ input.schmal{width:170px}
 .tausch .felder{margin:10px 0 4px}
 .tausch .felder .field{margin-bottom:10px}
 
+/* --- Einstellungen ---------------------------------------------------------
+   Das Menü: Beschriftung links, Anzahl rechts. */
+.mbtn{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left}
+.mbtn .zahl{color:var(--ink-soft);font-size:14px;font-variant-numeric:tabular-nums}
+/* Eine Zeile je Eintrag: Textfeld und Löschen-Knopf nebeneinander. Das Feld
+   wächst mit, damit auch ein langer Prüfpunkt vollständig zu lesen ist. */
+.zeile{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.zeile textarea{
+  flex:1;min-width:0;min-height:0;height:42px;padding:10px;font-size:15px;
+  line-height:1.35;resize:none;overflow:hidden;
+}
+.zeile .btn,.stelle .btn{flex:0 0 auto;width:auto;height:42px;padding:0 12px;font-size:14px;
+  display:flex;align-items:center;justify-content:center}
+/* Nebeneinander stehende Knöpfe brauchen den oberen Abstand nicht (siehe v0.96),
+   und die eigene display-Angabe muss die Regel für [hidden] dulden (v0.83). */
+.zeile .btn + .btn,.stelle .btn + .btn{margin-top:0}
+.zeile .btn[hidden],.stelle .btn[hidden]{display:none}
+/* Eine Karte je Zählstelle: fünf Felder und der Löschen-Knopf. */
+.stelle{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.stelle .field{margin-bottom:10px}
+
 .actionbar{
   position:sticky;bottom:0;z-index:30;margin-top:auto;
   padding:22px var(--pad) 26px;
@@ -849,30 +886,37 @@ input.schmal{width:170px}
       <div id="blattWrap"></div>
     </section>
 
-    <!-- Einstellungen -->
+    <!-- Einstellungen: nur noch ein Menü. Jeder Eintrag öffnet eine eigene
+         Ansicht, die der Zurück-Pfeil wieder verlässt. -->
     <section class="view" id="view-settings">
-      <label class="field"><span>Objekt</span><input id="setObjekt" placeholder="z.B. Musterhaus, Musterstraße 1"></label>
-      <label class="field"><span>Prüfer</span><input id="setPruefer" placeholder="Vor- und Nachname"></label>
-      <div class="eyebrow">Anlagen und Prüfumfang</div>
-      <p class="muted small" style="margin:-4px 0 10px">Je Nachweis eine Anlage pro Zeile. Die Checkliste steht im Protokoll genau so, wie sie hier eingetragen ist.</p>
-      <div id="setNachweise"></div>
+      <div id="setMenue"></div>
+    </section>
 
-      <!-- Gerätewechsel: alles, was die App weiß, in eine Datei und zurück. -->
-      <p class="muted small" style="margin:-4px 0 10px">Sichert Objekt, Prüfer, Anlagenlisten, Checklisten, Zählstellen samt Ablesereihenfolge, die laufenden Nachweise, die Stände des Vorquartals, die vermerkten Zählerwechsel und die Grundrisse in eine Datei. Auf dem neuen Gerät dieselbe Datei einlesen.</p>
-      <div class="eyebrow">Grundrisse</div>
-      <p class="muted small" style="margin:-4px 0 10px">Pläne des Objekts, damit zu jedem Zähler und jeder Tür die Stelle im Haus gezeigt werden kann. Bild oder PDF; eine mehrseitige PDF ergibt einen Grundriss je Seite. Für die Umwandlung einer PDF ist einmalig eine Netzverbindung nötig. Die Pläne liegen in einem eigenen Speicher und wandern mit in die Sicherungsdatei.</p>
-      <div id="planListe"><p class="muted small">wird geladen …</p></div>
-      <button class="btn ghost klein" id="btnPlanNeu" style="margin-top:10px">Grundriss hinzufügen</button>
-      <input type="file" id="planFile" accept="image/*,application/pdf,.pdf" hidden>
+    <!-- Die Unterseiten der Einstellungen. Der obere Teil wird je Seite frisch
+         gebaut; Grundrisse, Gerätewechsel und Zugang behalten ihr festes
+         Markup, weil ihre Knöpfe beim Laden einmal angebunden werden und die
+         Dateifelder nicht bei jedem Aufbau neu entstehen sollen. -->
+    <section class="view" id="view-setsub">
+      <div id="setSubDyn"></div>
 
-      <div class="eyebrow" style="margin-top:14px">Gerätewechsel</div>
-      <button class="btn ghost klein" id="btnCfgAus">Alles sichern</button>
-      <button class="btn ghost klein" id="btnCfgEin" style="margin-top:10px">Aus Datei übernehmen</button>
-      <input type="file" id="cfgFile" accept="application/json,.json" hidden>
+      <div id="blockPlaene" hidden>
+        <p class="muted small" style="margin:0 0 10px">Pläne des Objekts, damit zu jedem Zähler und jeder Tür die Stelle im Haus gezeigt werden kann. Bild oder PDF; eine mehrseitige PDF ergibt einen Grundriss je Seite. Für die Umwandlung einer PDF ist einmalig eine Netzverbindung nötig. Die Pläne liegen in einem eigenen Speicher und wandern mit in die Sicherungsdatei.</p>
+        <div id="planListe"><p class="muted small">wird geladen …</p></div>
+        <button class="btn ghost klein" id="btnPlanNeu" style="margin-top:10px">Grundriss hinzufügen</button>
+        <input type="file" id="planFile" accept="image/*,application/pdf,.pdf" hidden>
+      </div>
 
-      <div class="eyebrow" style="margin-top:14px">Zugang</div>
-      <p class="muted small" style="margin:-4px 0 10px">Dieses Gerät bleibt nach der einmaligen Eingabe offen. Sperren heißt: beim nächsten Öffnen wird das Passwort wieder verlangt. Auf anderen Geräten ändert sich nichts.</p>
-      <button class="btn ghost klein" id="btnSperren">Gerät sperren</button>
+      <div id="blockGeraet" hidden>
+        <p class="muted small" style="margin:0 0 10px">Sichert Objekt, Prüfer, Anlagenlisten, Checklisten, Zählstellen samt Ablesereihenfolge, die laufenden Nachweise, die Stände des Vorquartals, die vermerkten Zählerwechsel und die Grundrisse in eine Datei. Auf dem neuen Gerät dieselbe Datei einlesen.</p>
+        <button class="btn ghost klein" id="btnCfgAus">Alles sichern</button>
+        <button class="btn ghost klein" id="btnCfgEin" style="margin-top:10px">Aus Datei übernehmen</button>
+        <input type="file" id="cfgFile" accept="application/json,.json" hidden>
+      </div>
+
+      <div id="blockZugang" hidden>
+        <p class="muted small" style="margin:0 0 10px">Dieses Gerät bleibt nach der einmaligen Eingabe offen. Sperren heißt: beim nächsten Öffnen wird das Passwort wieder verlangt. Auf anderen Geräten ändert sich nichts.</p>
+        <button class="btn ghost klein" id="btnSperren">Gerät sperren</button>
+      </div>
     </section>
   </main>
 
@@ -913,8 +957,8 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.96';
-const BUILD   = VERSION + ' · 04.09.2026';
+const VERSION = 'v0.97';
+const BUILD   = VERSION + ' · 07.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -1297,21 +1341,25 @@ const CFG_STD = { objekt:'', pruefer:'', teile:{}, orte:{} };
 let CFG = Object.assign({}, CFG_STD, Store.get('nwCfg', {}));
 CFG.teile = CFG.teile || {};
 CFG.orte  = CFG.orte  || {};
+/* Die Startwerte greifen nur, solange noch gar keine Liste angelegt ist. Eine
+   von Hand geleerte Liste bleibt leer – seit die Einträge einzeln gelöscht
+   werden, hieße "leer also unbenutzt" sonst: gelöschte Anlagen kommen beim
+   nächsten Öffnen zurück. */
 const teilCfg = k => {
   const n = NW(k);
   CFG.teile[k] = CFG.teile[k] || {};
   const t = CFG.teile[k];
   if(n.art === 'medien'){
-    if(!Array.isArray(t.stellen) || !t.stellen.length) t.stellen = n.stellen.slice();
+    if(!Array.isArray(t.stellen)) t.stellen = n.stellen.slice();
     if(!Array.isArray(t.folge)) t.folge = [];
     return t;
   }
   if(n.art === 'sprinkler'){
-    if(!Array.isArray(t.woch) || !t.woch.length) t.woch = n.woch.slice();
-    if(!Array.isArray(t.mon)  || !t.mon.length)  t.mon  = n.mon.slice();
+    if(!Array.isArray(t.woch)) t.woch = n.woch.slice();
+    if(!Array.isArray(t.mon))  t.mon  = n.mon.slice();
     return t;
   }
-  if(!Array.isArray(t.anlagen) || !t.anlagen.length) t.anlagen = (n.anlagen || []).slice();
+  if(!Array.isArray(t.anlagen)) t.anlagen = (n.anlagen || []).slice();
   if(typeof t.checkliste !== 'string')               t.checkliste = n.checkliste || '';
   return t;
 };
@@ -1527,13 +1575,14 @@ function ring(n, takt){
 
 /* ---------- Ansichten ---------- */
 const TITEL = {home:'Betriebsnachweise', nachweis:'Nachweis', blatt:'Blatt',
-               settings:'Einstellungen', plan:'Grundriss'};
+               settings:'Einstellungen', setsub:'Einstellungen', plan:'Grundriss'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 function go(name, push = true){
   if(push && current !== name) stack.push(current);
   current = name;
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
-  $('#titel').textContent = name === 'nachweis' && offen ? NW(offen).label : TITEL[name];
+  $('#titel').textContent = name === 'nachweis' && offen ? NW(offen).label
+                          : name === 'setsub' ? setTitel : TITEL[name];
   const start = name === 'home', bb = $('#btnBack');
   bb.innerHTML = start ? GEAR_SVG : '&#8592;';
   bb.setAttribute('aria-label', start ? 'Einstellungen' : 'Zurück');
@@ -1551,13 +1600,19 @@ function go(name, push = true){
   window.scrollTo(0, 0);
   if(name === 'home')     renderHome();
   if(name === 'nachweis') renderNachweis();
-  if(name === 'settings'){ renderSettings(); renderPlaene(); }
+  if(name === 'settings') renderSettings();
+  if(name === 'setsub')   renderSetSub();
   renderBar();
 }
-$('#btnBack').onclick = () => {
+function zurueck(){
   if(current === 'home'){ go('settings'); return; }     // Startseite: Einstellungen
-  const p = stack.pop(); if(p) go(p, false);
-};
+  const p = stack.pop();
+  /* Führt der Weg auf eine Unterseite der Einstellungen zurück, muss auch deren
+     Zustand zurück – sonst stünde dort die zuletzt geöffnete Seite. */
+  if(p === 'setsub'){ const v = setStack.pop(); if(v){ setSeite = v.seite; setTitel = v.titel; } }
+  if(p) go(p, false);
+}
+$('#btnBack').onclick = zurueck;
 
 /* Rückfrage im eigenen Fenster. Der Aufruf übergibt, was bei Zustimmung
    geschehen soll – abgelehnt wird durch Nichtstun. */
@@ -2131,46 +2186,314 @@ function initPad(){
 })();
 window.addEventListener('resize', () => { if(current === 'nachweis') initPad(); });
 
-/* ---------- Einstellungen ---------- */
+/* ---------- Einstellungen ----------------------------------------------------
+   Die Einstellungen sind nur noch ein Menü: jeder Eintrag öffnet eine eigene
+   Ansicht, die der Zurück-Pfeil wieder verlässt. Gesichert wird dort sofort –
+   beim Verlassen eines Feldes und beim Löschen nach der Rückfrage. Einen
+   Speichern-Knopf gibt es nicht mehr; damit ist auch die alte Falle vom Tisch,
+   in der zwei Knöpfe beide nach Speichern aussahen (v0.50/v0.51). */
 function renderSettings(){
+  const knopf = (art, k, text, zahl) =>
+    `<button class="btn ghost mbtn" data-art="${art}" data-k="${esc(k || '')}">`
+    + `<span>${esc(text)}</span>`
+    + (zahl == null ? '' : `<span class="zahl"${art === 'plaene' ? ' id="setZahlPlaene"' : ''}>${zahl}</span>`)
+    + '</button>';
+  const anzahl = n => n.art === 'medien'    ? stellen().length
+                    : n.art === 'sprinkler' ? null
+                    : (teilCfg(n.k).anlagen || []).length;
+  $('#setMenue').innerHTML =
+      knopf('obj', '', 'Objekt und Prüfer')
+    + '<div class="eyebrow">Anlagen und Prüfumfang</div>'
+    + NACHWEISE.filter(n => !n.spaeter).map(n => knopf('nw', n.k, n.label, anzahl(n))).join('')
+    + '<div class="eyebrow">Gerät</div>'
+    + knopf('plaene', '', 'Grundrisse', '…')
+    + knopf('geraet', '', 'Gerätewechsel')
+    + knopf('zugang', '', 'Zugang');
+  $$('#setMenue [data-art]').forEach(b =>
+    b.onclick = () => setOeffnen(b.dataset.art, b.dataset.k));
+  /* Die Zahl der Grundrisse liegt im Bilderspeicher und kommt erst später. */
+  Bilder.alle().then(l => {
+    const z = $('#setZahlPlaene'); if(z) z.textContent = (l || []).length;
+  }).catch(() => { const z = $('#setZahlPlaene'); if(z) z.textContent = '–'; });
+}
+/* Welche Unterseite offen ist. Der Titel steht daneben, weil die Kopfzeile ihn
+   beim Wechsel braucht. */
+let setSeite = {art:'obj', k:''}, setTitel = 'Einstellungen', setStack = [];
+function setOeffnen(art, k){
+  /* Von einer Unterseite auf die nächste (Anlagen → Checkliste, Zählstellen →
+     Zählertausch) bleibt die Ansicht dieselbe – go() legt dann nichts auf den
+     Stapel. Damit der Pfeil trotzdem eine Ebene zurückführt und nicht gleich
+     ins Menü springt, wird die verlassene Seite hier selbst gemerkt. */
+  if(current === 'setsub'){ setStack.push({seite:setSeite, titel:setTitel}); stack.push('setsub'); }
+  setSeite = {art, k:k || ''};
+  setTitel = art === 'nw'     ? NW(k).label
+           : art === 'obj'    ? 'Objekt und Prüfer'
+           : art === 'check'  ? 'Checkliste'
+           : art === 'tausch' ? 'Zählertausch'
+           : art === 'plaene' ? 'Grundrisse'
+           : art === 'geraet' ? 'Gerätewechsel'
+           : art === 'zugang' ? 'Zugang' : 'Einstellungen';
+  go('setsub');
+}
+function renderSetSub(){
+  const dyn = $('#setSubDyn'), a = setSeite.art, k = setSeite.k;
+  $('#blockPlaene').hidden = a !== 'plaene';
+  $('#blockGeraet').hidden = a !== 'geraet';
+  $('#blockZugang').hidden = a !== 'zugang';
+  dyn.innerHTML = '';
+  if(a === 'plaene'){ renderPlaene(); return; }
+  if(a === 'geraet' || a === 'zugang') return;
+  if(a === 'obj')   { setObjekt(dyn);   return; }
+  if(a === 'check') { setCheck(dyn, k); return; }
+  if(a === 'tausch'){ setTausch(dyn);   return; }
+  const n = NW(k);
+  if(n.art === 'medien')         setStellen(dyn);
+  else if(n.art === 'sprinkler') setSprinkler(dyn, k);
+  else                           setAnlagen(dyn, k);
+}
+/* Verlässt jemand eine gefüllte neue Zeile gleich über den Zurück-Pfeil, wird
+   sie erst gesichert, wenn das Menü schon steht – die Anzahl dort hinkte dann
+   um eins hinterher. Deshalb nach dem Anlegen nachziehen, wenn das Menü gerade
+   sichtbar ist. */
+function menueAuffrischen(){ if(current === 'settings') renderSettings(); }
+/* Eine Ebene zurück – dasselbe, was der Pfeil oben links tut, nur aus dem Code. */
+function setZurueck(){ zurueck(); }
+
+function setObjekt(box){
+  box.innerHTML =
+    `<label class="field"><span>Objekt</span><input id="setObjekt" placeholder="z.B. Musterhaus, Musterstraße 1"></label>
+     <label class="field"><span>Prüfer</span><input id="setPruefer" placeholder="Vor- und Nachname"></label>
+     <p class="muted small">Beides steht im Kopf jedes Protokolls. Gesichert wird, sobald du das Feld verlässt.</p>`;
   $('#setObjekt').value  = CFG.objekt  || '';
   $('#setPruefer').value = CFG.pruefer || '';
-  $('#setNachweise').innerHTML = NACHWEISE.filter(n => !n.spaeter).map(n => {
-    // (Aufbau je Nachweis; der Rücksetzknopf wird unten angebunden)
-    const t = teilCfg(n.k);
-    const kopf = `<div class="name" style="font-weight:600;margin-bottom:10px">${esc(n.label)}</div>`;
-    if(n.art === 'medien') return `<div class="card">${kopf}
-      <p class="muted small" style="margin:-4px 0 10px">Eine Zählstelle je Zeile: Partei ; Medium ; Zählernummer ; Ort ; Einheit. Ort und Einheit dürfen fehlen; Wasser rechnet immer in m³, Strom und Wärme in kWh, sofern nicht MWh danebensteht. Die Ablesereihenfolge stellst du beim Ablesen mit den Pfeilen ein.</p>
-      <label class="field"><span>Zählstellen</span>
-        <textarea data-set="stellen" data-k="${n.k}" style="min-height:200px">${esc((t.stellen || []).join('\n'))}</textarea></label>
-      <div class="eyebrow" style="margin-top:4px">Zählertausch</div>
-      <p class="muted small" style="margin:-4px 0 10px">Zähler anhaken, neue Nummer eintragen, übernehmen. Für die getauschten Zähler wird der Stand des Vorquartals verworfen – der neue beginnt bei null, der Verbrauch erscheint wieder mit der übernächsten Ablesung. Alle anderen bleiben unberührt.</p>
-      <div id="tauschListe">${medienNamenListe()}</div>
-      <p class="muted small" style="margin:10px 0 0">Der Tausch wird mit „Speichern“ unten übernommen – mit einer Rückfrage, die noch einmal auflistet, was vermerkt wird.</p>
-      <div class="eyebrow" style="margin-top:14px">Alles zurücksetzen</div>
-      <button class="btn ghost klein" id="btnMedReset">Ablesewerte zurücksetzen</button>
-      <p class="muted small" style="margin:8px 0 0">Löscht die laufende Ablesung und die gemerkten Stände sämtlicher Zähler. Für einen einzelnen Zählertausch ist das der zu große Hammer – dafür ist die Auswahl darüber da.</p>
-    </div>`;
-    if(n.art === 'sprinkler') return `<div class="card">${kopf}
-      <p class="muted small" style="margin:-4px 0 10px">Ein Punkt, dessen Text auf „(bar)“ endet, bekommt ein Zahlenfeld statt der Zustandswahl.</p>
-      <label class="field"><span>Wöchentliche Punkte (einer je Zeile)</span>
-        <textarea data-set="woch" data-k="${n.k}" style="min-height:120px">${esc(t.woch.join('\n'))}</textarea></label>
-      <label class="field" style="margin-bottom:0"><span>Monatliche Punkte (einer je Zeile)</span>
-        <textarea data-set="mon" data-k="${n.k}" style="min-height:100px">${esc(t.mon.join('\n'))}</textarea></label>
-    </div>`;
-    return `<div class="card">${kopf}
-      <label class="field"><span>Anlagen (eine je Zeile)</span>
-        <textarea data-set="anlagen" data-k="${n.k}" style="min-height:120px">${esc(t.anlagen.join('\n'))}</textarea></label>
-      <label class="field" style="margin-bottom:0"><span>Checkliste</span>
-        <textarea data-set="check" data-k="${n.k}">${esc(t.checkliste)}</textarea></label>
-    </div>`;
-  }).join('');
-  const sp = $('#btnSperren');
-  if(sp) sp.onclick = () => frage('Gerät sperren',
-    'Beim nächsten Öffnen wird das Passwort wieder verlangt.', 'Sperren',
-    () => { Store.set('nwFrei', ''); location.reload(); });
-  const rs = $('#btnMedReset');
-  if(rs) rs.onclick = medienZuruecksetzen;
+  $('#setObjekt').onchange  = e => { CFG.objekt  = e.target.value.trim(); saveCfg(); };
+  $('#setPruefer').onchange = e => { CFG.pruefer = e.target.value.trim(); saveCfg(); };
+}
+function setCheck(box, k){
+  box.innerHTML =
+    `<p class="muted small" style="margin:0 0 10px">Die Checkliste steht im Protokoll genau so, wie sie hier eingetragen ist – Nummern, Spiegelstriche und „&gt;“ bleiben erhalten.</p>
+     <textarea id="setCheckText" style="min-height:340px"></textarea>`;
+  const ta = $('#setCheckText');
+  ta.value = teilCfg(k).checkliste || '';
+  ta.onchange = () => { teilCfg(k).checkliste = ta.value; saveCfg(); };
+}
+
+/* --- Listen mit einer Zeile je Eintrag --------------------------------------
+   Überall derselbe Aufbau: ein Textfeld je Eintrag, daneben „Löschen“, darunter
+   „+ … hinzufügen“. Gesichert wird beim Verlassen des Feldes, gelöscht sofort
+   nach der Rückfrage – jede Zeile arbeitet für sich.
+
+   opt.wort           Einzahl für Knopf und Rückfrage ("Anlage", "Punkt")
+   opt.liste()        liefert das Array; es wird an Ort und Stelle geändert
+   opt.beiUmbenennen  (alt, neu) – zieht die Verknüpfungen mit
+   opt.beiLoeschen    (i) – räumt auf, bevor der Eintrag verschwindet
+   opt.loeschHinweis  zweiter Absatz der Rückfrage */
+const feldHoehe = ta => {
+  ta.style.height = 'auto';
+  ta.style.height = Math.max(42, ta.scrollHeight + 2) + 'px';
+};
+function listeBauen(box, opt){
+  const zeile = (text, i) =>
+    `<div class="zeile" data-i="${i}">
+       <textarea rows="1"${i < 0 ? ` placeholder="${esc(opt.wort)}"` : ''}>${esc(text)}</textarea>
+       <button class="btn danger klein" data-weg="1">Löschen</button>
+     </div>`;
+  /* Wer an einer frisch angelegten Zeile "Löschen" tippt, verwirft sie. Das
+     Verlassen des Feldes kommt aber VOR dem Klick – ohne diesen Merker wäre der
+     Eintrag schon gespeichert, bevor der Knopf überhaupt drankommt. */
+  let verworfen = false;
+  const zeichnen = mitNeuer => {
+    verworfen = false;
+    box.innerHTML = opt.liste().map(zeile).join('')
+      + (mitNeuer ? zeile('', -1) : '')
+      + `<button class="btn ghost klein" data-plus="1" style="margin-top:12px">+ ${esc(opt.wort)} hinzufügen</button>`;
+    box.querySelectorAll('.zeile').forEach(r => {
+      const ta = r.querySelector('textarea'), i = +r.dataset.i, neu = i < 0;
+      feldHoehe(ta);
+      ta.oninput  = () => feldHoehe(ta);
+      ta.onchange = () => {
+        /* Ein Eintrag ist eine Zeile: Umbrüche aus dem Einfügen fallen weg. */
+        const wert = ta.value.replace(/\s+/g, ' ').trim(), liste = opt.liste();
+        if(neu){
+          if(!wert || verworfen){ zeichnen(false); return; }
+          liste.push(wert); saveCfg(); toast('Hinzugefügt');
+          zeichnen(false); menueAuffrischen(); return;
+        }
+        if(!wert){ ta.value = liste[i]; feldHoehe(ta); return; }   // leeren geht nur über Löschen
+        if(wert === liste[i]) return;
+        if(opt.beiUmbenennen) opt.beiUmbenennen(liste[i], wert);
+        liste[i] = wert; saveCfg();
+      };
+      r.querySelector('[data-weg]').onpointerdown = () => { if(neu) verworfen = true; };
+      r.querySelector('[data-weg]').onclick = () => {
+        if(neu){ zeichnen(false); return; }
+        const liste = opt.liste();
+        frage(opt.wort + ' löschen',
+          `„${liste[i]}“ verschwindet aus der Liste.`
+          + (opt.loeschHinweis ? '\n\n' + opt.loeschHinweis : ''),
+          'Löschen', () => {
+            if(opt.beiLoeschen) opt.beiLoeschen(i);
+            liste.splice(i, 1); saveCfg(); toast('Gelöscht');
+            zeichnen(false); menueAuffrischen();
+          });
+      };
+    });
+    box.querySelector('[data-plus]').onclick = () => {
+      zeichnen(true);
+      const t = box.querySelector('.zeile[data-i="-1"] textarea');
+      if(t) t.focus();
+    };
+  };
+  zeichnen(false);
+}
+
+function setAnlagen(box, k){
+  box.innerHTML =
+    `<button class="btn ghost klein" id="setZuCheck">Checkliste bearbeiten</button>
+     <div class="eyebrow">Anlagen</div>
+     <p class="muted small" style="margin:-4px 0 6px">Die Reihenfolge stellst du beim Prüfen mit den Pfeilen ein; neue Anlagen hängen sich hinten an.</p>
+     <div id="setListe"></div>`;
+  $('#setZuCheck').onclick = () => setOeffnen('check', k);
+  listeBauen($('#setListe'), {
+    wort:'Anlage',
+    liste:() => teilCfg(k).anlagen,
+    beiUmbenennen:(alt, neu) => anlageUmbenennen(k, alt, neu),
+    loeschHinweis:'Das bisher Erfasste und die Stelle im Grundriss bleiben gespeichert – '
+      + 'wer die Anlage mit demselben Namen wieder anlegt, findet beides wieder.'
+  });
+}
+/* Beim Sprinkler hängen die erfassten Werte an der Position des Punktes, nicht
+   an seinem Text: ein gelöschter Punkt muss deshalb auch aus den laufenden
+   Kontrollgängen heraus, sonst rutschen die Werte dahinter um einen weiter. */
+function setSprinkler(box, k){
+  box.innerHTML =
+    `<p class="muted small" style="margin:0 0 6px">Ein Punkt, dessen Text auf „(bar)“ endet, bekommt beim Erfassen ein Zahlenfeld statt der Zustandswahl.</p>
+     <div class="eyebrow">Wöchentliche Punkte</div>
+     <div id="setWoch"></div>
+     <div class="eyebrow" style="margin-top:18px">Monatliche Punkte</div>
+     <div id="setMon"></div>`;
+  [['woch', '#setWoch'], ['mon', '#setMon']].forEach(([feld, wo]) => {
+    listeBauen($(wo), {
+      wort:'Punkt',
+      liste:() => teilCfg(k)[feld],
+      beiLoeschen:i => {
+        const d = DAT[k];
+        if(d && Array.isArray(d[feld])){
+          d[feld].forEach(g => { if(Array.isArray(g.w)) g.w.splice(i, 1); });
+          saveDat();
+        }
+      },
+      loeschHinweis:'Bereits erfasste Werte zu diesem Punkt werden aus den laufenden Kontrollgängen entfernt.'
+    });
+  });
+}
+
+/* --- Zählstellen ------------------------------------------------------------
+   Fünf Felder je Zähler statt einer Zeile mit Strichpunkten. Partei, Medium und
+   Nummer bilden zusammen den Schlüssel – ändert sich einer davon, wandern
+   Vorquartalsstand, laufender Wert, Platz im Ableseweg und die Stelle im
+   Grundriss mit. Eine Nummer hier zu berichtigen kostet also nichts; der
+   wirkliche Zählertausch (mit Aus- und Einbaustand) hat seine eigene Seite. */
+const MEDIEN = ['Kaltwasser', 'Warmwasser', 'Wärme', 'Strom'];
+function setStellen(box){
+  box.innerHTML =
+    `<p class="muted small" style="margin:0 0 6px">Partei, Medium und Zählernummer bilden zusammen den Schlüssel eines Zählers. Wird einer davon geändert, wandern Vorquartalsstand, laufender Wert, Ableseplatz und die Stelle im Grundriss mit – ein Tippfehler lässt sich also gefahrlos berichtigen. Wasser rechnet immer in m³.</p>
+     <div id="setStellenListe"></div>
+     <button class="btn ghost klein" id="setStellePlus" style="margin-top:12px">+ Zählstelle hinzufügen</button>
+     <div class="eyebrow" style="margin-top:20px">Zählertausch</div>
+     <p class="muted small" style="margin:-4px 0 10px">Für einen wirklich getauschten Zähler: neue Nummer, Wechseldatum, Ausbau- und Einbaustand. Der Stand des Vorquartals wird dabei verworfen.</p>
+     <button class="btn ghost klein" id="setZuTausch">Zähler getauscht</button>
+     <div class="eyebrow" style="margin-top:20px">Alles zurücksetzen</div>
+     <button class="btn ghost klein" id="btnMedReset">Ablesewerte zurücksetzen</button>
+     <p class="muted small" style="margin:8px 0 0">Löscht die laufende Ablesung und die gemerkten Stände sämtlicher Zähler. Für einen einzelnen Zählertausch ist das der zu große Hammer – dafür ist der Knopf darüber da.</p>`;
+  $('#setZuTausch').onclick = () => setOeffnen('tausch');
+  $('#btnMedReset').onclick = medienZuruecksetzen;
+  $('#setStellePlus').onclick = () => {
+    stellenZeichnen(true);
+    const f = $('#setStellenListe .stelle[data-i="-1"] [data-f="partei"]');
+    if(f) f.focus();
+  };
+  stellenZeichnen(false);
+}
+function stelleKarte(z, i){
+  const wahl = (liste, wert) => liste
+    .map(m => `<option${m === wert ? ' selected' : ''}>${esc(m)}</option>`).join('');
+  /* Ein selbst eingetragenes Medium aus früheren Fassungen bleibt wählbar. */
+  const medien = z.medium && !MEDIEN.includes(z.medium) ? MEDIEN.concat(z.medium) : MEDIEN;
+  return `<div class="stelle" data-i="${i}">
+    <label class="field"><span>Partei</span><input data-f="partei" value="${esc(z.partei)}"></label>
+    <div class="row">
+      <label class="field"><span>Medium</span><select data-f="medium">${wahl(medien, z.medium)}</select></label>
+      <label class="field"><span>Einheit</span><select data-f="einheit">${wahl(['m³', 'kWh', 'MWh'], z.einheit)}</select></label>
+    </div>
+    <label class="field"><span>Zählernummer</span><input data-f="nr" value="${esc(z.nr)}"></label>
+    <label class="field"><span>Ort</span><input data-f="ort" value="${esc(z.ort)}"></label>
+    <button class="btn danger klein" data-weg="1">Löschen</button>
+  </div>`;
+}
+function stellenZeichnen(mitNeuer){
+  const box = $('#setStellenListe'); if(!box) return;
+  const t = teilCfg('medien');
+  let verworfen = false;
+  box.innerHTML = t.stellen.map((z, i) => stelleKarte(stelleLesen(z), i)).join('')
+    + (mitNeuer ? stelleKarte({partei:'', medium:'Kaltwasser', nr:'', ort:'', einheit:'m³'}, -1) : '');
+  box.querySelectorAll('.stelle').forEach(r => {
+    const i = +r.dataset.i, neu = i < 0;
+    const feld = f => r.querySelector(`[data-f="${f}"]`);
+    const zeileBauen = () => ['partei', 'medium', 'nr', 'ort', 'einheit']
+      .map(f => (feld(f).value || '').trim()).join(' ; ');
+    const sichern = () => {
+      const zeile = zeileBauen(), jetzt = stelleLesen(zeile);
+      if(neu){
+        if(!jetzt.partei && !jetzt.nr) return;      // eine leere Karte zählt nicht
+        t.stellen.push(zeile); saveCfg(); toast('Hinzugefügt');
+        stellenZeichnen(false); menueAuffrischen();
+        return;
+      }
+      const alt = stelleLesen(t.stellen[i]);
+      if(alt.key !== jetzt.key) stelleUmbenennen(alt.key, jetzt.key);
+      t.stellen[i] = zeile; saveCfg();
+    };
+    /* Eine neue Karte wird erst gesichert, wenn sie ganz verlassen wird – sonst
+       würde die Liste schon nach dem ersten Feld neu gebaut und das zweite ginge
+       beim Tippen verloren. Bei einer bestehenden Karte zählt jedes Feld für
+       sich; neu gebaut wird dabei nichts. */
+    if(neu) r.addEventListener('focusout', () => setTimeout(() => {
+      if(!r.contains(document.activeElement) && !verworfen) sichern();
+    }, 0));
+    r.querySelectorAll('[data-f]').forEach(f => f.onchange = () => {
+      /* Die Einheit richtet sich nach dem Medium: Wasser rechnet in m³, alles
+         andere in kWh oder MWh. Umgestellt wird an Ort und Stelle, damit die
+         Karte beim Tippen nicht unter dem Finger neu gebaut wird. */
+      if(f.dataset.f === 'medium'){
+        const eh = feld('einheit'), wasser = /wasser/i.test(f.value);
+        eh.value = wasser ? 'm³' : (eh.value === 'm³' ? 'kWh' : eh.value);
+      }
+      if(!neu) sichern();
+    });
+    r.querySelector('[data-weg]').onpointerdown = () => { if(neu) verworfen = true; };
+    r.querySelector('[data-weg]').onclick = () => {
+      if(neu){ stellenZeichnen(false); return; }
+      const z = stelleLesen(t.stellen[i]);
+      frage('Zählstelle löschen',
+        `„${z.partei} · ${z.medium}${z.nr ? ', ' + z.nr : ''}“ verschwindet aus der Liste.\n\n`
+        + 'Der Stand des Vorquartals, der laufende Wert und die Stelle im Grundriss bleiben '
+        + 'gespeichert – wer die Zählstelle mit denselben Angaben wieder anlegt, findet alles wieder.',
+        'Löschen', () => {
+          t.stellen.splice(i, 1); saveCfg(); toast('Gelöscht');
+          stellenZeichnen(false); menueAuffrischen();
+        });
+    };
+  });
+}
+/* Der Zählertausch hat jetzt eine eigene Seite mit einem einzigen Knopf. Damit
+   ist die Falle aus v0.50 endgültig weg, und die damalige Festlegung "Tausch
+   nur über Speichern" (v0.51) ist hinfällig – es gibt kein Speichern mehr. */
+function setTausch(box){
+  box.innerHTML =
+    `<p class="muted small" style="margin:0 0 10px">Zähler anhaken, Wechseldatum, neue Nummer sowie Aus- und Einbaustand eintragen. Für die angehakten Zähler wird der Stand des Vorquartals verworfen; gerechnet wird ab dem Einbaustand. Alle anderen bleiben unberührt.</p>
+     <div id="tauschListe">${medienNamenListe()}</div>
+     <button class="btn primary" id="btnTauschOk" style="margin-top:16px">Tausch vermerken</button>`;
   /* Das Nummernfeld öffnet sich erst mit dem Haken – so ist auf einen Blick zu
      sehen, welche Zähler wirklich gemeint sind. */
   $$('#tauschListe .tausch').forEach(r => {
@@ -2183,6 +2506,32 @@ function renderSettings(){
       }
     };
   });
+  $('#btnTauschOk').onclick = tauschVermerken;
+}
+function tauschVermerken(){
+  const {voll, unvoll} = tauschSammeln();
+  /* Ein Haken ohne neue Nummer ginge sonst stillschweigend verloren. */
+  if(unvoll.length){
+    frage('Neue Nummer fehlt',
+      `Bei ${unvoll.length === 1 ? 'einem angehakten Zähler' : unvoll.length + ' angehakten Zählern'} fehlt die neue Nummer:\n\n`
+      + unvoll.map(w => '• ' + w).join('\n')
+      + '\n\nOhne Nummer lässt sich der Tausch nicht vermerken.',
+      'Trotzdem weiter', () => tauschFragen(voll));
+    return;
+  }
+  tauschFragen(voll);
+}
+function tauschFragen(voll){
+  if(!voll.length){ toast('Kein Zähler angehakt'); return; }
+  frage('Zählertausch vermerken',
+    'Folgende Zähler werden als getauscht vermerkt:\n\n'
+    + voll.map(x => `• ${x.wer}\n   neue Nummer ${x.neu}, Wechsel am ${dText(x.datum)}`).join('\n')
+    + '\n\nDer Stand des Vorquartals wird dabei verworfen; gerechnet wird ab dem Einbaustand.',
+    'Vermerken', () => {
+      const n = tauschAnwenden(voll); saveCfg();
+      toast(n === 1 ? 'Ein Zähler getauscht' : `${n} Zähler getauscht`);
+      setZurueck();
+    });
 }
 /* --- Zählertausch -----------------------------------------------------------
    26 Zähler werden nie gemeinsam getauscht. Deshalb eine Auswahl: anhaken, neue
@@ -2281,89 +2630,30 @@ function zuruecksetzenAusfuehren(){
   toast('Ablesewerte zurückgesetzt');
 }
 /* --- Umbenennen ------------------------------------------------------------
-   Am Namen hängen die Stelle im Grundriss und das bereits Erfasste. Wer eine
-   Tür von "Tür 1" auf "Tür 1, Erdgeschoss, Gang neben Treppenhaus" ändert, will
-   beides behalten. Erkannt wird am Platz in der Liste: bleibt deren Länge
-   gleich, gilt ein geänderter Eintrag an derselben Stelle als Umbenennung.
-   Ändert sich auch die Zahl der Einträge, lässt sich nicht mehr sicher sagen,
-   was wohin gehört – dann bleibt alles, wie es ist. */
-function anlagenUmbenennen(k, alt, neu){
-  if(alt.length !== neu.length) return 0;
-  const d = DAT[k]; let n = 0;
-  alt.forEach((a, i) => {
-    const b = neu[i];
-    if(a === b) return;
-    const va = k + '|' + a, vb = k + '|' + b;
-    if(CFG.orte[va]){ CFG.orte[vb] = CFG.orte[va]; delete CFG.orte[va]; }
-    if(d && d.zeilen && d.zeilen[a]){ d.zeilen[b] = d.zeilen[a]; delete d.zeilen[a]; }
-    n++;
-  });
-  if(n) saveDat();
-  return n;
-}
-/* Dasselbe für die Zählstellen: hier hängt am Schlüssel zusätzlich der Stand des
-   Vorquartals und der Platz im Ableseweg. Die Zählernummer wird über den
-   Zählertausch geändert, nicht hier – aber eine Partei kann umziehen. */
-function stellenUmbenennen(alt, neu){
-  if(alt.length !== neu.length) return 0;
-  const t = teilCfg('medien'), d = DAT.medien; let n = 0;
-  alt.forEach((za, i) => {
-    const ka = stelleLesen(za).key, kb = stelleLesen(neu[i]).key;
-    if(ka === kb) return;
-    if(CFG.orte[ka]){ CFG.orte[kb] = CFG.orte[ka]; delete CFG.orte[ka]; }
-    if(MED_ALT[ka]){ MED_ALT[kb] = MED_ALT[ka]; delete MED_ALT[ka]; }
-    if(d && d.stand && d.stand[ka] != null){ d.stand[kb] = d.stand[ka]; delete d.stand[ka]; }
-    const j = (t.folge || []).indexOf(ka);
-    if(j >= 0) t.folge[j] = kb;
-    n++;
-  });
-  if(n){ saveDat(); saveAlt(); }
-  return n;
-}
-function settingsSichern(){
-  CFG.objekt  = $('#setObjekt').value.trim();
-  CFG.pruefer = $('#setPruefer').value.trim();
-  $$('#setNachweise [data-set]').forEach(el => {
-    const t = teilCfg(el.dataset.k), art = el.dataset.set;
-    if(art === 'check'){ t.checkliste = el.value; return; }
-    const neu = el.value.split('\n').map(s => s.trim()).filter(Boolean);
-    if(!neu.length) return;
-    const feld = art === 'anlagen' ? 'anlagen' : art;
-    const vorher = (t[feld] || []).slice();
-    if(feld === 'anlagen') anlagenUmbenennen(el.dataset.k, vorher, neu);
-    if(feld === 'stellen') stellenUmbenennen(vorher, neu);
-    t[feld] = neu;
-  });
-  /* Ein angehakter Zählertausch wird beim Speichern mit ausgeführt – erst nach
-     den Textfeldern, damit er auf der gerade gesicherten Liste arbeitet. Weil
-     ein Tausch den Stand des Vorquartals verwirft, wird vorher gefragt und
-     aufgelistet, was vermerkt wird. Ist ein Haken gesetzt, aber keine Nummer
-     eingetragen, wäre der Vorgang stillschweigend verloren – auch das kommt zur
-     Sprache, statt es geschehen zu lassen. */
-  saveCfg();                                  // die Textfelder sind damit sicher
-  const {voll, unvoll} = tauschSammeln();
-  const fertig = n => {
-    toast(n ? `Gespeichert, ${n} Zähler getauscht` : 'Einstellungen gespeichert');
-    go('home', false); stack = [];
-  };
-  const tauschFragen = () => {
-    if(!voll.length){ fertig(0); return; }
-    frage('Zählertausch vermerken',
-      'Folgende Zähler werden als getauscht vermerkt:\n\n'
-      + voll.map(x => `• ${x.wer}\n   neue Nummer ${x.neu}, Wechsel am ${dText(x.datum)}`).join('\n')
-      + '\n\nDer Stand des Vorquartals wird dabei verworfen; gerechnet wird ab dem Einbaustand.',
-      'Vermerken', () => { const n = tauschAnwenden(voll); saveCfg(); fertig(n); });
-  };
-  /* Ein Haken ohne neue Nummer ginge sonst stillschweigend verloren. */
-  if(unvoll.length){
-    frage('Neue Nummer fehlt',
-      `Bei ${unvoll.length === 1 ? 'einem angehakten Zähler' : unvoll.length + ' angehakten Zählern'} fehlt die neue Nummer:\n\n`
-      + unvoll.map(w => '• ' + w).join('\n')
-      + '\n\nOhne Nummer lässt sich der Tausch nicht vermerken. Die Einstellungen sind gespeichert.',
-      'Trotzdem weiter', tauschFragen);
-    return;
+   Am Namen hängen die Stelle im Grundriss und das bereits Erfasste. Weil jede
+   Zeile für sich gesichert wird, ist eindeutig, welcher Eintrag gemeint ist –
+   die frühere Regel (nur solange die Zahl der Zeilen gleich bleibt) ist damit
+   hinfällig: Umbenennen und Hinzufügen im selben Zug gehen jetzt zusammen. */
+function anlageUmbenennen(k, alt, neu){
+  if(!alt || alt === neu) return;
+  const va = k + '|' + alt, vb = k + '|' + neu, d = DAT[k];
+  if(CFG.orte[va]){ CFG.orte[vb] = CFG.orte[va]; delete CFG.orte[va]; }
+  if(d && d.zeilen && d.zeilen[alt]){
+    d.zeilen[neu] = d.zeilen[alt]; delete d.zeilen[alt]; saveDat();
   }
-  tauschFragen();
+}
+/* Dasselbe für eine Zählstelle: an ihrem Schlüssel hängen zusätzlich der Stand
+   des Vorquartals, der laufende Wert und der Platz im Ableseweg. */
+function stelleUmbenennen(alt, neu){
+  if(!alt || alt === neu) return;
+  const t = teilCfg('medien'), d = DAT.medien;
+  if(CFG.orte[alt]){ CFG.orte[neu] = CFG.orte[alt]; delete CFG.orte[alt]; }
+  if(MED_ALT[alt]){ MED_ALT[neu] = MED_ALT[alt]; delete MED_ALT[alt]; saveAlt(); }
+  if(d && d.stand && d.stand[alt] != null){
+    d.stand[neu] = d.stand[alt]; delete d.stand[alt]; saveDat();
+  }
+  const j = (t.folge || []).indexOf(alt);
+  if(j >= 0) t.folge[j] = neu;
 }
 
 /* --- Grundrisse -------------------------------------------------------------
@@ -2658,9 +2948,12 @@ function katOrte(k, planId){
    sonst alles, dessen Schlüssel mit demselben Nachweis beginnt. */
 function andereOrte(planId, key){
   const istZaehler = stellen().some(z => z.key === key);
-  const passt = k => k !== key && (CFG.orte[k] || {}).plan === planId &&
-    (istZaehler ? stellen().some(z => z.key === k)
-                : k.startsWith(String(key).split('|')[0] + '|'));
+  /* Nur, was es heute noch gibt: die Stelle einer gelöschten Anlage bleibt zwar
+     gespeichert (sie kehrt mit dem Namen zurück), als Nachbarmarke hat sie im
+     Plan aber nichts mehr verloren. */
+  const daheim = new Set(istZaehler ? stellen().map(z => z.key)
+                                    : katSchluessel(String(key).split('|')[0]));
+  const passt = k => k !== key && (CFG.orte[k] || {}).plan === planId && daheim.has(k);
   /* Der Schlüssel reist mit: er wird gebraucht, wenn jemand die Marke antippt
      und wissen will, was dort steht. */
   return Object.keys(CFG.orte).filter(passt).map(k => Object.assign({key:k}, CFG.orte[k]));
@@ -3002,8 +3295,11 @@ async function paketUebernehmen(paket){
     catch(e){ /* einzelnes Bild überspringen */ }
   }
   toast(n ? `Übernommen, ${n} Grundriss${n === 1 ? '' : 'e'}` : 'Übernommen');
-  renderSettings(); renderPlaene();
+  if(current === 'setsub') setZurueck(); else renderSettings();
 }
+$('#btnSperren').onclick = () => frage('Gerät sperren',
+  'Beim nächsten Öffnen wird das Passwort wieder verlangt.', 'Sperren',
+  () => { Store.set('nwFrei', ''); location.reload(); });
 $('#btnCfgAus').onclick = alsDateiSichern;
 $('#btnCfgEin').onclick = () => $('#cfgFile').click();
 $('#cfgFile').onchange = e => {
@@ -3027,10 +3323,7 @@ $('#cfgFile').onchange = e => {
 /* ---------- Fußleiste je Ansicht ---------- */
 function renderBar(){
   const b = $('#barInner');
-  if(current === 'settings'){
-    b.innerHTML = `<button class="btn primary" id="barA">Speichern</button>`;
-    $('#barA').onclick = settingsSichern;
-  }else if(current === 'nachweis'){
+  if(current === 'nachweis'){
     const d = datenFuer(offen);
     let voll, hinweis;
     if(NW(offen).art === 'medien'){
