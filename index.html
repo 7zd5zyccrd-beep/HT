@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.95 04.09.2026  Der Knopf zum Neuladen steht nur noch in den Einstellungen,
+                    der Grundrisswechsel nur in der Grundrissansicht. Beide
+                    teilen sich keinen Platz mehr: der jeweils andere ist ganz
+                    weg, damit die Kopfzeile ihre Breite behaelt.
+  v0.94 04.09.2026  Knopf oben rechts in der Kopfzeile: laedt die App frisch
+                    vom Server, indem er sie unter einer Adresse mit Zeitstempel
+                    aufruft. GitHub Pages gibt die Seite mit zehn Minuten
+                    Haltbarkeit heraus, sonst kaeme auch nach einem Neustart die
+                    alte Fassung. Im Grundriss bleibt der Platz dem Blaettern.
   v0.93 04.09.2026  Knoepfe schalten die native Darstellung von iOS ab und
                     bekommen feste Hoehen: in den Einstellungen sass "Loeschen"
                     tiefer als "Ansehen", im Streifen "Ausgeben" tiefer als
@@ -387,6 +396,11 @@ header .kopfKnopf{
 }
 header .kopfKnopf svg{display:block}
 header .kopfKnopf.unsichtbar{visibility:hidden}
+/* Rechts steht in jeder Ansicht genau einer der beiden Knöpfe: der andere ist
+   ganz weg, nicht bloß unsichtbar. Zwei Plätze nebeneinander machten die rechte
+   Seite doppelt so breit wie die linke, und der Titel stünde nicht mehr mittig.
+   Die eigene display-Angabe oben schlägt die eingebaute Regel für [hidden]. */
+header .kopfKnopf[hidden]{display:none}
 /* In der Grundrissansicht reicht der Plan bis an den unteren Rand – das untere
    Polster würde sonst als heller Streifen darunter stehenbleiben. */
 body.planAn{padding-bottom:0}
@@ -770,6 +784,7 @@ input.schmal{width:170px}
     <button class="back" id="btnBack" aria-label="Zurück">←</button>
     <h1 id="titel">Betriebsnachweise</h1>
     <button class="kopfKnopf unsichtbar" id="btnPlanWahl" aria-label="Anderer Grundriss"></button>
+    <button class="kopfKnopf" id="btnNeuLaden" aria-label="Neu vom Server laden" hidden></button>
   </header>
 
   <main>
@@ -886,13 +901,14 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.93';
+const VERSION = 'v0.95';
 const BUILD   = VERSION + ' · 04.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
    Feld 24×24 mittig ausfüllt (x 3–21, y 4,5–19,5): sonst sitzt das Symbol im
    runden Knopf sichtbar zu hoch, auch wenn der Knopf selbst mittig ist. */
+const FRISCH_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>';
 const PLAN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5 3 9l9 4.5L21 9z"/><path d="M3 15l9 4.5L21 15"/></svg>';
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
 const $  = s => document.querySelector(s);
@@ -1512,7 +1528,13 @@ function go(name, push = true){
   bb.disabled = !start && !stack.length;
   /* Der Knopf rechts gehört allein der Grundrissansicht; sie zeigt ihn selbst,
      sobald feststeht, dass es überhaupt etwas zu wechseln gibt. */
+  /* Rechts oben: in den Einstellungen das Neuladen, sonst der Grundrisswechsel
+     (den zeigt die Grundrissansicht selbst, sobald es etwas zu wechseln gibt).
+     Immer nur einer von beiden, damit die Kopfzeile ihre Breite behält. */
+  const inSettings = name === 'settings';
   $('#btnPlanWahl').classList.add('unsichtbar');
+  $('#btnPlanWahl').hidden = inSettings;
+  $('#btnNeuLaden').hidden = !inSettings;
   document.body.classList.toggle('planAn', name === 'plan');
   window.scrollTo(0, 0);
   if(name === 'home')     renderHome();
@@ -2850,6 +2872,15 @@ async function verorten(key, titel){
   planListe = liste;
   await planZeigen(id, {key, titel});
 }
+$('#btnNeuLaden').innerHTML = FRISCH_SVG;
+$('#btnNeuLaden').onclick = () => {
+  /* GitHub Pages gibt die Seite mit zehn Minuten Haltbarkeit heraus; in der Zeit
+     fragt der Browser nicht beim Server nach, auch nach einem Neustart nicht.
+     Eine Adresse mit Zeitstempel hat er noch nie gesehen, also holt er die Datei
+     frisch. Die Daten hängen am Ursprung, nicht an der Adresse, und bleiben
+     unberührt; replace statt Zuweisung, damit der Zurück-Weg nicht zuwächst. */
+  location.replace(location.pathname + '?v=' + Date.now());
+};
 $('#btnPlanWahl').innerHTML = PLAN_SVG;
 $('#btnPlanWahl').onclick = planWechseln;
 $('#btnPlanNeu').onclick = () => $('#planFile').click();
