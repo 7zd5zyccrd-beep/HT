@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.93 04.09.2026  Knoepfe schalten die native Darstellung von iOS ab und
+                    bekommen feste Hoehen: in den Einstellungen sass "Loeschen"
+                    tiefer als "Ansehen", im Streifen "Ausgeben" tiefer als
+                    "Objekte". Dazu behoben: seit v0.92 stand "Verschieben"
+                    auch in der Uebersicht im Streifen, weil die neue Regel
+                    fuer die Knopfhoehe die Regel fuer ausgeblendete Knoepfe
+                    ueberholte.
   v0.92 04.09.2026  Die Knoepfe im Streifen ueber dem Grundriss haben eine
                     feste Hoehe und mittig gesetzte Beschriftung - vorher ergab
                     sich die Hoehe aus den Schriftmassen, und "Ausgeben" sass
@@ -397,6 +404,10 @@ main{flex:1;padding:16px var(--pad) 0;width:100%;max-width:var(--col);margin:0 a
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
 
 .btn{
+  /* Die native Knopfdarstellung von iOS abschalten: sie legt eigene
+     Innenabstände drauf, und die fallen je nach Beschriftung verschieden aus –
+     zwei Knöpfe nebeneinander sitzen dann unterschiedlich hoch. */
+  -webkit-appearance:none;appearance:none;
   display:block;width:100%;padding:14px 16px;border-radius:12px;
   border:1px solid var(--line);background:var(--surface);color:var(--ink);
   font:inherit;font-weight:500;text-align:center;cursor:pointer;
@@ -580,6 +591,9 @@ input.schmal{width:170px}
   display:inline-flex;align-items:center;justify-content:center;line-height:1;
   background:var(--surface);pointer-events:auto;
 }
+/* Muss hinter der Regel oben stehen und ebenso spezifisch sein, sonst holt
+   das display:inline-flex die ausgeblendeten Knöpfe zurück ins Bild. */
+#planStreifen .btn[hidden]{display:none}
 #planStreifen.weg .btn{pointer-events:none}
 /* Safari bietet beim langen Druck auf ein Bild Teilen und Kopieren an – hier
    stört das, weil derselbe Druck das Verschieben freischaltet. */
@@ -659,8 +673,11 @@ input.schmal{width:170px}
 }
 .plan{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
 .plan .wer{flex:1;min-width:0}
-.plan .wer input{width:100%;padding:8px 10px;font-size:14px}
-.plan .btn{flex:0 0 auto;width:auto;padding:8px 12px;font-size:14px}
+.plan .wer input{width:100%;height:38px;padding:0 10px;font-size:14px}
+/* Feld und Knöpfe gleich hoch und mittig beschriftet – dann steht die Zeile
+   ruhig, gleich wie lang das Wort auf dem Knopf ist. */
+.plan .btn{flex:0 0 auto;width:auto;height:38px;padding:0 12px;font-size:14px;
+  display:inline-flex;align-items:center;justify-content:center;line-height:1}
 /* --- Der Bogen ---------------------------------------------------------------
    In Pixeln, 1024 breit; die Exportdatei setzt ihn auf 1130, damit die
    Umwandlung ihn auf die Seitenbreite einpasst. Das schafft zugleich Höhen-
@@ -869,7 +886,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.92';
+const VERSION = 'v0.93';
 const BUILD   = VERSION + ' · 04.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
