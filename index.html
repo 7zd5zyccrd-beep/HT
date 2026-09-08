@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.99 08.09.2026  Die Blattwahl von der Startseite aus ist eine eigene,
+                    bildschirmfuellende Ansicht mit Zurueck-Pfeil statt eines
+                    Fensters mit Abbrechen-Knopf. Der Planwechsel oben rechts
+                    in der Grundrissansicht bleibt ein Fenster: dort wird
+                    innerhalb einer Aufgabe gewechselt, nicht eine geoeffnet.
   v0.98 08.09.2026  Die Grundrisse stehen jetzt auch auf der Startseite: unter
                     den Takten die Gruppe "Haus" mit einem Knopf, der die
                     Blattwahl oeffnet; der gewaehlte Plan oeffnet sich in der
@@ -891,6 +896,13 @@ input.schmal{width:170px}
       <div id="blattWrap"></div>
     </section>
 
+    <!-- Die Grundrisse: erst die Blätter, dann der Plan. Eine eigene Ansicht
+         statt eines Fensters – gewählt wird hier nicht innerhalb einer Aufgabe,
+         sondern es wird eine geöffnet, und dafür ist der Zurück-Pfeil da. -->
+    <section class="view" id="view-plaene">
+      <div id="plaeneListe"><p class="muted small">wird geladen …</p></div>
+    </section>
+
     <!-- Einstellungen: nur noch ein Menü. Jeder Eintrag öffnet eine eigene
          Ansicht, die der Zurück-Pfeil wieder verlässt. -->
     <section class="view" id="view-settings">
@@ -962,7 +974,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.98';
+const VERSION = 'v0.99';
 const BUILD   = VERSION + ' · 08.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1580,7 +1592,8 @@ function ring(n, takt){
 
 /* ---------- Ansichten ---------- */
 const TITEL = {home:'Betriebsnachweise', nachweis:'Nachweis', blatt:'Blatt',
-               settings:'Einstellungen', setsub:'Einstellungen', plan:'Grundriss'};
+               settings:'Einstellungen', setsub:'Einstellungen',
+               plaene:'Grundrisse', plan:'Grundriss'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 function go(name, push = true){
   if(push && current !== name) stack.push(current);
@@ -1605,6 +1618,7 @@ function go(name, push = true){
   window.scrollTo(0, 0);
   if(name === 'home')     renderHome();
   if(name === 'nachweis') renderNachweis();
+  if(name === 'plaene')   renderPlaeneWahl();
   if(name === 'settings') renderSettings();
   if(name === 'setsub')   renderSetSub();
   renderBar();
@@ -1821,9 +1835,24 @@ async function hausKnopf(){
     planListe = liste;                        // von hier aus wird geblättert
     /* Bei einem einzigen Plan wäre die Wahl eine Frage mit nur einer Antwort. */
     if(liste.length === 1){ planZeigen(liste[0].id, null); return; }
-    wahlFenster('Grundriss', liste.map(pl => ({id:pl.id, text:pl.name})),
-      w => planZeigen(w.id, null));
+    go('plaene');
   };
+}
+/* Die Blätter untereinander, jedes ein Knopf. Die Liste wird beim Betreten neu
+   geholt: sie muss auch dann stimmen, wenn zwischendurch in den Einstellungen
+   ein Plan dazugekommen oder verschwunden ist. */
+async function renderPlaeneWahl(){
+  const box = $('#plaeneListe'); if(!box) return;
+  let liste = [];
+  try{ liste = (await Bilder.alle()) || []; }
+  catch(e){ box.innerHTML = `<p class="muted small">Bilderspeicher nicht verfügbar.</p>`; return; }
+  liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
+  planListe = liste;                          // von hier aus wird geblättert
+  box.innerHTML = liste.length
+    ? liste.map(pl => `<button class="btn" data-id="${esc(pl.id)}">${esc(pl.name)}</button>`).join('')
+    : `<p class="muted small">Noch kein Grundriss hinterlegt.</p>`;
+  box.querySelectorAll('[data-id]').forEach(b =>
+    b.onclick = () => planZeigen(b.dataset.id, null));
 }
 let sprungZiel = '';
 
