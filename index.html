@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.01 08.09.2026  Wie bei den Grundrissen: sind bei einem Nachweis alle
+                    Eintraege geloescht, faellt sein Knopf auf der Startseite
+                    weg, und mit der letzten Zeile einer Taktgruppe auch deren
+                    Ueberschrift. Beim Sprinkler zaehlt jeder Takt fuer sich.
+                    Bleibt nichts uebrig, steht dort ein Hinweis auf die
+                    Einstellungen statt einer leeren Seite.
   v1.00 08.09.2026  Die mitgelieferten Anlagenlisten sind auf ein Beispiel je
                     Art gekuerzt (Aufzug 1, Anlage 1, Tuer 1, eine Zaehlstelle);
                     beim Sprinkler bleiben die Pruefpunkte vollstaendig. Was auf
@@ -981,7 +987,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v1.00';
+const VERSION = 'v1.01';
 const BUILD   = VERSION + ' · 08.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1823,9 +1829,24 @@ function homeStand(n){
    Eintrag springt in der Ansicht gleich zum passenden Abschnitt, sonst müsste
    man an bis zu fünf Wochenkarten vorbeiblättern. */
 const TAKTE = [['woche','Wöchentlich'], ['monat','Monatlich'], ['quartal','Quartalsweise']];
+/* Kein Eintrag, kein Knopf – dieselbe Regel wie bei den Grundrissen. Wer alle
+   Anlagen einer Art löscht, hat sie im Haus nicht; dann muss auch nichts dafür
+   auf der Startseite stehen. Beim Sprinkler entscheidet jeder Takt für sich:
+   ohne wöchentliche Punkte fällt der wöchentliche Knopf weg, der monatliche
+   bleibt. Ein angekündigter Nachweis ("folgt") bleibt sichtbar – er hat noch
+   keine Liste, nicht keine mehr. */
+const hatEintraege = (n, t) => {
+  if(n.spaeter) return true;
+  const c = teilCfg(n.k);
+  if(n.art === 'medien')    return stellen().length > 0;
+  if(n.art === 'sprinkler') return (t === 'monat' ? c.mon : c.woch).length > 0;
+  return (c.anlagen || []).length > 0;
+};
 function renderHome(){
-  $('#homeListe').innerHTML = TAKTE.map(([t, titel]) => {
-    const teile = NACHWEISE.filter(n => (n.takt || ['monat']).includes(t));
+  const inhalt = TAKTE.map(([t, titel]) => {
+    const teile = NACHWEISE.filter(n => (n.takt || ['monat']).includes(t) && hatEintraege(n, t));
+    /* Leert sich eine ganze Gruppe, fällt ihre Überschrift mit weg – sonst
+       stünde "Monatlich" über nichts. */
     if(!teile.length) return '';
     return `<div class="eyebrow" style="margin-top:6px">${titel}</div>` + teile.map(n => {
       if(n.spaeter) return `<button class="btn" disabled>${esc(n.label)} · folgt</button>`;
@@ -1834,6 +1855,8 @@ function renderHome(){
       return `<button class="btn${r ? ' ring-' + r : ''}" data-nw="${n.k}" data-ziel="${ziel}">${esc(n.label)}${homeStand(n)}</button>`;
     }).join('');
   }).join('');
+  /* Eine leere Startseite ließe offen, wohin man sich wenden soll. */
+  $('#homeListe').innerHTML = inhalt || `<p class="muted small">Noch nichts eingetragen. Über das Zahnrad oben links geht es in die Einstellungen – dort legst du je Nachweis an, was im Haus steht.</p>`;
   $$('#homeListe [data-nw]').forEach(b => b.onclick = () => {
     offen = b.dataset.nw; datenFuer(offen);
     sigAktiv = false; sprungZiel = b.dataset.ziel || '';
