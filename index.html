@@ -10,6 +10,26 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.03 08.09.2026  Grundriss und Protokollbogen nutzen ab 1024 px Breite den
+                    ganzen Bildschirm statt der 720er Textspalte: der Bogen
+                    steht damit in Originalgroesse ganz im Bild, ohne Wischen,
+                    der Plan zeigt mehr vom Haus. Passt der Plan in der Breite
+                    hinein, steht er mittig statt links mit Grau daneben. Alle
+                    uebrigen Ansichten bleiben in der Spalte - dort ist die
+                    begrenzte Zeilenlaenge gewollt. An der Ausgabe aendert sich
+                    nichts.
+  v1.02 08.09.2026  Zwei neue Nachweise, beide von Fremdfirmen geprueft:
+                    Feuerloescher (Vorgabe alle zwei Jahre) und RWA (jaehrlich).
+                    Je Objekt ein Pruefdatum und eine Bemerkung; aus Datum und
+                    Abstand rechnet die App den naechsten Termin, danach richtet
+                    sich der Ring und die Ueberschrift auf der Startseite
+                    ("Jaehrlich", "Zweijaehrlich"). Oben im Nachweis setzt ein
+                    Knopf das Datum fuer alle Objekte auf denselben Tag. Der
+                    Akkutausch der RWA-Anlagen hat einen eigenen Knopf unter
+                    "Eigene Wartung": je Anlage wird ein Akkutyp gewaehlt, sein
+                    Zyklus (drei oder vier Jahre) steht in den Einstellungen.
+                    Unterschrift und Blatt entfallen bei beiden - das Protokoll
+                    schreibt die Firma.
   v1.01 08.09.2026  Wie bei den Grundrissen: sind bei einem Nachweis alle
                     Eintraege geloescht, faellt sein Knopf auf der Startseite
                     weg, und mit der letzten Zeile einer Taktgruppe auch deren
@@ -625,6 +645,21 @@ input.schmal{width:170px}
 }
 #toast.on{opacity:1;transform:translateX(-50%)}
 
+/* --- Große Bildschirme ------------------------------------------------------
+   Ab Tablet-Querformat: die 720er Spalte gilt weiter für alles mit Text und
+   Knöpfen – dort ist die begrenzte Zeilenlänge ja der Sinn. Nur zwei Ansichten
+   brauchen die ganze Breite: der Grundriss zeigt dann mehr vom Haus statt Grau
+   an den Rändern, und der 1024 px breite Bogen steht vollständig da, statt in
+   einem Ausschnitt zu liegen, den man wischen muss. Verkleinert wird nichts,
+   der Bogen bleibt in Originalgröße. */
+@media (min-width:1024px){
+  body.planAn main{max-width:none}
+  body.blattAn main{max-width:none;padding-left:0;padding-right:0}
+  /* Ohne seitliches Polster passt der Bogen schon bei genau 1024 px ganz ins
+     Bild; darüber stellt ihn sein eigenes auto-Maß in die Mitte. */
+  body.blattAn #blattWrap{padding:12px 0}
+}
+
 /* --- Blattvorschau ---------------------------------------------------------
    Aufbau wie im E-Assistenten: 1024 px breiter Bogen, keine @page-Regel, damit
    die Umwandlung im Kurzbefehl den Bogen auf die Seitenbreite einpasst. */
@@ -909,6 +944,12 @@ input.schmal{width:170px}
       <div id="blattWrap"></div>
     </section>
 
+    <!-- Der Akkutausch der RWA-Anlagen: eigene Ansicht, weil er weder zu einer
+         Runde noch zur Prüfung der Firma gehört. -->
+    <section class="view" id="view-akku">
+      <div id="akkuListe"></div>
+    </section>
+
     <!-- Die Grundrisse: erst die Blätter, dann der Plan. Eine eigene Ansicht
          statt eines Fensters – gewählt wird hier nicht innerhalb einer Aufgabe,
          sondern es wird eine geöffnet, und dafür ist der Zurück-Pfeil da. -->
@@ -987,7 +1028,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v1.01';
+const VERSION = 'v1.03';
 const BUILD   = VERSION + ' · 08.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1355,6 +1396,25 @@ const NACHWEISE = [
        in kWh, sofern nicht MWh danebensteht. Die Reihenfolge dieser Liste ist
        der Ausgangspunkt der Ablesereihenfolge; verschoben wird beim Ablesen. */
     stellen:['Partei 1 ; Kaltwasser ; 21-4711 ; Keller, Nische links ; m³']
+  },
+  /* --- Fremdprüfungen -------------------------------------------------------
+     Geprüft wird von einer Firma, wir halten nur fest, wann. Statt "In Ordnung
+     / Mangel" trägt jedes Objekt sein Prüfdatum; aus ihm und dem eingestellten
+     Abstand ergibt sich der nächste Termin. Der Abstand steht hier nur als
+     Vorgabe – geändert wird er in den Einstellungen. */
+  {
+    k:'loescher', label:'Feuerlöscher', datei:'Prüfung Feuerlöscher',
+    art:'fremd', jahre:2,
+    titel:'Prüfung Feuerlöscher',
+    anlagen:['Feuerlöscher 1']
+  },
+  {
+    k:'rwa', label:'RWA', datei:'Prüfung RWA',
+    art:'fremd', jahre:1, akku:true,
+    titel:'Prüfung Rauch- und Wärmeabzugsanlagen',
+    anlagen:['RWA 1'],
+    /* Den Akkutausch machen wir selbst; wie oft, hängt an der Kapazität. */
+    akkus:[{name:'7 Ah', jahre:4}]
   }
 ];
 const NW = k => NACHWEISE.find(n => n.k === k);
@@ -1411,6 +1471,13 @@ const teilCfg = k => {
   if(!Array.isArray(t.anlagen)){
     const alt = ausErfasstem(k);
     t.anlagen = alt.length ? alt : (n.anlagen || []).slice();
+  }
+  if(n.art === 'fremd'){
+    /* Der Abstand zwischen zwei Prüfungen, in Jahren. */
+    if(!(t.jahre > 0)) t.jahre = n.jahre;
+    if(n.akku && !Array.isArray(t.akkus))
+      t.akkus = (n.akkus || []).map(a => ({name:a.name, jahre:a.jahre}));
+    return t;
   }
   if(typeof t.checkliste !== 'string')               t.checkliste = n.checkliste || '';
   return t;
@@ -1596,6 +1663,34 @@ const inWoche = (iso, jetzt) => {
 const tageBis = ende => Math.ceil((ende - tagAnfang(new Date())) / TAG_MS);
 const monatsEnde   = j => new Date(j.getFullYear(), j.getMonth() + 1, 1);
 const quartalsEnde = j => new Date(j.getFullYear(), (Math.floor(j.getMonth() / 3) + 1) * 3, 1);
+/* --- Fristen der Fremdprüfungen ---------------------------------------------
+   Aus dem letzten Prüfdatum und dem Abstand ergibt sich der nächste Termin.
+   Ohne Datum gilt ein Objekt als offen: es ist fällig, nicht erst irgendwann. */
+const alsDatum = iso => { const [j, m, t] = String(iso).split('-').map(Number);
+                          return new Date(j, (m || 1) - 1, t || 1); };
+const naechsteISO = (datum, jahre) => {
+  const [j, m, t] = String(datum || '').split('-').map(Number);
+  if(!j) return '';
+  const d = new Date(j + jahre, m - 1, t), z = x => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+};
+const monatKurz = iso => { const [j, m] = String(iso).split('-'); return `${m}/${j}`; };
+function frist(datum, jahre){
+  if(!datum || !(jahre > 0)) return {offen:true, faellig:true, tage:0, ziel:''};
+  const ziel = naechsteISO(datum, jahre);
+  return {offen:false, faellig:tageBis(alsDatum(ziel)) < 0, tage:tageBis(alsDatum(ziel)), ziel};
+}
+/* Acht Wochen vorher wird die Ampel gelb – Zeit genug, die Firma zu bestellen. */
+const VORWARN = 56;
+const zeileVon = (k, a) => { const d = DAT[k]; return (d && d.zeilen && d.zeilen[a]) || {}; };
+const fristen = k => { const t = teilCfg(k);
+  return t.anlagen.map(a => frist(zeileVon(k, a).datum, t.jahre)); };
+function fremdRing(k){
+  const fr = fristen(k);
+  if(!fr.length) return '';
+  if(fr.some(f => f.offen || f.faellig)) return 'rot';
+  return fr.some(f => f.tage <= VORWARN) ? 'gelb' : 'gruen';
+}
 /* Ist überhaupt etwas erfasst? */
 function begonnen(n){
   const d = DAT[n.k]; if(!d) return false;
@@ -1604,6 +1699,7 @@ function begonnen(n){
   return zeilenJetzt(n.k).some(z => z.status);
 }
 function ring(n, takt){
+  if(n.art === 'fremd') return fremdRing(n.k);
   const jetzt = new Date();
   if(takt === 'woche'){
     /* Die wöchentliche Runde des Sprinklers: sie geht erst am Monatsende mit
@@ -1628,7 +1724,7 @@ function ring(n, takt){
 /* ---------- Ansichten ---------- */
 const TITEL = {home:'Betriebsnachweise', nachweis:'Nachweis', blatt:'Blatt',
                settings:'Einstellungen', setsub:'Einstellungen',
-               plaene:'Grundrisse', plan:'Grundriss'};
+               plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 function go(name, push = true){
   if(push && current !== name) stack.push(current);
@@ -1650,9 +1746,13 @@ function go(name, push = true){
   $('#btnPlanWahl').hidden = inSettings;
   $('#btnNeuLaden').hidden = !inSettings;
   document.body.classList.toggle('planAn', name === 'plan');
+  /* Auf großen Schirmen dürfen Grundriss und Bogen aus der Textspalte heraus –
+     welche Ansicht offen ist, sagt der Körper dem Stilblatt. */
+  document.body.classList.toggle('blattAn', name === 'blatt');
   window.scrollTo(0, 0);
   if(name === 'home')     renderHome();
   if(name === 'nachweis') renderNachweis();
+  if(name === 'akku')     renderAkku();
   if(name === 'plaene')   renderPlaeneWahl();
   if(name === 'settings') renderSettings();
   if(name === 'setsub')   renderSetSub();
@@ -1811,6 +1911,11 @@ function homeStand(n){
     if(d && n.art === 'medien'){
       const l = stellen(), fertig = l.filter(z => String(d.stand[z.key] ?? '').trim() !== '').length;
       if(fertig) stand = medienVoll(d) ? ' · vollständig' : ` · ${fertig} von ${l.length} abgelesen`;
+    }else if(n.art === 'fremd'){
+      const fr = fristen(n.k), faellig = fr.filter(f => f.offen || f.faellig).length;
+      if(faellig)        stand = ` · ${faellig} von ${fr.length} fällig`;
+      else if(fr.length) stand = ` · nächste Prüfung ${
+        monatKurz(fr.slice().sort((a, b) => a.tage - b.tage)[0].ziel)}`;
     }else if(d && n.art === 'sprinkler'){
       const g = d.woch.length + d.mon.length;
       if(g) stand = sprinklerVoll(d) ? ' · vollständig' : ` · ${g} Kontrollgang${g === 1 ? '' : 'gänge'}`;
@@ -1829,6 +1934,35 @@ function homeStand(n){
    Eintrag springt in der Ansicht gleich zum passenden Abschnitt, sonst müsste
    man an bis zu fünf Wochenkarten vorbeiblättern. */
 const TAKTE = [['woche','Wöchentlich'], ['monat','Monatlich'], ['quartal','Quartalsweise']];
+/* Fremdprüfungen ordnen sich nach ihrem eingestellten Abstand ein. Wird der in
+   den Einstellungen geändert, wandert der Knopf in die andere Gruppe. */
+const jahrTitel = j => j === 1 ? 'Jährlich' : j === 2 ? 'Zweijährlich' : `Alle ${j} Jahre`;
+/* --- Der Akkutausch ---------------------------------------------------------
+   Er hängt nicht am Prüfabstand der Firma, sondern am Typ des eingebauten
+   Akkus: je nach Kapazität alle drei oder vier Jahre. Der Typ wird je Anlage
+   gewählt, sein Zyklus steht in den Einstellungen. */
+const akkuTypen = () => NW('rwa') ? (teilCfg('rwa').akkus || []) : [];
+const akkuJahre = name => { const a = akkuTypen().find(x => x.name === name); return a ? a.jahre : 0; };
+const akkuAn = () => !!NW('rwa') && teilCfg('rwa').anlagen.length > 0;
+/* Ohne gewählten Typ ist nichts zu rechnen – solche Anlagen bleiben außen vor,
+   statt als überfällig zu gelten. */
+const akkuFristen = () => teilCfg('rwa').anlagen
+  .map(a => zeileVon('rwa', a))
+  .filter(z => akkuJahre(z.akkuTyp) > 0)
+  .map(z => frist(z.akkuDatum, akkuJahre(z.akkuTyp)));
+function akkuRing(){
+  const fr = akkuFristen();
+  if(!fr.length) return '';
+  if(fr.some(f => f.offen || f.faellig)) return 'rot';
+  return fr.some(f => f.tage <= VORWARN) ? 'gelb' : 'gruen';
+}
+function akkuStand(){
+  const alle = teilCfg('rwa').anlagen.length, fr = akkuFristen();
+  if(!fr.length) return alle ? ' · kein Akkutyp gewählt' : '';
+  const faellig = fr.filter(f => f.offen || f.faellig).length;
+  if(faellig) return ` · ${faellig} von ${alle} fällig`;
+  return ` · nächster Tausch ${monatKurz(fr.slice().sort((a, b) => a.tage - b.tage)[0].ziel)}`;
+}
 /* Kein Eintrag, kein Knopf – dieselbe Regel wie bei den Grundrissen. Wer alle
    Anlagen einer Art löscht, hat sie im Haus nicht; dann muss auch nichts dafür
    auf der Startseite stehen. Beim Sprinkler entscheidet jeder Takt für sich:
@@ -1843,20 +1977,38 @@ const hatEintraege = (n, t) => {
   return (c.anlagen || []).length > 0;
 };
 function renderHome(){
-  const inhalt = TAKTE.map(([t, titel]) => {
-    const teile = NACHWEISE.filter(n => (n.takt || ['monat']).includes(t) && hatEintraege(n, t));
+  const knopf = (n, t) => {
+    if(n.spaeter) return `<button class="btn" disabled>${esc(n.label)} · folgt</button>`;
+    const ziel = n.art === 'sprinkler' ? (t === 'monat' ? 'mon' : 'woch') : '';
+    const r = ring(n, t);
+    return `<button class="btn${r ? ' ring-' + r : ''}" data-nw="${n.k}" data-ziel="${ziel}">${esc(n.label)}${homeStand(n)}</button>`;
+  };
+  const gruppen = [];
+  TAKTE.forEach(([t, titel]) => {
+    const teile = NACHWEISE.filter(n => n.art !== 'fremd'
+      && (n.takt || ['monat']).includes(t) && hatEintraege(n, t));
     /* Leert sich eine ganze Gruppe, fällt ihre Überschrift mit weg – sonst
        stünde "Monatlich" über nichts. */
-    if(!teile.length) return '';
-    return `<div class="eyebrow" style="margin-top:6px">${titel}</div>` + teile.map(n => {
-      if(n.spaeter) return `<button class="btn" disabled>${esc(n.label)} · folgt</button>`;
-      const ziel = n.art === 'sprinkler' ? (t === 'monat' ? 'mon' : 'woch') : '';
-      const r = ring(n, t);
-      return `<button class="btn${r ? ' ring-' + r : ''}" data-nw="${n.k}" data-ziel="${ziel}">${esc(n.label)}${homeStand(n)}</button>`;
-    }).join('');
-  }).join('');
+    if(teile.length) gruppen.push([titel, teile.map(n => knopf(n, t)).join('')]);
+  });
+  /* Die Fremdprüfungen nach Abstand gebündelt, der kürzere zuerst. */
+  const fremd = NACHWEISE.filter(n => n.art === 'fremd' && hatEintraege(n, ''));
+  [...new Set(fremd.map(n => teilCfg(n.k).jahre))].sort((a, b) => a - b).forEach(j =>
+    gruppen.push([jahrTitel(j),
+      fremd.filter(n => teilCfg(n.k).jahre === j).map(n => knopf(n, '')).join('')]));
+  /* Der Akkutausch ist keine Prüfung und keine Runde: er hat seinen eigenen
+     Knopf, solange es RWA-Anlagen gibt. */
+  if(akkuAn()){
+    const r = akkuRing();
+    gruppen.push(['Eigene Wartung',
+      `<button class="btn${r ? ' ring-' + r : ''}" data-akku="1">RWA-Akkus${akkuStand()}</button>`]);
+  }
+  const inhalt = gruppen.map(([titel, knoepfe]) =>
+    `<div class="eyebrow" style="margin-top:6px">${esc(titel)}</div>` + knoepfe).join('');
   /* Eine leere Startseite ließe offen, wohin man sich wenden soll. */
   $('#homeListe').innerHTML = inhalt || `<p class="muted small">Noch nichts eingetragen. Über das Zahnrad oben links geht es in die Einstellungen – dort legst du je Nachweis an, was im Haus steht.</p>`;
+  const akku = $('#homeListe [data-akku]');
+  if(akku) akku.onclick = () => { datenFuer('rwa'); go('akku'); };
   $$('#homeListe [data-nw]').forEach(b => b.onclick = () => {
     offen = b.dataset.nw; datenFuer(offen);
     sigAktiv = false; sprungZiel = b.dataset.ziel || '';
@@ -1908,6 +2060,123 @@ async function renderPlaeneWahl(){
 }
 let sprungZiel = '';
 
+/* ---------- Fremdprüfung ----------------------------------------------------
+   Oben der Sammel-Eintrag: die Firma war da und hat alles geprüft, also steht
+   überall dasselbe Datum. Darunter je Objekt eine Karte, um einzelne Fälle
+   nachzuziehen – etwa einen Löscher, der beim Termin verstellt war.
+
+   Der Hinweis unter dem Datum sagt, woran man ist: wann wieder geprüft werden
+   muss, oder seit wann es überfällig ist. */
+function fristText(f){
+  if(f.offen)   return 'noch nicht geprüft';
+  if(f.faellig) return 'überfällig seit ' + dText(f.ziel);
+  return 'nächste Prüfung ' + dText(f.ziel);
+}
+function renderFremd(){
+  const n = NW(offen), t = teilCfg(offen), d = datenFuer(offen);
+  $('#nwListe').innerHTML =
+    `<div class="card">
+       <div class="eyebrow" style="margin:0 0 6px">Die Firma war da</div>
+       <p class="muted small" style="margin:0 0 10px">Setzt das Prüfdatum für alle ${
+         t.anlagen.length} ${t.anlagen.length === 1 ? 'Objekt' : 'Objekte'} auf denselben Tag. Einzelne lassen sich danach nachziehen.</p>
+       <div class="row">
+         <input type="date" id="alleDatum" value="${heute()}" aria-label="Prüfdatum">
+         <button class="btn" id="alleSetzen">Übernehmen</button>
+       </div>
+     </div>`
+    + t.anlagen.map((a, i) => {
+        const z = d.zeilen[a], f = frist(z.datum, t.jahre);
+        const klasse = f.offen || f.faellig ? ' mangel' : ' fertig';
+        return `<div class="pos${klasse}" data-i="${i}">
+          <div class="name">${esc(a)}</div>
+          <div class="kopf">
+            <input type="date" data-feld="datum" value="${esc(z.datum || '')}" aria-label="Prüfdatum">
+            <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">⌖</button></span>
+          </div>
+          <div class="muted small">${esc(fristText(f))}</div>
+          <input class="bem" data-feld="bem" placeholder="Bemerkung (wenn nötig)" value="${esc(z.bem || '')}">
+        </div>`;
+      }).join('');
+  $('#alleSetzen').onclick = () => {
+    const tag = $('#alleDatum').value;
+    if(!tag){ toast('Kein Datum gewählt'); return; }
+    frage('Für alle übernehmen',
+      `Alle ${t.anlagen.length} Objekte bekommen den ${dText(tag)} als Prüfdatum.\n\n`
+      + 'Bereits eingetragene Daten werden dabei überschrieben.',
+      'Übernehmen', () => {
+        t.anlagen.forEach(a => { d.zeilen[a].datum = tag; });
+        saveDat(); toast('Eingetragen'); renderNachweis(); renderBar();
+      });
+  };
+  $$('#nwListe .pos').forEach(box => {
+    const a = t.anlagen[+box.dataset.i], z = d.zeilen[a];
+    box.querySelector('[data-ort]').onclick = () => verorten(offen + '|' + a, a);
+    box.querySelector('[data-feld="datum"]').onchange = e => {
+      z.datum = e.target.value; saveDat(); renderNachweis();
+    };
+    box.querySelector('[data-feld="bem"]').oninput = e => { z.bem = e.target.value; saveDat(); };
+  });
+}
+
+/* ---------- Der Akkutausch --------------------------------------------------
+   Je Anlage der eingebaute Akkutyp und das Datum des letzten Tauschs. Der
+   Zyklus kommt vom Typ, nicht von der Anlage – wer einen größeren Akku
+   einbaut, stellt den Typ um und bekommt die neue Frist. */
+function renderAkku(){
+  const t = teilCfg('rwa'), d = datenFuer('rwa'), typen = akkuTypen();
+  $('#akkuListe').innerHTML =
+    (typen.length ? '' : `<p class="muted small">Noch kein Akkutyp angelegt – das geht in den Einstellungen unter RWA.</p>`)
+    + `<div class="card">
+       <div class="eyebrow" style="margin:0 0 6px">Alle getauscht</div>
+       <p class="muted small" style="margin:0 0 10px">Setzt das Tauschdatum für alle Anlagen mit gewähltem Akkutyp auf denselben Tag.</p>
+       <div class="row">
+         <input type="date" id="akkuAlleDatum" value="${heute()}" aria-label="Tauschdatum">
+         <button class="btn" id="akkuAlleSetzen">Übernehmen</button>
+       </div>
+     </div>`
+    + t.anlagen.map((a, i) => {
+        const z = d.zeilen[a], j = akkuJahre(z.akkuTyp);
+        const f = j ? frist(z.akkuDatum, j) : null;
+        const klasse = !f ? '' : (f.offen || f.faellig ? ' mangel' : ' fertig');
+        const wahl = `<option value="">— kein Typ —</option>` + typen.map(x =>
+          `<option${x.name === z.akkuTyp ? ' selected' : ''}>${esc(x.name)}</option>`).join('');
+        return `<div class="pos${klasse}" data-i="${i}">
+          <div class="name">${esc(a)}</div>
+          <div class="row">
+            <label class="field" style="margin:0"><span>Akkutyp</span><select data-feld="typ">${wahl}</select></label>
+            <label class="field" style="margin:0"><span>Getauscht am</span><input type="date" data-feld="datum" value="${esc(z.akkuDatum || '')}"></label>
+          </div>
+          <div class="muted small" style="margin-top:8px">${esc(
+            !j ? 'kein Akkutyp gewählt'
+               : f.offen   ? `noch kein Tausch vermerkt · alle ${j} Jahre`
+               : f.faellig ? 'überfällig seit ' + dText(f.ziel)
+               : 'nächster Tausch ' + dText(f.ziel))}</div>
+        </div>`;
+      }).join('');
+  $('#akkuAlleSetzen').onclick = () => {
+    const tag = $('#akkuAlleDatum').value;
+    if(!tag){ toast('Kein Datum gewählt'); return; }
+    const betroffen = t.anlagen.filter(a => akkuJahre(d.zeilen[a].akkuTyp) > 0);
+    if(!betroffen.length){ toast('Keine Anlage mit Akkutyp'); return; }
+    frage('Für alle übernehmen',
+      `${betroffen.length === 1 ? 'Eine Anlage bekommt' : betroffen.length + ' Anlagen bekommen'} den ${dText(tag)} als Tauschdatum.\n\n`
+      + 'Anlagen ohne gewählten Akkutyp bleiben unberührt.',
+      'Übernehmen', () => {
+        betroffen.forEach(a => { d.zeilen[a].akkuDatum = tag; });
+        saveDat(); toast('Eingetragen'); renderAkku();
+      });
+  };
+  $$('#akkuListe .pos').forEach(box => {
+    const a = t.anlagen[+box.dataset.i], z = d.zeilen[a];
+    box.querySelector('[data-feld="typ"]').onchange = e => {
+      z.akkuTyp = e.target.value; saveDat(); renderAkku();
+    };
+    box.querySelector('[data-feld="datum"]').onchange = e => {
+      z.akkuDatum = e.target.value; saveDat(); renderAkku();
+    };
+  });
+}
+
 /* ---------- Ein Nachweis ---------------------------------------------------
    Je Anlage eine Zeile: Datum, Zustand, Bemerkung. Das Datum steht je Position,
    nicht einmal je Nachweis – eine monatliche Runde zieht sich über Tage. Beim
@@ -1921,7 +2190,8 @@ let offenKarten = new Set();
 function renderNachweis(){
   const n = NW(offen), t = teilCfg(offen), d = datenFuer(offen);
   $('#nwObjekt').textContent = CFG.objekt || 'Objekt in den Einstellungen eintragen';
-  $('#sigBlock').hidden = n.art === 'medien';
+  $('#sigBlock').hidden = n.art === 'medien' || n.art === 'fremd';
+  if(n.art === 'fremd'){     renderFremd();     return; }
   if(n.art === 'medien'){    renderMedien();    return; }
   if(n.art === 'sprinkler'){ renderSprinkler(); renderSig(); return; }
   /* --- Reihenfolge während des Rundgangs -----------------------------------
@@ -2338,6 +2608,7 @@ function setOeffnen(art, k){
   setTitel = art === 'nw'     ? NW(k).label
            : art === 'obj'    ? 'Objekt und Prüfer'
            : art === 'check'  ? 'Checkliste'
+           : art === 'akkus'  ? 'Akkutypen'
            : art === 'tausch' ? 'Zählertausch'
            : art === 'plaene' ? 'Grundrisse'
            : art === 'geraet' ? 'Gerätewechsel'
@@ -2355,8 +2626,10 @@ function renderSetSub(){
   if(a === 'obj')   { setObjekt(dyn);   return; }
   if(a === 'check') { setCheck(dyn, k); return; }
   if(a === 'tausch'){ setTausch(dyn);   return; }
+  if(a === 'akkus') { setAkkus(dyn);     return; }
   const n = NW(k);
   if(n.art === 'medien')         setStellen(dyn);
+  else if(n.art === 'fremd')     setFremd(dyn, k);
   else if(n.art === 'sprinkler') setSprinkler(dyn, k);
   else                           setAnlagen(dyn, k);
 }
@@ -2495,6 +2768,104 @@ function setSprinkler(box, k){
       loeschHinweis:'Bereits erfasste Werte zu diesem Punkt werden aus den laufenden Kontrollgängen entfernt.'
     });
   });
+}
+
+/* --- Fremdprüfungen in den Einstellungen ------------------------------------
+   Der Prüfabstand steht hier, nicht im Nachweis: er gilt für alle Objekte einer
+   Art und ändert sich höchstens, wenn sich die Vorschrift ändert. */
+function setFremd(box, k){
+  const n = NW(k), t = teilCfg(k);
+  box.innerHTML =
+    `<label class="field"><span>Prüfabstand in Jahren</span>
+       <input type="number" id="setJahre" class="schmal" min="1" max="20" step="1" inputmode="numeric" value="${t.jahre}"></label>
+     <p class="muted small" style="margin:-6px 0 14px">Aus dem letzten Prüfdatum und diesem Abstand ergibt sich der nächste Termin. Danach richtet sich auch, unter welcher Überschrift der Nachweis auf der Startseite steht.</p>`
+    + (n.akku ? `<button class="btn ghost klein" id="setZuAkkus">Akkutypen</button>` : '')
+    + `<div class="eyebrow">Objekte</div>
+       <p class="muted small" style="margin:-4px 0 6px">Neue Objekte hängen sich hinten an.</p>
+       <div id="setListe"></div>`;
+  $('#setJahre').onchange = e => {
+    const j = Math.round(+e.target.value);
+    if(!(j > 0 && j <= 20)){ e.target.value = t.jahre; return; }
+    t.jahre = j; saveCfg();
+  };
+  if(n.akku) $('#setZuAkkus').onclick = () => setOeffnen('akkus', k);
+  listeBauen($('#setListe'), {
+    wort:'Objekt',
+    liste:() => teilCfg(k).anlagen,
+    beiUmbenennen:(alt, neu) => anlageUmbenennen(k, alt, neu),
+    loeschHinweis:'Prüfdatum, Bemerkung und die Stelle im Grundriss bleiben gespeichert – '
+      + 'wer das Objekt mit demselben Namen wieder anlegt, findet alles wieder.'
+  });
+}
+/* Die Akkutypen: Bezeichnung und Zyklus. Eine Karte wird erst gesichert, wenn
+   sie ganz verlassen wird – sonst risse der Neuaufbau das zweite Feld weg,
+   während man noch darin tippt (wie bei den Zählstellen). */
+function setAkkus(box){
+  box.innerHTML =
+    `<p class="muted small" style="margin:0 0 10px">Je nach Kapazität wird der Akku alle drei oder vier Jahre getauscht. Der Typ wird beim Akkutausch je Anlage gewählt; sein Zyklus steht hier.</p>
+     <div id="akkuTypListe"></div>
+     <button class="btn ghost klein" id="akkuTypPlus" style="margin-top:12px">+ Akkutyp hinzufügen</button>`;
+  $('#akkuTypPlus').onclick = () => {
+    akkuTypZeichnen(true);
+    const f = $('#akkuTypListe .stelle[data-i="-1"] [data-f="name"]');
+    if(f) f.focus();
+  };
+  akkuTypZeichnen(false);
+}
+function akkuTypZeichnen(mitNeuer){
+  const box = $('#akkuTypListe'); if(!box) return;
+  const t = teilCfg('rwa');
+  let verworfen = false;
+  const karte = (x, i) => `<div class="stelle" data-i="${i}">
+      <div class="row">
+        <label class="field"><span>Bezeichnung</span><input data-f="name" value="${esc(x.name)}"${
+          i < 0 ? ' placeholder="z.B. 12 Ah"' : ''}></label>
+        <label class="field"><span>Jahre</span><input data-f="jahre" type="number" min="1" max="20" step="1" inputmode="numeric" value="${x.jahre}"></label>
+      </div>
+      <button class="btn danger klein" data-weg="1">Löschen</button>
+    </div>`;
+  box.innerHTML = t.akkus.map(karte).join('')
+    + (mitNeuer ? karte({name:'', jahre:4}, -1) : '');
+  box.querySelectorAll('.stelle').forEach(r => {
+    const i = +r.dataset.i, neu = i < 0;
+    const feld = f => r.querySelector(`[data-f="${f}"]`);
+    const sichern = () => {
+      const name = (feld('name').value || '').trim();
+      const jahre = Math.round(+feld('jahre').value) || 0;
+      if(neu){
+        if(!name || !(jahre > 0)) return;
+        t.akkus.push({name, jahre}); saveCfg(); toast('Hinzugefügt'); akkuTypZeichnen(false);
+        return;
+      }
+      if(!name || !(jahre > 0)){                 // leeren geht nur über Löschen
+        feld('name').value = t.akkus[i].name; feld('jahre').value = t.akkus[i].jahre; return;
+      }
+      /* Der Name verbindet Typ und Anlage: wird er geändert, ziehen die
+         Anlagen mit, sonst stünden sie plötzlich ohne Typ da. */
+      if(name !== t.akkus[i].name) akkuTypUmbenennen(t.akkus[i].name, name);
+      t.akkus[i] = {name, jahre}; saveCfg();
+    };
+    if(neu) r.addEventListener('focusout', () => setTimeout(() => {
+      if(!r.contains(document.activeElement) && !verworfen) sichern();
+    }, 0));
+    r.querySelectorAll('[data-f]').forEach(f => f.onchange = () => { if(!neu) sichern(); });
+    r.querySelector('[data-weg]').onpointerdown = () => { if(neu) verworfen = true; };
+    r.querySelector('[data-weg]').onclick = () => {
+      if(neu){ akkuTypZeichnen(false); return; }
+      frage('Akkutyp löschen',
+        `„${t.akkus[i].name}“ verschwindet aus der Auswahl.\n\n`
+        + 'Anlagen, in denen dieser Typ steckt, stehen danach ohne Typ da und bekommen erst wieder eine Frist, wenn ein anderer gewählt ist.',
+        'Löschen', () => {
+          t.akkus.splice(i, 1); saveCfg(); toast('Gelöscht'); akkuTypZeichnen(false);
+        });
+    };
+  });
+}
+function akkuTypUmbenennen(alt, neu){
+  const d = DAT.rwa; if(!d || !d.zeilen) return;
+  let etwas = false;
+  Object.values(d.zeilen).forEach(z => { if(z.akkuTyp === alt){ z.akkuTyp = neu; etwas = true; } });
+  if(etwas) saveDat();
 }
 
 /* --- Zählstellen ------------------------------------------------------------
@@ -2840,6 +3211,12 @@ function planZoomAnwenden(){
   const wrap = $('#planWrap'), box = $('#planBox');
   if(!wrap || !box) return;
   box.style.height = Math.round(wrap.clientHeight * planZoom) + 'px';
+  /* Passt der Plan in der Breite ganz ins Bild, steht er in der Mitte statt
+     links mit Grau daneben – auf einem breiten Schirm ist das der Regelfall.
+     Reicht er über den Rand hinaus, bleibt er linksbündig: sonst wäre sein
+     linker Teil nicht mehr zu erreichen. */
+  const frei = wrap.clientWidth - box.offsetWidth;
+  box.style.marginLeft = box.offsetWidth && frei > 0 ? Math.round(frei / 2) + 'px' : '0';
   /* Die vorhandene Nachzeichnung wächst mit, bis die neue steht – sonst
      blitzte beim Zoomen kurz das unscharfe Grundbild auf. */
   scharfSpaeter();
@@ -3432,7 +3809,10 @@ $('#cfgFile').onchange = e => {
 /* ---------- Fußleiste je Ansicht ---------- */
 function renderBar(){
   const b = $('#barInner');
-  if(current === 'nachweis'){
+  if(current === 'nachweis' && NW(offen).art === 'fremd'){
+    /* Kein Blatt und keine Unterschrift: das Protokoll schreibt die Firma. */
+    b.innerHTML = '';
+  }else if(current === 'nachweis'){
     const d = datenFuer(offen);
     let voll, hinweis;
     if(NW(offen).art === 'medien'){
