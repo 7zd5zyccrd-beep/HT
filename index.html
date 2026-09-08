@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.00 08.09.2026  Die mitgelieferten Anlagenlisten sind auf ein Beispiel je
+                    Art gekuerzt (Aufzug 1, Anlage 1, Tuer 1, eine Zaehlstelle);
+                    beim Sprinkler bleiben die Pruefpunkte vollstaendig. Was auf
+                    dem Geraet gespeichert ist, bleibt unangetastet: die
+                    Startwerte greifen nur, wenn noch keine Liste angelegt ist -
+                    und liegt in diesem Fall schon Erfasstes vor, wird die Liste
+                    daraus aufgebaut statt aus dem Beispiel.
   v0.99 08.09.2026  Die Blattwahl von der Startseite aus ist eine eigene,
                     bildschirmfuellende Ansicht mit Zurueck-Pfeil statt eines
                     Fensters mit Abbrechen-Knopf. Der Planwechsel oben rechts
@@ -974,7 +981,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.99';
+const VERSION = 'v1.00';
 const BUILD   = VERSION + ' · 08.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1251,7 +1258,7 @@ const NACHWEISE = [
     k:'aufzuege', label:'Aufzüge', datei:'Prüfung Aufzüge', takt:['monat'],
     titel:'Monatliche Kontrolle Personenaufzüge',
     status:['In Ordnung','Mangel'],
-    anlagen:['Aufzug 1','Aufzug 2','Aufzug 3','Aufzug 4'],
+    anlagen:['Aufzug 1'],
     checkliste:
 `Checkliste Monatliche Prüfung Personenaufzüge
 
@@ -1266,7 +1273,7 @@ const NACHWEISE = [
     k:'rollband', label:'Rollbandfilter', datei:'Prüfung Rollbandfilter', takt:['monat'],
     titel:'Monatliche Kontrolle Rollbandfilter',
     status:['Weitergedreht/ausgetauscht','In Ordnung','Mangel'],
-    anlagen:['Anlage 1','Anlage 2','Anlage 3','Anlage 4'],
+    anlagen:['Anlage 1'],
     checkliste:
 `Checkliste Monatliche Prüfung Rollbandfilter
 
@@ -1283,8 +1290,7 @@ const NACHWEISE = [
     kompakt:true,                      // Geprüftes schrumpft, damit die Liste kurz bleibt
     titel:'Monatliche Kontrolle Feststellanlagen',
     status:['In Ordnung','Mangel'],
-    /* 42 Einheiten – die Bezeichnungen trägt Jean in den Einstellungen ein. */
-    anlagen: Array.from({length:42}, (_, i) => 'Tür ' + (i + 1)),
+    anlagen:['Tür 1'],
     checkliste:
 `Checkliste Monatliche Prüfung Feststellanlagen
 
@@ -1342,11 +1348,7 @@ const NACHWEISE = [
        Ort und Einheit dürfen fehlen; Wasser rechnet immer in m³, Strom und Wärme
        in kWh, sofern nicht MWh danebensteht. Die Reihenfolge dieser Liste ist
        der Ausgangspunkt der Ablesereihenfolge; verschoben wird beim Ablesen. */
-    stellen:[
-      'Partei 1 ; Kaltwasser ; 21-4711 ; Keller, Nische links ; m³',
-      'Partei 1 ; Wärme ; W-8802 ; Keller, Nische links ; kWh',
-      'Partei 2 ; Strom ; 1EZ0034 ; Zählerschrank Treppenhaus ; kWh'
-    ]
+    stellen:['Partei 1 ; Kaltwasser ; 21-4711 ; Keller, Nische links ; m³']
   }
 ];
 const NW = k => NACHWEISE.find(n => n.k === k);
@@ -1358,16 +1360,40 @@ const CFG_STD = { objekt:'', pruefer:'', teile:{}, orte:{} };
 let CFG = Object.assign({}, CFG_STD, Store.get('nwCfg', {}));
 CFG.teile = CFG.teile || {};
 CFG.orte  = CFG.orte  || {};
-/* Die Startwerte greifen nur, solange noch gar keine Liste angelegt ist. Eine
-   von Hand geleerte Liste bleibt leer – seit die Einträge einzeln gelöscht
-   werden, hieße "leer also unbenutzt" sonst: gelöschte Anlagen kommen beim
-   nächsten Öffnen zurück. */
+/* Die Startwerte sind nur noch ein Beispiel je Art – die wirklichen Anlagen
+   trägt jeder selbst ein. Sie greifen ausschließlich, solange überhaupt keine
+   Liste angelegt ist. Eine von Hand geleerte Liste bleibt leer: seit die
+   Einträge einzeln gelöscht werden, hieße "leer also unbenutzt" sonst,
+   gelöschte Anlagen kämen beim nächsten Öffnen zurück.
+
+   Fehlt die Liste, ist aber schon etwas erfasst, wiegt das Erfasste schwerer
+   als das Beispiel: die Liste wird daraus aufgebaut. Sonst schrumpfte eine
+   gewachsene Liste beim Update auf die eine Beispielzeile. */
+const ausErfasstem = k => {
+  const d = DAT[k];
+  return d && d.zeilen ? Object.keys(d.zeilen) : [];
+};
+/* Bei den Zählern steckt im Schlüssel Partei, Medium und Nummer; Ort und
+   Einheit lassen sich daraus nicht zurückholen – die Einheit richtet sich
+   ohnehin nach dem Medium, der Ort wäre nachzutragen. */
+const stellenAusErfasstem = () => {
+  const d = DAT.medien;
+  if(!d || !d.stand) return [];
+  return Object.keys(d.stand).map(key => {
+    const [partei, medium, nr] = String(key).split('|');
+    return [partei || '', medium || '', nr || '', '',
+            /wasser/i.test(medium || '') ? 'm³' : 'kWh'].join(' ; ');
+  });
+};
 const teilCfg = k => {
   const n = NW(k);
   CFG.teile[k] = CFG.teile[k] || {};
   const t = CFG.teile[k];
   if(n.art === 'medien'){
-    if(!Array.isArray(t.stellen)) t.stellen = n.stellen.slice();
+    if(!Array.isArray(t.stellen)){
+      const alt = stellenAusErfasstem();
+      t.stellen = alt.length ? alt : n.stellen.slice();
+    }
     if(!Array.isArray(t.folge)) t.folge = [];
     return t;
   }
@@ -1376,7 +1402,10 @@ const teilCfg = k => {
     if(!Array.isArray(t.mon))  t.mon  = n.mon.slice();
     return t;
   }
-  if(!Array.isArray(t.anlagen)) t.anlagen = (n.anlagen || []).slice();
+  if(!Array.isArray(t.anlagen)){
+    const alt = ausErfasstem(k);
+    t.anlagen = alt.length ? alt : (n.anlagen || []).slice();
+  }
   if(typeof t.checkliste !== 'string')               t.checkliste = n.checkliste || '';
   return t;
 };
