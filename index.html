@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v0.98 08.09.2026  Die Grundrisse stehen jetzt auch auf der Startseite: unter
+                    den Takten die Gruppe "Haus" mit einem Knopf, der die
+                    Blattwahl oeffnet; der gewaehlte Plan oeffnet sich in der
+                    Uebersicht. Bei nur einem Plan entfaellt die Wahl, ohne
+                    Plaene fehlt der Knopf.
   v0.97 07.09.2026  Die Einstellungen sind nur noch ein Menue: jeder Eintrag
                     oeffnet eine eigene Ansicht, die der Zurueck-Pfeil wieder
                     verlaesst. Anlagen, Pruefpunkte und Zaehlstellen stehen
@@ -957,8 +962,8 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v0.97';
-const BUILD   = VERSION + ' · 07.09.2026';
+const VERSION = 'v0.98';
+const BUILD   = VERSION + ' · 08.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -1796,6 +1801,29 @@ function renderHome(){
     go('nachweis');
   });
   $('#buildTag').textContent = BUILD;
+  hausKnopf();
+}
+/* Die Grundrisse gehören inzwischen zum täglichen Handwerkszeug und sollen
+   nicht mehr über die Einstellungen gesucht werden müssen. Sie liegen im
+   Bilderspeicher und stehen erst nach dem Aufbau der Startseite fest – der
+   Knopf hängt sich deshalb nach. Ohne Pläne bleibt er ganz weg, statt ins
+   Leere zu führen. */
+async function hausKnopf(){
+  let liste = [];
+  try{ liste = (await Bilder.alle()) || []; }catch(e){ return; }
+  const box = $('#homeListe');
+  if(!liste.length || current !== 'home' || !box || box.querySelector('[data-plaene]')) return;
+  liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
+  box.insertAdjacentHTML('beforeend',
+    `<div class="eyebrow" style="margin-top:6px">Haus</div>`
+    + `<button class="btn" data-plaene="1">Grundrisse · ${liste.length} ${liste.length === 1 ? 'Plan' : 'Pläne'}</button>`);
+  box.querySelector('[data-plaene]').onclick = () => {
+    planListe = liste;                        // von hier aus wird geblättert
+    /* Bei einem einzigen Plan wäre die Wahl eine Frage mit nur einer Antwort. */
+    if(liste.length === 1){ planZeigen(liste[0].id, null); return; }
+    wahlFenster('Grundriss', liste.map(pl => ({id:pl.id, text:pl.name})),
+      w => planZeigen(w.id, null));
+  };
 }
 let sprungZiel = '';
 
