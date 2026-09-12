@@ -10,6 +10,20 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.04 12.09.2026  RWA-Akkus: der Akkutyp wird als Segmentwahl angetippt statt
+                    aus einem Auswahlmenue geholt - dort blieb die Wahl auf dem
+                    iPhone nicht stehen, weil der Aenderungs-Hoerer sofort die
+                    ganze Liste neu baute und damit das Menue mitriss, waehrend
+                    iOS es noch schloss (dieselbe Lehre wie v0.88 bei der
+                    Ablesung). Aufgefrischt wird jetzt nur noch die eine Karte,
+                    und zwar an Ort und Stelle. Das Datumsfeld steht auf dem
+                    ueblichen Mass (Klasse .dat, 150 px, Schrift 14) statt sich
+                    als Flex-Element die ganze Zeile zu nehmen. Neu in den
+                    Einstellungen unter RWA > Akkutypen: "Akkus je Anlage" mit
+                    1 oder 2 zur Wahl - beide haben denselben Typ und werden
+                    gemeinsam getauscht, in der Karte steht dann "2 x 12 Ah".
+                    Die Zahl haengt am Eintrag der Anlage und wandert beim
+                    Umbenennen mit.
   v1.03 08.09.2026  Grundriss und Protokollbogen nutzen ab 1024 px Breite den
                     ganzen Bildschirm statt der 720er Textspalte: der Bogen
                     steht damit in Originalgroesse ganz im Bild, ohne Wischen,
@@ -533,6 +547,11 @@ input:focus,select:focus,textarea:focus,button:focus-visible{
 .row[hidden]{display:none}
 .row > *{flex:1}
 input.schmal{width:170px}
+/* Ein Datumsfeld schrumpft in Safari nicht unter seinen Inhalt: steht es als
+   Flex-Element mit flex:1 in einer Reihe, nimmt es sich die ganze Zeile und
+   drueckt den Nachbarn zusammen. Deshalb ueberall dasselbe feste Mass wie in
+   .kopf – dort steckt es seit jeher in der Regel darunter. */
+input.dat{flex:0 0 150px;width:150px;padding:8px 10px;font-size:14px}
 
 /* Eine Zeile je Anlage: Name, darunter Datum und Zustand nebeneinander. */
 .pos{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
@@ -1028,7 +1047,7 @@ input.schmal{width:170px}
 
 <script>
 'use strict';
-const VERSION = 'v1.03';
+const VERSION = 'v1.04';
 const BUILD   = VERSION + ' · 08.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1944,6 +1963,12 @@ const jahrTitel = j => j === 1 ? 'Jährlich' : j === 2 ? 'Zweijährlich' : `Alle
 const akkuTypen = () => NW('rwa') ? (teilCfg('rwa').akkus || []) : [];
 const akkuJahre = name => { const a = akkuTypen().find(x => x.name === name); return a ? a.jahre : 0; };
 const akkuAn = () => !!NW('rwa') && teilCfg('rwa').anlagen.length > 0;
+/* Wie viele Akkus in einer Anlage stecken – einer, solange nichts anderes
+   eingestellt ist. Beide haben denselben Typ und werden gemeinsam getauscht,
+   die Zahl ändert an der Frist also nichts; sie sagt, wie viele mitzunehmen
+   sind. Sie steht neben Typ und Tauschdatum am Eintrag der Anlage und wandert
+   damit beim Umbenennen von selbst mit. */
+const akkuAnzahl = z => (z && z.akkuAnzahl === 2) ? 2 : 1;
 /* Ohne gewählten Typ ist nichts zu rechnen – solche Anlagen bleiben außen vor,
    statt als überfällig zu gelten. */
 const akkuFristen = () => teilCfg('rwa').anlagen
@@ -2122,6 +2147,59 @@ function renderFremd(){
    Je Anlage der eingebaute Akkutyp und das Datum des letzten Tauschs. Der
    Zyklus kommt vom Typ, nicht von der Anlage – wer einen größeren Akku
    einbaut, stellt den Typ um und bekommt die neue Frist. */
+/* Der Typ steht als Segmentwahl da, nicht als Auswahlmenü: ein Tipp genügt,
+   und es gibt kein Auswahlrad, das erst geschlossen werden muss. Ein zweiter
+   Tipp auf den gewählten Typ nimmt ihn zurück – dieselbe Regel wie bei
+   "In Ordnung / Mangel". */
+function akkuKarte(a, i, typen, d){
+  const z = d.zeilen[a], j = akkuJahre(z.akkuTyp);
+  const f = j ? frist(z.akkuDatum, j) : null;
+  const klasse = !f ? '' : (f.offen || f.faellig ? ' mangel' : ' fertig');
+  return `<div class="pos${klasse}" data-i="${i}">
+    <div class="name">${esc(a)}</div>
+    ${typen.length ? `<div class="seg">${typen.map(x =>
+      `<button type="button" data-typ="${esc(x.name)}" aria-pressed="${x.name === z.akkuTyp}">${esc(x.name)}</button>`).join('')}</div>` : ''}
+    <div class="kopf" style="margin:10px 0 0">
+      <span class="muted small">Getauscht am</span>
+      <input type="date" class="dat" data-feld="datum" value="${esc(z.akkuDatum || '')}" aria-label="Tauschdatum">
+    </div>
+    <div class="muted small stand" style="margin-top:8px">${esc(akkuText(z, j, f))}</div>
+  </div>`;
+}
+/* Woran man ist: wie viele Akkus welchen Typs, und wann sie fällig sind. */
+function akkuText(z, j, f){
+  const anz = akkuAnzahl(z);
+  if(!j) return (anz > 1 ? anz + ' Akkus · ' : '') + 'kein Akkutyp gewählt';
+  return `${anz} × ${z.akkuTyp} · `
+    + (f.offen   ? `noch kein Tausch vermerkt · alle ${j} Jahre`
+     : f.faellig ? 'überfällig seit ' + dText(f.ziel)
+                 : 'nächster Tausch ' + dText(f.ziel));
+}
+/* Nur die eine Karte auffrischen, nicht die ganze Liste neu bauen: wird die
+   Liste mitten in der Bedienung ersetzt, reißt es das gerade benutzte Feld weg
+   (dieselbe Lehre wie bei der Ablesung, v0.88). Ersetzt wird hier überhaupt
+   nichts – Zustand, Knöpfe und Text werden an Ort und Stelle nachgezogen. */
+function akkuFrischen(box){
+  const t = teilCfg('rwa'), d = datenFuer('rwa');
+  const z = d.zeilen[t.anlagen[+box.dataset.i]], j = akkuJahre(z.akkuTyp);
+  const f = j ? frist(z.akkuDatum, j) : null;
+  box.classList.toggle('mangel', !!f && (f.offen || f.faellig));
+  box.classList.toggle('fertig', !!f && !f.offen && !f.faellig);
+  box.querySelectorAll('[data-typ]').forEach(b =>
+    b.setAttribute('aria-pressed', b.dataset.typ === z.akkuTyp));
+  box.querySelector('.stand').textContent = akkuText(z, j, f);
+}
+function akkuVerdrahten(box){
+  const t = teilCfg('rwa'), d = datenFuer('rwa');
+  const z = d.zeilen[t.anlagen[+box.dataset.i]];
+  box.querySelectorAll('[data-typ]').forEach(b => b.onclick = () => {
+    z.akkuTyp = z.akkuTyp === b.dataset.typ ? '' : b.dataset.typ;
+    saveDat(); akkuFrischen(box);
+  });
+  box.querySelector('[data-feld="datum"]').onchange = e => {
+    z.akkuDatum = e.target.value; saveDat(); akkuFrischen(box);
+  };
+}
 function renderAkku(){
   const t = teilCfg('rwa'), d = datenFuer('rwa'), typen = akkuTypen();
   $('#akkuListe').innerHTML =
@@ -2130,29 +2208,11 @@ function renderAkku(){
        <div class="eyebrow" style="margin:0 0 6px">Alle getauscht</div>
        <p class="muted small" style="margin:0 0 10px">Setzt das Tauschdatum für alle Anlagen mit gewähltem Akkutyp auf denselben Tag.</p>
        <div class="row">
-         <input type="date" id="akkuAlleDatum" value="${heute()}" aria-label="Tauschdatum">
+         <input type="date" class="dat" id="akkuAlleDatum" value="${heute()}" aria-label="Tauschdatum">
          <button class="btn" id="akkuAlleSetzen">Übernehmen</button>
        </div>
      </div>`
-    + t.anlagen.map((a, i) => {
-        const z = d.zeilen[a], j = akkuJahre(z.akkuTyp);
-        const f = j ? frist(z.akkuDatum, j) : null;
-        const klasse = !f ? '' : (f.offen || f.faellig ? ' mangel' : ' fertig');
-        const wahl = `<option value="">— kein Typ —</option>` + typen.map(x =>
-          `<option${x.name === z.akkuTyp ? ' selected' : ''}>${esc(x.name)}</option>`).join('');
-        return `<div class="pos${klasse}" data-i="${i}">
-          <div class="name">${esc(a)}</div>
-          <div class="row">
-            <label class="field" style="margin:0"><span>Akkutyp</span><select data-feld="typ">${wahl}</select></label>
-            <label class="field" style="margin:0"><span>Getauscht am</span><input type="date" data-feld="datum" value="${esc(z.akkuDatum || '')}"></label>
-          </div>
-          <div class="muted small" style="margin-top:8px">${esc(
-            !j ? 'kein Akkutyp gewählt'
-               : f.offen   ? `noch kein Tausch vermerkt · alle ${j} Jahre`
-               : f.faellig ? 'überfällig seit ' + dText(f.ziel)
-               : 'nächster Tausch ' + dText(f.ziel))}</div>
-        </div>`;
-      }).join('');
+    + t.anlagen.map((a, i) => akkuKarte(a, i, typen, d)).join('');
   $('#akkuAlleSetzen').onclick = () => {
     const tag = $('#akkuAlleDatum').value;
     if(!tag){ toast('Kein Datum gewählt'); return; }
@@ -2166,15 +2226,7 @@ function renderAkku(){
         saveDat(); toast('Eingetragen'); renderAkku();
       });
   };
-  $$('#akkuListe .pos').forEach(box => {
-    const a = t.anlagen[+box.dataset.i], z = d.zeilen[a];
-    box.querySelector('[data-feld="typ"]').onchange = e => {
-      z.akkuTyp = e.target.value; saveDat(); renderAkku();
-    };
-    box.querySelector('[data-feld="datum"]').onchange = e => {
-      z.akkuDatum = e.target.value; saveDat(); renderAkku();
-    };
-  });
+  $$('#akkuListe .pos').forEach(akkuVerdrahten);
 }
 
 /* ---------- Ein Nachweis ---------------------------------------------------
@@ -2804,13 +2856,45 @@ function setAkkus(box){
   box.innerHTML =
     `<p class="muted small" style="margin:0 0 10px">Je nach Kapazität wird der Akku alle drei oder vier Jahre getauscht. Der Typ wird beim Akkutausch je Anlage gewählt; sein Zyklus steht hier.</p>
      <div id="akkuTypListe"></div>
-     <button class="btn ghost klein" id="akkuTypPlus" style="margin-top:12px">+ Akkutyp hinzufügen</button>`;
+     <button class="btn ghost klein" id="akkuTypPlus" style="margin-top:12px">+ Akkutyp hinzufügen</button>
+     <div class="eyebrow" style="margin-top:22px">Akkus je Anlage</div>
+     <p class="muted small" style="margin:-4px 0 10px">Wie viele Akkus in der Anlage stecken. Beide haben denselben Typ und werden gemeinsam getauscht – die Zahl sagt nur, wie viele mitzunehmen sind.</p>
+     <div id="akkuAnzListe"></div>`;
   $('#akkuTypPlus').onclick = () => {
     akkuTypZeichnen(true);
     const f = $('#akkuTypListe .stelle[data-i="-1"] [data-f="name"]');
     if(f) f.focus();
   };
   akkuTypZeichnen(false);
+  akkuAnzZeichnen();
+}
+/* Die Anzahl steht am Eintrag der Anlage, nicht in einer eigenen Liste: so
+   wandert sie beim Umbenennen mit Typ und Tauschdatum von selbst mit, und eine
+   gelöschte Anlage lässt nichts zurück. */
+function akkuAnzZeichnen(){
+  const box = $('#akkuAnzListe'); if(!box) return;
+  const t = teilCfg('rwa'), d = datenFuer('rwa');
+  if(!t.anlagen.length){
+    box.innerHTML = `<p class="muted small">Noch keine Anlage angelegt – das geht eine Ebene höher unter "Objekte".</p>`;
+    return;
+  }
+  box.innerHTML = t.anlagen.map((a, i) => {
+    const anz = akkuAnzahl(d.zeilen[a]);
+    return `<div class="pos" data-i="${i}">
+      <div class="kopf" style="margin:0">
+        <span class="name" style="margin:0">${esc(a)}</span>
+        <span class="seg" style="flex:0 0 104px">${[1, 2].map(n =>
+          `<button type="button" data-anz="${n}" aria-pressed="${anz === n}">${n}</button>`).join('')}</span>
+      </div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.pos').forEach(r => {
+    const z = d.zeilen[t.anlagen[+r.dataset.i]];
+    r.querySelectorAll('[data-anz]').forEach(b => b.onclick = () => {
+      z.akkuAnzahl = +b.dataset.anz; saveDat();
+      r.querySelectorAll('[data-anz]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    });
+  });
 }
 function akkuTypZeichnen(mitNeuer){
   const box = $('#akkuTypListe'); if(!box) return;
