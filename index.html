@@ -10,6 +10,20 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.10 12.09.2026  Der Versuch aus v1.09, das Trackpad der iPad-Tastatur am
+                    Zoomen zu hindern, ist wieder draußen: iPadOS behandelt
+                    dessen Kneifen oberhalb der Seite, die erfaehrt davon nichts.
+                    Was fuer Finger auf dem Schirm wirkt (touch-action, die
+                    16-px-Felder, die Ausnahme der Blattvorschau), bleibt.
+                    Stattdessen bekommt der Plan auf Bildschirmen ab etwa zehn
+                    Zoll (kurze Kante ab 800 Punkten) von Anfang an die hoechste
+                    Aufloesung: nachgezeichnet wird nicht erst ab zweifachem
+                    Zoom, sondern sofort, und nicht auf Bildschirmaufloesung,
+                    sondern bis an die Sicherheitsgrenze von 16 Millionen
+                    Punkten - bei einem Querplan rund 4600 x 3500 statt der 3200
+                    des gespeicherten Bildes. So bleibt scharf, was die Lupe des
+                    Systems groesser zieht. Gilt nur fuer Plaene aus einer PDF;
+                    ein hereingeholtes Bild hat keine hoehere Aufloesung.
   v1.09 12.09.2026  Das Trackpad der iPad-Tastatur kam am Zoomverbot vorbei: es
                     kneift nicht auf dem Schirm, also greift touch-action nicht,
                     und Safari meldet die Geste als Rollen mit gedrueckter
@@ -1124,7 +1138,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.09';
+const VERSION = 'v1.10';
 const BUILD   = VERSION + ' · 08.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1822,27 +1836,20 @@ const TITEL = {home:'Betriebsnachweise', nachweis:'Nachweis', blatt:'Blatt',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
-/* Vergrößern abfangen, auf allen drei Wegen, die es dafür gibt:
-   touch-action (im Stilblatt) nimmt die Finger auf dem Schirm, gesturestart und
-   Geschwister sind der Weg, den WebKit selbst anbietet, und das Trackpad der
-   iPad-Tastatur meldet sein Kneifen überhaupt nicht als Berührung, sondern als
-   Rollen mit gedrückter Strg-Taste – so macht es jedes Zeigegerät mit zwei
-   Fingern. Fehlte einer der drei, ließe sich die App über ihn doch vergrößern.
-   Ausgenommen bleibt die Blattvorschau, wo der 1024 px breite Bogen steht.
-   Der Grundriss fängt dieselben Ereignisse vorher an seinem Rahmen ab und legt
-   sie auf seinen eigenen Zoom um; dass sie hier zusätzlich abgewehrt werden,
-   stört ihn nicht – es verhindert nur, dass eine Geste neben dem Rahmen doch
-   den ganzen Bildschirm zieht. */
+/* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
+   nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
+   Weg, den WebKit selbst anbietet. Ausgenommen bleiben der Grundriss – er zoomt
+   mit eigenen Mitteln – und die Blattvorschau, wo der 1024er Bogen steht.
+   Das Trackpad der iPad-Tastatur erreicht beides nicht: iPadOS behandelt sein
+   Kneifen oberhalb der Seite, die erfährt davon nichts. Versucht wurde es in
+   v1.09 über Strg-Rollen, ohne Wirkung; der Versuch ist wieder draußen. Wer auf
+   dem iPad einen Plan groß braucht, bekommt ihn dafür von vornherein in voller
+   Auflösung (siehe GROSSER_SCHIRM weiter unten). */
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(art =>
   document.addEventListener(art, e => {
-    if(current === 'blatt') return;
+    if(current === 'plan' || current === 'blatt') return;
     if(e.cancelable) e.preventDefault();
   }, {passive:false}));
-document.addEventListener('wheel', e => {
-  if(!e.ctrlKey) return;                  // gewöhnliches Rollen bleibt Scrollen
-  if(current === 'blatt') return;
-  if(e.cancelable) e.preventDefault();
-}, {passive:false});
 function go(name, push = true){
   if(push && current !== name) stack.push(current);
   current = name;
@@ -3528,19 +3535,6 @@ function planZoomAnwenden(){
      blitzte beim Zoomen kurz das unscharfe Grundbild auf. */
   scharfSpaeter();
 }
-/* Zoomen um einen Punkt herum, den Rest rechnet der Rahmen: dieselbe Rechnung
-   wie bei der Fingergeste, nur dass Faktor und Punkt von woanders kommen. */
-function planZoomUm(faktor, cx, cy){
-  const wrap = $('#planWrap'); if(!wrap) return;
-  const r = wrap.getBoundingClientRect();
-  const neu = Math.min(6, Math.max(1, planZoom * Math.min(2, Math.max(0.5, faktor))));
-  const v = neu / planZoom;
-  if(v === 1) return;
-  const px = wrap.scrollLeft + cx - r.left, py = wrap.scrollTop + cy - r.top;
-  planZoom = neu; planZoomAnwenden();
-  wrap.scrollLeft = px * v - (cx - r.left);
-  wrap.scrollTop  = py * v - (cy - r.top);
-}
 (function zoomBinden(){
   const wrap = $('#planWrap'); if(!wrap) return;
   const abstand = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
@@ -3571,27 +3565,6 @@ function planZoomUm(faktor, cx, cy){
     if(planGezoomt) setTimeout(() => { planGezoomt = false; }, 250);
     scharfSpaeter();
   });
-  /* Dasselbe vom Trackpad der iPad-Tastatur aus. Es kneift nicht auf dem Schirm,
-     also greifen weder touch-action noch die Fingergeste oben; Safari meldet
-     die Geste als Rollen mit Strg und, je nach Fassung, als gesturechange.
-     Beides wird hier abgefangen, sonst zöge es den ganzen Bildschirm größer
-     statt den Plan. planGezoomt bleibt unberührt: es hält den abschließenden
-     Tipp vom Setzen ab, und einen solchen gibt es hier nicht – gesetzt würde
-     ohnehin erst mit einem eigenen Klick. */
-  wrap.addEventListener('wheel', e => {
-    if(!e.ctrlKey) return;                  // gewöhnliches Rollen bleibt Scrollen
-    e.preventDefault();
-    planZoomUm(Math.exp(-e.deltaY / 100), e.clientX, e.clientY);
-  }, {passive:false});
-  let g0 = 1;
-  wrap.addEventListener('gesturestart', e => { e.preventDefault(); g0 = e.scale || 1; }, {passive:false});
-  wrap.addEventListener('gesturechange', e => {
-    e.preventDefault();
-    const s = e.scale || 1;
-    planZoomUm(s / (g0 || 1), e.clientX, e.clientY);
-    g0 = s;
-  }, {passive:false});
-  wrap.addEventListener('gestureend', e => { e.preventDefault(); scharfSpaeter(); }, {passive:false});
   /* Auch beim bloßen Wischen wandert der Ausschnitt – dann muss nachgezeichnet
      werden, sobald der Finger einen Augenblick ruht. */
   wrap.addEventListener('scroll', scharfSpaeter, {passive:true});
@@ -3609,6 +3582,18 @@ let planGezoomt = false;
    Millionen Pixel statt einiger hundert. Ringsum ein Viertel Zugabe, damit
    kleines Wischen nicht sofort neu rechnet. */
 const SCHARF_AB   = 2;        // ab dieser Zoomstufe wird nachgezeichnet
+/* Ab etwa zehn Zoll wird von vornherein nachgezeichnet, und zwar bis an die
+   Sicherheitsgrenze statt nur auf Bildschirmauflösung. Zoll kennt eine Seite
+   nicht; die kurze Kante des Bildschirms ab 800 Punkten ist die Näherung – sie
+   trifft das iPad ab 10,2 Zoll, laesst das Mini mit 8,3 Zoll und alle Telefone
+   außen vor. Grund: das Kneifen auf dem Trackpad laesst sich nicht abfangen,
+   die Lupe des Systems zieht den Plan also groß. Dann soll etwas da sein, was
+   sich zu vergrößern lohnt – auf Bildschirmauflösung gerechnet waere die Ebene
+   bei einfacher Ansicht sogar gröber als das gespeicherte Bild (PLAN_MAX). */
+const GROSSER_SCHIRM = () => {
+  const s = window.screen || {};
+  return Math.min(s.width || 0, s.height || 0) >= 800;
+};
 const SCHARF_LUFT = 0.25;     // Zugabe ringsum, in Anteilen des Ausschnitts
 const SCHARF_MAX  = 16e6;     // Sicherheitsgrenze, weit unter Safaris Canvas-Grenze
 let scharfPlan = null;        // der gerade gezeigte Plan, wenn er eine PDF hat
@@ -3636,7 +3621,8 @@ async function scharfZeichnen(){
   const wrap = $('#planWrap'), box = $('#planBox');
   const bild = box && box.querySelector('img');
   if(!wrap || !bild || !scharfPlan || current !== 'plan') return;
-  if(planZoom < SCHARF_AB){ scharfWeg(); return; }
+  const gross = GROSSER_SCHIRM();
+  if(!gross && planZoom < SCHARF_AB){ scharfWeg(); return; }
 
   const bw = bild.offsetWidth, bh = bild.offsetHeight;
   if(!bw || !bh) return;
@@ -3668,6 +3654,9 @@ async function scharfZeichnen(){
 
     const px = Math.min(3, window.devicePixelRatio || 1);
     let s = (w * bw * px) / rw;                        // Bildschirmauflösung des Ausschnitts
+    /* Auf dem großen Schirm das Punktkonto ausschöpfen statt beim Bildschirm
+       stehenzubleiben: der Ausschnitt kommt so fein, wie die Grenze zulässt. */
+    if(gross) s = Math.max(s, Math.sqrt(SCHARF_MAX / (rw * rh)));
     const flaeche = rw * s * rh * s;
     if(flaeche > SCHARF_MAX) s *= Math.sqrt(SCHARF_MAX / flaeche);
     const cw = Math.max(1, Math.round(rw * s)), ch = Math.max(1, Math.round(rh * s));
