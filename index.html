@@ -10,6 +10,18 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.06 12.09.2026  Die App laesst sich nicht mehr vergroessern: die globale
+                    Regel steht auf touch-action:pan-x pan-y (nimmt Doppeltipp
+                    UND Kneifen), dazu faengt die App Safaris eigene Geste
+                    (gesturestart und Geschwister) ab. Zwei Ausnahmen: der
+                    Grundriss zoomt weiter mit eigenen Mitteln, und die
+                    Blattvorschau bleibt kneifbar - dort steht der 1024 px
+                    breite Bogen, der auf dem Telefon sonst nicht zu lesen waere.
+                    Der dritte Zoom war der von iOS selbst: es vergroessert die
+                    Seite, sobald man ein Feld mit Schrift unter 16 px antippt.
+                    Deshalb stehen Datumsfelder, die Zeilen der Einstellungs-
+                    listen und das Feld der Grundrissnamen jetzt auf 16 px; die
+                    Datumsfelder wurden dafuer von 150 auf 165 px verbreitert.
   v1.05 12.09.2026  Welcher Akkutyp in welcher Anlage steckt, wird jetzt in den
                     Einstellungen festgelegt (RWA > Akkutypen, Abschnitt "Akkus
                     je Anlage") - zusammen mit der Anzahl. Das aendert sich beim
@@ -442,13 +454,14 @@
   --pad:18px;
   --col:720px;
 }
-/* touch-action:manipulation nimmt dem Browser genau eine Geste weg: das Zoomen
-   per Doppeltipp. iOS zaehlt dafuer zwei Tipps kurz nacheinander, auch wenn sie
-   verschiedene Knoepfe treffen – beim Umsortieren mit den Pfeilen sprang die
-   Seite deshalb in die Vergroesserung. Wischen und Zoomen mit zwei Fingern
-   bleiben unberuehrt; der Plan behaelt seine eigene, engere Regel, weil er das
-   Zoomen selbst uebernimmt. */
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+/* pan-x pan-y laesst dem Browser das Wischen und nimmt ihm beides Zoomen: den
+   Doppeltipp (iOS zaehlt dafuer zwei Tipps kurz nacheinander, auch auf
+   verschiedenen Knoepfen – beim Umsortieren mit den Pfeilen sprang die Seite
+   deshalb in die Vergroesserung) und das Kneifen mit zwei Fingern. Die App ist
+   fuer die Hand gebaut, vergroessern soll man sie nicht.
+   Zwei Ausnahmen mit eigener, spaeterer Regel: der Grundriss (er zoomt selbst)
+   und die Blattvorschau (dort steht der 1024 px breite Bogen). */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:pan-x pan-y}
 html,body{margin:0;padding:0}
 body{
   font-family:var(--f-body);color:var(--ink);background:var(--enclosure);
@@ -557,11 +570,14 @@ input:focus,select:focus,textarea:focus,button:focus-visible{
 .row[hidden]{display:none}
 .row > *{flex:1}
 input.schmal{width:170px}
+/* 16 px ist die Untergrenze fuer alles, was sich antippen und beschreiben
+   laesst: darunter zoomt iOS beim Hineintippen von selbst in die Seite, und das
+   laesst sich anders nicht abstellen (siehe auch #schloss input). */
 /* Ein Datumsfeld schrumpft in Safari nicht unter seinen Inhalt: steht es als
    Flex-Element mit flex:1 in einer Reihe, nimmt es sich die ganze Zeile und
    drueckt den Nachbarn zusammen. Deshalb ueberall dasselbe feste Mass wie in
    .kopf – dort steckt es seit jeher in der Regel darunter. */
-input.dat{flex:0 0 150px;width:150px;padding:8px 10px;font-size:14px}
+input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 /* Eine Zeile je Anlage: Name, darunter Datum und Zustand nebeneinander. */
 .pos{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
@@ -577,7 +593,7 @@ input.dat{flex:0 0 150px;width:150px;padding:8px 10px;font-size:14px}
    Bedienelemente nebeneinander. */
 .pos .name{font-weight:600;margin-bottom:8px}
 .pos .kopf{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-.pos .kopf input{flex:0 0 auto;width:150px;padding:8px 10px;font-size:14px}
+.pos .kopf input{flex:0 0 auto;width:165px;padding:8px 10px;font-size:16px}
 .pos .seg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
 .pos .seg button{
   flex:1;padding:11px 6px;border:0;background:var(--surface);color:var(--ink);
@@ -613,7 +629,7 @@ input.dat{flex:0 0 150px;width:150px;padding:8px 10px;font-size:14px}
    wächst mit, damit auch ein langer Prüfpunkt vollständig zu lesen ist. */
 .zeile{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
 .zeile textarea{
-  flex:1;min-width:0;min-height:0;height:42px;padding:10px;font-size:15px;
+  flex:1;min-width:0;min-height:0;height:42px;padding:9px 10px;font-size:16px;
   line-height:1.35;resize:none;overflow:hidden;
 }
 .zeile .btn,.stelle .btn{flex:0 0 auto;width:auto;height:42px;padding:0 12px;font-size:14px;
@@ -692,7 +708,14 @@ input.dat{flex:0 0 150px;width:150px;padding:8px 10px;font-size:14px}
 /* --- Blattvorschau ---------------------------------------------------------
    Aufbau wie im E-Assistenten: 1024 px breiter Bogen, keine @page-Regel, damit
    die Umwandlung im Kurzbefehl den Bogen auf die Seitenbreite einpasst. */
+/* Die Ausnahme vom Zoomverbot: der Bogen ist 1024 px breit, auf dem Telefon
+   sieht man also immer einen Ausschnitt und muss ihn groesser ziehen koennen.
+   pinch-zoom ausdruecklich dazu, den Doppeltipp laesst die Aufzaehlung weg. */
 #blattWrap{background:#555;padding:12px;overflow:auto}
+/* Auch die Kinder ausdruecklich: entscheidend ist die Angabe an dem Element,
+   auf dem die Finger aufsetzen – das ist der Bogen, nicht sein Rahmen. Stuende
+   dort die globale Regel, bliebe das Kneifen trotz der Ausnahme weg. */
+#blattWrap, #blattWrap *{touch-action:pan-x pan-y pinch-zoom}
 /* Über dem Plan steht nur noch eine Zeile: links, wonach gesucht wird, rechts
    der Name des Plans – als Text, gewechselt wird über die Kopfzeile. */
 #view-plan{margin-top:-8px}
@@ -823,7 +846,7 @@ input.dat{flex:0 0 150px;width:150px;padding:8px 10px;font-size:14px}
 }
 .plan{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
 .plan .wer{flex:1;min-width:0}
-.plan .wer input{width:100%;height:38px;padding:0 10px;font-size:14px}
+.plan .wer input{width:100%;height:38px;padding:0 10px;font-size:16px}
 /* Feld und Knöpfe gleich hoch und mittig beschriftet – dann steht die Zeile
    ruhig, gleich wie lang das Wort auf dem Knopf ist. */
 .plan .btn{flex:0 0 auto;width:auto;height:38px;padding:0 12px;font-size:14px;
@@ -1057,7 +1080,7 @@ input.dat{flex:0 0 150px;width:150px;padding:8px 10px;font-size:14px}
 
 <script>
 'use strict';
-const VERSION = 'v1.05';
+const VERSION = 'v1.06';
 const BUILD   = VERSION + ' · 08.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1755,6 +1778,15 @@ const TITEL = {home:'Betriebsnachweise', nachweis:'Nachweis', blatt:'Blatt',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
+/* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
+   nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
+   Weg, den WebKit selbst anbietet. Ausgenommen bleiben der Grundriss – er zoomt
+   mit eigenen Mitteln – und die Blattvorschau, wo der 1024er Bogen steht. */
+['gesturestart', 'gesturechange', 'gestureend'].forEach(art =>
+  document.addEventListener(art, e => {
+    if(current === 'plan' || current === 'blatt') return;
+    if(e.cancelable) e.preventDefault();
+  }, {passive:false}));
 function go(name, push = true){
   if(push && current !== name) stack.push(current);
   current = name;
