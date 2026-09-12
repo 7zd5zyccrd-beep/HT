@@ -10,6 +10,21 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.07 12.09.2026  Sortieren und Standorte. Die Akkutypen und die Objekte der
+                    Fremdpruefungen (RWA, Feuerloescher) lassen sich in den
+                    Einstellungen mit Pfeilen verschieben; die bewegte Karte
+                    bleibt dabei auf dem Schirm stehen. Die Objekte stehen dafuer
+                    als Karte statt als Zeile - Bezeichnung oben, darunter
+                    Standort, Pfeile und Loeschen. Ihre Reihenfolge gilt in der
+                    Pruefansicht, unter "Akkus je Anlage" und, bei gleichem
+                    Termin, auch im Akkutausch (vorher entschied dort der Name).
+                    Der Standort im Grundriss laesst sich jetzt an drei Stellen
+                    setzen und ansehen: Pruefansicht (wie bisher), Akkuansicht
+                    (neuer Knopf neben dem Datum) und Einstellungen - dort wurde
+                    bisher nur angesehen. Alle drei benutzen denselben
+                    Schluessel, es ist also derselbe Punkt. Aus dem Grundriss
+                    kehrt man in allen dreien an die Stelle der Liste zurueck,
+                    von der aus man losgegangen ist.
   v1.06 12.09.2026  Die App laesst sich nicht mehr vergroessern: die globale
                     Regel steht auf touch-action:pan-x pan-y (nimmt Doppeltipp
                     UND Kneifen), dazu faengt die App Safaris eigene Geste
@@ -641,6 +656,11 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 /* Eine Karte je Zählstelle: fünf Felder und der Löschen-Knopf. */
 .stelle{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
 .stelle .field{margin-bottom:10px}
+/* Die Bezeichnung in einer Objektkarte: beginnt einzeilig und waechst mit, wie
+   in den Listenzeilen. Ohne eigene Regel griffe die Mindesthoehe von textarea
+   (150 px) und die Karte waere ein Block. */
+.stelle textarea{min-height:0;height:42px;padding:9px 10px;font-size:16px;
+  line-height:1.35;resize:none;overflow:hidden}
 
 .actionbar{
   position:sticky;bottom:0;z-index:30;margin-top:auto;
@@ -1080,7 +1100,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.06';
+const VERSION = 'v1.07';
 const BUILD   = VERSION + ' · 08.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1938,6 +1958,15 @@ const laufNr = d => (d.lauf = (d.lauf || 0) + 1);
    sitzt oben unter der Kopfzeile, die offene steht darunter. So sieht man auf
    einen Blick, dass davor nichts übersprungen wurde. */
 let sprungOffen = false, listenLage = null;
+/* Dasselbe nur für sich: die Listen-Nachweise erledigen die Rückkehr in
+   listenSprung, aber Akkuansicht, Prüfansicht der Fremdprüfungen und die
+   Objektliste der Einstellungen bauen sich beim Zurückkommen ebenso neu auf –
+   ohne das stünden sie wieder ganz oben. Gilt genau einmal. */
+function lageZurueck(){
+  if(listenLage == null) return;
+  const y = listenLage; listenLage = null;
+  window.scrollTo(0, y);
+}
 function listenSprung(istOffen){
   if(listenLage != null){
     const y = listenLage;
@@ -2183,6 +2212,7 @@ function renderFremd(){
     };
     box.querySelector('[data-feld="bem"]').oninput = e => { z.bem = e.target.value; saveDat(); };
   });
+  lageZurueck();
 }
 
 /* ---------- Der Akkutausch --------------------------------------------------
@@ -2201,6 +2231,7 @@ function akkuKarte(a, i, d){
     <div class="kopf" style="margin:0">
       <span class="muted small">Getauscht am</span>
       <input type="date" class="dat" data-feld="datum" value="${esc(z.akkuDatum || '')}" aria-label="Tauschdatum">
+      <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">⌖</button></span>
     </div>
     <div class="muted small stand" style="margin-top:8px">${esc(akkuText(z, j, f))}</div>
   </div>`;
@@ -2217,17 +2248,17 @@ function akkuText(z, j, f){
 /* Reihenfolge in der Ansicht: was am längsten drängt, steht oben. Ein Typ ohne
    Tauschdatum zählt als drängend – wann zuletzt getauscht wurde, weiß dann
    niemand. Anlagen ohne Typ stehen unten, für sie ist nichts zu rechnen; bei
-   gleichem Stand entscheidet der Name (mit Rücksicht auf Zahlen darin, sonst
-   stünde "RWA 10" vor "RWA 2"). */
+   gleichem Stand entscheidet die Reihenfolge aus den Einstellungen – die hat
+   Jean dort selbst gelegt, sie sagt mehr als der Name. */
 function akkuOrdnung(z){
   const j = akkuJahre(z.akkuTyp);
   if(!j) return [2, 0];
   const f = frist(z.akkuDatum, j);
   return f.offen ? [0, 0] : [1, f.tage];
 }
-function akkuVergleich(za, a, zb, b){
+function akkuVergleich(za, ia, zb, ib){
   const x = akkuOrdnung(za), y = akkuOrdnung(zb);
-  return x[0] - y[0] || x[1] - y[1] || a.localeCompare(b, 'de', {numeric:true});
+  return x[0] - y[0] || x[1] - y[1] || ia - ib;
 }
 /* Nur die eine Karte auffrischen, nicht die ganze Liste neu bauen: wird die
    Liste mitten in der Bedienung ersetzt, reißt es das gerade benutzte Feld weg
@@ -2243,7 +2274,11 @@ function akkuFrischen(box){
 }
 function akkuVerdrahten(box){
   const t = teilCfg('rwa'), d = datenFuer('rwa');
-  const z = d.zeilen[t.anlagen[+box.dataset.i]];
+  const a = t.anlagen[+box.dataset.i], z = d.zeilen[a];
+  /* Derselbe Schlüssel wie in der Prüfansicht und in den Einstellungen: es ist
+     dieselbe Anlage im Haus, also derselbe Punkt im Plan – gleich, von wo aus
+     er gesetzt wurde. */
+  box.querySelector('[data-ort]').onclick = () => verorten('rwa|' + a, a);
   box.querySelector('[data-feld="datum"]').onchange = e => {
     z.akkuDatum = e.target.value; saveDat(); akkuFrischen(box);
   };
@@ -2266,7 +2301,7 @@ function renderAkku(){
        beim nächsten Öffnen an ihrem neuen Platz. Der Platz in der Liste der
        Einstellungen (data-i) bleibt dabei erhalten. */
     + t.anlagen.map((a, i) => ({a, i}))
-        .sort((x, y) => akkuVergleich(d.zeilen[x.a], x.a, d.zeilen[y.a], y.a))
+        .sort((x, y) => akkuVergleich(d.zeilen[x.a], x.i, d.zeilen[y.a], y.i))
         .map(({a, i}) => akkuKarte(a, i, d)).join('');
   $('#akkuAlleSetzen').onclick = () => {
     const tag = $('#akkuAlleDatum').value;
@@ -2282,6 +2317,7 @@ function renderAkku(){
       });
   };
   $$('#akkuListe .pos').forEach(akkuVerdrahten);
+  lageZurueck();
 }
 
 /* ---------- Ein Nachweis ---------------------------------------------------
@@ -2896,13 +2932,90 @@ function setFremd(box, k){
     t.jahre = j; saveCfg();
   };
   if(n.akku) $('#setZuAkkus').onclick = () => setOeffnen('akkus', k);
-  listeBauen($('#setListe'), {
-    wort:'Objekt',
-    liste:() => teilCfg(k).anlagen,
-    beiUmbenennen:(alt, neu) => anlageUmbenennen(k, alt, neu),
-    loeschHinweis:'Prüfdatum, Bemerkung und die Stelle im Grundriss bleiben gespeichert – '
-      + 'wer das Objekt mit demselben Namen wieder anlegt, findet alles wieder.'
-  });
+  objektKarten($('#setListe'), k);
+}
+/* --- Die Objekte der Fremdprüfungen ----------------------------------------
+   Sie stehen als Karten da, nicht als Zeilen wie die übrigen Listen: neben der
+   Bezeichnung brauchen sie den Standort im Grundriss und die Pfeile, und vier
+   Bedienelemente neben einem Textfeld sind auf dem Telefon eine Zeile zu viel.
+   Die Reihenfolge gilt überall – Prüfansicht, "Akkus je Anlage" und, bei
+   gleichem Termin, auch im Akkutausch. Sichern, Umbenennen und Löschen laufen
+   wie in listeBauen; der Rest der Einstellungen bleibt dort. */
+function objektKarten(box, k){
+  let verworfen = false;
+  const karte = (text, i, n) => `<div class="stelle" data-i="${i}">
+      <textarea rows="1" data-f="name"${i < 0 ? ' placeholder="Objekt"' : ''}>${esc(text)}</textarea>
+      <div class="zeile" style="border-top:0;padding:10px 0 0">
+        <button class="btn ghost klein" data-ort="1" aria-label="Grundriss"${i < 0 ? ' disabled' : ''}>⌖</button>
+        <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 ? ' disabled' : ''}>↑</button>
+        <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i < 0 || i >= n - 1 ? ' disabled' : ''}>↓</button>
+        <button class="btn danger klein" data-weg="1">Löschen</button>
+      </div>
+    </div>`;
+  const zeichnen = mitNeuer => {
+    verworfen = false;
+    const liste = teilCfg(k).anlagen;
+    box.innerHTML = liste.map((x, i) => karte(x, i, liste.length)).join('')
+      + (mitNeuer ? karte('', -1, liste.length) : '')
+      + `<button class="btn ghost klein" data-plus="1" style="margin-top:12px">+ Objekt hinzufügen</button>`;
+    /* Die bewegte Karte bleibt auf dem Schirm stehen, die anderen wandern daran
+       vorbei – wie beim Verschieben in den Nachweisen (v0.53). */
+    const tausch = (i, j) => {
+      const l = teilCfg(k).anlagen;
+      if(i < 0 || j < 0 || j >= l.length) return;
+      const karteJetzt = box.querySelector(`.stelle[data-i="${i}"]`);
+      const top = karteJetzt ? karteJetzt.getBoundingClientRect().top : null;
+      [l[i], l[j]] = [l[j], l[i]]; saveCfg(); zeichnen(false);
+      lageHalten(top, () => box.querySelector(`.stelle[data-i="${j}"]`));
+    };
+    box.querySelectorAll('.stelle').forEach(r => {
+      const i = +r.dataset.i, neu = i < 0;
+      const ta = r.querySelector('textarea');
+      feldHoehe(ta);
+      ta.oninput  = () => feldHoehe(ta);
+      ta.onchange = () => {
+        const wert = ta.value.replace(/\s+/g, ' ').trim(), liste = teilCfg(k).anlagen;
+        if(neu){
+          if(!wert || verworfen){ zeichnen(false); return; }
+          liste.push(wert); saveCfg(); toast('Hinzugefügt');
+          zeichnen(false); menueAuffrischen(); return;
+        }
+        if(!wert){ ta.value = liste[i]; feldHoehe(ta); return; }   // leeren geht nur über Löschen
+        if(wert === liste[i]) return;
+        anlageUmbenennen(k, liste[i], wert);
+        liste[i] = wert; saveCfg();
+      };
+      /* Hier wird nicht nur angesehen, sondern auch gesetzt und verschoben –
+         derselbe Weg wie aus der Prüf- und der Akkuansicht. */
+      r.querySelector('[data-ort]').onclick = () => {
+        if(neu) return;
+        const a = teilCfg(k).anlagen[i];
+        verorten(k + '|' + a, a);
+      };
+      r.querySelector('[data-hoch]').onclick   = () => tausch(i, i - 1);
+      r.querySelector('[data-runter]').onclick = () => tausch(i, i + 1);
+      r.querySelector('[data-weg]').onpointerdown = () => { if(neu) verworfen = true; };
+      r.querySelector('[data-weg]').onclick = () => {
+        if(neu){ zeichnen(false); return; }
+        const liste = teilCfg(k).anlagen;
+        frage('Objekt löschen',
+          `„${liste[i]}“ verschwindet aus der Liste.\n\n`
+          + 'Prüfdatum, Bemerkung und die Stelle im Grundriss bleiben gespeichert – '
+          + 'wer das Objekt mit demselben Namen wieder anlegt, findet alles wieder.',
+          'Löschen', () => {
+            liste.splice(i, 1); saveCfg(); toast('Gelöscht');
+            zeichnen(false); menueAuffrischen();
+          });
+      };
+    });
+    box.querySelector('[data-plus]').onclick = () => {
+      zeichnen(true);
+      const t = box.querySelector('.stelle[data-i="-1"] textarea');
+      if(t) t.focus();
+    };
+  };
+  zeichnen(false);
+  lageZurueck();
 }
 /* Die Akkutypen: Bezeichnung und Zyklus. Eine Karte wird erst gesichert, wenn
    sie ganz verlassen wird – sonst risse der Neuaufbau das zweite Feld weg,
@@ -2969,16 +3082,29 @@ function akkuTypZeichnen(mitNeuer){
   const box = $('#akkuTypListe'); if(!box) return;
   const t = teilCfg('rwa');
   let verworfen = false;
-  const karte = (x, i) => `<div class="stelle" data-i="${i}">
+  const karte = (x, i, n) => `<div class="stelle" data-i="${i}">
       <div class="row">
         <label class="field"><span>Bezeichnung</span><input data-f="name" value="${esc(x.name)}"${
           i < 0 ? ' placeholder="z.B. 12 Ah"' : ''}></label>
         <label class="field"><span>Jahre</span><input data-f="jahre" type="number" min="1" max="20" step="1" inputmode="numeric" value="${x.jahre}"></label>
       </div>
-      <button class="btn danger klein" data-weg="1">Löschen</button>
+      <div class="zeile" style="border-top:0;padding:0">
+        <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 ? ' disabled' : ''}>↑</button>
+        <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i < 0 || i >= n - 1 ? ' disabled' : ''}>↓</button>
+        <button class="btn danger klein" data-weg="1">Löschen</button>
+      </div>
     </div>`;
-  box.innerHTML = t.akkus.map(karte).join('')
-    + (mitNeuer ? karte({name:'', jahre:4}, -1) : '');
+  box.innerHTML = t.akkus.map((x, i) => karte(x, i, t.akkus.length)).join('')
+    + (mitNeuer ? karte({name:'', jahre:4}, -1, t.akkus.length) : '');
+  /* Die Reihenfolge bestimmt, in welcher Folge die Typknöpfe unter "Akkus je
+     Anlage" stehen. Die bewegte Karte bleibt dabei auf dem Schirm stehen. */
+  const tausch = (i, j) => {
+    if(i < 0 || j < 0 || j >= t.akkus.length) return;
+    const karteJetzt = box.querySelector(`.stelle[data-i="${i}"]`);
+    const top = karteJetzt ? karteJetzt.getBoundingClientRect().top : null;
+    [t.akkus[i], t.akkus[j]] = [t.akkus[j], t.akkus[i]]; saveCfg(); akkuTypZeichnen(false);
+    lageHalten(top, () => box.querySelector(`.stelle[data-i="${j}"]`));
+  };
   box.querySelectorAll('.stelle').forEach(r => {
     const i = +r.dataset.i, neu = i < 0;
     const feld = f => r.querySelector(`[data-f="${f}"]`);
@@ -3002,6 +3128,8 @@ function akkuTypZeichnen(mitNeuer){
       if(!r.contains(document.activeElement) && !verworfen) sichern();
     }, 0));
     r.querySelectorAll('[data-f]').forEach(f => f.onchange = () => { if(!neu) sichern(); });
+    r.querySelector('[data-hoch]').onclick   = () => tausch(i, i - 1);
+    r.querySelector('[data-runter]').onclick = () => tausch(i, i + 1);
     r.querySelector('[data-weg]').onpointerdown = () => { if(neu) verworfen = true; };
     r.querySelector('[data-weg]').onclick = () => {
       if(neu){ akkuTypZeichnen(false); return; }
@@ -3817,6 +3945,11 @@ async function verorten(key, titel){
   /* Erst hier merken, nicht schon beim Antippen: gibt es keinen Plan, bleibt
      die Liste stehen und dürfte beim nächsten Aufbau nicht springen. */
   listenLage = window.scrollY;
+  /* Der Weg kann aus einer Unterseite der Einstellungen kommen. zurueck() holt
+     für ein 'setsub' immer einen Zustand vom setStack – also muss hier einer
+     hinterlegt werden, sonst fischt der Pfeil den Eintrag einer anderen Seite
+     heraus und zeigt die falsche Unterseite. */
+  if(current === 'setsub') setStack.push({seite:setSeite, titel:setTitel});
   planListe = liste;
   await planZeigen(id, {key, titel});
 }
