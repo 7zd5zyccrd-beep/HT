@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.09 12.09.2026  Das Trackpad der iPad-Tastatur kam am Zoomverbot vorbei: es
+                    kneift nicht auf dem Schirm, also greift touch-action nicht,
+                    und Safari meldet die Geste als Rollen mit gedrueckter
+                    Strg-Taste. Das wird jetzt ebenfalls abgefangen. In der
+                    Grundrissansicht zog dieselbe Geste den ganzen Bildschirm
+                    groesser statt den Plan - der Rahmen faengt sie nun selbst ab
+                    (Strg-Rollen und gesturechange) und legt sie auf seinen
+                    eigenen Zoom um, mit dem Punkt unter dem Zeiger als festem
+                    Punkt, wie bei der Fingergeste. Ausnahme bleibt die
+                    Blattvorschau. Cmd+Plus/Minus und die Lupe des Systems
+                    bleiben unberuehrt, die gehoeren dem Benutzer.
   v1.08 12.09.2026  Akkutyp und Anzahl stehen jetzt in der Objektkarte der RWA,
                     nicht mehr als eigener Abschnitt auf der Akkutypenseite -
                     alles zu einer Anlage an einer Stelle. Beides teilt sich
@@ -1113,7 +1124,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.08';
+const VERSION = 'v1.09';
 const BUILD   = VERSION + ' · 08.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1811,15 +1822,27 @@ const TITEL = {home:'Betriebsnachweise', nachweis:'Nachweis', blatt:'Blatt',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
-/* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
-   nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
-   Weg, den WebKit selbst anbietet. Ausgenommen bleiben der Grundriss – er zoomt
-   mit eigenen Mitteln – und die Blattvorschau, wo der 1024er Bogen steht. */
+/* Vergrößern abfangen, auf allen drei Wegen, die es dafür gibt:
+   touch-action (im Stilblatt) nimmt die Finger auf dem Schirm, gesturestart und
+   Geschwister sind der Weg, den WebKit selbst anbietet, und das Trackpad der
+   iPad-Tastatur meldet sein Kneifen überhaupt nicht als Berührung, sondern als
+   Rollen mit gedrückter Strg-Taste – so macht es jedes Zeigegerät mit zwei
+   Fingern. Fehlte einer der drei, ließe sich die App über ihn doch vergrößern.
+   Ausgenommen bleibt die Blattvorschau, wo der 1024 px breite Bogen steht.
+   Der Grundriss fängt dieselben Ereignisse vorher an seinem Rahmen ab und legt
+   sie auf seinen eigenen Zoom um; dass sie hier zusätzlich abgewehrt werden,
+   stört ihn nicht – es verhindert nur, dass eine Geste neben dem Rahmen doch
+   den ganzen Bildschirm zieht. */
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(art =>
   document.addEventListener(art, e => {
-    if(current === 'plan' || current === 'blatt') return;
+    if(current === 'blatt') return;
     if(e.cancelable) e.preventDefault();
   }, {passive:false}));
+document.addEventListener('wheel', e => {
+  if(!e.ctrlKey) return;                  // gewöhnliches Rollen bleibt Scrollen
+  if(current === 'blatt') return;
+  if(e.cancelable) e.preventDefault();
+}, {passive:false});
 function go(name, push = true){
   if(push && current !== name) stack.push(current);
   current = name;
@@ -3505,6 +3528,19 @@ function planZoomAnwenden(){
      blitzte beim Zoomen kurz das unscharfe Grundbild auf. */
   scharfSpaeter();
 }
+/* Zoomen um einen Punkt herum, den Rest rechnet der Rahmen: dieselbe Rechnung
+   wie bei der Fingergeste, nur dass Faktor und Punkt von woanders kommen. */
+function planZoomUm(faktor, cx, cy){
+  const wrap = $('#planWrap'); if(!wrap) return;
+  const r = wrap.getBoundingClientRect();
+  const neu = Math.min(6, Math.max(1, planZoom * Math.min(2, Math.max(0.5, faktor))));
+  const v = neu / planZoom;
+  if(v === 1) return;
+  const px = wrap.scrollLeft + cx - r.left, py = wrap.scrollTop + cy - r.top;
+  planZoom = neu; planZoomAnwenden();
+  wrap.scrollLeft = px * v - (cx - r.left);
+  wrap.scrollTop  = py * v - (cy - r.top);
+}
 (function zoomBinden(){
   const wrap = $('#planWrap'); if(!wrap) return;
   const abstand = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
@@ -3535,6 +3571,27 @@ function planZoomAnwenden(){
     if(planGezoomt) setTimeout(() => { planGezoomt = false; }, 250);
     scharfSpaeter();
   });
+  /* Dasselbe vom Trackpad der iPad-Tastatur aus. Es kneift nicht auf dem Schirm,
+     also greifen weder touch-action noch die Fingergeste oben; Safari meldet
+     die Geste als Rollen mit Strg und, je nach Fassung, als gesturechange.
+     Beides wird hier abgefangen, sonst zöge es den ganzen Bildschirm größer
+     statt den Plan. planGezoomt bleibt unberührt: es hält den abschließenden
+     Tipp vom Setzen ab, und einen solchen gibt es hier nicht – gesetzt würde
+     ohnehin erst mit einem eigenen Klick. */
+  wrap.addEventListener('wheel', e => {
+    if(!e.ctrlKey) return;                  // gewöhnliches Rollen bleibt Scrollen
+    e.preventDefault();
+    planZoomUm(Math.exp(-e.deltaY / 100), e.clientX, e.clientY);
+  }, {passive:false});
+  let g0 = 1;
+  wrap.addEventListener('gesturestart', e => { e.preventDefault(); g0 = e.scale || 1; }, {passive:false});
+  wrap.addEventListener('gesturechange', e => {
+    e.preventDefault();
+    const s = e.scale || 1;
+    planZoomUm(s / (g0 || 1), e.clientX, e.clientY);
+    g0 = s;
+  }, {passive:false});
+  wrap.addEventListener('gestureend', e => { e.preventDefault(); scharfSpaeter(); }, {passive:false});
   /* Auch beim bloßen Wischen wandert der Ausschnitt – dann muss nachgezeichnet
      werden, sobald der Finger einen Augenblick ruht. */
   wrap.addEventListener('scroll', scharfSpaeter, {passive:true});
