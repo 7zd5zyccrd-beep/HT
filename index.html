@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.08 12.09.2026  Akkutyp und Anzahl stehen jetzt in der Objektkarte der RWA,
+                    nicht mehr als eigener Abschnitt auf der Akkutypenseite -
+                    alles zu einer Anlage an einer Stelle. Beides teilt sich
+                    platzsparend eine Zeile, zwei Gruppen nebeneinander, zu
+                    lesen als "2 x 12 Ah". Ab vier Typen wird das zu eng, dann
+                    steht die Typwahl darueber und die Anzahl bekommt ihre
+                    Beschriftung zurueck. Eine frisch angelegte Karte zeigt
+                    beides erst nach dem Sichern des Namens - vorher gibt es
+                    keinen Eintrag, an dem es haengen koennte. Die Akkutypenseite
+                    fuehrt nur noch die Typen selbst. Gespeichert wird
+                    unveraendert am Eintrag der Anlage.
   v1.07 12.09.2026  Sortieren und Standorte. Die Akkutypen und die Objekte der
                     Fremdpruefungen (RWA, Feuerloescher) lassen sich in den
                     Einstellungen mit Pfeilen verschieben; die bewegte Karte
@@ -607,15 +618,17 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 /* Die Bezeichnung läuft als Überschrift über die ganze Karte, darunter die
    Bedienelemente nebeneinander. */
 .pos .name{font-weight:600;margin-bottom:8px}
-.pos .kopf{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.pos .kopf,.stelle .kopf{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .pos .kopf input{flex:0 0 auto;width:165px;padding:8px 10px;font-size:16px}
-.pos .seg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
-.pos .seg button{
+/* Dieselbe Segmentwahl in beiden Kartenarten: .pos traegt sie im Nachweis,
+   .stelle in den Einstellungen (Objektkarten). */
+.pos .seg,.stelle .seg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
+.pos .seg button,.stelle .seg button{
   flex:1;padding:11px 6px;border:0;background:var(--surface);color:var(--ink);
   font:inherit;font-size:14px;cursor:pointer;border-left:1px solid var(--line);
 }
-.pos .seg button:first-child{border-left:0}
-.pos .seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
+.pos .seg button:first-child,.stelle .seg button:first-child{border-left:0}
+.pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
 .pos .bem{margin-top:8px}
 .pos .punkt{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 .pos .punkt .ptext{font-size:14px;margin-bottom:6px}
@@ -1100,7 +1113,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.07';
+const VERSION = 'v1.08';
 const BUILD   = VERSION + ' · 08.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -2943,8 +2956,30 @@ function setFremd(box, k){
    wie in listeBauen; der Rest der Einstellungen bleibt dort. */
 function objektKarten(box, k){
   let verworfen = false;
+  /* Anzahl und Typ teilen sich eine Zeile: zwei Gruppen nebeneinander, jede mit
+     eigenem Rahmen, zusammen zu lesen als "2 × 12 Ah". Ab vier Typen wird das zu
+     eng – die Knöpfe können nicht unter ihre Beschriftung schrumpfen und liefen
+     aus dem Rahmen –, dann steht die Typwahl in einer eigenen Zeile darüber und
+     die Anzahl bekommt ihre Beschriftung zurück.
+     Eine frisch angelegte Karte zeigt beides noch nicht: solange der Name nicht
+     gesichert ist, gibt es keinen Eintrag, an dem es hängen könnte. */
+  const akkuWahl = (name, i) => {
+    if(!NW(k).akku || i < 0) return '';
+    const z = datenFuer(k).zeilen[name] || {}, typen = akkuTypen();
+    const anz = `<span class="seg" style="flex:0 0 96px">${[1, 2].map(m =>
+      `<button type="button" data-anz="${m}" aria-pressed="${akkuAnzahl(z) === m}">${m} ×</button>`).join('')}</span>`;
+    if(!typen.length)
+      return `<p class="muted small" style="margin:10px 0 0">Erst einen Akkutyp anlegen.</p>`;
+    const typ = `<span class="seg">${typen.map(x =>
+      `<button type="button" data-typ="${esc(x.name)}" aria-pressed="${x.name === z.akkuTyp}">${esc(x.name)}</button>`).join('')}</span>`;
+    return typen.length > 3
+      ? `<div style="margin-top:10px">${typ}</div>
+         <div class="kopf" style="margin:8px 0 0"><span class="muted small">Anzahl</span>${anz}</div>`
+      : `<div class="row" style="margin-top:10px">${anz}${typ}</div>`;
+  };
   const karte = (text, i, n) => `<div class="stelle" data-i="${i}">
       <textarea rows="1" data-f="name"${i < 0 ? ' placeholder="Objekt"' : ''}>${esc(text)}</textarea>
+      ${akkuWahl(text, i)}
       <div class="zeile" style="border-top:0;padding:10px 0 0">
         <button class="btn ghost klein" data-ort="1" aria-label="Grundriss"${i < 0 ? ' disabled' : ''}>⌖</button>
         <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 ? ' disabled' : ''}>↑</button>
@@ -2992,6 +3027,20 @@ function objektKarten(box, k){
         const a = teilCfg(k).anlagen[i];
         verorten(k + '|' + a, a);
       };
+      /* Typ und Anzahl: die Karte wird nie ersetzt, nur die Knöpfe nachgezogen –
+         ein zweiter Tipp auf den gewählten Typ nimmt ihn zurück. */
+      if(!neu && NW(k).akku){
+        const z = datenFuer(k).zeilen[teilCfg(k).anlagen[i]];
+        r.querySelectorAll('[data-typ]').forEach(b => b.onclick = () => {
+          z.akkuTyp = z.akkuTyp === b.dataset.typ ? '' : b.dataset.typ; saveDat();
+          r.querySelectorAll('[data-typ]').forEach(x =>
+            x.setAttribute('aria-pressed', x.dataset.typ === z.akkuTyp));
+        });
+        r.querySelectorAll('[data-anz]').forEach(b => b.onclick = () => {
+          z.akkuAnzahl = +b.dataset.anz; saveDat();
+          r.querySelectorAll('[data-anz]').forEach(x => x.setAttribute('aria-pressed', x === b));
+        });
+      }
       r.querySelector('[data-hoch]').onclick   = () => tausch(i, i - 1);
       r.querySelector('[data-runter]').onclick = () => tausch(i, i + 1);
       r.querySelector('[data-weg]').onpointerdown = () => { if(neu) verworfen = true; };
@@ -3022,61 +3071,15 @@ function objektKarten(box, k){
    während man noch darin tippt (wie bei den Zählstellen). */
 function setAkkus(box){
   box.innerHTML =
-    `<p class="muted small" style="margin:0 0 10px">Je nach Kapazität wird der Akku alle drei oder vier Jahre getauscht. Der Typ wird beim Akkutausch je Anlage gewählt; sein Zyklus steht hier.</p>
+    `<p class="muted small" style="margin:0 0 10px">Je nach Kapazität wird der Akku alle drei oder vier Jahre getauscht; hier stehen die Typen mit ihrem Zyklus. Welcher davon in welcher Anlage steckt und wie viele, steht eine Ebene höher bei den Objekten.</p>
      <div id="akkuTypListe"></div>
-     <button class="btn ghost klein" id="akkuTypPlus" style="margin-top:12px">+ Akkutyp hinzufügen</button>
-     <div class="eyebrow" style="margin-top:22px">Akkus je Anlage</div>
-     <p class="muted small" style="margin:-4px 0 10px">Welcher Typ in der Anlage steckt und wie viele. Bei zwei Akkus haben beide denselben Typ und werden gemeinsam getauscht – die Zahl sagt nur, wie viele mitzunehmen sind.</p>
-     <div id="akkuAnzListe"></div>`;
+     <button class="btn ghost klein" id="akkuTypPlus" style="margin-top:12px">+ Akkutyp hinzufügen</button>`;
   $('#akkuTypPlus').onclick = () => {
     akkuTypZeichnen(true);
     const f = $('#akkuTypListe .stelle[data-i="-1"] [data-f="name"]');
     if(f) f.focus();
   };
   akkuTypZeichnen(false);
-}
-/* Typ und Anzahl stehen am Eintrag der Anlage, nicht in einer eigenen Liste: so
-   wandern sie beim Umbenennen mit dem Tauschdatum von selbst mit, und eine
-   gelöschte Anlage lässt nichts zurück. Beides wird angetippt statt aus einem
-   Menü geholt – bei zwei bis vier Typen der kürzere Weg, und es gibt kein
-   Auswahlrad, das erst geschlossen werden muss.
-   Die Karte wird nie ersetzt, nur die Knöpfe werden nachgezogen. */
-function akkuAnlagenZeichnen(){
-  const box = $('#akkuAnzListe'); if(!box) return;
-  const t = teilCfg('rwa'), d = datenFuer('rwa'), typen = akkuTypen();
-  if(!t.anlagen.length){
-    box.innerHTML = `<p class="muted small">Noch keine Anlage angelegt – das geht eine Ebene höher unter "Objekte".</p>`;
-    return;
-  }
-  box.innerHTML = t.anlagen.map((a, i) => {
-    const z = d.zeilen[a];
-    return `<div class="pos" data-i="${i}">
-      <div class="name">${esc(a)}</div>
-      ${typen.length
-        ? `<div class="seg">${typen.map(x =>
-            `<button type="button" data-typ="${esc(x.name)}" aria-pressed="${x.name === z.akkuTyp}">${esc(x.name)}</button>`).join('')}</div>`
-        : `<p class="muted small" style="margin:0">Erst einen Akkutyp anlegen.</p>`}
-      <div class="kopf" style="margin:10px 0 0">
-        <span class="muted small">Anzahl</span>
-        <span class="seg" style="flex:0 0 104px">${[1, 2].map(n =>
-          `<button type="button" data-anz="${n}" aria-pressed="${akkuAnzahl(z) === n}">${n}</button>`).join('')}</span>
-      </div>
-    </div>`;
-  }).join('');
-  box.querySelectorAll('.pos').forEach(r => {
-    const z = d.zeilen[t.anlagen[+r.dataset.i]];
-    /* Ein zweiter Tipp auf den gewählten Typ nimmt ihn zurück – dieselbe Regel
-       wie bei "In Ordnung / Mangel". */
-    r.querySelectorAll('[data-typ]').forEach(b => b.onclick = () => {
-      z.akkuTyp = z.akkuTyp === b.dataset.typ ? '' : b.dataset.typ; saveDat();
-      r.querySelectorAll('[data-typ]').forEach(x =>
-        x.setAttribute('aria-pressed', x.dataset.typ === z.akkuTyp));
-    });
-    r.querySelectorAll('[data-anz]').forEach(b => b.onclick = () => {
-      z.akkuAnzahl = +b.dataset.anz; saveDat();
-      r.querySelectorAll('[data-anz]').forEach(x => x.setAttribute('aria-pressed', x === b));
-    });
-  });
 }
 function akkuTypZeichnen(mitNeuer){
   const box = $('#akkuTypListe'); if(!box) return;
@@ -3122,7 +3125,7 @@ function akkuTypZeichnen(mitNeuer){
       /* Der Name verbindet Typ und Anlage: wird er geändert, ziehen die
          Anlagen mit, sonst stünden sie plötzlich ohne Typ da. */
       if(name !== t.akkus[i].name) akkuTypUmbenennen(t.akkus[i].name, name);
-      t.akkus[i] = {name, jahre}; saveCfg(); akkuAnlagenZeichnen();
+      t.akkus[i] = {name, jahre}; saveCfg();
     };
     if(neu) r.addEventListener('focusout', () => setTimeout(() => {
       if(!r.contains(document.activeElement) && !verworfen) sichern();
@@ -3141,10 +3144,6 @@ function akkuTypZeichnen(mitNeuer){
         });
     };
   });
-  /* Die Knöpfe je Anlage tragen die Typnamen – wird ein Typ angelegt, gelöscht
-     oder umbenannt, müssen sie mit. Deshalb hängt der Neuaufbau hier dran und
-     nicht an jeder einzelnen Stelle, die die Typenliste ändert. */
-  akkuAnlagenZeichnen();
 }
 function akkuTypUmbenennen(alt, neu){
   const d = DAT.rwa; if(!d || !d.zeilen) return;
