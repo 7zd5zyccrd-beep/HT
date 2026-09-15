@@ -10,6 +10,30 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.18 15.09.2026  Aufzüge über mehrere Etagen. In den Einstellungen der
+                    Aufzüge steht unter „Etagen“ je Aufzug, auf welchen
+                    Grundrissen er vorkommt. Seine Marke wird einmal gesetzt und
+                    gilt auf allen gewählten Etagen; verschoben wird sie auf
+                    einer Etage, wandert sie überall mit. In der Übersicht trägt
+                    ein Aufzug auf jeder Etage dieselbe Nummer (bisher zählte
+                    die Nummer je Vorkommen weiter), und auf dem Blatt der Pläne
+                    steht er auf jeder Etagenseite. Voraussetzung: die
+                    Etagenpläne haben denselben Ausschnitt.
+  v1.17 15.09.2026  Grundriss-Übersicht: Feuerlöscher in Signalrot, RWA in
+                    Orange – die Farben, die sie auch im Haus tragen. In der
+                    Übersicht steht die Farbe nur für die Kategorie, der
+                    Prüfstand erscheint dort nicht; die Verwechslung mit Rot
+                    als "fällig" ist deshalb ausgeschlossen.
+  v1.16 15.09.2026  Feuerlöscher und RWA lassen sich in der Grundriss-Übersicht
+                    einblenden und kommen damit auch aufs Blatt der Pläne –
+                    Feuerlöscher in Magenta, RWA in Schiefergrau (abseits von
+                    Grün, Gelb und Rot wie die übrigen Kategorien). Beim Setzen
+                    einer Marke aus diesen Nachweisen zeigten die Nachbarmarken
+                    bisher den Monatsstand einer Runde, den es bei
+                    Fremdprüfungen nicht gibt. Jetzt richtet sich ihre Farbe
+                    nach der Frist wie der Ring: grün gültig, gelb in den acht
+                    Wochen davor, rot fällig oder ohne Datum. Bei RWA zählt die
+                    knappere Frist von Prüfung und Akkutausch.
   v1.15 15.09.2026  Zählertausch behält die Marke im Grundriss. Bisher blieb sie
                     am alten Schlüssel (Partei, Medium, Nummer) hängen, und der
                     neue Zähler stand ohne Ort da – das Umbenennen einer
@@ -1223,7 +1247,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.15';
+const VERSION = 'v1.18';
 const BUILD   = VERSION + ' · 15.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3495,12 +3519,15 @@ function listeBauen(box, opt){
         if(neu){
           if(!wert || verworfen){ zeichnen(false); return; }
           liste.push(wert); saveCfg(); toast('Hinzugefügt');
-          zeichnen(false); menueAuffrischen(); return;
+          zeichnen(false); menueAuffrischen();
+          if(opt.nachher) opt.nachher();
+          return;
         }
         if(!wert){ ta.value = liste[i]; feldHoehe(ta); return; }   // leeren geht nur über Löschen
         if(wert === liste[i]) return;
         if(opt.beiUmbenennen) opt.beiUmbenennen(liste[i], wert);
         liste[i] = wert; saveCfg();
+        if(opt.nachher) opt.nachher();
       };
       r.querySelector('[data-weg]').onpointerdown = () => { if(neu) verworfen = true; };
       r.querySelector('[data-weg]').onclick = () => {
@@ -3513,6 +3540,7 @@ function listeBauen(box, opt){
             if(opt.beiLoeschen) opt.beiLoeschen(i);
             liste.splice(i, 1); saveCfg(); toast('Gelöscht');
             zeichnen(false); menueAuffrischen();
+            if(opt.nachher) opt.nachher();
           });
       };
     });
@@ -3530,14 +3558,60 @@ function setAnlagen(box, k){
     `<button class="btn ghost klein" id="setZuCheck">Checkliste bearbeiten</button>
      <div class="eyebrow">Anlagen</div>
      <p class="muted small" style="margin:-4px 0 6px">Die Reihenfolge stellst du beim Prüfen mit den Pfeilen ein; neue Anlagen hängen sich hinten an.</p>
-     <div id="setListe"></div>`;
+     <div id="setListe"></div>`
+    + (k === 'aufzuege'
+      ? `<div class="eyebrow" style="margin-top:18px">Etagen</div>
+         <p class="muted small" style="margin:-4px 0 6px">Auf welchen Grundrissen jeder Aufzug steht. Seine Marke setzt du einmal; sie gilt auf allen gewählten Etagen und wandert beim Verschieben überall mit. Das passt, solange die Etagenpläne denselben Ausschnitt haben.</p>
+         <div id="setEtagen"></div>`
+      : '');
   $('#setZuCheck').onclick = () => setOeffnen('check', k);
+  if(k === 'aufzuege') etagenBauen();
   listeBauen($('#setListe'), {
     wort:'Anlage',
     liste:() => teilCfg(k).anlagen,
+    nachher:() => { if(k === 'aufzuege') etagenBauen(); },
     beiUmbenennen:(alt, neu) => anlageUmbenennen(k, alt, neu),
     loeschHinweis:'Das bisher Erfasste und die Stelle im Grundriss bleiben gespeichert – '
       + 'wer die Anlage mit demselben Namen wieder anlegt, findet beides wieder.'
+  });
+}
+/* Je Aufzug ein Knopf mit seinen Etagen; ein Tipp öffnet die Auswahl der Pläne.
+   Die Pläne kommen aus dem Bilderspeicher und damit verzögert – ist die Seite
+   bis dahin verlassen, bleibt es beim Nichtstun. */
+async function etagenBauen(){
+  let plaene = [];
+  try{ plaene = (await Bilder.alle()) || []; }catch(e){}
+  const box = $('#setEtagen');
+  if(!box || !box.isConnected) return;
+  plaene.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
+  const anlagen = teilCfg('aufzuege').anlagen;
+  if(!plaene.length){
+    box.innerHTML = `<p class="muted small">Noch kein Grundriss hinterlegt.</p>`; return;
+  }
+  const namen = key => {
+    const auf = etagenAuswahl(key);
+    return plaene.filter(p => auf.includes(p.id)).map(p => p.name);
+  };
+  box.innerHTML = anlagen.map((a, i) => {
+    const n = namen('aufzuege|' + a);
+    return `<button class="btn ghost klein" data-i="${i}" style="text-align:left">${esc(a)} · ${
+      esc(n.length ? n.join(', ') : 'keine Etage gewählt')}</button>`;
+  }).join('');
+  box.querySelectorAll('[data-i]').forEach(b => b.onclick = () => {
+    const a = anlagen[+b.dataset.i], key = 'aufzuege|' + a, an = etagenAuswahl(key);
+    kastenFenster(`Etagen · ${a}`,
+      [{alle:true, an:plaene.every(p => an.includes(p.id)), text:'Alle Etagen'}]
+        .concat(plaene.map(p => ({id:p.id, an:an.includes(p.id), text:p.name}))),
+      gewaehlt => {
+        const ids = gewaehlt.filter(e => e.an && !e.alle).map(e => e.id);
+        CFG.etagen = CFG.etagen || {};
+        if(ids.length) CFG.etagen[key] = ids; else delete CFG.etagen[key];
+        /* Wird die Etage abgewählt, auf der die Marke gesetzt wurde, zieht sie
+           auf die erste gewählte um – die Stelle selbst bleibt. */
+        const o = CFG.orte[key];
+        if(o && o.x != null && ids.length && !ids.includes(o.plan)) o.plan = ids[0];
+        saveCfg(); etagenBauen();
+      });
   });
 }
 /* Beim Sprinkler hängen die erfassten Werte an der Position des Punktes, nicht
@@ -4047,6 +4121,7 @@ function anlageUmbenennen(k, alt, neu){
   if(!alt || alt === neu) return;
   const va = k + '|' + alt, vb = k + '|' + neu, d = DAT[k];
   if(CFG.orte[va]){ CFG.orte[vb] = CFG.orte[va]; delete CFG.orte[va]; }
+  if(CFG.etagen && CFG.etagen[va]){ CFG.etagen[vb] = CFG.etagen[va]; delete CFG.etagen[va]; }
   if(d && d.zeilen && d.zeilen[alt]){
     d.zeilen[neu] = d.zeilen[alt]; delete d.zeilen[alt];
     zeitUmhaengen(d, alt, neu); saveDat();
@@ -4323,7 +4398,7 @@ function markenZeichnen(planId, ziehen){
   const eigen = CFG.orte[planZiel.key] || {};
   andereOrte(planId, planZiel.key)
     .forEach(o => punkt(o.x, o.y, 'andere st-' + ortStatus(o.key)));
-  if(eigen.plan === planId && eigen.x != null)
+  if(ortPlaene(planZiel.key).includes(planId))
     punkt(eigen.x, eigen.y, (ziehen ? 'zieh' : 'aktiv') + ' st-' + ortStatus(planZiel.key));
 }
 /* Wie steht dieses eine Objekt in der laufenden Runde da? Grün, sobald etwas
@@ -4343,22 +4418,57 @@ function ortStatus(key){
     return tageBis(quartalsEnde(jetzt)) <= 14 ? 'rot' : 'gelb';
   }
   const t = String(key).split('|');
+  /* Fremdprüfungen kennen keine Runde, nur Fristen – die Marke steht wie der
+     Ring: rot fällig oder ohne Datum, gelb in der Vorwarnzeit, sonst grün. Bei
+     RWA zählt zusätzlich der Akkutausch; die knappere Frist gibt die Farbe. */
+  const nf = NW(t[0]);
+  if(nf && nf.art === 'fremd'){
+    const a = t.slice(1).join('|'), z = zeileVon(nf.k, a);
+    const fr = [frist(z.datum, teilCfg(nf.k).jahre)];
+    if(nf.akku && akkuJahre(z.akkuTyp) > 0) fr.push(frist(z.akkuDatum, akkuJahre(z.akkuTyp)));
+    if(fr.some(f => f.offen || f.faellig)) return 'rot';
+    return fr.some(f => f.tage <= VORWARN) ? 'gelb' : 'gruen';
+  }
   const d = DAT[t[0]], z = d && d.zeilen && d.zeilen[t.slice(1).join('|')];
   if(z && z.status) return 'gruen';
   const n = NW(t[0]);
   if(n && rundeUeberfaellig(n)) return 'rot';      // Runde eines vergangenen Monats
   return tageBis(monatsEnde(jetzt)) <= 7 ? 'rot' : 'gelb';
 }
+/* --- Etagen -----------------------------------------------------------------
+   Ein Aufzug reicht über mehrere Geschosse. Er hat trotzdem nur eine Stelle
+   (x, y), und die gilt auf allen seinen Etagen – verschoben wird deshalb immer
+   überall. Welche Etagen, steht in den Einstellungen der Aufzüge (CFG.etagen,
+   Schlüssel wie bei den Orten); der Plan, auf dem die Marke gesetzt wurde,
+   gehört stets dazu. Das geht auf, solange die Etagenpläne denselben Ausschnitt
+   haben. Andere Nachweise tragen keine Etagen – die Helfer schaden dort nicht,
+   sie liefern einfach den einen Plan. */
+const etagenVon = key => ((CFG.etagen || {})[key] || []);
+function ortPlaene(key){
+  const o = CFG.orte[key];
+  if(!o || o.x == null) return [];
+  return [...new Set([o.plan, ...etagenVon(key)])];
+}
+/* Was in der Auswahl angehakt steht: die gewählten Etagen und der Plan der
+   Marke, auch wenn diese noch nirgends eingetragen ist. */
+const etagenAuswahl = key => {
+  const o = CFG.orte[key];
+  return [...new Set([...(o && o.x != null && o.plan ? [o.plan] : []), ...etagenVon(key)])];
+};
 /* --- Kategorien der Übersicht ----------------------------------------------
-   Objekte mit einer Stelle im Grundriss gibt es in vier Listen; der Sprinkler
-   hat keine. Die Farben liegen bewusst abseits von Grün, Gelb und Rot: dort
-   steht der Prüfstand, und dieselbe Farbe soll nicht zweierlei sagen. */
+   Objekte mit einer Stelle im Grundriss gibt es in sechs Listen; der Sprinkler
+   hat keine. Die Farben liegen abseits von Grün, Gelb und Rot, wo es geht: dort
+   steht beim Setzen einer Marke der Prüfstand. Ausnahmen sind Feuerlöscher und
+   RWA – sie tragen ihre Signalfarben aus dem Haus (so von Jean gewünscht). In
+   der Übersicht erscheint kein Prüfstand, eine Verwechslung gibt es dort nicht. */
 const KATEGORIEN = [
   {k:'aufzuege',  farbe:'#1F6FB2'},          // Blau
   {k:'rollband',  farbe:'#7B3FA0'},          // Violett
   {k:'feststell', farbe:'#0F8B8D'},          // Türkis
-  {k:'medien',    farbe:'#8A5A2B'}           // Braun
-];
+  {k:'medien',    farbe:'#8A5A2B'},          // Braun
+  {k:'loescher',  farbe:'#C1121F'},          // Signalrot
+  {k:'rwa',       farbe:'#E8710A'}           // Orange
+].filter(kat => NW(kat.k));                  // nur, was es als Nachweis gibt
 const katWahl = () => KATEGORIEN.filter(kat => (CFG.planWahl || []).includes(kat.k));
 /* Die Objekte einer Kategorie in der Reihenfolge ihrer Liste – also des Weges. */
 const katSchluessel = k => k === 'medien'
@@ -4368,17 +4478,19 @@ const katSchluessel = k => k === 'medien'
    Blatt: sie läuft über alle Pläne in deren fester Ordnung (nach Namen sortiert,
    wie in den Einstellungen). Deshalb zeigt der Bildschirm dieselbe Nummer wie
    das Blatt – auch dann, wenn erst beim Ausgeben feststeht, welche Pläne
-   mitkommen. Ein zweites Geschoss fängt also nicht wieder bei 1 an. */
+   mitkommen. Ein zweites Geschoss fängt also nicht wieder bei 1 an. Ein
+   Aufzug über mehrere Etagen bekommt seine Nummer beim ersten Vorkommen und
+   trägt sie auf allen übrigen weiter – es ist ja derselbe Aufzug. */
 function katOrte(k, planId){
   const ids = planListe.map(p => p.id);
   if(!ids.includes(planId)) ids.push(planId);   // Plan noch nicht in der Liste
-  const raus = [];
+  const raus = [], nummer = {};
   let nr = 0;
   ids.forEach(id => katSchluessel(k).forEach(key => {
     const o = CFG.orte[key];
-    if(!o || o.plan !== id || o.x == null) return;
-    nr++;
-    if(id === planId) raus.push({key, kat:k, x:o.x, y:o.y, nr});
+    if(!o || o.x == null || !ortPlaene(key).includes(id)) return;
+    if(!nummer[key]) nummer[key] = ++nr;
+    if(id === planId) raus.push({key, kat:k, x:o.x, y:o.y, nr:nummer[key]});
   }));
   return raus;
 }
@@ -4391,7 +4503,7 @@ function andereOrte(planId, key){
      Plan aber nichts mehr verloren. */
   const daheim = new Set(istZaehler ? stellen().map(z => z.key)
                                     : katSchluessel(String(key).split('|')[0]));
-  const passt = k => k !== key && (CFG.orte[k] || {}).plan === planId && daheim.has(k);
+  const passt = k => k !== key && ortPlaene(k).includes(planId) && daheim.has(k);
   /* Der Schlüssel reist mit: er wird gebraucht, wenn jemand die Marke antippt
      und wissen will, was dort steht. */
   return Object.keys(CFG.orte).filter(passt).map(k => Object.assign({key:k}, CFG.orte[k]));
@@ -4449,7 +4561,7 @@ function planZurStelle(){
   const bild = box && box.querySelector('img');
   if(!wrap || !bild || !planZiel) return;
   const o = CFG.orte[planZiel.key];
-  if(!o || o.x == null || o.plan !== planAktuell) return;
+  if(!o || o.x == null || !ortPlaene(planZiel.key).includes(planAktuell)) return;
   const bw = bild.offsetWidth, bh = bild.offsetHeight;
   if(!bw || !bh) return;
   wrap.scrollLeft = Math.max(0, Math.min(bw - wrap.clientWidth,  o.x * bw - wrap.clientWidth  / 2));
@@ -4496,7 +4608,7 @@ async function planZeigen(id, ziel){
   bild.onload = fertig;
   bild.onerror = fertig;                      // sonst bliebe die Ansicht leer
   if(bild.complete && bild.naturalWidth) fertig();
-  const gesetzt = () => { const o = CFG.orte[planZiel.key] || {}; return o.plan === id && o.x != null; };
+  const gesetzt = () => ortPlaene(planZiel.key).includes(id);
   const hinweis = () => {
     const kn = $('#btnPlanZieh'), ob = $('#btnPlanObjekte'), au = $('#btnPlanBlatt');
     if(!planZiel){
@@ -4554,6 +4666,11 @@ async function planZeigen(id, ziel){
     const r = bild.getBoundingClientRect();
     const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
     const y = Math.min(1, Math.max(0, (e.clientY - r.top)  / r.height));
+    /* Wird auf einer anderen Etage verschoben, darf die bisherige nicht
+       herausfallen: sie wandert in die Etagenliste, sofern es eine gibt. */
+    const vorher = CFG.orte[planZiel.key];
+    if(etagenVon(planZiel.key).length && vorher && vorher.plan && vorher.plan !== id)
+      CFG.etagen[planZiel.key] = [...new Set([...etagenVon(planZiel.key), vorher.plan, id])];
     CFG.orte[planZiel.key] = {plan:id, x, y};
     saveCfg(); planZiehen = false;
     markenZeichnen(id, false); hinweis(); toast('Stelle gemerkt');
@@ -4608,7 +4725,9 @@ async function verorten(key, titel){
   if(!liste.length){ toast('Erst einen Grundriss hinterlegen'); return; }
   liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
   const ort = CFG.orte[key] || {};
-  const id = liste.some(p => p.id === ort.plan) ? ort.plan : liste[0].id;
+  /* Ohne Marke, aber mit gewählten Etagen öffnet die erste davon. */
+  const id = liste.some(p => p.id === ort.plan) ? ort.plan
+           : (liste.find(p => etagenVon(key).includes(p.id)) || liste[0]).id;
   /* Erst hier merken, nicht schon beim Antippen: gibt es keinen Plan, bleibt
      die Liste stehen und dürfte beim nächsten Aufbau nicht springen. */
   listenLage = window.scrollY;
