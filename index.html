@@ -10,6 +10,25 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.11 15.09.2026  Die Startseite ist jetzt eine Aufgabenliste (Stufe 1 des
+                    Umbaus zum Arbeitsassistenten). Je laufende Runde eine
+                    Zeile mit Stand und Frist, gruppiert nach Überfällig,
+                    Diese Woche, Diesen Monat und Demnächst (bis acht Wochen);
+                    Fremdprüfungen und Akkutausch mit ihrem frühesten Termin.
+                    Innerhalb einer Gruppe entscheidet die Wichtigkeit, die je
+                    Nachweis in den Einstellungen steht, dann der Termin.
+                    Gespeichert wird dafür nichts, die Liste entsteht aus dem
+                    Stand der Nachweise. Die bisherige Startseite nach Takten
+                    heißt „Alle Nachweise“ und liegt hinter einem Knopf,
+                    daneben die Grundrisse. Neu im Ring: eine angefangene Runde,
+                    deren Monat oder Quartal vorbei ist, steht rot statt gelb –
+                    auch ihre Marken im Grundriss. Eine nie begonnene verfällt
+                    wie bisher. Still im Hintergrund: zu jeder Bewertung, jedem
+                    Prüfpunkt und jedem Zählerstand merkt sich die App die
+                    Uhrzeit der ersten Eingabe; beim Ausgeben entsteht daraus
+                    eine Zeile im Tätigkeitsbuch (Arbeitszeit ohne Pausen über
+                    30 Minuten). Sichtbar ist davon noch nichts, das Buch reist
+                    in der Sicherungsdatei mit.
   v1.10 12.09.2026  Der Versuch aus v1.09, das Trackpad der iPad-Tastatur am
                     Zoomen zu hindern, ist wieder draußen: iPadOS behandelt
                     dessen Kneifen oberhalb der Seite, die erfaehrt davon nichts.
@@ -603,6 +622,9 @@ main{flex:1;padding:16px var(--pad) 0;width:100%;max-width:var(--col);margin:0 a
 .btn.ring-rot{border-color:#C0392B}
 .btn.ring-gelb{border-color:#E3A81F}
 .btn.ring-gruen{border-color:#4E9A2F}
+/* Eine Aufgabe der Startseite: oben der Nachweis, darunter Stand und Frist
+   in kleinerer Schrift, damit die Liste auch bei vielen Zeilen lesbar bleibt. */
+.btn.aufgabe small{display:block;margin-top:3px;font-size:14px;font-weight:400;color:var(--ink-soft)}
 
 .field{display:block;margin-bottom:14px}
 .field > span{
@@ -647,13 +669,13 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .pos .kopf input{flex:0 0 auto;width:165px;padding:8px 10px;font-size:16px}
 /* Dieselbe Segmentwahl in beiden Kartenarten: .pos traegt sie im Nachweis,
    .stelle in den Einstellungen (Objektkarten). */
-.pos .seg,.stelle .seg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
-.pos .seg button,.stelle .seg button{
+.pos .seg,.stelle .seg,.wichtig .seg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
+.pos .seg button,.stelle .seg button,.wichtig .seg button{
   flex:1;padding:11px 6px;border:0;background:var(--surface);color:var(--ink);
   font:inherit;font-size:14px;cursor:pointer;border-left:1px solid var(--line);
 }
-.pos .seg button:first-child,.stelle .seg button:first-child{border-left:0}
-.pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
+.pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child{border-left:0}
+.pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
 .pos .bem{margin-top:8px}
 .pos .punkt{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 .pos .punkt .ptext{font-size:14px;margin-bottom:6px}
@@ -1013,6 +1035,11 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
       <p class="muted small" id="buildTag" style="margin-top:18px;opacity:.7"></p>
     </section>
 
+    <!-- Alle Nachweise nach Takt – die frühere Startseite -->
+    <section class="view" id="view-alle">
+      <div id="alleListe"></div>
+    </section>
+
     <!-- Ein Nachweis -->
     <section class="view" id="view-nachweis">
       <div class="eyebrow" id="nwObjekt"></div>
@@ -1138,8 +1165,8 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.10';
-const BUILD   = VERSION + ' · 08.09.2026';
+const VERSION = 'v1.11';
+const BUILD   = VERSION + ' · 15.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -1675,6 +1702,33 @@ const saveDat = () => Store.set('nwDat', DAT);
    diesen Vermerk wüsste die Startseite nichts vom Stand der Runde. */
 let EXP = Store.get('nwExp', {});
 const saveExp = () => Store.set('nwExp', EXP);
+/* --- Tätigkeitsbuch ---------------------------------------------------------
+   Vorarbeit für die Zeitfenster einer späteren Stufe: je ausgegebener Runde eine
+   Zeile mit Nachweis, Zeitraum, Ausgabetag und Arbeitszeit. Die Zeit entsteht
+   aus den Uhrzeiten der ersten Eingabe je Anlage, Prüfpunkt oder Zähler. Gezählt
+   werden nur die Abstände bis 30 Minuten – was länger dauert, ist eine Pause
+   oder ein anderer Tag. So bleibt die Zahl auch dann brauchbar, wenn eine Runde
+   in mehreren Anläufen erledigt wird; "schritte" sagt, wie viele Abstände
+   gemessen wurden, "anlaeufe", in wie vielen Stücken gearbeitet wurde. */
+let BUCH = Store.get('nwBuch', []);
+if(!Array.isArray(BUCH)) BUCH = [];
+const saveBuch = () => Store.set('nwBuch', BUCH);
+const PAUSE_MS = 30 * 60000;
+const zeitMerken = (o, s) => { o.zt = o.zt || {}; if(!o.zt[s]) o.zt[s] = Date.now(); };
+function buchSchreiben(k, d, zeitraum){
+  const t = Object.values((d && d.zt) || {});
+  [...((d && d.woch) || []), ...((d && d.mon) || [])].forEach(g => t.push(...Object.values(g.zt || {})));
+  const z = t.filter(x => x > 0).sort((a, b) => a - b);
+  let ms = 0, schritte = 0, anlaeufe = z.length ? 1 : 0;
+  for(let i = 1; i < z.length; i++){
+    const abstand = z[i] - z[i - 1];
+    if(abstand <= PAUSE_MS){ ms += abstand; schritte++; } else anlaeufe++;
+  }
+  BUCH.push({k, zeitraum, aus:heute(), eingaben:z.length, schritte, anlaeufe,
+             minuten:Math.round(ms / 6000) / 10});
+  if(BUCH.length > 500) BUCH = BUCH.slice(-500);
+  saveBuch();
+}
 const monatVon   = iso => String(iso || '').slice(0, 7);
 const quartalVon = iso => { const [j, m] = String(iso || '').split('-');
   return `${j}-Q${Math.floor((+m - 1) / 3) + 1}`; };
@@ -1808,6 +1862,30 @@ function begonnen(n){
   if(n.art === 'sprinkler') return (d.woch || []).length > 0 || (d.mon || []).length > 0;
   return zeilenJetzt(n.k).some(z => z.status);
 }
+/* Zu welchem Zeitraum die laufende Runde gehört: eine angefangene nach ihrem
+   Beginn (wie Überschrift und Dateiname), sonst der laufende Monat bzw. das
+   laufende Quartal. Zeiträume stehen als "2026-08" und "2026-Q3" – so lassen sie
+   sich als Text vergleichen. */
+const jetztZeitraum = quartal => quartal ? quartalVon(heute()) : monatVon(heute());
+function rundeVon(n){
+  const quartal = n.art === 'medien';
+  const t = begonnen(n) ? alleDaten(n.k).sort().shift() : '';
+  return t ? (quartal ? quartalVon(t) : monatVon(t)) : jetztZeitraum(quartal);
+}
+/* Überfällig ist eine angefangene Runde, deren Zeitraum vorbei ist. Eine nie
+   begonnene verfällt dagegen wie bisher mit ihrem Monat. */
+const rundeUeberfaellig = n => n.art !== 'fremd' && begonnen(n)
+  && rundeVon(n) < jetztZeitraum(n.art === 'medien');
+/* Letzter Tag eines Zeitraums und seine Bezeichnung ("August", "3. Quartal"). */
+function zeitraumEnde(z){
+  const [j, r] = String(z).split('-');
+  return new Date(+j, r[0] === 'Q' ? +r.slice(1) * 3 : +r, 0);
+}
+function zeitraumText(z){
+  const [j, r] = String(z).split('-');
+  const text = r[0] === 'Q' ? `${r.slice(1)}. Quartal` : MONATE[+r - 1];
+  return +j === new Date().getFullYear() ? text : `${text} ${j}`;
+}
 function ring(n, takt){
   if(n.art === 'fremd') return fremdRing(n.k);
   const jetzt = new Date();
@@ -1823,16 +1901,16 @@ function ring(n, takt){
   const jetztQuartal = `${jetzt.getFullYear()}-Q${Math.floor(jetzt.getMonth() / 3) + 1}`;
   if(takt === 'monat'){
     if(expMonat(n.k) === jetztMonat) return 'gruen';
-    if(begonnen(n)) return 'gelb';
+    if(begonnen(n)) return rundeUeberfaellig(n) ? 'rot' : 'gelb';
     return tageBis(monatsEnde(jetzt)) <= 7 ? 'rot' : '';
   }
   if(expQuartal(n.k) === jetztQuartal) return 'gruen';
-  if(begonnen(n)) return 'gelb';
+  if(begonnen(n)) return rundeUeberfaellig(n) ? 'rot' : 'gelb';
   return tageBis(quartalsEnde(jetzt)) <= 14 ? 'rot' : '';
 }
 
 /* ---------- Ansichten ---------- */
-const TITEL = {home:'Betriebsnachweise', nachweis:'Nachweis', blatt:'Blatt',
+const TITEL = {home:'Betriebsnachweise', alle:'Alle Nachweise', nachweis:'Nachweis', blatt:'Blatt',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
@@ -1875,6 +1953,7 @@ function go(name, push = true){
   document.body.classList.toggle('blattAn', name === 'blatt');
   window.scrollTo(0, 0);
   if(name === 'home')     renderHome();
+  if(name === 'alle')     renderAlle();
   if(name === 'nachweis') renderNachweis();
   if(name === 'akku')     renderAkku();
   if(name === 'plaene')   renderPlaeneWahl();
@@ -2115,7 +2194,174 @@ const hatEintraege = (n, t) => {
   if(n.art === 'sprinkler') return (t === 'monat' ? c.mon : c.woch).length > 0;
   return (c.anlagen || []).length > 0;
 };
+/* ---------- Anstehend ------------------------------------------------------
+   Die Aufgabenliste der Startseite. Gespeichert wird dafür nichts: die Aufgaben
+   entstehen bei jedem Aufbau aus dem Stand der Nachweise, mit denselben Regeln
+   wie die Ringe. Je laufende Runde eine Zeile; bei Fremdprüfungen und Akkutausch
+   eine je Nachweis mit dem frühesten Termin. Sortiert wird nach Gruppe, darin
+   nach Wichtigkeit, dann nach Termin – Überfälliges steht also immer oben. */
+const WICHTIG = [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']];
+/* Vorbelegung: hoch, wo es um Brand- und Personenschutz geht. */
+const WICHTIG_STD = {aufzuege:'hoch', feststell:'hoch', sprinkler:'hoch', loescher:'hoch', rwa:'hoch'};
+const wichtigVon = k => {
+  const w = (CFG.teile[k] || {}).wichtig;
+  return WICHTIG.some(x => x[0] === w) ? w : (WICHTIG_STD[k] || 'normal');
+};
+const GRUPPEN = [['ueber', 'Überfällig'], ['woche', 'Diese Woche'],
+                 ['monat', 'Diesen Monat'], ['bald', 'Demnächst']];
+const ttmm = d => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
+/* Gibt es überhaupt einen Nachweis mit Einträgen? Sonst hilft nur der Hinweis
+   auf die Einstellungen. */
+const irgendeinNachweis = () => NACHWEISE.some(n => !n.spaeter
+  && (hatEintraege(n, 'monat') || hatEintraege(n, 'woche')));
+
+function aufgaben(){
+  const liste = [], jetzt = new Date(), heute0 = tagAnfang(jetzt);
+  const neu = (n, a) => liste.push(Object.assign(
+    {k:n.k, ziel:'', akku:false, begonnen:false, wichtig:wichtigVon(n.k), pos:NACHWEISE.indexOf(n)}, a));
+  /* Fremdprüfung und Akkutausch: eine Zeile, sobald ein Objekt ohne Datum ist
+     oder ein Termin in die Vorwarnzeit rückt. */
+  const fristAufgabe = (n, fr, titel, rg, wort, akku) => {
+    if(!fr.length) return;
+    const ohne = fr.filter(f => f.offen).length;
+    const mit  = fr.filter(f => !f.offen).sort((x, y) => x.tage - y.tage);
+    const faellig = mit.filter(f => f.faellig).length;
+    const bald    = mit.filter(f => f.tage <= VORWARN).length;
+    if(!ohne && !bald) return;
+    neu(n, {titel, ring:rg, akku,
+      faellig: ohne ? null : alsDatum(mit[0].ziel),
+      stand: ohne    ? `${ohne} von ${fr.length} ohne ${wort}`
+           : faellig ? `${faellig} von ${fr.length} überfällig`
+           :           `${bald} von ${fr.length} fällig`});
+  };
+  NACHWEISE.filter(n => !n.spaeter).forEach(n => {
+    const d = DAT[n.k];
+    if(n.art === 'fremd'){
+      if(!hatEintraege(n, '')) return;
+      fristAufgabe(n, fristen(n.k), n.label, fremdRing(n.k), 'Prüfdatum', false);
+      if(n.akku && akkuAn()) fristAufgabe(n, akkuFristen(), 'RWA-Akkus', akkuRing(), 'Tauschdatum', true);
+      return;
+    }
+    if(n.art === 'sprinkler'){
+      /* Der wöchentliche Gang ist eine eigene Aufgabe bis Sonntag. Ein versäumter
+         Gang der Vorwoche verfällt wie bisher. */
+      if(hatEintraege(n, 'woche')){
+        const punkte = teilCfg(n.k).woch;
+        const gaenge = ((d && d.woch) || []).filter(g => inWoche(g.datum, jetzt));
+        const w = wochenBeginn(jetzt);
+        if(!(gaenge.length && gaenge.every(g => gangVoll(g, punkte))))
+          neu(n, {titel:n.label + ' · wöchentlich', ziel:'woch', ring:ring(n, 'woche'),
+            faellig:new Date(w.getFullYear(), w.getMonth(), w.getDate() + 6),
+            stand: gaenge.length ? 'Kontrollgang unvollständig' : 'Kontrollgang fehlt'});
+      }
+      if(!hatEintraege(n, 'monat')) return;
+    }
+    const quartal = n.art === 'medien';
+    if(!hatEintraege(n, quartal ? 'quartal' : 'monat')) return;
+    /* Erledigt heißt wie beim grünen Ring: der laufende Zeitraum ist ausgegeben. */
+    if((quartal ? expQuartal(n.k) : expMonat(n.k)) === jetztZeitraum(quartal)) return;
+    const runde = rundeVon(n), los = begonnen(n);
+    const ueber = runde < jetztZeitraum(quartal);
+    let stand;
+    if(n.art === 'medien'){
+      const l = stellen();
+      const fertig = d ? l.filter(z => String((d.stand || {})[z.key] ?? '').trim() !== '').length : 0;
+      stand = !fertig ? 'noch nicht begonnen'
+            : medienVoll(d) ? 'vollständig, noch nicht ausgegeben'
+            : `${fertig} von ${l.length} abgelesen`;
+    }else if(n.art === 'sprinkler'){
+      stand = !los ? 'noch nicht begonnen'
+            : sprinklerVoll(d) ? 'vollständig, noch nicht ausgegeben'
+            : !(d.mon || []).length ? 'monatliche Kontrolle fehlt'
+            : 'noch nicht vollständig';
+    }else{
+      const alle = teilCfg(n.k).anlagen.length;
+      const erfasst = zeilenJetzt(n.k).filter(z => z.status).length;
+      stand = !erfasst ? 'noch nicht begonnen'
+            : erfasst >= alle ? 'vollständig, noch nicht ausgegeben'
+            : `${alle - erfasst} von ${alle} offen`;
+    }
+    neu(n, {titel: n.label + (n.art === 'sprinkler' ? ' · monatlich' : '')
+                 + (ueber ? ' · ' + zeitraumText(runde) : ''),
+            ziel: n.art === 'sprinkler' ? 'mon' : '',
+            ring: ring(n, quartal ? 'quartal' : 'monat'),
+            faellig: zeitraumEnde(runde), begonnen: los, stand});
+  });
+  const sonntag = (() => { const w = wochenBeginn(jetzt);
+                           return new Date(w.getFullYear(), w.getMonth(), w.getDate() + 6); })();
+  const monatLetzter = new Date(heute0.getFullYear(), heute0.getMonth() + 1, 0);
+  const gruppeNr = g => GRUPPEN.findIndex(x => x[0] === g);
+  const rang = w => WICHTIG.findIndex(x => x[0] === w);
+  liste.forEach(a => {
+    a.tage = a.faellig ? Math.round((a.faellig - heute0) / TAG_MS) : null;
+    a.gruppe = !a.faellig || a.tage < 0   ? 'ueber'
+             : a.faellig <= sonntag       ? 'woche'
+             : a.faellig <= monatLetzter  ? 'monat' : 'bald';
+  });
+  /* Weiter als die Vorwarnzeit entfernt steht nur, was schon angefangen ist –
+     etwa eine Ablesung zu Beginn des Quartals. */
+  return liste
+    .filter(a => a.gruppe !== 'bald' || a.tage <= VORWARN || a.begonnen)
+    .sort((x, y) => gruppeNr(x.gruppe) - gruppeNr(y.gruppe)
+                 || rang(x.wichtig) - rang(y.wichtig)
+                 || (x.faellig ? x.faellig.getTime() : 0) - (y.faellig ? y.faellig.getTime() : 0)
+                 || x.pos - y.pos);
+}
+/* Die Frist hält mit geschützten Leerzeichen zusammen: wird die Zeile zu lang,
+   bricht sie zwischen Stand und Frist statt mitten im Datum. */
+const fristZeile = a => fristText0(a).replace(/ /g, '\u00a0');
+function fristText0(a){
+  if(!a.faellig) return '';
+  if(a.tage < -60) return `fällig seit ${monatKurz(`${a.faellig.getFullYear()}-${String(a.faellig.getMonth() + 1).padStart(2, '0')}`)}`;
+  if(a.tage < 0)   return `${-a.tage} ${a.tage === -1 ? 'Tag' : 'Tage'} überfällig`;
+  if(a.tage === 0) return 'fällig heute';
+  if(a.tage === 1) return 'fällig morgen';
+  return `bis ${ttmm(a.faellig)} · noch ${a.tage} Tage`;
+}
+const aufgabeKnopf = a =>
+  `<button class="btn aufgabe${a.ring ? ' ring-' + a.ring : ''}" data-nw="${a.k}" data-ziel="${a.ziel}"${a.akku ? ' data-akku="1"' : ''}>`
+  + `${esc(a.titel)}<small>${esc([a.stand, fristZeile(a)].filter(Boolean).join(' · '))}</small></button>`;
+
+/* Einen Nachweis öffnen – von der Aufgabenliste wie von „Alle Nachweise“ aus. */
+function nachweisOeffnen(k, ziel){
+  offen = k; datenFuer(offen);
+  sigAktiv = false; sprungZiel = ziel || '';
+  /* Von hier aus wird die erste offene Karte angesteuert; eine gemerkte Lage
+     aus einem früheren Grundrissbesuch gilt dann nicht mehr. */
+  sprungOffen = true; listenLage = null;
+  offenKarten = new Set();            // Bewertetes aus früheren Runden zeigt sich klein
+  go('nachweis');
+}
+function akkuOeffnen(){ datenFuer('rwa'); go('akku'); }
+const knoepfeVerdrahten = box =>
+  box.querySelectorAll('[data-nw]').forEach(b => b.onclick = () =>
+    b.dataset.akku ? akkuOeffnen() : nachweisOeffnen(b.dataset.nw, b.dataset.ziel));
+
 function renderHome(){
+  const liste = aufgaben(), gibt = irgendeinNachweis();
+  let inhalt = GRUPPEN.map(([g, titel]) => {
+    const teil = liste.filter(a => a.gruppe === g);
+    return teil.length
+      ? `<div class="eyebrow" style="margin-top:6px">${esc(titel)}</div>` + teil.map(aufgabeKnopf).join('')
+      : '';
+  }).join('');
+  if(!inhalt) inhalt = gibt
+    ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Alle Nachweise“.</p>`
+    : `<p class="muted small">Noch nichts eingetragen. Über das Zahnrad oben links geht es in die Einstellungen – dort legst du je Nachweis an, was im Haus steht.</p>`;
+  /* Darunter der Weg zu allem Übrigen. Die Grundrisse hängen sich nach, sobald
+     der Bilderspeicher geantwortet hat. */
+  $('#homeListe').innerHTML = inhalt + '<div id="homeMehr">'
+    + (gibt ? `<div class="eyebrow">Übersicht</div><button class="btn" data-alle="1">Alle Nachweise</button>` : '')
+    + '</div>';
+  knoepfeVerdrahten($('#homeListe'));
+  const alle = $('#homeListe [data-alle]');
+  if(alle) alle.onclick = () => go('alle');
+  $('#buildTag').textContent = BUILD;
+  hausKnopf();
+}
+/* Die frühere Startseite: alle Nachweise nach Takt, die Fremdprüfungen nach
+   Abstand, darunter die eigene Wartung. */
+function renderAlle(){
   const knopf = (n, t) => {
     if(n.spaeter) return `<button class="btn" disabled>${esc(n.label)} · folgt</button>`;
     const ziel = n.art === 'sprinkler' ? (t === 'monat' ? 'mon' : 'woch') : '';
@@ -2140,25 +2386,12 @@ function renderHome(){
   if(akkuAn()){
     const r = akkuRing();
     gruppen.push(['Eigene Wartung',
-      `<button class="btn${r ? ' ring-' + r : ''}" data-akku="1">RWA-Akkus${akkuStand()}</button>`]);
+      `<button class="btn${r ? ' ring-' + r : ''}" data-nw="rwa" data-ziel="" data-akku="1">RWA-Akkus${akkuStand()}</button>`]);
   }
   const inhalt = gruppen.map(([titel, knoepfe]) =>
     `<div class="eyebrow" style="margin-top:6px">${esc(titel)}</div>` + knoepfe).join('');
-  /* Eine leere Startseite ließe offen, wohin man sich wenden soll. */
-  $('#homeListe').innerHTML = inhalt || `<p class="muted small">Noch nichts eingetragen. Über das Zahnrad oben links geht es in die Einstellungen – dort legst du je Nachweis an, was im Haus steht.</p>`;
-  const akku = $('#homeListe [data-akku]');
-  if(akku) akku.onclick = () => { datenFuer('rwa'); go('akku'); };
-  $$('#homeListe [data-nw]').forEach(b => b.onclick = () => {
-    offen = b.dataset.nw; datenFuer(offen);
-    sigAktiv = false; sprungZiel = b.dataset.ziel || '';
-    /* Von hier aus wird die erste offene Karte angesteuert; eine gemerkte Lage
-       aus einem früheren Grundrissbesuch gilt dann nicht mehr. */
-    sprungOffen = true; listenLage = null;
-    offenKarten = new Set();          // Bewertetes aus früheren Runden zeigt sich klein
-    go('nachweis');
-  });
-  $('#buildTag').textContent = BUILD;
-  hausKnopf();
+  $('#alleListe').innerHTML = inhalt || `<p class="muted small">Noch nichts eingetragen. Über die Einstellungen legst du je Nachweis an, was im Haus steht.</p>`;
+  knoepfeVerdrahten($('#alleListe'));
 }
 /* Die Grundrisse gehören inzwischen zum täglichen Handwerkszeug und sollen
    nicht mehr über die Einstellungen gesucht werden müssen. Sie liegen im
@@ -2168,11 +2401,12 @@ function renderHome(){
 async function hausKnopf(){
   let liste = [];
   try{ liste = (await Bilder.alle()) || []; }catch(e){ return; }
-  const box = $('#homeListe');
+  const box = $('#homeMehr');
   if(!liste.length || current !== 'home' || !box || box.querySelector('[data-plaene]')) return;
   liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
+  /* Ohne Nachweise fehlt die Überschrift des Blocks – dann bringt sie der Knopf mit. */
   box.insertAdjacentHTML('beforeend',
-    `<div class="eyebrow" style="margin-top:6px">Haus</div>`
+    (box.querySelector('.eyebrow') ? '' : `<div class="eyebrow">Übersicht</div>`)
     + `<button class="btn" data-plaene="1">Grundrisse · ${liste.length} ${liste.length === 1 ? 'Plan' : 'Pläne'}</button>`);
   box.querySelector('[data-plaene]').onclick = () => {
     planListe = liste;                        // von hier aus wird geblättert
@@ -2477,6 +2711,7 @@ function renderNachweis(){
       const top = box.getBoundingClientRect().top;
       z.status = z.status === b.dataset.status ? '' : b.dataset.status;
       if(z.status && !z.datum) z.datum = heute();
+      if(z.status) zeitMerken(DAT[offen], a);        // fürs Tätigkeitsbuch
       /* "In Ordnung" ist der Regelfall und braucht keine Bemerkung – die Karte
          schrumpft sofort. Bei einem Mangel bleibt sie offen, dort will man in
          aller Regel etwas dazuschreiben. Aufklappen geht jederzeit wieder. */
@@ -2577,7 +2812,9 @@ function renderMedien(){
     const i = +box.dataset.i, z = liste[i];
     const feld = box.querySelector('[data-stand]');
     feld.oninput = e => {
-      d.stand[z.key] = e.target.value.trim(); saveDat(); renderBar();
+      d.stand[z.key] = e.target.value.trim();
+      if(d.stand[z.key]) zeitMerken(d, z.key);        // fürs Tätigkeitsbuch
+      saveDat(); renderBar();
       box.classList.toggle('fertig', !!d.stand[z.key]);
     };
     /* Beim Verlassen des Feldes wandert der abgelesene Zähler an den Anfang –
@@ -2670,10 +2907,13 @@ function renderSprinkler(){
     box.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
       const i = seg.dataset.p;
       g.w[i] = g.w[i] === b.dataset.w ? '' : b.dataset.w;
+      if(g.w[i]) zeitMerken(g, i);                    // fürs Tätigkeitsbuch
       saveDat(); renderSprinkler(); renderBar();
     }));
     box.querySelectorAll('input.bar').forEach(inp => inp.oninput = () => {
-      g.w[inp.dataset.p] = inp.value.trim(); saveDat(); renderBar();
+      g.w[inp.dataset.p] = inp.value.trim();
+      if(g.w[inp.dataset.p]) zeitMerken(g, inp.dataset.p);
+      saveDat(); renderBar();
     });
     box.querySelector('[data-weg]').onclick = () => {
       d[art].splice(+box.dataset.g, 1); saveDat(); renderSprinkler(); renderBar();
@@ -2814,10 +3054,31 @@ function renderSetSub(){
   if(a === 'tausch'){ setTausch(dyn);   return; }
   if(a === 'akkus') { setAkkus(dyn);     return; }
   const n = NW(k);
-  if(n.art === 'medien')         setStellen(dyn);
-  else if(n.art === 'fremd')     setFremd(dyn, k);
-  else if(n.art === 'sprinkler') setSprinkler(dyn, k);
-  else                           setAnlagen(dyn, k);
+  /* Oben die Wichtigkeit für die Aufgabenliste, darunter wie gehabt die Seite
+     des Nachweises in einem eigenen Behälter. */
+  dyn.innerHTML = '<div id="setWichtig"></div><div id="setNwInhalt"></div>';
+  wichtigWahl($('#setWichtig'), k);
+  const box = $('#setNwInhalt');
+  if(n.art === 'medien')         setStellen(box);
+  else if(n.art === 'fremd')     setFremd(box, k);
+  else if(n.art === 'sprinkler') setSprinkler(box, k);
+  else                           setAnlagen(box, k);
+}
+/* Drei Stufen, gesichert beim Antippen. Aufgefrischt wird nur die Wahl selbst. */
+function wichtigWahl(box, k){
+  const zeichnen = () => {
+    const w = wichtigVon(k);
+    box.innerHTML =
+      `<div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
+        WICHTIG.map(([s, t]) => `<button type="button" data-w="${s}" aria-pressed="${w === s}">${t}</button>`).join('')
+      }</div></div>
+       <p class="muted small" style="margin:-6px 0 14px">Ordnet die Aufgabenliste innerhalb einer Gruppe: Wichtiges steht weiter oben. Überfälliges steht trotzdem immer zuerst.${
+         NW(k).akku ? ' Gilt auch für den Akkutausch.' : ''}</p>`;
+    box.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
+      teilCfg(k).wichtig = b.dataset.w; saveCfg(); zeichnen();
+    });
+  };
+  zeichnen();
 }
 /* Verlässt jemand eine gefüllte neue Zeile gleich über den Zurück-Pfeil, wird
    sie erst gesichert, wenn das Menü schon steht – die Anzahl dort hinkte dann
@@ -3720,11 +3981,14 @@ function ortStatus(key){
   if(stellen().some(z => z.key === key)){
     const d = DAT.medien;
     if(d && String((d.stand || {})[key] ?? '').trim() !== '') return 'gruen';
+    if(rundeUeberfaellig(NW('medien'))) return 'rot';
     return tageBis(quartalsEnde(jetzt)) <= 14 ? 'rot' : 'gelb';
   }
   const t = String(key).split('|');
   const d = DAT[t[0]], z = d && d.zeilen && d.zeilen[t.slice(1).join('|')];
   if(z && z.status) return 'gruen';
+  const n = NW(t[0]);
+  if(n && rundeUeberfaellig(n)) return 'rot';      // Runde eines vergangenen Monats
   return tageBis(monatsEnde(jetzt)) <= 7 ? 'rot' : 'gelb';
 }
 /* --- Kategorien der Übersicht ----------------------------------------------
@@ -4075,7 +4339,7 @@ async function alsDateiSichern(){
         daten:await blobZuText(new Blob([q.daten], {type:'application/pdf'}))})));
   }catch(e){ /* ohne Bilderspeicher eben ohne Pläne */ }
   const paket = {format:CFG_FORMAT, stand:heute(),
-                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, plaene, quellen};
+                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, plaene, quellen};
   const name = `Nachweise ${heute().slice(2)}.json`;
   void plaene;
   const datei = new File([new Blob([JSON.stringify(paket, null, 1)], {type:'application/json'})],
@@ -4101,6 +4365,9 @@ async function paketUebernehmen(paket){
   TAUSCH  = Array.isArray(paket.tausch) ? paket.tausch : [];
   EXP     = paket.exp    || {};
   saveCfg(); saveDat(); saveAlt(); saveTausch(); saveExp();
+  /* Ältere Sicherungen kennen das Tätigkeitsbuch nicht – dann bleibt das
+     vorhandene stehen, statt geleert zu werden. */
+  if(Array.isArray(paket.buch)){ BUCH = paket.buch; saveBuch(); }
   /* Die Pläne kommen zurück in den Bilderspeicher; vorhandene gleichen Namens
      werden ersetzt, weil die Kennung mitreist. */
   let n = 0;
@@ -4686,6 +4953,7 @@ async function ausgeben(){
   }
   EXP[offen] = n.art === 'medien' ? quartalVon(stichtag) : monatVon(stichtag);
   saveExp();
+  buchSchreiben(offen, d0, EXP[offen]);
   /* Nach der Ausgabe steht der Nachweis wieder leer bereit – die nächste Runde
      beginnt von vorn. */
   delete DAT[offen]; saveDat();
