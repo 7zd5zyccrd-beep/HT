@@ -10,6 +10,23 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.23 15.09.2026  Prüfhistorie (Stufe 1 von 3). Beim Ausgeben legt die App
+                    eine Kopie des Blattes ab, genau so, wie es an den
+                    Kurzbefehl ging, dazu die Ergebnisse je Anlage bzw. Zähler.
+                    „Alle Nachweise“ → „Ausgegebene Blätter“ zeigt je Nachweis
+                    die Runden: ansehen und erneut teilen, löschen (die ganze
+                    Fassung, nach Rückfrage) und die jüngste Runde zurückholen,
+                    solange keine neue begonnen ist. Zurückgeholt wird ohne
+                    Unterschrift; eine zweite Ausgabe desselben Zeitraums macht
+                    die ältere Fassung zu „ersetzt“. Feuerlöscher, RWA und
+                    Akkutausch haben keine Ausgabe: dort wandert ein Datum in
+                    den Verlauf, sobald ein späteres es ablöst – am Tag des
+                    Eintrags korrigiert gilt es als Tippfehler. Jede
+                    aufgeklappte Karte trägt rechts in der Titelzeile ein
+                    Uhrsymbol für ihren Verlauf (neben ⌖ und Pfeilen hätte die
+                    Zeile auf dem iPhone nicht mehr gepasst). Die Historie liegt
+                    in IndexedDB (Fassung 3) und reist in der Sicherungsdatei
+                    mit; sie folgt Umbenennen und Zählertausch.
   v1.22 15.09.2026  „Weg neu bilden“ am Ende des Rundgangs: verwirft den
                     gespeicherten Weg nach einer Rückfrage und bildet ihn wie
                     beim ersten Öffnen neu – aus den Reihenfolgen der Nachweise
@@ -1151,6 +1168,25 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .paper .lzeile{font-size:10pt;line-height:1.5;display:flex;gap:8px;
   padding:1px 0;break-inside:avoid}
 .paper .lnr{flex:0 0 auto;width:26px;text-align:right;font-weight:700}
+/* --- Historie ---------------------------------------------------------------
+   Das Uhrsymbol steht rechts in der Titelzeile einer Karte. Neben dem ⌖ und den
+   Pfeilen hätte die Zeile auf dem iPhone nicht mehr gepasst: Datumsfeld und
+   vier Knöpfe brauchen rund 345 px, die Karte bietet gut 310. Der negative
+   Rand hält die Titelzeile so hoch wie bisher. */
+.pos .name.mitVerlauf{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.pos .name.mitVerlauf > span{min-width:0}
+.verlaufKnopf{
+  -webkit-appearance:none;appearance:none;
+  flex:0 0 auto;width:32px;height:32px;margin:-5px 0 -5px 0;padding:0;
+  border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.verlaufKnopf svg{display:block}
+.hist .hkopf{font-weight:600}
+.hist .row{margin-top:10px}
+.vzeile{padding:7px 0}
+.vzeile + .vzeile{border-top:1px solid var(--line)}
+.vzeile .vwann{font-weight:600;font-size:15px}
 </style>
 </head>
 <body>
@@ -1191,6 +1227,19 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
     <!-- Erledigte Aufgaben -->
     <section class="view" id="view-erledigt">
       <div id="erledigtListe"></div>
+    </section>
+
+    <!-- Historie: die ausgegebenen Blätter, erst je Nachweis, dann die Runden -->
+    <section class="view" id="view-historie">
+      <div id="histListe"></div>
+    </section>
+    <section class="view" id="view-histnw">
+      <div id="histNwListe"></div>
+    </section>
+
+    <!-- Verlauf einer Anlage, eines Zählers oder eines Objekts -->
+    <section class="view" id="view-verlauf">
+      <div id="verlaufBox"></div>
     </section>
 
     <!-- Ein Nachweis -->
@@ -1268,7 +1317,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
       </div>
 
       <div id="blockGeraet" hidden>
-        <p class="muted small" style="margin:0 0 10px">Sichert Objekt, Prüfer, Anlagenlisten, Checklisten, Zählstellen samt Ablesereihenfolge, die laufenden Nachweise, die Stände des Vorquartals, die vermerkten Zählerwechsel und die Grundrisse in eine Datei. Auf dem neuen Gerät dieselbe Datei einlesen.</p>
+        <p class="muted small" style="margin:0 0 10px">Sichert Objekt, Prüfer, Anlagenlisten, Checklisten, Zählstellen samt Ablesereihenfolge, die laufenden Nachweise, die Stände des Vorquartals, die vermerkten Zählerwechsel, die Grundrisse und die Historie in eine Datei. Auf dem neuen Gerät dieselbe Datei einlesen.</p>
         <button class="btn ghost klein" id="btnCfgAus">Alles sichern</button>
         <button class="btn ghost klein" id="btnCfgEin" style="margin-top:10px">Aus Datei übernehmen</button>
         <input type="file" id="cfgFile" accept="application/json,.json" hidden>
@@ -1318,7 +1367,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.22';
+const VERSION = 'v1.23';
 const BUILD   = VERSION + ' · 15.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1326,6 +1375,8 @@ const BUILD   = VERSION + ' · 15.09.2026';
    Feld 24×24 mittig ausfüllt (x 3–21, y 4,5–19,5): sonst sitzt das Symbol im
    runden Knopf sichtbar zu hoch, auch wenn der Knopf selbst mittig ist. */
 const FRISCH_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>';
+/* Uhr für den Verlauf einer Karte. */
+const UHR_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
 const PLAN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5 3 9l9 4.5L21 9z"/><path d="M3 15l9 4.5L21 15"/></svg>';
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
 const $  = s => document.querySelector(s);
@@ -1353,11 +1404,12 @@ const Bilder = {
     if(this.db) return Promise.resolve(this.db);
     return new Promise((ok, fehl) => {
       /* Fassung 2: neben den Bildern liegen jetzt die PDF-Quellen (für das
-         scharfe Nachzeichnen) und pdf.js selbst (damit es ohne Netz geht). */
-      const r = indexedDB.open('nwBilder', 2);
+         scharfe Nachzeichnen) und pdf.js selbst (damit es ohne Netz geht).
+         Fassung 3: dazu die Historie. */
+      const r = indexedDB.open('nwBilder', 3);
       r.onupgradeneeded = () => {
         const db = r.result;
-        ['plaene', 'quellen', 'lib'].forEach(n => {
+        ['plaene', 'quellen', 'lib', 'historie'].forEach(n => {
           if(!db.objectStoreNames.contains(n)) db.createObjectStore(n, {keyPath:'id'});
         });
       };
@@ -1393,6 +1445,22 @@ const Bilder = {
   get(id){ return this.lauf('readonly',  st => st.get(id)); },
   alle(){  return this.lauf('readonly',  st => st.getAll()); },
   weg(id){ return this.lauf('readwrite', st => st.delete(id)); }
+};
+/* --- Historie ---------------------------------------------------------------
+   Im selben Speicher wie die Pläne, in einem eigenen Bereich – der gewöhnliche
+   Speicher fasst bei Safari nur wenige Megabyte, und ein Blatt mit Unterschrift
+   hat 40 bis 80 KB. Drei Arten von Einträgen:
+   runde    – eine ausgegebene Runde: das Blatt als fertiges Dokument, genau so,
+              wie es an den Kurzbefehl ging, die Ergebnisse je Anlage bzw. Zähler
+              und der Stand der Runde (roh) fürs Zurückholen.
+   pruefung – bei Feuerlöschern und RWA ein Prüfdatum, das ein späteres ablöste.
+   akku     – dasselbe für den Akkutausch der RWA.
+   Keine Blobs, nur Text und Zahlen (siehe v0.72). */
+const Historie = {
+  put(o){   return Bilder.lauf('readwrite', st => st.put(o),     'historie'); },
+  alle(){   return Bilder.lauf('readonly',  st => st.getAll(),   'historie').then(l => l || []); },
+  weg(id){  return Bilder.lauf('readwrite', st => st.delete(id), 'historie'); },
+  leeren(){ return Bilder.lauf('readwrite', st => st.clear(),    'historie'); }
 };
 /* --- PDF-Pläne --------------------------------------------------------------
    Grundrisse liegen meist als PDF vor. Eingebettet ließe sich eine PDF zwar
@@ -1952,6 +2020,9 @@ function maengelUebernehmen(k, d, zeitraum){
   funde.forEach(f => {
     const alt = offenerMangel(f.quelle);
     if(alt){
+      /* Eine zurückgeholte und erneut ausgegebene Runde bringt ihre eigenen
+         Mängel noch einmal mit – das ist kein erneuter Befund. */
+      if(alt.zeitraum === zeitraum) return;
       alt.erneut = alt.erneut || [];
       if(!alt.erneut.some(e => e.zeitraum === zeitraum)) alt.erneut.push({datum:f.tag, zeitraum, text:f.text});
       return;
@@ -2245,6 +2316,7 @@ function ring(n, takt){
 
 /* ---------- Ansichten ---------- */
 const TITEL = {home:'Betriebsnachweise', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigte Aufgaben', nachweis:'Nachweis', blatt:'Blatt',
+               historie:'Historie', histnw:'Historie', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
@@ -2267,6 +2339,7 @@ function go(name, push = true){
   current = name;
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   $('#titel').textContent = name === 'nachweis' && offen ? NW(offen).label
+                          : name === 'histnw' && histK ? NW(histK).label
                           : name === 'setsub' ? setTitel : TITEL[name];
   const start = name === 'home', bb = $('#btnBack');
   bb.innerHTML = start ? GEAR_SVG : '&#8592;';
@@ -2291,6 +2364,9 @@ function go(name, push = true){
   if(name === 'aufgabe')  renderAufgabe();
   if(name === 'rundgang') renderRundgang();
   if(name === 'erledigt') renderErledigt();
+  if(name === 'historie') renderHistorie();
+  if(name === 'histnw')   renderHistNw();
+  if(name === 'verlauf')  renderVerlauf();
   if(name === 'nachweis') renderNachweis();
   if(name === 'akku')     renderAkku();
   if(name === 'plaene')   renderPlaeneWahl();
@@ -2325,8 +2401,14 @@ function frage(titel, text, jaText, aufJa){
   $('#dlgJa').onclick   = () => { zu(); aufJa(); };
   $('#dlgNein').onclick = zu;
 }
+/* Nur ein Hinweis, nichts zu entscheiden: ein Knopf. */
+function hinweis(titel, text){
+  frage(titel, text, 'OK', () => {});
+  $('#dlgNein').hidden = true;
+}
 /* Dasselbe Fenster, nur mit einer Liste statt Ja und Nein. */
 function dlgZuruecksetzen(){
+  $('#dlgNein').hidden = false;
   $('#dlgText').hidden = false;
   $('#dlgKnoepfe').hidden = false;
   $('#dlgListe').hidden = true;
@@ -2991,7 +3073,7 @@ function renderRundgang(){
       const v = zahl(d.stand[o.id]) != null && alt && zahl(alt.stand) != null
         ? zahlText(zahl(d.stand[o.id]) - zahl(alt.stand)) : '';
       return `<div class="pos${steht(o) ? ' fertig' : ''}" data-w="${esc(w)}">${typ}
-        <div class="name">${esc(z.partei)} · ${esc(namen[o.id] || z.medium)}</div>
+        ${nameMitVerlauf(`${esc(z.partei)} · ${esc(namen[o.id] || z.medium)}`)}
         <div class="muted small">Nr. ${esc(z.nr)}${z.ort ? ' · ' + esc(z.ort) : ''}</div>
         <div class="row" style="margin-top:8px;align-items:center">
           <input inputmode="decimal" data-stand="1" value="${esc(d.stand[o.id] || '')}" placeholder="Zählerstand">
@@ -3012,7 +3094,7 @@ function renderRundgang(){
         <div class="muted small">${esc(dText(z.datum))}${z.datum ? ' · ' : ''}${esc(z.status)}${z.bem ? ' · ' + esc(z.bem) : ''}</div>
       </div>`;
     return `<div class="pos${klasse}" data-w="${esc(w)}">${typ}
-      <div class="name${z.status ? ' zu' : ''}">${esc(o.id)}</div>${mangelHinweis(o.ort)}
+      ${nameMitVerlauf(esc(o.id), z.status ? ' zu' : '')}${mangelHinweis(o.ort)}
       <div class="kopf">
         <input type="date" data-feld="datum" value="${esc(z.datum)}" aria-label="Datum">
         ${pfeile(w, !istOben)}
@@ -3063,6 +3145,12 @@ function renderRundgang(){
     if(ortKnopf) ortKnopf.onclick = () => {
       const z = o.k === 'medien' ? stellenListe.find(x => x.key === o.id) : null;
       verorten(o.ort, z ? `${z.partei} · ${namen[o.id] || z.medium}` : o.id);
+    };
+    const uhr = box.querySelector('[data-verlauf]');
+    if(uhr) uhr.onclick = ev => {
+      ev.stopPropagation();
+      const z = o.k === 'medien' ? stellenListe.find(x => x.key === o.id) : null;
+      verlaufOeffnen(o.k, o.id, z ? `${z.partei} · ${namen[o.id] || z.medium}` : o.id);
     };
     /* Pfeile: Tausch mit der benachbarten offenen Karte – im gemeinsamen Weg. */
     const schieben = richtung => {
@@ -3415,8 +3503,10 @@ function renderAlle(){
   }
   const inhalt = gruppen.map(([titel, knoepfe]) =>
     `<div class="eyebrow" style="margin-top:6px">${esc(titel)}</div>` + knoepfe).join('');
-  $('#alleListe').innerHTML = inhalt || `<p class="muted small">Noch nichts eingetragen. Über die Einstellungen legst du je Nachweis an, was im Haus steht.</p>`;
+  $('#alleListe').innerHTML = (inhalt || `<p class="muted small">Noch nichts eingetragen. Über die Einstellungen legst du je Nachweis an, was im Haus steht.</p>`)
+    + '<div id="alleHist"></div>';
   knoepfeVerdrahten($('#alleListe'));
+  histKnopf();
 }
 /* Die Grundrisse gehören inzwischen zum täglichen Handwerkszeug und sollen
    nicht mehr über die Einstellungen gesucht werden müssen. Sie liegen im
@@ -3486,7 +3576,7 @@ function renderFremd(){
         const z = d.zeilen[a], f = frist(z.datum, t.jahre);
         const klasse = f.offen || f.faellig ? ' mangel' : ' fertig';
         return `<div class="pos${klasse}" data-i="${i}">
-          <div class="name">${esc(a)}</div>
+          ${nameMitVerlauf(esc(a))}
           <div class="kopf">
             <input type="date" data-feld="datum" value="${esc(z.datum || '')}" aria-label="Prüfdatum">
             <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">⌖</button></span>
@@ -3500,17 +3590,19 @@ function renderFremd(){
     if(!tag){ toast('Kein Datum gewählt'); return; }
     frage('Für alle übernehmen',
       `Alle ${t.anlagen.length} Objekte bekommen den ${dText(tag)} als Prüfdatum.\n\n`
-      + 'Bereits eingetragene Daten werden dabei überschrieben.',
+      + 'Bereits eingetragene Daten werden dabei ersetzt; das bisherige Datum bleibt im Verlauf.',
       'Übernehmen', () => {
-        t.anlagen.forEach(a => { d.zeilen[a].datum = tag; });
+        t.anlagen.forEach(a => datumAbloesen('pruefung', offen, a, d.zeilen[a], 'datum', 'seit', tag));
         saveDat(); toast('Eingetragen'); renderNachweis(); renderBar();
       });
   };
   $$('#nwListe .pos').forEach(box => {
     const a = t.anlagen[+box.dataset.i], z = d.zeilen[a];
     box.querySelector('[data-ort]').onclick = () => verorten(offen + '|' + a, a);
+    box.querySelector('[data-verlauf]').onclick = () => verlaufOeffnen(offen, a, a);
     box.querySelector('[data-feld="datum"]').onchange = e => {
-      z.datum = e.target.value; saveDat(); renderNachweis();
+      datumAbloesen('pruefung', offen, a, z, 'datum', 'seit', e.target.value);
+      saveDat(); renderNachweis();
     };
     box.querySelector('[data-feld="bem"]').oninput = e => { z.bem = e.target.value; saveDat(); };
   });
@@ -3530,7 +3622,7 @@ function akkuKarte(a, i, d){
   const f = j ? frist(z.akkuDatum, j) : null;
   const klasse = !f ? '' : (f.offen || f.faellig ? ' mangel' : ' fertig');
   return `<div class="pos${klasse}" data-i="${i}">
-    <div class="name">${esc(a)}</div>
+    ${nameMitVerlauf(esc(a))}
     <div class="kopf" style="margin:0">
       <span class="muted small">Getauscht am</span>
       <input type="date" class="dat" data-feld="datum" value="${esc(z.akkuDatum || '')}" aria-label="Tauschdatum">
@@ -3582,8 +3674,10 @@ function akkuVerdrahten(box){
      dieselbe Anlage im Haus, also derselbe Punkt im Plan – gleich, von wo aus
      er gesetzt wurde. */
   box.querySelector('[data-ort]').onclick = () => verorten('rwa|' + a, a);
+  box.querySelector('[data-verlauf]').onclick = () => verlaufOeffnen('rwa', a, a, 'akku');
   box.querySelector('[data-feld="datum"]').onchange = e => {
-    z.akkuDatum = e.target.value; saveDat(); akkuFrischen(box); akkuVorbFrisch();
+    datumAbloesen('akku', 'rwa', a, z, 'akkuDatum', 'akkuSeit', e.target.value);
+    saveDat(); akkuFrischen(box); akkuVorbFrisch();
   };
 }
 function renderAkku(){
@@ -3616,7 +3710,7 @@ function renderAkku(){
       `${betroffen.length === 1 ? 'Eine Anlage bekommt' : betroffen.length + ' Anlagen bekommen'} den ${dText(tag)} als Tauschdatum.\n\n`
       + 'Anlagen ohne gewählten Akkutyp bleiben unberührt.',
       'Übernehmen', () => {
-        betroffen.forEach(a => { d.zeilen[a].akkuDatum = tag; });
+        betroffen.forEach(a => datumAbloesen('akku', 'rwa', a, d.zeilen[a], 'akkuDatum', 'akkuSeit', tag));
         saveDat(); toast('Eingetragen'); renderAkku();
       });
   };
@@ -3826,7 +3920,7 @@ function renderNachweis(){
        Erdgeschoss, Gang neben Treppenhaus" in eine schmale Spalte und brach in
        viele kurze Zeilen um. */
     return `<div class="pos${klasse}" data-i="${i}">
-      <div class="name${n.kompakt ? ' zu' : ''}">${esc(a)}</div>${mangelHinweis(offen + '|' + a)}
+      ${nameMitVerlauf(esc(a), n.kompakt ? ' zu' : '')}${mangelHinweis(offen + '|' + a)}
       <div class="kopf">
         <input type="date" data-feld="datum" value="${esc(z.datum)}" aria-label="Datum">
         ${pfeile}
@@ -3861,6 +3955,8 @@ function renderNachweis(){
     /* Der Schlüssel trägt den Nachweis mit: "Anlage 1" gibt es in mehreren
        Listen, die Stellen im Haus sind aber verschiedene. */
     box.querySelector('[data-ort]').onclick = () => verorten(offen + '|' + a, a);
+    /* Die Titelzeile klappt die Karte zu – der Tipp auf die Uhr soll das nicht. */
+    box.querySelector('[data-verlauf]').onclick = e => { e.stopPropagation(); verlaufOeffnen(offen, a, a); };
     box.querySelectorAll('[data-status]').forEach(b => b.onclick = () => {
       const top = box.getBoundingClientRect().top;
       z.status = z.status === b.dataset.status ? '' : b.dataset.status;
@@ -3933,7 +4029,7 @@ function renderMedien(){
     const v = zahl(d.stand[z.key]) != null && alt && zahl(alt.stand) != null
       ? zahlText(zahl(d.stand[z.key]) - zahl(alt.stand)) : '';
     return `<div class="pos${d.stand[z.key] ? ' fertig' : ''}" data-i="${i}">
-      <div class="name">${esc(z.partei)} · ${esc(namen[z.key] || z.medium)}</div>
+      ${nameMitVerlauf(`${esc(z.partei)} · ${esc(namen[z.key] || z.medium)}`)}
       <div class="muted small">Nr. ${esc(z.nr)}${z.ort ? ' · ' + esc(z.ort) : ''}</div>
       <div class="row" style="margin-top:8px;align-items:center">
         <input inputmode="decimal" data-stand="1" value="${esc(d.stand[z.key] || '')}" placeholder="Zählerstand">
@@ -3999,6 +4095,8 @@ function renderMedien(){
     if(runter) runter.onclick = () => tausch(nachbarOffen(i, 1));
     box.querySelector('[data-ort]').onclick = () =>
       verorten(z.key, `${z.partei} · ${namen[z.key] || z.medium}`);
+    box.querySelector('[data-verlauf]').onclick = () =>
+      verlaufOeffnen('medien', z.key, `${z.partei} · ${namen[z.key] || z.medium}`);
   });
   $('#medDatum').onchange = e => { d.datum = e.target.value; saveDat(); renderBar(); };
   listenSprung(p => String(d.stand[liste[reihe[p]].key] ?? '').trim() === '');
@@ -4937,6 +5035,7 @@ function tauschAnwenden(dran){
     zeitUmhaengen(d, x.key, neuStelle.key);
     aufgabenUmhaengen('medien', x.key, neuStelle.key);
     wegUmhaengen('medien', x.key, neuStelle.key);
+    historieUmhaengen('medien', x.key, neuStelle.key);
   });
   saveCfg(); saveAlt(); saveDat(); saveTausch();
   return getan;
@@ -4983,6 +5082,7 @@ function anlageUmbenennen(k, alt, neu){
   }
   aufgabenUmhaengen(k, alt, neu);
   wegUmhaengen(k, alt, neu);
+  historieUmhaengen(k, alt, neu);
 }
 /* Dasselbe für eine Zählstelle: an ihrem Schlüssel hängen zusätzlich der Stand
    des Vorquartals, der laufende Wert und der Platz im Ableseweg. */
@@ -4999,6 +5099,7 @@ function stelleUmbenennen(alt, neu){
   if(j >= 0) t.folge[j] = neu;
   aufgabenUmhaengen('medien', alt, neu);
   wegUmhaengen('medien', alt, neu);
+  historieUmhaengen('medien', alt, neu);
 }
 
 /* --- Grundrisse -------------------------------------------------------------
@@ -5672,8 +5773,10 @@ async function alsDateiSichern(){
       ({id:q.id, stand:q.stand,
         daten:await blobZuText(new Blob([q.daten], {type:'application/pdf'}))})));
   }catch(e){ /* ohne Bilderspeicher eben ohne Pläne */ }
+  let historie = [];
+  try{ historie = await Historie.alle(); }catch(e){ /* ohne Speicher ohne Historie */ }
   const paket = {format:CFG_FORMAT, stand:heute(),
-                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB, plaene, quellen};
+                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB, plaene, quellen, historie};
   const name = `Nachweise ${heute().slice(2)}.json`;
   void plaene;
   const datei = new File([new Blob([JSON.stringify(paket, null, 1)], {type:'application/json'})],
@@ -5704,6 +5807,14 @@ async function paketUebernehmen(paket){
   if(Array.isArray(paket.buch)){ BUCH = paket.buch; saveBuch(); }
   if(Array.isArray(paket.aufg)){ AUFG = paket.aufg; saveAufg(); }
   if(paket.vorb && typeof paket.vorb === 'object'){ VORB = paket.vorb; saveVorb(); }
+  /* Die Historie ersetzt die vorhandene ganz, wie die übrigen Daten. Ältere
+     Sicherungen kennen sie nicht – dann bleibt die vorhandene stehen. */
+  if(Array.isArray(paket.historie)){
+    try{
+      await Historie.leeren();
+      for(const e of paket.historie) await Historie.put(e);
+    }catch(e){ toast('Historie konnte nicht übernommen werden'); }
+  }
   /* Die Pläne kommen zurück in den Bilderspeicher; vorhandene gleichen Namens
      werden ersetzt, weil die Kennung mitreist. */
   let n = 0;
@@ -5738,7 +5849,7 @@ $('#cfgFile').onchange = e => {
     frage('Alles übernehmen',
       `Die Datei vom ${dText(paket.stand || '')} ersetzt sämtliche Einstellungen und Daten `
       + 'dieses Geräts: Objekt, Prüfer, Anlagenlisten, Checklisten, Zählstellen, laufende '
-      + 'Nachweise, Stände des Vorquartals und vermerkte Zählerwechsel.',
+      + 'Nachweise, Stände des Vorquartals, vermerkte Zählerwechsel und die Historie.',
       'Übernehmen', () => paketUebernehmen(paket));
   };
   leser.readAsText(f);
@@ -6229,6 +6340,373 @@ async function planBlattZeigen(ids){
   go('blatt');
 }
 
+/* ---------- Historie ----------------------------------------------------------
+   Was hinausging, bleibt nachlesbar. Je ausgegebener Runde liegt das Blatt als
+   fertiges Dokument in der Historie, dazu die Ergebnisse je Anlage bzw. Zähler.
+   Aus den Ergebnissen entsteht der Verlauf einer Karte; das Blatt lässt sich
+   ansehen, erneut teilen und – als jüngste Runde eines Nachweises – zurückholen,
+   um es zu korrigieren. */
+const zeitraumVoll = z => {
+  const [j, r] = String(z || '').split('-');
+  if(!r) return String(z || '');
+  return r[0] === 'Q' ? `${r.slice(1)}. Quartal ${j}` : `${MONATE[+r - 1] || r} ${j}`;
+};
+const rund3 = v => v == null ? null : Math.round(v * 1000) / 1000;
+let histK = null, verlaufZiel = null;
+
+/* Verbrauch eines Zählers im Quartal, gerechnet wie im Blatt: ohne Wechsel
+   Stand minus Vorquartal, mit Wechsel der alte Zähler bis zum Ausbau plus der
+   neue ab dem Einbau. Als Zahl abgelegt, damit spätere Vergleiche damit rechnen
+   können. */
+function verbrauchVon(d, z, quartal){
+  const jetzt = zahl((d.stand || {})[z.key]);
+  const w = tauscheIm(quartal).filter(x => x.neuKey === z.key);
+  if(!w.length){
+    const alt = MED_ALT[z.key] ? zahl(MED_ALT[z.key].stand) : null;
+    return {verbrauch: jetzt != null && alt != null ? rund3(jetzt - alt) : null, wechsel:false};
+  }
+  let summe = 0;
+  for(const x of w){
+    const vor = zahl(x.vor), aus = zahl(x.aus);
+    if(vor == null || aus == null) return {verbrauch:null, wechsel:true};
+    summe += aus - vor;
+  }
+  const ein = zahl(w[w.length - 1].ein);
+  if(jetzt == null || ein == null) return {verbrauch:null, wechsel:true};
+  return {verbrauch:rund3(summe + jetzt - ein), wechsel:true};
+}
+
+/* Der Eintrag einer Runde. roh ist der Stand der Runde ohne Unterschrift – eine
+   zurückgeholte Runde wird neu unterschrieben. Für die Ablesung kommen die
+   Stände des Vorquartals dazu, wie sie VOR der Ausgabe standen, und die Zahl der
+   vermerkten Zählerwechsel: ändert sie sich später, passt der alte Stand nicht
+   mehr, und das Zurückholen wird verweigert. */
+function rundeFuerHistorie(k, d, zeitraum, name, html){
+  const n = NW(k), roh = JSON.parse(JSON.stringify(d || {}));
+  delete roh.signatur;
+  const e = {id:neueId(), art:'runde', k, zeitraum, aus:heute(), ausMs:Date.now(),
+             name, html, roh, ergebnisse:{}, expVorher:EXP[k] || '', zurueck:''};
+  if(n.art === 'medien'){
+    const namen = medienNamen();
+    e.altVorher = {};
+    e.tauschAnzahl = TAUSCH.length;
+    stellen().forEach(z => {
+      const alt = MED_ALT[z.key];
+      e.altVorher[z.key] = alt ? Object.assign({}, alt) : null;
+      const v = verbrauchVon(d, z, zeitraum);
+      e.ergebnisse[z.key] = {nr:z.nr, name:namen[z.key] || z.medium, einheit:z.einheit,
+        stand:String((d.stand || {})[z.key] ?? '').trim(), vor:alt ? alt.stand : '',
+        verbrauch:v.verbrauch, wechsel:v.wechsel, datum:d.datum || ''};
+    });
+  }else if(n.art !== 'sprinkler'){
+    teilCfg(k).anlagen.forEach(a => {
+      const z = (d.zeilen || {})[a];
+      if(z) e.ergebnisse[a] = {datum:z.datum || '', status:z.status || '', bem:z.bem || ''};
+    });
+  }
+  return e;
+}
+
+/* Welche Fassung gilt: je Nachweis und Zeitraum die zuletzt ausgegebene, die
+   übrigen sind ersetzt. Gerechnet statt gespeichert – wird die neuere gelöscht,
+   gilt die ältere von selbst wieder. Sortiert: jüngster Zeitraum zuerst. */
+function historieOrdnen(liste){
+  const runden = (liste || []).filter(e => e.art === 'runde');
+  const neueste = {};
+  runden.forEach(e => {
+    const g = e.k + '|' + e.zeitraum;
+    if(!neueste[g] || (e.ausMs || 0) > (neueste[g].ausMs || 0)) neueste[g] = e;
+  });
+  runden.forEach(e => { e.ersetzt = neueste[e.k + '|' + e.zeitraum] !== e; });
+  return runden.sort((a, b) => String(b.zeitraum).localeCompare(String(a.zeitraum))
+                            || (b.ausMs || 0) - (a.ausMs || 0));
+}
+/* ersetzt ist gerechnet und gehört nicht in den Speicher. */
+const ohneRechnung = e => { const o = Object.assign({}, e); delete o.ersetzt; return o; };
+
+/* --- Verlauf bei Feuerlöschern und RWA --------------------------------------
+   Dort gibt es keine Ausgabe, das Datum wird schlicht überschrieben. In den
+   Verlauf wandert das bisherige Datum, sobald ein SPÄTERES es ablöst. Ein
+   Datum, das am selben Tag korrigiert wird, an dem es eingetragen wurde, gilt als
+   Tippfehler und wird nicht festgehalten – ebenso wenig, wenn das neue Datum
+   früher liegt (dann war das alte falsch). Im Feld seitFeld steht, wann das
+   Datum eingetragen wurde; ältere Einträge kennen es nicht und gelten als
+   bewährt. */
+function datumAbloesen(art, k, a, z, feld, seitFeld, neu){
+  const alt = z[feld] || '';
+  if(alt && neu && neu > alt && z[seitFeld] !== heute()){
+    const e = {id:neueId(), art, k, anlage:a, datum:alt, am:heute()};
+    if(art === 'pruefung') e.bem = z.bem || '';
+    else{ e.typ = z.akkuTyp || ''; e.anzahl = akkuAnzahl(z); }
+    Historie.put(e).catch(() => toast('Verlauf nicht gespeichert'));
+  }
+  if((neu || '') !== alt) z[seitFeld] = heute();
+  z[feld] = neu;
+}
+
+/* Die Historie folgt Umbenennen und Zählertausch wie Marke und Aufgaben – sonst
+   stünde der Verlauf nach einer neuen Bezeichnung leer da. Die abgelegten
+   Blätter bleiben unberührt: sie zeigen, was damals hinausging. Die Läufe
+   werden hintereinander gereiht: tauschen zwei Zähler im selben Zug, läsen zwei
+   gleichzeitige Läufe denselben Eintrag, und der zweite schriebe den ersten
+   wieder zurück. */
+let histKette = Promise.resolve();
+function historieUmhaengen(k, alt, neu){
+  if(!alt || alt === neu) return;
+  histKette = histKette.then(async () => {
+    const liste = await Historie.alle();
+    const um = o => {
+      if(!o || typeof o !== 'object' || !(alt in o)) return false;
+      o[neu] = o[alt]; delete o[alt]; return true;
+    };
+    for(const e of liste){
+      let anders = false;
+      if(e.art === 'runde' && e.k === k){
+        const r = e.roh || {};
+        [e.ergebnisse, e.altVorher, r.zeilen, r.stand, r.zt, r.n].forEach(o => { if(um(o)) anders = true; });
+      }else if(e.art !== 'runde' && e.k === k && e.anlage === alt){
+        e.anlage = neu; anders = true;
+      }
+      if(anders) await Historie.put(e);
+    }
+  }).catch(() => {});
+}
+
+/* --- Einstieg unter „Alle Nachweise“ ----------------------------------------
+   Hängt sich nach, weil die Historie im Bilderspeicher liegt. Ohne Blätter
+   bleibt der Knopf weg, statt ins Leere zu führen. */
+async function histKnopf(){
+  let runden = [];
+  try{ runden = historieOrdnen(await Historie.alle()); }catch(e){ return; }
+  const box = $('#alleHist');
+  if(!box || current !== 'alle' || !runden.length) return;
+  box.innerHTML = `<div class="eyebrow">Historie</div>
+    <button class="btn" data-hist="1">Ausgegebene Blätter · ${runden.length}</button>`;
+  box.querySelector('[data-hist]').onclick = () => go('historie');
+}
+async function renderHistorie(){
+  const box = $('#histListe');
+  let runden = [];
+  try{ runden = historieOrdnen(await Historie.alle()); }
+  catch(e){ box.innerHTML = `<p class="muted small">Speicher nicht verfügbar.</p>`; return; }
+  if(current !== 'historie') return;
+  const teile = NACHWEISE.filter(n => runden.some(e => e.k === n.k));
+  box.innerHTML = teile.length
+    ? teile.map(n => `<button class="btn mbtn" data-k="${n.k}"><span>${esc(n.label)}</span>`
+        + `<span class="zahl">${runden.filter(e => e.k === n.k).length}</span></button>`).join('')
+    : `<p class="muted small">Noch kein Blatt in der Historie.</p>`;
+  box.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { histK = b.dataset.k; go('histnw'); });
+}
+/* Die Runden eines Nachweises, jüngste zuerst. Zurückholen steht nur an der
+   jüngsten gültigen Runde; ob es gerade geht, sagt der Knopf beim Antippen. */
+async function renderHistNw(){
+  const box = $('#histNwListe');
+  if(!histK || !NW(histK)){ box.innerHTML = ''; return; }
+  let runden = [];
+  try{ runden = historieOrdnen(await Historie.alle()); }
+  catch(e){ box.innerHTML = `<p class="muted small">Speicher nicht verfügbar.</p>`; return; }
+  if(current !== 'histnw') return;
+  const l = runden.filter(e => e.k === histK);
+  const juengste = l.find(e => !e.ersetzt);
+  box.innerHTML = !l.length ? `<p class="muted small">Keine Blätter mehr vorhanden.</p>`
+    : l.map((e, i) => `<div class="card hist" data-i="${i}">
+        <div class="hkopf">${esc(zeitraumVoll(e.zeitraum))}</div>
+        <div class="muted small">ausgegeben am ${esc(dText(e.aus))}${
+          e.ersetzt ? ' · ersetzt' : e.zurueck ? ' · zurückgeholt am ' + esc(dText(e.zurueck)) : ''}</div>
+        <div class="row">
+          <button class="btn ghost klein" data-an="1">Ansehen</button>${
+          e === juengste && !e.zurueck ? `
+          <button class="btn ghost klein" data-zu="1">Zurückholen</button>` : ''}
+          <button class="btn ghost klein" data-weg="1">Löschen</button>
+        </div>
+      </div>`).join('');
+  box.querySelectorAll('.hist').forEach(c => {
+    const e = l[+c.dataset.i];
+    c.querySelector('[data-an]').onclick = () => blattAusHistorie(e);
+    const zu = c.querySelector('[data-zu]');
+    if(zu) zu.onclick = () => {
+      const grund = zurueckGrund(e, runden);
+      if(grund) hinweis('Zurückholen nicht möglich', grund); else rundeZurueckholen(e);
+    };
+    c.querySelector('[data-weg]').onclick = () => fassungLoeschen(e);
+  });
+}
+
+/* Das Blatt trägt sein Stylesheet von damals. In einem Schattenbaum gilt es nur
+   für das Blatt: ändert sich später die Gestaltung der App, sieht die Vorschau
+   trotzdem aus wie das, was hinausging – und es färbt nicht auf die App ab. Aus
+   :root wird dort :host; das Zoomverbot des Grundstils wird für das Blatt
+   aufgehoben wie in der gewöhnlichen Vorschau. Geteilt wird das gespeicherte
+   Dokument unverändert. */
+function blattAusHistorie(e){
+  const m = /<style>([\s\S]*?)<\/style>[\s\S]*?<body>([\s\S]*)<\/body>/.exec(e.html || '');
+  if(!m){ toast('Blatt nicht lesbar'); return; }
+  blattDatei = {name:e.name, html:e.html};
+  const wrap = $('#blattWrap');
+  wrap.innerHTML = '';
+  const traeger = document.createElement('div');
+  wrap.appendChild(traeger);
+  const stil = m[1].replace(/:root/g, ':host')
+    + '\n*{touch-action:pan-x pan-y pinch-zoom}\n.paper + .paper{margin-top:12px}';
+  if(traeger.attachShadow) traeger.attachShadow({mode:'open'}).innerHTML = `<style>${stil}</style>${m[2]}`;
+  else traeger.innerHTML = m[2];
+  go('blatt');
+}
+
+function fassungLoeschen(e){
+  frage('Fassung löschen',
+    `${NW(e.k).label}, ${zeitraumVoll(e.zeitraum)} – ausgegeben am ${dText(e.aus)}${e.ersetzt ? ' (ersetzt)' : ''}.\n\n`
+    + 'Blatt und Ergebnisse dieser Fassung werden aus der Historie entfernt. '
+    + 'Am laufenden Stand, an Aufgaben und an Zählerständen ändert sich nichts.',
+    'Löschen', async () => {
+      try{ await Historie.weg(e.id); toast('Gelöscht'); }
+      catch(x){ toast('Löschen nicht möglich'); }
+      renderHistNw();
+    });
+}
+
+/* --- Zurückholen ------------------------------------------------------------
+   Nur die jüngste Runde eines Nachweises: eine ältere zurückzuholen und neu
+   auszugeben, setzte den Ausgabevermerk rückwärts, und die Startseite hielte die
+   neuere Runde für offen. Außerdem darf keine neue Runde begonnen sein – sie
+   würde überschrieben. */
+function zurueckGrund(e, runden){
+  const n = NW(e.k);
+  if(!n) return 'Diesen Nachweis gibt es nicht mehr.';
+  if(e.ersetzt) return 'Diese Fassung wurde bereits ersetzt.';
+  if(runden.find(x => x.k === e.k && !x.ersetzt) !== e)
+    return 'Zurückholen geht nur mit der jüngsten Runde eines Nachweises.';
+  if(!e.roh) return 'Für diese Runde liegen keine Daten zum Zurückholen vor.';
+  if(begonnen(n))
+    return 'Die nächste Runde ist schon begonnen. Sie würde beim Zurückholen überschrieben.';
+  const vermerk = n.art === 'medien' ? expQuartal(e.k) : expMonat(e.k);
+  if(vermerk !== e.zeitraum)
+    return 'Der Ausgabevermerk passt nicht mehr zu dieser Runde – vermutlich wurden die Ablesewerte zurückgesetzt.';
+  if(n.art === 'medien' && e.tauschAnzahl != null && e.tauschAnzahl !== TAUSCH.length)
+    return 'Seit dieser Ausgabe wurde ein Zählerwechsel vermerkt. Die Stände des Vorquartals ließen sich nicht mehr sauber wiederherstellen.';
+  return '';
+}
+function rundeZurueckholen(e){
+  const n = NW(e.k), medien = n.art === 'medien';
+  frage('Runde zurückholen',
+    `${n.label}, ${zeitraumVoll(e.zeitraum)} (ausgegeben am ${dText(e.aus)}) wird wieder zur laufenden Runde.\n\n`
+    + (medien ? 'Die Stände des Vorquartals kommen auf den Stand vor dieser Ausgabe zurück.\n\n'
+              : 'Die Unterschrift muss neu geleistet werden. Mängelaufgaben aus dieser Runde bleiben '
+                + 'bestehen – ein irrtümlich vermerkter Mangel wird dort erledigt.\n\n')
+    + 'Das alte Blatt bleibt in der Historie und gilt nach der erneuten Ausgabe als ersetzt.',
+    'Zurückholen', async () => {
+      DAT[e.k] = JSON.parse(JSON.stringify(e.roh));
+      DAT[e.k].signatur = null;
+      if(e.expVorher) EXP[e.k] = e.expVorher; else delete EXP[e.k];
+      if(medien){
+        Object.entries(e.altVorher || {}).forEach(([key, v]) => {
+          if(v) MED_ALT[key] = v; else delete MED_ALT[key];
+        });
+        saveAlt();
+      }
+      /* Das Tätigkeitsbuch schreibt die Runde bei der erneuten Ausgabe neu –
+         aus denselben Uhrzeiten, die mit der Runde zurückkommen. */
+      BUCH = BUCH.filter(b => !(b.k === e.k && b.zeitraum === e.zeitraum));
+      saveBuch(); saveExp(); saveDat();
+      e.zurueck = heute();
+      try{ await Historie.put(ohneRechnung(e)); }catch(x){ /* nur der Vermerk fehlt */ }
+      toast('Runde zurückgeholt');
+      nachweisOeffnen(e.k);
+    });
+}
+
+/* --- Verlauf einer Karte ----------------------------------------------------
+   Eine eigene Ansicht mit Zurück-Pfeil. Die Liste, aus der man kommt, merkt sich
+   ihre Lage wie beim Verorten und steht beim Zurückkommen wieder an der Stelle. */
+function verlaufOeffnen(k, id, titel, vorn){
+  listenLage = window.scrollY;
+  verlaufZiel = {k, id, titel, vorn:vorn || ''};
+  go('verlauf');
+}
+const vZeile = (wann, text) => `<div class="vzeile"><div class="vwann">${esc(wann)}</div>${
+  text ? `<div class="small">${esc(text)}</div>` : ''}</div>`;
+const vAbschnitt = (titel, zeilen, leer) => `<div class="card">
+  <div class="eyebrow" style="margin:0 0 4px">${esc(titel)}</div>
+  ${zeilen.length ? zeilen.join('') : `<p class="muted small" style="margin:0">${esc(leer)}</p>`}</div>`;
+const LEER_RUNDEN = 'Noch nichts in der Historie. Einträge entstehen mit der nächsten Ausgabe.';
+
+async function renderVerlauf(){
+  const box = $('#verlaufBox'), v = verlaufZiel;
+  if(!v || !NW(v.k)){ box.innerHTML = ''; return; }
+  const kopf = `<div class="eyebrow" style="margin-top:0">${esc(NW(v.k).label)}</div>
+    <div class="aufgKopf" style="margin-bottom:12px">${esc(v.titel)}</div>`;
+  box.innerHTML = kopf + `<p class="muted small">wird geladen …</p>`;
+  let liste = [];
+  try{ liste = await Historie.alle(); }catch(e){ /* dann eben nur der laufende Stand */ }
+  if(current !== 'verlauf' || verlaufZiel !== v) return;
+  const art = NW(v.k).art;
+  box.innerHTML = kopf + (art === 'fremd'  ? verlaufFremd(v, liste)
+                        : art === 'medien' ? verlaufZaehler(v, liste)
+                        : verlaufAnlage(v, liste));
+}
+function verlaufAnlage(v, liste){
+  const runden = historieOrdnen(liste)
+    .filter(e => e.k === v.k && !e.ersetzt && e.ergebnisse && e.ergebnisse[v.id]);
+  const zeilen = [];
+  const lauf = DAT[v.k] && DAT[v.k].zeilen && DAT[v.k].zeilen[v.id];
+  if(lauf && lauf.status)
+    zeilen.push(vZeile('Laufende Runde', [dText(lauf.datum), lauf.status, lauf.bem].filter(Boolean).join(' · ')));
+  runden.forEach(e => {
+    const r = e.ergebnisse[v.id];
+    zeilen.push(vZeile(zeitraumVoll(e.zeitraum),
+      [dText(r.datum), r.status || 'ohne Zustand', r.bem].filter(Boolean).join(' · ')));
+  });
+  const maengel = AUFG.filter(a => a.art === 'mangel' && a.quelle === `${v.k}|${v.id}`)
+    .sort((a, b) => String(b.festgestellt).localeCompare(String(a.festgestellt)));
+  const mz = maengel.map(a => vZeile(`Mangel vom ${dText(a.festgestellt)}`,
+    [a.erledigt ? `erledigt am ${dText(a.erledigt)}` : 'offen',
+     a.erneut && a.erneut.length ? `erneut festgestellt ${a.erneut.length}×` : '',
+     a.text].filter(Boolean).join(' · ')));
+  return vAbschnitt('Runden', zeilen, LEER_RUNDEN)
+       + (mz.length ? vAbschnitt('Mängel', mz, '') : '');
+}
+function verlaufZaehler(v, liste){
+  const z = stellen().find(x => x.key === v.id) || {};
+  const zeilen = [];
+  const d = DAT.medien;
+  const lauf = d && d.stand ? String(d.stand[v.id] ?? '').trim() : '';
+  if(lauf) zeilen.push(vZeile('Laufende Ablesung',
+    `Stand ${zahlText(zahl(lauf))} ${z.einheit || ''}`.trim()));
+  historieOrdnen(liste)
+    .filter(e => e.k === 'medien' && !e.ersetzt && e.ergebnisse && e.ergebnisse[v.id])
+    .forEach(e => {
+      const r = e.ergebnisse[v.id];
+      zeilen.push(vZeile(zeitraumVoll(e.zeitraum), [
+        r.datum ? 'abgelesen ' + dText(r.datum) : '',
+        r.stand ? `Stand ${zahlText(zahl(r.stand))} ${r.einheit}` : '',
+        r.verbrauch != null ? `Verbrauch ${zahlText(r.verbrauch)} ${r.einheit}` : 'Verbrauch –',
+        r.wechsel ? 'mit Zählerwechsel' : '',
+        r.nr && z.nr && r.nr !== z.nr ? `Zähler Nr. ${r.nr}` : ''
+      ].filter(Boolean).join(' · ')));
+    });
+  return vAbschnitt('Ablesungen', zeilen, LEER_RUNDEN);
+}
+function verlaufFremd(v, liste){
+  const z = zeileVon(v.k, v.id);
+  const nachDatum = (a, b) => String(b.datum).localeCompare(String(a.datum));
+  const pz = (z.datum ? [vZeile(dText(z.datum), ['aktuell', z.bem].filter(Boolean).join(' · '))] : [])
+    .concat(liste.filter(e => e.art === 'pruefung' && e.k === v.k && e.anlage === v.id)
+      .sort(nachDatum).map(e => vZeile(dText(e.datum), e.bem || '')));
+  const pruef = vAbschnitt('Prüfungen', pz, 'Noch kein Prüfdatum eingetragen.');
+  if(v.k !== 'rwa') return pruef;
+  const az = (z.akkuDatum ? [vZeile(dText(z.akkuDatum),
+      ['aktuell', z.akkuTyp ? `${akkuAnzahl(z)} × ${z.akkuTyp}` : ''].filter(Boolean).join(' · '))] : [])
+    .concat(liste.filter(e => e.art === 'akku' && e.k === 'rwa' && e.anlage === v.id)
+      .sort(nachDatum).map(e => vZeile(dText(e.datum), e.typ ? `${e.anzahl || 1} × ${e.typ}` : '')));
+  const akku = vAbschnitt('Akkutausch', az, 'Noch kein Tausch vermerkt.');
+  return v.vorn === 'akku' ? akku + pruef : pruef + akku;
+}
+/* Titelzeile einer Karte mit dem Uhrsymbol rechts. Der Text kommt fertig
+   maskiert herein. */
+const nameMitVerlauf = (html, zusatz = '') =>
+  `<div class="name mitVerlauf${zusatz}"><span>${html}</span>`
+  + `<button type="button" class="verlaufKnopf" data-verlauf="1" aria-label="Verlauf">${UHR_SVG}</button></div>`;
+
 /* ---------- Übergabe an den Kurzbefehl --------------------------------------
    Wie im E-Assistenten: die Blätter gehen als HTML mit der Gestaltung im Kopf
    hinaus, der Kurzbefehl wandelt sie in PDF. Ohne Titel im Teilen-Vorgang, sonst
@@ -6277,7 +6755,15 @@ async function ausgeben(){
     ? stichtag.slice(2, 4) + '-Q' + (Math.floor((+stichtag.slice(5, 7) - 1) / 3) + 1)
     : stichtag.slice(2, 7);
   const name = `${teil} ${nameTeil(n.datei || n.label)}.html`;
-  if(!await dateiTeilen(name, exportHtml(offen))) return;
+  const html = exportHtml(offen);
+  if(!await dateiTeilen(name, html)) return;
+  /* Die Historie nimmt die Runde auf, bevor irgendetwas geleert wird: sie
+     braucht auch die Stände des Vorquartals, wie sie VOR dieser Ausgabe
+     standen – ein Zurückholen stellt sie wieder her. */
+  const zeitraum = n.art === 'medien' ? quartalVon(stichtag) : monatVon(stichtag);
+  let histOk = true;
+  try{ await Historie.put(rundeFuerHistorie(offen, d0, zeitraum, name, html)); }
+  catch(e){ histOk = false; }
   /* Vor dem Leeren die Zählerstände sichern: aus ihnen entsteht im nächsten
      Quartal der Verbrauch. */
   if(n.art === 'medien'){
@@ -6287,7 +6773,7 @@ async function ausgeben(){
     });
     saveAlt();
   }
-  EXP[offen] = n.art === 'medien' ? quartalVon(stichtag) : monatVon(stichtag);
+  EXP[offen] = zeitraum;
   saveExp();
   buchSchreiben(offen, d0, EXP[offen]);
   maengelUebernehmen(offen, d0, EXP[offen]);
@@ -6295,7 +6781,7 @@ async function ausgeben(){
      beginnt von vorn. */
   delete DAT[offen]; saveDat();
   stack = []; go('home', false);
-  toast('Nachweis ausgegeben');
+  toast(histOk ? 'Nachweis ausgegeben' : 'Ausgegeben – Historie nicht gespeichert');
 }
 
 /* --- Zugang -----------------------------------------------------------------
