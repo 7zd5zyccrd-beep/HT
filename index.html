@@ -10,6 +10,23 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.19 15.09.2026  Wiederkehrende Aufgaben und Vorbereitung. Eine eigene
+                    Aufgabe kann sich alle n Wochen, Monate oder Jahre
+                    wiederholen; ob der nächste Termin ab dem alten Termin oder
+                    ab dem Tag der Erledigung zählt, wird je Aufgabe gewählt.
+                    Beim Erledigen entsteht die nächste mit Titel, Bezug,
+                    Wichtigkeit und Vorbereitung; „Wieder öffnen“ nimmt eine
+                    noch unberührte Folgeaufgabe zurück. Wiederkehrende
+                    Aufgaben stehen erst ab acht Wochen vor dem Termin in der
+                    Liste, bei längerem Vorlauf entsprechend früher. Jede
+                    eigene Aufgabe kann eine Vorbereitung mit Vorlauf in Wochen
+                    tragen; ab dann zeigt die Liste „Vorbereitung: …“, nach dem
+                    Abhaken „vorbereitet“. Feuerlöscher und RWA bekommen oben
+                    in ihrer Ansicht „Firma beauftragen“, der Akkutausch
+                    „Akkus bereitlegen“ mit den bis Ende des nächsten Monats
+                    benötigten Akkus je Typ. Beide Vermerke verfallen von
+                    selbst, sobald für alle erfassten Objekte ein neues Datum
+                    eingetragen ist; die Aufgabenliste zeigt ihren Stand.
   v1.18 15.09.2026  Aufzüge über mehrere Etagen. In den Einstellungen der
                     Aufzüge steht unter „Etagen“ je Aufzug, auf welchen
                     Grundrissen er vorkommt. Seine Marke wird einmal gesetzt und
@@ -692,6 +709,12 @@ main{flex:1;padding:16px var(--pad) 0;width:100%;max-width:var(--col);margin:0 a
 /* Eine Aufgabe der Startseite: oben der Nachweis, darunter Stand und Frist
    in kleinerer Schrift, damit die Liste auch bei vielen Zeilen lesbar bleibt. */
 /* Hinweis im Rundgang auf einen noch offenen Mangel derselben Anlage. */
+/* Felder mit eigener display-Angabe verschwinden sonst nicht per hidden. */
+.field[hidden],.wdhZeile [hidden]{display:none}
+/* Wiederholen: "alle", Zahl und Einheit in einer Zeile. */
+.wdhZeile{align-items:center}
+.wdhZeile .wdhAlle{flex:0 0 auto}
+.wdhZeile #wdhN{flex:0 0 5em;width:5em}
 .mangelHinweis{font-size:14px;font-weight:600;margin:2px 0 6px}
 /* Kopf der Aufgabenseite. */
 .aufgKopf{font-size:18px;font-weight:600;margin:0}
@@ -741,13 +764,13 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .pos .kopf input{flex:0 0 auto;width:165px;padding:8px 10px;font-size:16px}
 /* Dieselbe Segmentwahl in beiden Kartenarten: .pos traegt sie im Nachweis,
    .stelle in den Einstellungen (Objektkarten). */
-.pos .seg,.stelle .seg,.wichtig .seg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
-.pos .seg button,.stelle .seg button,.wichtig .seg button{
+.pos .seg,.stelle .seg,.wichtig .seg,.segfeld .seg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
+.pos .seg button,.stelle .seg button,.wichtig .seg button,.segfeld .seg button{
   flex:1;padding:11px 6px;border:0;background:var(--surface);color:var(--ink);
   font:inherit;font-size:14px;cursor:pointer;border-left:1px solid var(--line);
 }
-.pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child{border-left:0}
-.pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
+.pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child,.segfeld .seg button:first-child{border-left:0}
+.pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"],.segfeld .seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
 .pos .bem{margin-top:8px}
 .pos .punkt{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 .pos .punkt .ptext{font-size:14px;margin-bottom:6px}
@@ -1247,7 +1270,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.18';
+const VERSION = 'v1.19';
 const BUILD   = VERSION + ' · 15.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1822,6 +1845,15 @@ let AUFG = Store.get('nwAufg', []);
 if(!Array.isArray(AUFG)) AUFG = [];
 const saveAufg = () => { Store.set('nwAufg', AUFG); listeNachziehen(); };
 const FRIST_TAGE = {hoch:7, normal:30, niedrig:90};
+/* --- Vorbereitung bei Fremdprüfungen und Akkutausch -------------------------
+   "Firma beauftragt" bzw. "Akkus vorhanden": je Nachweis ein Vermerk, der
+   festhält, für welche Objekte er galt – als Objekt → damaliger Termin. Er gilt,
+   solange mindestens eines davon mit demselben Termin aussteht. Ist überall ein
+   neues Datum eingetragen, ist die Sache erledigt und der Vermerk verfällt von
+   selbst. Schlüssel: 'loescher', 'rwa', 'akku'. */
+let VORB = Store.get('nwVorb', {});
+if(!VORB || typeof VORB !== 'object' || Array.isArray(VORB)) VORB = {};
+const saveVorb = () => { Store.set('nwVorb', VORB); listeNachziehen(); };
 const isoTag = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const tagPlus = (iso, tage) => { const d = alsDatum(iso); d.setDate(d.getDate() + tage); return isoTag(d); };
 const neueId = () => 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -2423,11 +2455,12 @@ function aufgaben(){
     const faellig = mit.filter(f => f.faellig).length;
     const bald    = mit.filter(f => f.tage <= VORWARN).length;
     if(!ohne && !bald) return;
+    const grund = ohne ? `${ohne} von ${fr.length} ohne ${wort}`
+                : faellig ? `${faellig} von ${fr.length} überfällig`
+                :           `${bald} von ${fr.length} fällig`;
     neu(n, {titel, ring:rg, akku,
       faellig: ohne ? null : alsDatum(mit[0].ziel),
-      stand: ohne    ? `${ohne} von ${fr.length} ohne ${wort}`
-           : faellig ? `${faellig} von ${fr.length} überfällig`
-           :           `${bald} von ${fr.length} fällig`});
+      stand:[grund, vorbZusatz(akku ? 'akku' : n.k)].filter(Boolean).join(' · ')});
   };
   NACHWEISE.filter(n => !n.spaeter).forEach(n => {
     const d = DAT[n.k];
@@ -2485,11 +2518,21 @@ function aufgaben(){
   /* Mängel und eigene Aufgaben: sie stehen immer in der Liste, auch wenn ihr
      Termin weiter weg ist als die Vorwarnzeit – eine offene Sache soll nicht
      aus dem Blick geraten. */
-  AUFG.filter(a => !a.erledigt).forEach(a => liste.push({
-    k:a.k || '', aufg:a.id, ziel:'', akku:false, begonnen:true,
-    wichtig: WICHTIG.some(x => x[0] === a.wichtig) ? a.wichtig : 'normal', pos:1000,
-    titel:aufgTitel(a), stand:aufgStand(a), ring:'',
-    faellig: a.frist ? alsDatum(a.frist) : null}));
+  AUFG.filter(a => !a.erledigt).forEach(a => {
+    /* Wiederkehrende erst ab acht Wochen vorher, bei längerem Vorlauf früher –
+       eine jährliche Aufgabe soll nicht das ganze Jahr in der Liste stehen. */
+    if(a.wdh && a.frist){
+      const tage = Math.round((alsDatum(a.frist) - heute0) / TAG_MS);
+      const vorlauf = a.vorb && String(a.vorb.text || '').trim() ? (+a.vorb.wochen || 0) * 7 : 0;
+      if(tage > Math.max(VORWARN, vorlauf)) return;
+    }
+    liste.push({
+      k:a.k || '', aufg:a.id, ziel:'', akku:false, begonnen:true,
+      wichtig: WICHTIG.some(x => x[0] === a.wichtig) ? a.wichtig : 'normal', pos:1000,
+      titel:aufgTitel(a), stand:aufgStand(a), ring:'',
+      vorbAus: vorbText(a).startsWith('Vorbereitung'),
+      faellig: a.frist ? alsDatum(a.frist) : null});
+  });
   const sonntag = (() => { const w = wochenBeginn(jetzt);
                            return new Date(w.getFullYear(), w.getMonth(), w.getDate() + 6); })();
   const monatLetzter = new Date(heute0.getFullYear(), heute0.getMonth() + 1, 0);
@@ -2497,7 +2540,7 @@ function aufgaben(){
   const rang = w => WICHTIG.findIndex(x => x[0] === w);
   liste.forEach(a => {
     a.tage = a.faellig ? Math.round((a.faellig - heute0) / TAG_MS) : null;
-    if(a.aufg) a.ring = a.tage === null || a.tage < 0 ? 'rot' : a.tage <= 7 ? 'gelb' : '';
+    if(a.aufg) a.ring = a.tage === null || a.tage < 0 ? 'rot' : (a.tage <= 7 || a.vorbAus) ? 'gelb' : '';
     a.gruppe = !a.faellig || a.tage < 0   ? 'ueber'
              : a.faellig <= sonntag       ? 'woche'
              : a.faellig <= monatLetzter  ? 'monat' : 'bald';
@@ -2520,7 +2563,9 @@ function fristText0(a){
   if(a.tage < 0)   return `${-a.tage} ${a.tage === -1 ? 'Tag' : 'Tage'} überfällig`;
   if(a.tage === 0) return 'fällig heute';
   if(a.tage === 1) return 'fällig morgen';
-  return `bis ${ttmm(a.faellig)} · noch ${a.tage} Tage`;
+  /* Liegt der Termin im nächsten Jahr, gehört die Jahreszahl dazu. */
+  const jahr = a.faellig.getFullYear() !== new Date().getFullYear() ? a.faellig.getFullYear() : '';
+  return `bis ${ttmm(a.faellig)}${jahr} · noch ${a.tage} Tage`;
 }
 const kurz = (t, max = 48) => {
   t = String(t || '').replace(/\s+/g, ' ').trim();
@@ -2534,7 +2579,8 @@ function aufgStand(a){
     return [kurz(a.text) || 'ohne Bemerkung', (a.erneut || []).length ? 'erneut festgestellt' : '']
       .filter(Boolean).join(' · ');
   const n = a.k && NW(a.k);
-  return [n ? n.label + (a.anlage ? ' · ' + anlageName(a) : '') : '', kurz(a.notiz)].filter(Boolean).join(' · ');
+  return [n ? n.label + (a.anlage ? ' · ' + anlageName(a) : '') : '', vorbText(a) || kurz(a.notiz)]
+    .filter(Boolean).join(' · ');
 }
 const aufgabeKnopf = a =>
   `<button class="btn aufgabe${a.ring ? ' ring-' + a.ring : ''}" ${a.aufg ? `data-aufg="${a.aufg}"`
@@ -2661,6 +2707,35 @@ function renderAufgabe(){
         <select id="aufgAnlage"><option value="">– ohne –</option>${
           anlagen.map(x => `<option value="${esc(x.wert)}"${x.wert === a.anlage ? ' selected' : ''}>${esc(x.text)}</option>`).join('')}</select></label>` : ''}`;
   }
+  /* Wiederholung und Vorbereitung gibt es nur bei eigenen Aufgaben. */
+  const w = a.wdh || null, v = a.vorb || {text:'', wochen:4};
+  const planung = mangel ? '' : `
+    <label class="field"><span>Wiederholen</span>
+      <div class="row wdhZeile">
+        <span class="wdhAlle"${w ? '' : ' hidden'}>alle</span>
+        <input id="wdhN" type="number" inputmode="numeric" min="1" value="${esc(w ? w.n : 1)}"${w ? '' : ' hidden'}>
+        <select id="wdhEinheit">
+          <option value=""${w ? '' : ' selected'}>nicht wiederholen</option>
+          ${Object.entries(WDH_TEXT).map(([e, t]) => `<option value="${e}"${w && w.einheit === e ? ' selected' : ''}>${t[1]}</option>`).join('')}
+        </select>
+      </div></label>
+    ${w ? `<div class="field segfeld"><span>Nächster Termin zählt ab</span><div class="seg">
+        <button type="button" data-basis="termin" aria-pressed="${w.basis !== 'erledigt'}">altem Termin</button>
+        <button type="button" data-basis="erledigt" aria-pressed="${w.basis === 'erledigt'}">Erledigung</button>
+      </div></div>` : ''}
+    <label class="field"><span>Vorbereitung (wenn nötig)</span>
+      <input id="vorbText" value="${esc(v.text)}" placeholder="z. B. Firma beauftragen"></label>
+    <label class="field" id="vorbWochenFeld"${String(v.text || '').trim() ? '' : ' hidden'}><span>Vorlauf in Wochen</span>
+      <input id="vorbWochen" type="number" inputmode="numeric" min="0" value="${esc(v.wochen ?? 4)}"></label>`;
+  /* Der Stand der Vorbereitung, sobald es eine gibt und die Aufgabe steht. */
+  const vorbStandKarte = mangel || neu || a.erledigt || !String(v.text || '').trim() ? ''
+    : a.vorbErledigt
+      ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Vorbereitung · ${esc(v.text)}</div>
+           <p style="margin:0">erledigt am ${esc(dText(a.vorbErledigt))}${a.vorbVermerk ? ' · ' + esc(a.vorbVermerk) : ''}</p>
+           <button class="btn ghost klein" id="vorbZurueck" style="margin-top:10px">Zurücknehmen</button></div>`
+      : `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Vorbereitung · ${esc(v.text)}</div>
+           <input id="vorbVermerkA" placeholder="Vermerk, z. B. Fa. X kommt am 12.10.">
+           <button class="btn" id="vorbSetzen" style="margin-top:10px">Vorbereitung erledigt</button></div>`;
   const wege = !neu && a.k && n ? `<div class="row" style="margin-bottom:14px">
       ${aufgOrt(a) ? `<button class="btn" data-weg="plan">⌖ Grundriss</button>` : ''}
       <button class="btn" data-weg="nw">Zum Nachweis</button></div>` : '';
@@ -2678,8 +2753,9 @@ function renderAufgabe(){
     + `<label class="field"><span>Termin</span><input type="date" id="aufgFrist" value="${esc(a.frist)}"></label>
        <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
          WICHTIG.map(([w, t]) => `<button type="button" data-w="${w}" aria-pressed="${a.wichtig === w}">${t}</button>`).join('')}</div></div>
+       ${planung}
        <label class="field"><span>Notiz</span><textarea id="aufgNotiz" style="min-height:90px">${esc(a.notiz)}</textarea></label>`
-    + wege + erledigung
+    + wege + vorbStandKarte + erledigung
     + (!neu && !mangel ? `<button class="btn ghost klein" id="aufgWeg" style="margin-top:18px">Aufgabe löschen</button>` : '');
 
   if(!mangel){
@@ -2693,7 +2769,48 @@ function renderAufgabe(){
   }
   /* Beide Ereignisse: iOS meldet "change" erst beim Schließen der Datumswahl. */
   const frist = $('#aufgFrist');
-  frist.oninput = frist.onchange = () => { if(frist.value && frist.value !== a.frist){ a.frist = frist.value; sichern(); } };
+  frist.oninput = frist.onchange = () => {
+    if(frist.value && frist.value !== a.frist){
+      a.frist = frist.value;
+      if(a.wdh) a.wdh.anker = alsDatum(a.frist).getDate();   // der feste Rhythmus folgt dem neuen Tag
+      sichern();
+    }
+  };
+  if(!mangel){
+    $('#wdhEinheit').onchange = e => {
+      const einheit = e.target.value;
+      if(!einheit) delete a.wdh;
+      else a.wdh = Object.assign({n:1, basis:'termin'}, a.wdh || {}, {einheit, anker:alsDatum(a.frist || heute()).getDate()});
+      sichern(); renderAufgabe();
+    };
+    $('#wdhN').oninput = e => {
+      const zahlN = Math.round(+e.target.value);
+      if(a.wdh && zahlN >= 1){ a.wdh.n = zahlN; sichern(); }
+    };
+    box.querySelectorAll('[data-basis]').forEach(b => b.onclick = () => {
+      a.wdh.basis = b.dataset.basis; sichern();
+      box.querySelectorAll('[data-basis]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    });
+    $('#vorbText').oninput = e => {
+      a.vorb = Object.assign({wochen:4}, a.vorb || {}, {text:e.target.value});
+      $('#vorbWochenFeld').hidden = !e.target.value.trim();
+      sichern();
+    };
+    /* Die Vorbereitungskarte erscheint erst, wenn das Feld verlassen wird –
+       sonst risse ein Neuaufbau beim Tippen die Tastatur weg. */
+    $('#vorbText').onchange = () => { if(!neu) renderAufgabe(); };
+    $('#vorbWochen').oninput = e => {
+      const wo = Math.round(+e.target.value);
+      if(wo >= 0){ a.vorb = Object.assign({text:''}, a.vorb || {}, {wochen:wo}); sichern(); }
+    };
+  }
+  if($('#vorbSetzen')) $('#vorbSetzen').onclick = () => {
+    a.vorbErledigt = heute(); a.vorbVermerk = $('#vorbVermerkA').value.trim();
+    saveAufg(); toast('Vorbereitung vermerkt'); renderAufgabe();
+  };
+  if($('#vorbZurueck')) $('#vorbZurueck').onclick = () => {
+    a.vorbErledigt = ''; a.vorbVermerk = ''; saveAufg(); renderAufgabe();
+  };
   box.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
     a.wichtig = b.dataset.w; sichern();
     box.querySelectorAll('[data-w]').forEach(x => x.setAttribute('aria-pressed', x === b));
@@ -2711,9 +2828,26 @@ function renderAufgabe(){
   if($('#erlSetzen')) $('#erlSetzen').onclick = () => {
     a.erledigt = $('#erlDatum').value || heute();
     a.vermerk = $('#erlVermerk').value.trim();
+    /* Wiederkehrend: die nächste steht sofort bereit. Die Notiz beginnt leer, die
+       Vorbereitung wieder offen – beides gehört zum einzelnen Termin. */
+    if(a.wdh && !mangel){
+      const folge = {id:neueId(), art:'eigen', quelle:'', k:a.k, anlage:a.anlage, anlageText:a.anlageText || '',
+        punkt:'', titel:a.titel, text:'', notiz:'', zeitraum:'', festgestellt:'', angelegt:heute(),
+        frist:naechsterTermin(a), wichtig:a.wichtig, erneut:[], erledigt:'', vermerk:'',
+        wdh:Object.assign({}, a.wdh), vorb:a.vorb ? Object.assign({}, a.vorb) : undefined,
+        vorbErledigt:'', vorbVermerk:''};
+      AUFG.push(folge); a.folge = folge.id;
+      saveAufg(); toast(`Erledigt · nächster Termin ${dText(folge.frist)}`); zurueck();
+      return;
+    }
     saveAufg(); toast('Als erledigt vermerkt'); zurueck();
   };
   if($('#aufgWieder')) $('#aufgWieder').onclick = () => {
+    /* Eine noch unberührte Folgeaufgabe geht mit zurück, sonst stünde der
+       nächste Termin doppelt da. Wurde an ihr schon etwas getan, bleibt sie. */
+    const f = a.folge && AUFG.find(x => x.id === a.folge);
+    if(f && !f.erledigt && !f.notiz && !f.vorbErledigt){ AUFG = AUFG.filter(x => x !== f); }
+    delete a.folge;
     a.erledigt = ''; a.vermerk = ''; saveAufg(); renderAufgabe();
   };
   /* Nur eigene Aufgaben lassen sich löschen. Ein Mangel gehört zum Nachweis und
@@ -2820,7 +2954,7 @@ function fristText(f){
 }
 function renderFremd(){
   const n = NW(offen), t = teilCfg(offen), d = datenFuer(offen);
-  $('#nwListe').innerHTML =
+  $('#nwListe').innerHTML = vorbKarte(offen) +
     `<div class="card">
        <div class="eyebrow" style="margin:0 0 6px">Die Firma war da</div>
        <p class="muted small" style="margin:0 0 10px">Setzt das Prüfdatum für alle ${
@@ -2862,6 +2996,7 @@ function renderFremd(){
     };
     box.querySelector('[data-feld="bem"]').oninput = e => { z.bem = e.target.value; saveDat(); };
   });
+  vorbVerdrahten(offen, renderNachweis);
   lageZurueck();
 }
 
@@ -2930,13 +3065,14 @@ function akkuVerdrahten(box){
      er gesetzt wurde. */
   box.querySelector('[data-ort]').onclick = () => verorten('rwa|' + a, a);
   box.querySelector('[data-feld="datum"]').onchange = e => {
-    z.akkuDatum = e.target.value; saveDat(); akkuFrischen(box);
+    z.akkuDatum = e.target.value; saveDat(); akkuFrischen(box); akkuVorbFrisch();
   };
 }
 function renderAkku(){
   const t = teilCfg('rwa'), d = datenFuer('rwa'), typen = akkuTypen();
   $('#akkuListe').innerHTML =
     (typen.length ? '' : `<p class="muted small">Noch kein Akkutyp angelegt – das geht in den Einstellungen unter RWA.</p>`)
+    + `<div id="vorbPlatz">${vorbKarte('akku')}</div>`
     + `<div class="card">
        <div class="eyebrow" style="margin:0 0 6px">Alle getauscht</div>
        <p class="muted small" style="margin:0 0 10px">Setzt das Tauschdatum für alle Anlagen mit gewähltem Akkutyp auf denselben Tag.</p>
@@ -2967,7 +3103,134 @@ function renderAkku(){
       });
   };
   $$('#akkuListe .pos').forEach(akkuVerdrahten);
+  vorbVerdrahten('akku', renderAkku);
   lageZurueck();
+}
+/* Nach einem eingetragenen Tauschdatum nur die Vorbereitungskarte auffrischen –
+   die Liste bleibt stehen, wie beim Akkutausch üblich. */
+function akkuVorbFrisch(){
+  const platz = $('#vorbPlatz'); if(!platz) return;
+  platz.innerHTML = vorbKarte('akku');
+  vorbVerdrahten('akku', renderAkku);
+}
+
+/* ---------- Vorbereitung ---------------------------------------------------
+   Was gerade ansteht, als Objekt → Termin: bei Fremdprüfungen alles ohne Datum
+   oder in der Vorwarnzeit, beim Akkutausch alles, was bis Ende des nächsten
+   Monats getauscht werden muss (so von Jean gewünscht: im Monat davor die Akkus
+   besorgen oder ihr Vorhandensein prüfen). */
+const naechsterMonatText = () => MONATE[(new Date().getMonth() + 1) % 12];
+function vorbAnstehend(art){
+  const raus = {};
+  if(art === 'akku'){
+    if(!akkuAn()) return raus;
+    const jetzt = new Date(), ende = new Date(jetzt.getFullYear(), jetzt.getMonth() + 2, 0);
+    teilCfg('rwa').anlagen.forEach(a => {
+      const z = zeileVon('rwa', a), j = akkuJahre(z.akkuTyp);
+      if(!j) return;
+      const f = frist(z.akkuDatum, j);
+      if(f.offen || alsDatum(f.ziel) <= ende) raus[a] = f.ziel;
+    });
+    return raus;
+  }
+  if(!NW(art)) return raus;
+  const t = teilCfg(art);
+  t.anlagen.forEach(a => {
+    const f = frist(zeileVon(art, a).datum, t.jahre);
+    if(f.offen || f.tage <= VORWARN) raus[a] = f.ziel;
+  });
+  return raus;
+}
+function vorbStand(art){
+  const jetzt = vorbAnstehend(art), rec = VORB[art];
+  const gedeckt = rec ? Object.keys(rec.ziele || {}).filter(a => a in jetzt && jetzt[a] === rec.ziele[a]) : [];
+  return {jetzt, rec:gedeckt.length ? rec : null, gedeckt,
+          offen:Object.keys(jetzt).filter(a => !gedeckt.includes(a))};
+}
+/* Die Akkus, die bis Ende des nächsten Monats gebraucht werden, je Typ gezählt –
+   mit der Anzahl je Anlage. */
+function akkuBedarf(){
+  const summe = {};
+  Object.keys(vorbAnstehend('akku')).forEach(a => {
+    const z = zeileVon('rwa', a);
+    summe[z.akkuTyp] = (summe[z.akkuTyp] || 0) + akkuAnzahl(z);
+  });
+  return akkuTypen().filter(x => summe[x.name]).map(x => `${summe[x.name]}× ${x.name}`).join(', ');
+}
+/* Kurzform für die Aufgabenliste. */
+function vorbZusatz(art){
+  const s = vorbStand(art), akku = art === 'akku';
+  const teile = [];
+  if(akku){ const b = akkuBedarf(); if(b) teile.push(`bis Ende ${naechsterMonatText()}: ${b}`); }
+  if(s.rec) teile.push((akku ? 'Akkus vorhanden' : 'Firma beauftragt')
+    + (s.offen.length ? ` (${s.gedeckt.length} von ${s.gedeckt.length + s.offen.length})` : ''));
+  return teile.join(' · ');
+}
+/* Die Karte oben in der Ansicht. Ohne Anstehendes gibt es sie nicht. */
+function vorbKarte(art){
+  const s = vorbStand(art), akku = art === 'akku', anzahl = Object.keys(s.jetzt).length;
+  if(!anzahl) return '';
+  const titel = akku ? 'Akkus bereitlegen' : 'Firma beauftragen';
+  const kopf = akku
+    ? `<p style="margin:0 0 8px">Bis Ende ${esc(naechsterMonatText())} benötigt: <b>${esc(akkuBedarf())}</b></p>`
+    : `<p class="muted small" style="margin:0 0 8px">${anzahl} ${anzahl === 1 ? 'Objekt steht' : 'Objekte stehen'} an – ohne Datum oder in den nächsten acht Wochen fällig.</p>`;
+  if(s.rec) return `<div class="card" id="vorbKarte">
+      <div class="eyebrow" style="margin:0 0 6px">${titel}</div>${kopf}
+      <p style="margin:0">${akku ? 'Akkus vorhanden' : 'Firma beauftragt'}, vermerkt am ${esc(dText(s.rec.datum))}${
+        s.rec.vermerk ? ' · ' + esc(s.rec.vermerk) : ''}</p>
+      ${s.offen.length ? `<p class="muted small" style="margin:6px 0 0">Seitdem ${s.offen.length === 1 ? 'ist eines' : 'sind ' + s.offen.length} dazugekommen.</p>` : ''}
+      <div class="row" style="margin-top:10px">
+        ${s.offen.length ? `<button class="btn klein" data-vorb="neu">Für alle vermerken</button>` : ''}
+        <button class="btn ghost klein" data-vorb="weg">Zurücknehmen</button>
+      </div></div>`;
+  return `<div class="card" id="vorbKarte">
+      <div class="eyebrow" style="margin:0 0 6px">${titel}</div>${kopf}
+      <input id="vorbVermerk" placeholder="${akku ? 'Vermerk, z. B. im Lager vorhanden' : 'Vermerk, z. B. Fa. X kommt am 12.10.'}">
+      <button class="btn" data-vorb="neu" style="margin-top:10px">${akku ? 'Akkus vorhanden' : 'Firma beauftragt'}</button>
+    </div>`;
+}
+function vorbVerdrahten(art, neuZeichnen){
+  const karte = $('#vorbKarte'); if(!karte) return;
+  karte.querySelectorAll('[data-vorb]').forEach(b => b.onclick = () => {
+    if(b.dataset.vorb === 'weg') delete VORB[art];
+    else{
+      const feld = $('#vorbVermerk'), alt = VORB[art];
+      VORB[art] = {datum:heute(), vermerk:feld ? feld.value.trim() : ((alt && alt.vermerk) || ''),
+                   ziele:vorbAnstehend(art)};
+    }
+    saveVorb(); toast(b.dataset.vorb === 'weg' ? 'Zurückgenommen' : 'Vermerkt'); neuZeichnen();
+  });
+}
+
+/* ---------- Wiederkehrende Aufgaben -----------------------------------------
+   Ein Termin plus Abstand. Bei Monaten und Jahren bleibt der Tag des Monats
+   stehen, soweit der Monat ihn hat (31. → 30. → wieder 31.): gemerkt wird dafür
+   der Ankertag, sonst rutschte ein Termin nach einem kurzen Monat für immer. */
+function terminPlus(iso, n, einheit, anker){
+  if(einheit === 'woche') return tagPlus(iso, 7 * n);
+  const d = alsDatum(iso), tag = anker || d.getDate();
+  const ziel = new Date(d.getFullYear(), d.getMonth() + (einheit === 'jahr' ? 12 * n : n), 1);
+  const letzter = new Date(ziel.getFullYear(), ziel.getMonth() + 1, 0).getDate();
+  ziel.setDate(Math.min(tag, letzter));
+  return isoTag(ziel);
+}
+function naechsterTermin(a){
+  const w = a.wdh, n = Math.max(1, Math.round(+w.n) || 1), erl = a.erledigt || heute();
+  if(w.basis === 'erledigt') return terminPlus(erl, n, w.einheit);
+  /* Fester Rhythmus: vom alten Termin aus weiter, bis der Termin nach dem Tag
+     der Erledigung liegt – ein verspätet Erledigtes holt keine Termine nach. */
+  let t = terminPlus(a.frist || erl, n, w.einheit, w.anker);
+  while(t <= erl) t = terminPlus(t, n, w.einheit, w.anker);
+  return t;
+}
+const WDH_TEXT = {woche:['Woche', 'Wochen'], monat:['Monat', 'Monate'], jahr:['Jahr', 'Jahre']};
+/* Stand der Vorbereitung einer eigenen Aufgabe, leer wenn es keine gibt oder
+   ihr Vorlauf noch nicht erreicht ist. */
+function vorbText(a){
+  if(!a.vorb || !String(a.vorb.text || '').trim()) return '';
+  if(a.vorbErledigt) return 'vorbereitet' + (a.vorbVermerk ? ': ' + kurz(a.vorbVermerk, 36) : '');
+  const tage = a.frist ? Math.round((alsDatum(a.frist) - tagAnfang(new Date())) / TAG_MS) : 0;
+  return tage <= (+a.vorb.wochen || 0) * 7 ? 'Vorbereitung: ' + kurz(a.vorb.text, 36) : '';
 }
 
 /* ---------- Ein Nachweis ---------------------------------------------------
@@ -4122,6 +4385,10 @@ function anlageUmbenennen(k, alt, neu){
   const va = k + '|' + alt, vb = k + '|' + neu, d = DAT[k];
   if(CFG.orte[va]){ CFG.orte[vb] = CFG.orte[va]; delete CFG.orte[va]; }
   if(CFG.etagen && CFG.etagen[va]){ CFG.etagen[vb] = CFG.etagen[va]; delete CFG.etagen[va]; }
+  [k, ...(k === 'rwa' ? ['akku'] : [])].forEach(art => {
+    const z = VORB[art] && VORB[art].ziele;
+    if(z && alt in z){ z[neu] = z[alt]; delete z[alt]; saveVorb(); }
+  });
   if(d && d.zeilen && d.zeilen[alt]){
     d.zeilen[neu] = d.zeilen[alt]; delete d.zeilen[alt];
     zeitUmhaengen(d, alt, neu); saveDat();
@@ -4816,7 +5083,7 @@ async function alsDateiSichern(){
         daten:await blobZuText(new Blob([q.daten], {type:'application/pdf'}))})));
   }catch(e){ /* ohne Bilderspeicher eben ohne Pläne */ }
   const paket = {format:CFG_FORMAT, stand:heute(),
-                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, plaene, quellen};
+                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB, plaene, quellen};
   const name = `Nachweise ${heute().slice(2)}.json`;
   void plaene;
   const datei = new File([new Blob([JSON.stringify(paket, null, 1)], {type:'application/json'})],
@@ -4846,6 +5113,7 @@ async function paketUebernehmen(paket){
      vorhandene stehen, statt geleert zu werden. */
   if(Array.isArray(paket.buch)){ BUCH = paket.buch; saveBuch(); }
   if(Array.isArray(paket.aufg)){ AUFG = paket.aufg; saveAufg(); }
+  if(paket.vorb && typeof paket.vorb === 'object'){ VORB = paket.vorb; saveVorb(); }
   /* Die Pläne kommen zurück in den Bilderspeicher; vorhandene gleichen Namens
      werden ersetzt, weil die Kennung mitreist. */
   let n = 0;
