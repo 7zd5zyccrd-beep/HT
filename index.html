@@ -10,6 +10,42 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.22 15.09.2026  „Weg neu bilden“ am Ende des Rundgangs: verwirft den
+                    gespeicherten Weg nach einer Rückfrage und bildet ihn wie
+                    beim ersten Öffnen neu – aus den Reihenfolgen der Nachweise
+                    und den inzwischen gesetzten Marken. Mit den Pfeilen
+                    Verschobenes geht dabei verloren.
+  v1.21 15.09.2026  Kombinierter Rundgang. Aufzüge, Rollbandfilter,
+                    Feststellanlagen und Medienverbräuche tragen in ihren
+                    Einstellungen „In kombinierte Rundgänge integrieren“. Sind
+                    mindestens zwei davon offen, ersetzt auf der Startseite eine
+                    Zeile „Kombinierter Rundgang“ ihre Einzelzeilen. Der Rundgang
+                    zeigt die Karten aller beteiligten Nachweise gemischt und
+                    bearbeitbar wie in den Einzelansichten. Der Weg entsteht aus
+                    der längsten vorhandenen Reihenfolge; die Objekte der übrigen
+                    kommen hinter das nächstgelegene Objekt derselben Etage,
+                    Objekte ohne Marke hängen hinten an. Mit den Pfeilen im
+                    Rundgang zurechtgeschoben, bleibt der Weg gespeichert; die
+                    Reihenfolgen der Einzelansichten bleiben unberührt. Zähler
+                    kommen im letzten Monat des Quartals dazu (oder sobald die
+                    Ablesung begonnen ist). Ausgegeben wird weiter je Nachweis,
+                    am Ende des Rundgangs führt ein Knopf dorthin.
+  v1.20 15.09.2026  Abwesenheit, Wochenenden und Feiertage. In den
+                    Einstellungen unter „Abwesenheit und Feiertage“ werden
+                    Abwesenheiten (von, bis, Bezeichnung) eingetragen und das
+                    Bundesland gewählt. Fällt eine Frist auf ein Wochenende,
+                    einen landesweiten Feiertag oder in eine Abwesenheit, rechnet
+                    die Aufgabenliste mit dem letzten Arbeitstag davor; bei einer
+                    Abwesenheit sagt die Zeile, warum. Lässt sich nichts
+                    vorziehen – ein wöchentlicher Gang in einer ganz abwesenden
+                    Woche, eine Monatsrunde ohne Arbeitstag –, steht dort
+                    „Vertretung klären“. Zwei Wochen vor einer Abwesenheit zeigt
+                    die Startseite oben, was vorher zu erledigen ist und wofür
+                    eine Vertretung gebraucht wird. Die Ringe und die
+                    Markenfarben im Grundriss rechnen mit denselben Arbeitstagen.
+                    Nur teilweise geltende Feiertage (Fronleichnam in Teilen
+                    Sachsens und Thüringens, Mariä Himmelfahrt in Teilen Bayerns,
+                    Augsburger Friedensfest) rechnet die App nicht mit.
   v1.19 15.09.2026  Wiederkehrende Aufgaben und Vorbereitung. Eine eigene
                     Aufgabe kann sich alle n Wochen, Monate oder Jahre
                     wiederholen; ob der nächste Termin ab dem alten Termin oder
@@ -715,6 +751,11 @@ main{flex:1;padding:16px var(--pad) 0;width:100%;max-width:var(--col);margin:0 a
 .wdhZeile{align-items:center}
 .wdhZeile .wdhAlle{flex:0 0 auto}
 .wdhZeile #wdhN{flex:0 0 5em;width:5em}
+/* Kontrollkästchen mit Text daneben. */
+.haken{display:flex;align-items:center;gap:10px;font-size:16px;margin:0 0 6px}
+.haken input{flex:0 0 22px;width:22px;height:22px;padding:0;margin:0}
+/* Im Rundgang steht über jeder Karte, zu welchem Nachweis sie gehört. */
+.pos .typ{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 2px}
 .mangelHinweis{font-size:14px;font-weight:600;margin:2px 0 6px}
 /* Kopf der Aufgabenseite. */
 .aufgKopf{font-size:18px;font-weight:600;margin:0}
@@ -1135,6 +1176,13 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
       <div id="alleListe"></div>
     </section>
 
+    <!-- Kombinierter Rundgang -->
+    <section class="view" id="view-rundgang">
+      <div id="rgKopf"></div>
+      <div id="rgListe"></div>
+      <div id="rgEnde"></div>
+    </section>
+
     <!-- Eine Aufgabe: Mangel oder eigene -->
     <section class="view" id="view-aufgabe">
       <div id="aufgBox"></div>
@@ -1270,7 +1318,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.19';
+const VERSION = 'v1.22';
 const BUILD   = VERSION + ' · 15.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -2028,6 +2076,88 @@ const inWoche = (iso, jetzt) => {
 const tageBis = ende => Math.ceil((ende - tagAnfang(new Date())) / TAG_MS);
 const monatsEnde   = j => new Date(j.getFullYear(), j.getMonth() + 1, 1);
 const quartalsEnde = j => new Date(j.getFullYear(), (Math.floor(j.getMonth() / 3) + 1) * 3, 1);
+/* --- Arbeitstage ------------------------------------------------------------
+   Eine Frist, die auf ein Wochenende, einen Feiertag oder in eine Abwesenheit
+   fällt, zieht auf den letzten Arbeitstag davor (so von Jean festgelegt: am
+   Wochenende der Freitag davor). Feiertage nach Bundesland, nur die landesweit
+   geltenden; Abwesenheiten stehen in CFG.abwesend als {von, bis, text}. */
+const BUNDESLAENDER = [['BW','Baden-Württemberg'], ['BY','Bayern'], ['BE','Berlin'], ['BB','Brandenburg'],
+  ['HB','Bremen'], ['HH','Hamburg'], ['HE','Hessen'], ['MV','Mecklenburg-Vorpommern'], ['NI','Niedersachsen'],
+  ['NW','Nordrhein-Westfalen'], ['RP','Rheinland-Pfalz'], ['SL','Saarland'], ['SN','Sachsen'],
+  ['ST','Sachsen-Anhalt'], ['SH','Schleswig-Holstein'], ['TH','Thüringen']];
+function ostersonntag(j){                      // Gaußsche Osterformel, gregorianisch
+  const a = j % 19, b = Math.floor(j / 100), c = j % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  return new Date(j, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 1);
+}
+const feiertagSpeicher = {};
+function feiertage(j, land){
+  const schluessel = j + '|' + land;
+  if(feiertagSpeicher[schluessel]) return feiertagSpeicher[schluessel];
+  const raus = {}, iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const fest = (m, t, name) => { raus[iso(new Date(j, m - 1, t))] = name; };
+  const o = ostersonntag(j), rel = (tage, name) => { raus[iso(new Date(j, o.getMonth(), o.getDate() + tage))] = name; };
+  const in_ = (...l) => l.includes(land);
+  fest(1, 1, 'Neujahr'); rel(-2, 'Karfreitag'); rel(1, 'Ostermontag'); fest(5, 1, 'Tag der Arbeit');
+  rel(39, 'Christi Himmelfahrt'); rel(50, 'Pfingstmontag'); fest(10, 3, 'Tag der Deutschen Einheit');
+  fest(12, 25, '1. Weihnachtstag'); fest(12, 26, '2. Weihnachtstag');
+  if(in_('BW', 'BY', 'ST')) fest(1, 6, 'Heilige Drei Könige');
+  if(in_('BE', 'MV')) fest(3, 8, 'Internationaler Frauentag');
+  if(in_('BW', 'BY', 'HE', 'NW', 'RP', 'SL')) rel(60, 'Fronleichnam');
+  if(in_('SL')) fest(8, 15, 'Mariä Himmelfahrt');
+  if(in_('TH')) fest(9, 20, 'Weltkindertag');
+  if(in_('BB', 'HB', 'HH', 'MV', 'NI', 'SN', 'ST', 'SH', 'TH')) fest(10, 31, 'Reformationstag');
+  if(in_('BW', 'BY', 'NW', 'RP', 'SL')) fest(11, 1, 'Allerheiligen');
+  if(in_('SN')){                               // Mittwoch vor dem 23. November
+    const d = new Date(j, 10, 23);
+    do{ d.setDate(d.getDate() - 1); }while(d.getDay() !== 3);
+    raus[iso(d)] = 'Buß- und Bettag';
+  }
+  return (feiertagSpeicher[schluessel] = raus);
+}
+const isoVonDatum = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const abwesenheitAm = iso => (CFG.abwesend || []).find(x => x.von && x.bis && x.von <= iso && iso <= x.bis) || null;
+/* Warum an diesem Tag nicht gearbeitet wird – oder null. */
+function freiGrund(d){
+  const iso = isoVonDatum(d), ab = abwesenheitAm(iso);
+  if(ab) return {art:'abwesend', ab};
+  if(d.getDay() === 0 || d.getDay() === 6) return {art:'wochenende'};
+  if(CFG.bundesland && feiertage(d.getFullYear(), CFG.bundesland)[iso]) return {art:'feiertag'};
+  return null;
+}
+/* Letzter Arbeitstag an oder vor d; nicht vor "fruehestens" (etwa dem Ersten
+   des Monats – eine Monatsrunde kann nicht im Vormonat erledigt werden). Ohne
+   Treffer ist tag null: dann hilft nur eine Vertretung. "ab" nennt die
+   Abwesenheit, die das Vorziehen verursacht hat. */
+function wirksamerTag(d, fruehestens){
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  let ab = null;
+  for(let i = 0; i < 400; i++){
+    const g = freiGrund(t);
+    if(!g) return {tag:t, ab};
+    if(g.art === 'abwesend' && !ab) ab = g.ab;
+    t.setDate(t.getDate() - 1);
+    if(fruehestens && t < fruehestens) return {tag:null, ab};
+  }
+  return {tag:null, ab};
+}
+/* Tage bis zum Ende einer Frist, gezählt bis einschließlich ihres letzten
+   Arbeitstags – für die Ringe und die Markenfarben. */
+function restBis(letzter, erster){
+  const w = wirksamerTag(letzter, erster), bis = w.tag || letzter;
+  return tageBis(new Date(bis.getFullYear(), bis.getMonth(), bis.getDate() + 1));
+}
+const restMonat = (j = new Date()) => restBis(new Date(j.getFullYear(), j.getMonth() + 1, 0), new Date(j.getFullYear(), j.getMonth(), 1));
+const restQuartal = (j = new Date()) => {
+  const q = Math.floor(j.getMonth() / 3);
+  return restBis(new Date(j.getFullYear(), (q + 1) * 3, 0), new Date(j.getFullYear(), q * 3, 1));
+};
+const kalenderwoche = d => {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), wt = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - wt);
+  return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / TAG_MS + 1) / 7);
+};
 /* --- Fristen der Fremdprüfungen ---------------------------------------------
    Aus dem letzten Prüfdatum und dem Abstand ergibt sich der nächste Termin.
    Ohne Datum gilt ein Objekt als offen: es ist fällig, nicht erst irgendwann. */
@@ -2094,7 +2224,10 @@ function ring(n, takt){
     /* Die wöchentliche Runde des Sprinklers: sie geht erst am Monatsende mit
        hinaus, deshalb zählt hier der Kontrollgang dieser Woche selbst. */
     const d = DAT[n.k], gaenge = (d && d.woch || []).filter(g => inWoche(g.datum, jetzt));
-    if(!gaenge.length) return jetzt.getDay() >= 4 || jetzt.getDay() === 0 ? 'rot' : '';
+    /* Rot in den letzten zwei Arbeitstagen der Woche – ohne Feiertag und
+       Abwesenheit Donnerstag und Freitag, wie bisher. */
+    const mo = wochenBeginn(jetzt);
+    if(!gaenge.length) return restBis(new Date(mo.getFullYear(), mo.getMonth(), mo.getDate() + 6), mo) <= 2 ? 'rot' : '';
     const punkte = teilCfg(n.k).woch;
     return gaenge.every(g => gangVoll(g, punkte)) ? 'gruen' : 'gelb';
   }
@@ -2103,15 +2236,15 @@ function ring(n, takt){
   if(takt === 'monat'){
     if(expMonat(n.k) === jetztMonat) return 'gruen';
     if(begonnen(n)) return rundeUeberfaellig(n) ? 'rot' : 'gelb';
-    return tageBis(monatsEnde(jetzt)) <= 7 ? 'rot' : '';
+    return restMonat(jetzt) <= 7 ? 'rot' : '';
   }
   if(expQuartal(n.k) === jetztQuartal) return 'gruen';
   if(begonnen(n)) return rundeUeberfaellig(n) ? 'rot' : 'gelb';
-  return tageBis(quartalsEnde(jetzt)) <= 14 ? 'rot' : '';
+  return restQuartal(jetzt) <= 14 ? 'rot' : '';
 }
 
 /* ---------- Ansichten ---------- */
-const TITEL = {home:'Betriebsnachweise', alle:'Alle Nachweise', aufgabe:'Aufgabe', erledigt:'Erledigte Aufgaben', nachweis:'Nachweis', blatt:'Blatt',
+const TITEL = {home:'Betriebsnachweise', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigte Aufgaben', nachweis:'Nachweis', blatt:'Blatt',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
@@ -2156,6 +2289,7 @@ function go(name, push = true){
   if(name === 'home')     renderHome();
   if(name === 'alle')     renderAlle();
   if(name === 'aufgabe')  renderAufgabe();
+  if(name === 'rundgang') renderRundgang();
   if(name === 'erledigt') renderErledigt();
   if(name === 'nachweis') renderNachweis();
   if(name === 'akku')     renderAkku();
@@ -2478,7 +2612,7 @@ function aufgaben(){
         const gaenge = ((d && d.woch) || []).filter(g => inWoche(g.datum, jetzt));
         const w = wochenBeginn(jetzt);
         if(!(gaenge.length && gaenge.every(g => gangVoll(g, punkte))))
-          neu(n, {titel:n.label + ' · wöchentlich', ziel:'woch', ring:ring(n, 'woche'),
+          neu(n, {titel:n.label + ' · wöchentlich', ziel:'woch', ring:ring(n, 'woche'), frueh:w,
             faellig:new Date(w.getFullYear(), w.getMonth(), w.getDate() + 6),
             stand: gaenge.length ? 'Kontrollgang unvollständig' : 'Kontrollgang fehlt'});
       }
@@ -2513,8 +2647,29 @@ function aufgaben(){
                  + (ueber ? ' · ' + zeitraumText(runde) : ''),
             ziel: n.art === 'sprinkler' ? 'mon' : '',
             ring: ring(n, quartal ? 'quartal' : 'monat'),
-            faellig: zeitraumEnde(runde), begonnen: los, stand});
+            faellig: zeitraumEnde(runde), begonnen: los, stand,
+            frueh: (() => { const e = zeitraumEnde(runde);
+                            return new Date(e.getFullYear(), e.getMonth() - (quartal ? 2 : 0), 1); })()});
   });
+  /* Kombinierter Rundgang: sind mindestens zwei integrierte Nachweise offen,
+     ersetzt eine Zeile ihre Einzelzeilen. Termin ist der früheste, Ring und
+     Wichtigkeit die dringlichsten der beteiligten. */
+  const rg = rundgangTeile().filter(t => t.objekte.some(o => o.offen));
+  if(rg.length >= 2){
+    const teil = liste.filter(a => !a.aufg && !a.akku && rg.some(t => t.k === a.k));
+    if(teil.length >= 2){
+      const erst = teil.slice().sort((x, y) => x.faellig - y.faellig)[0];
+      const ringRang = r => ['rot', 'gelb', '', 'gruen'].indexOf(r || '');
+      const wRang = w => WICHTIG.findIndex(x => x[0] === w);
+      for(let i = liste.length - 1; i >= 0; i--) if(teil.includes(liste[i])) liste.splice(i, 1);
+      liste.push({k:'', rundgang:true, ziel:'', akku:false, begonnen:teil.some(a => a.begonnen), pos:-1,
+        titel:'Kombinierter Rundgang',
+        stand:rg.map(t => `${NW(t.k).label} ${t.objekte.filter(o => o.offen).length}`).join(' · ') + ' offen',
+        ring:teil.map(a => a.ring).sort((x, y) => ringRang(x) - ringRang(y))[0] || '',
+        wichtig:teil.map(a => a.wichtig).sort((x, y) => wRang(x) - wRang(y))[0],
+        faellig:erst.faellig, frueh:erst.frueh});
+    }
+  }
   /* Mängel und eigene Aufgaben: sie stehen immer in der Liste, auch wenn ihr
      Termin weiter weg ist als die Vorwarnzeit – eine offene Sache soll nicht
      aus dem Blick geraten. */
@@ -2539,6 +2694,16 @@ function aufgaben(){
   const gruppeNr = g => GRUPPEN.findIndex(x => x[0] === g);
   const rang = w => WICHTIG.findIndex(x => x[0] === w);
   liste.forEach(a => {
+    /* Frist auf den letzten Arbeitstag davor. Geht das nicht, bleibt die Frist
+       stehen und die Zeile sagt, dass eine Vertretung gebraucht wird. */
+    if(a.faellig){
+      const w = wirksamerTag(a.faellig, a.frueh || null);
+      a.original = a.faellig;
+      if(w.tag){
+        if(w.ab){ a.ab = w.ab; a.hinweis = `${w.ab.text || 'Abwesenheit'} ab ${ttmm(alsDatum(w.ab.von))}`; }
+        a.faellig = w.tag;
+      }else{ a.ab = w.ab; a.vertretung = true; a.hinweis = 'Vertretung klären'; }
+    }
     a.tage = a.faellig ? Math.round((a.faellig - heute0) / TAG_MS) : null;
     if(a.aufg) a.ring = a.tage === null || a.tage < 0 ? 'rot' : (a.tage <= 7 || a.vorbAus) ? 'gelb' : '';
     a.gruppe = !a.faellig || a.tage < 0   ? 'ueber'
@@ -2583,9 +2748,9 @@ function aufgStand(a){
     .filter(Boolean).join(' · ');
 }
 const aufgabeKnopf = a =>
-  `<button class="btn aufgabe${a.ring ? ' ring-' + a.ring : ''}" ${a.aufg ? `data-aufg="${a.aufg}"`
+  `<button class="btn aufgabe${a.ring ? ' ring-' + a.ring : ''}" ${a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${a.aufg}"`
     : `data-nw="${a.k}" data-ziel="${a.ziel}"`}${a.akku ? ' data-akku="1"' : ''}>`
-  + `${esc(a.titel)}<small>${esc([a.stand, fristZeile(a)].filter(Boolean).join(' · '))}</small></button>`;
+  + `${esc(a.titel)}<small>${esc([a.stand, a.hinweis, fristZeile(a)].filter(Boolean).join(' · '))}</small></button>`;
 
 /* Einen Nachweis öffnen – von der Aufgabenliste wie von „Alle Nachweise“ aus. */
 function nachweisOeffnen(k, ziel){
@@ -2602,18 +2767,55 @@ const knoepfeVerdrahten = box => {
   box.querySelectorAll('[data-nw]').forEach(b => b.onclick = () =>
     b.dataset.akku ? akkuOeffnen() : nachweisOeffnen(b.dataset.nw, b.dataset.ziel));
   box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => aufgabeOeffnen(b.dataset.aufg));
+  box.querySelectorAll('[data-rundgang]').forEach(b => b.onclick = rundgangOeffnen);
 };
 
+/* Zwei Wochen vor einer Abwesenheit: was vorher zu erledigen ist und wofür eine
+   Vertretung gebraucht wird. Vorher erledigen heißt, die Liste hat die Frist
+   wegen dieser Abwesenheit vorgezogen. Vertretung: wöchentliche Gänge in einer
+   Woche ohne Arbeitstag, Monatsrunden in einem Monat ohne Arbeitstag. */
+function abwesenheitsKarte(liste){
+  const h = heute(), grenze = tagPlus(h, 14);
+  const ab = (CFG.abwesend || []).filter(x => x.von && x.bis && x.bis >= h && x.von <= grenze)
+    .sort((x, y) => x.von.localeCompare(y.von))[0];
+  if(!ab) return '';
+  const von = alsDatum(ab.von), bis = alsDatum(ab.bis);
+  const vorher = liste.filter(a => a.ab === ab && !a.vertretung).map(a => a.titel);
+  const vertretung = liste.filter(a => a.ab === ab && a.vertretung).map(a => a.titel);
+  const sp = NW('sprinkler');
+  if(sp && hatEintraege(sp, 'woche'))
+    for(let mo = wochenBeginn(von); mo <= bis; mo = new Date(mo.getFullYear(), mo.getMonth(), mo.getDate() + 7)){
+      const so = new Date(mo.getFullYear(), mo.getMonth(), mo.getDate() + 6);
+      if(so < tagAnfang(new Date())) continue;
+      const text = `Sprinkler-Kontrollgang KW ${kalenderwoche(mo)}`;
+      if(!wirksamerTag(so, mo).tag && !vertretung.includes(text)) vertretung.push(text);
+    }
+  for(let m = new Date(von.getFullYear(), von.getMonth(), 1); m <= bis; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)){
+    if(wirksamerTag(new Date(m.getFullYear(), m.getMonth() + 1, 0), m).tag) continue;
+    NACHWEISE.filter(n => !n.spaeter && n.art !== 'fremd' && n.art !== 'medien' && hatEintraege(n, 'monat'))
+      .forEach(n => {
+        const text = `${n.label} · ${MONATE[m.getMonth()]}`;
+        if(!vertretung.some(v => v.startsWith(n.label))) vertretung.push(text);
+      });
+  }
+  const zeilen = (titel, l) => l.length
+    ? `<p class="muted small" style="margin:8px 0 2px">${titel}</p><p style="margin:0">${l.map(esc).join('<br>')}</p>` : '';
+  return `<div class="card">
+    <div class="eyebrow" style="margin:0 0 6px">${esc(ab.text || 'Abwesenheit')} · ${esc(dText(ab.von))} bis ${esc(dText(ab.bis))}</div>
+    ${zeilen('Vorher erledigen', vorher)}${zeilen('Vertretung klären', vertretung)}
+    ${!vorher.length && !vertretung.length ? '<p class="muted small" style="margin:0">Nichts, was vorher erledigt werden muss.</p>' : ''}
+  </div>`;
+}
 function renderHome(){
   listeGebaut = true;
   const liste = aufgaben(), gibt = irgendeinNachweis();
-  let inhalt = GRUPPEN.map(([g, titel]) => {
+  let inhalt = abwesenheitsKarte(liste) + GRUPPEN.map(([g, titel]) => {
     const teil = liste.filter(a => a.gruppe === g);
     return teil.length
       ? `<div class="eyebrow" style="margin-top:6px">${esc(titel)}</div>` + teil.map(aufgabeKnopf).join('')
       : '';
   }).join('');
-  if(!inhalt) inhalt = gibt
+  if(!inhalt.includes('data-')) inhalt += gibt
     ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Alle Nachweise“.</p>`
     : `<p class="muted small">Noch nichts eingetragen. Über das Zahnrad oben links geht es in die Einstellungen – dort legst du je Nachweis an, was im Haus steht.</p>`;
   /* Darunter der Weg zu allem Übrigen. Die Grundrisse hängen sich nach, sobald
@@ -2633,6 +2835,322 @@ function renderHome(){
   $('#buildTag').textContent = BUILD;
   hausKnopf();
 }
+/* ---------- Kombinierter Rundgang -------------------------------------------
+   Die Runden mehrerer Nachweise als ein Weg durchs Haus. Welche mitmachen,
+   steht je Nachweis in den Einstellungen. Der Weg (CFG.weg) umfasst alle
+   Objekte der integrierten Nachweise – auch die gerade nicht fälligen, damit
+   ein Zähler seinen Platz zwischen den Quartalen behält – und wird im Rundgang
+   nur auf das Anstehende gefiltert. Die Reihenfolgen der Einzelansichten
+   bleiben davon unberührt. */
+const RUNDGANG_TYPEN = ['aufzuege', 'rollband', 'feststell', 'medien'];
+const imRundgang = k => RUNDGANG_TYPEN.includes(k) && !!(CFG.teile[k] || {}).rundgang;
+const wegId = (k, id) => `${k}::${id}`;
+function wegUmhaengen(k, alt, neu){
+  if(!Array.isArray(CFG.weg)) return;
+  const i = CFG.weg.indexOf(wegId(k, alt));
+  if(i >= 0) CFG.weg[i] = wegId(k, neu);
+}
+/* Die Objekte eines Nachweises in seiner eigenen Reihenfolge. */
+const rgEigene = k => k === 'medien'
+  ? stellenSortiert().map(z => ({k, id:z.key, ort:z.key}))
+  : teilCfg(k).anlagen.map(a => ({k, id:a, ort:`${k}|${a}`}));
+/* Welche integrierten Nachweise gerade im Rundgang stehen, mit Objekten und
+   deren Stand. Ohne Nebenwirkung: es wird nichts angelegt oder gespeichert. */
+function rundgangTeile(){
+  const teile = [];
+  RUNDGANG_TYPEN.forEach(k => {
+    const n = NW(k);
+    if(!n || n.spaeter || !imRundgang(k) || !hatEintraege(n, 'monat')) return;
+    const d = DAT[k];
+    if(k === 'medien'){
+      if(expQuartal(k) === jetztZeitraum(true)) return;
+      /* Abgelesen wird zum Quartalsende – vorher nur, wenn schon begonnen. */
+      if(!begonnen(n) && new Date().getMonth() % 3 !== 2) return;
+      teile.push({k, n, objekte:rgEigene(k).map(o => Object.assign(o,
+        {offen:!d || String((d.stand || {})[o.id] ?? '').trim() === ''}))});
+    }else{
+      if(expMonat(k) === jetztZeitraum(false)) return;
+      teile.push({k, n, objekte:rgEigene(k).map(o => Object.assign(o,
+        {offen:!(d && d.zeilen && d.zeilen[o.id] && d.zeilen[o.id].status)}))});
+    }
+  });
+  return teile;
+}
+/* Den gespeicherten Weg auf den Stand bringen: Verschwundenes fällt heraus,
+   Neues wird eingeordnet. Ohne Weg bildet die längste eigene Reihenfolge das
+   Gerüst. Eingeordnet wird hinter das nächstgelegene Objekt, das auf einer
+   gemeinsamen Etage liegt; mehrere hinter demselben behalten ihre eigene
+   Folge. Ohne Marke oder ohne gemeinsame Etage geht es ans Ende. Die Abstände
+   sind Luftlinie im Planbild – fürs grobe Einordnen genügt das, den Rest
+   schiebt man im Rundgang zurecht. */
+function wegAktuell(){
+  const typen = RUNDGANG_TYPEN.filter(k => NW(k) && !NW(k).spaeter && imRundgang(k));
+  const vorhanden = new Map();
+  typen.forEach(k => rgEigene(k).forEach(o => vorhanden.set(wegId(o.k, o.id), o)));
+  const alt = Array.isArray(CFG.weg) ? CFG.weg : [];
+  const weg = [...new Set(alt.filter(w => vorhanden.has(w)))];
+  let geaendert = weg.length !== alt.length;
+  if(!weg.length && typen.length){
+    const basis = typen.map(k => rgEigene(k)).sort((x, y) => y.length - x.length)[0];
+    basis.forEach(o => weg.push(wegId(o.k, o.id)));
+    geaendert = true;
+  }
+  typen.forEach(k => {
+    const eingefuegt = new Set();
+    rgEigene(k).forEach(o => {
+      const w = wegId(o.k, o.id);
+      if(weg.includes(w)) return;
+      const plaene = ortPlaene(o.ort), ort = CFG.orte[o.ort];
+      let best = -1, bestAbstand = Infinity;
+      if(plaene.length) weg.forEach((x, i) => {
+        if(eingefuegt.has(x)) return;
+        const p = vorhanden.get(x), po = p && CFG.orte[p.ort];
+        if(!po || po.x == null || !ortPlaene(p.ort).some(pl => plaene.includes(pl))) return;
+        const abstand = Math.hypot(po.x - ort.x, po.y - ort.y);
+        if(abstand < bestAbstand){ bestAbstand = abstand; best = i; }
+      });
+      if(best < 0) weg.push(w);
+      else{
+        let i = best + 1;
+        while(i < weg.length && eingefuegt.has(weg[i])) i++;
+        weg.splice(i, 0, w);
+      }
+      eingefuegt.add(w);
+      geaendert = true;
+    });
+  });
+  if(geaendert){ CFG.weg = weg; saveCfg(); }
+  return weg;
+}
+
+let rgOffen = new Set(), rgGeprueft = new Set(), rgSprung = false;
+function rundgangOeffnen(){
+  rgOffen = new Set(); rgGeprueft = new Set(); rgSprung = true; listenLage = null;
+  go('rundgang');
+}
+function renderRundgang(){
+  const teile = rundgangTeile();
+  teile.forEach(t => datenFuer(t.k));
+  const obj = new Map();
+  teile.forEach(t => t.objekte.forEach(o => obj.set(wegId(o.k, o.id), o)));
+  const weg = wegAktuell().filter(w => obj.has(w));
+  obj.forEach((o, w) => { if(!weg.includes(w)) weg.push(w); });
+  const namen = medienNamen(), stellenListe = stellen();
+  const steht = o => String((DAT.medien.stand || {})[o.id] ?? '').trim() !== '';
+  const zeile = o => DAT[o.k].zeilen[o.id];
+
+  /* Laufnummern wie in den Einzelansichten, damit diese nach dem Rundgang
+     dieselbe Ordnung zeigen: Feststellanlagen beim Zuklappen, Zähler sobald ein
+     Stand steht. */
+  let neueNr = false;
+  obj.forEach((o, w) => {
+    const d = DAT[o.k];
+    if(o.k === 'medien'){
+      d.n = d.n || {};
+      if(steht(o)){ if(!d.n[o.id]){ d.n[o.id] = laufNr(d); neueNr = true; } }
+      else if(d.n[o.id]){ delete d.n[o.id]; neueNr = true; }
+    }else if(NW(o.k).kompakt){
+      const z = zeile(o);
+      if(z.status && !rgOffen.has(w)){ if(!z.n){ z.n = laufNr(d); neueNr = true; } }
+      else if(!z.status && z.n){ delete z.n; neueNr = true; }
+    }
+  });
+  if(neueNr) saveDat();
+
+  /* Oben das Erledigte, zuletzt Geprüftes zuoberst; darunter die offenen
+     Objekte in der Folge des Weges. Eine gerade als Mangel bewertete Karte
+     bleibt offen an ihrem Platz, bis sie zugeklappt wird. */
+  const oben = w => {
+    const o = obj.get(w);
+    if(o.k === 'medien') return steht(o);
+    const z = zeile(o);
+    return !!z.status && (!rgOffen.has(w) || rgGeprueft.has(w) || !!z.n);
+  };
+  const zeit = w => { const o = obj.get(w); return ((DAT[o.k].zt || {})[o.id]) || 0; };
+  const fertig = weg.filter(oben).sort((x, y) => zeit(y) - zeit(x));
+  const offene = weg.filter(w => !oben(w));
+
+  const aktiv = teile.map(t => `${esc(t.n.label)} ${t.objekte.filter(o => o.offen).length}`).join(' · ');
+  $('#rgKopf').innerHTML = `<p class="muted small" style="margin:0 0 10px">Offen: ${aktiv}</p>`
+    + (teile.some(t => t.k === 'medien')
+      ? `<label class="field"><span>Ablesedatum der Zähler</span>
+           <input type="date" id="rgMedDatum" class="schmal" value="${esc(DAT.medien.datum || '')}"></label>` : '');
+
+  const pfeile = (w, mitPfeilen) => {
+    const k = offene.indexOf(w);
+    return `<span class="pfeile">
+        <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>${mitPfeilen ? `
+        <button type="button" data-hoch="1" aria-label="nach oben"${k <= 0 ? ' disabled' : ''}>↑</button>
+        <button type="button" data-runter="1" aria-label="nach unten"${k < 0 || k >= offene.length - 1 ? ' disabled' : ''}>↓</button>` : ''}
+      </span>`;
+  };
+  const karte = w => {
+    const o = obj.get(w), n = NW(o.k), typ = `<div class="typ">${esc(n.label)}</div>`, istOben = fertig.includes(w);
+    if(o.k === 'medien'){
+      const z = stellenListe.find(x => x.key === o.id) || {}, d = DAT.medien, alt = MED_ALT[o.id];
+      const v = zahl(d.stand[o.id]) != null && alt && zahl(alt.stand) != null
+        ? zahlText(zahl(d.stand[o.id]) - zahl(alt.stand)) : '';
+      return `<div class="pos${steht(o) ? ' fertig' : ''}" data-w="${esc(w)}">${typ}
+        <div class="name">${esc(z.partei)} · ${esc(namen[o.id] || z.medium)}</div>
+        <div class="muted small">Nr. ${esc(z.nr)}${z.ort ? ' · ' + esc(z.ort) : ''}</div>
+        <div class="row" style="margin-top:8px;align-items:center">
+          <input inputmode="decimal" data-stand="1" value="${esc(d.stand[o.id] || '')}" placeholder="Zählerstand">
+          <span class="muted small" style="flex:0 0 auto">${esc(z.einheit)}</span>
+          ${pfeile(w, !istOben)}
+        </div>
+        <div class="muted small" style="margin-top:6px">${
+          alt ? `Vorquartal ${esc(zahlText(zahl(alt.stand)))} ${esc(z.einheit)}${v ? ` · Verbrauch ${esc(v)} ${esc(z.einheit)}` : ''}`
+              : 'Keine Ablesung aus dem Vorquartal'}</div>
+      </div>`;
+    }
+    const z = zeile(o);
+    const mangel = z.status && /mangel|defekt/i.test(z.status);
+    const klasse = !z.status ? '' : mangel ? ' mangel' : ' fertig';
+    if(z.status && !rgOffen.has(w))
+      return `<div class="pos${klasse} kompakt" data-w="${esc(w)}">${typ}
+        <div class="name">${esc(o.id)}</div>${mangelHinweis(o.ort)}
+        <div class="muted small">${esc(dText(z.datum))}${z.datum ? ' · ' : ''}${esc(z.status)}${z.bem ? ' · ' + esc(z.bem) : ''}</div>
+      </div>`;
+    return `<div class="pos${klasse}" data-w="${esc(w)}">${typ}
+      <div class="name${z.status ? ' zu' : ''}">${esc(o.id)}</div>${mangelHinweis(o.ort)}
+      <div class="kopf">
+        <input type="date" data-feld="datum" value="${esc(z.datum)}" aria-label="Datum">
+        ${pfeile(w, !istOben)}
+      </div>
+      <div class="seg">${n.status.map(st =>
+        `<button type="button" data-status="${esc(st)}" aria-pressed="${z.status === st}">${esc(st)}</button>`).join('')}</div>
+      <input class="bem" data-feld="bem" placeholder="Bemerkung (wenn nötig)" value="${esc(z.bem)}">
+    </div>`;
+  };
+  $('#rgListe').innerHTML = [...fertig, ...offene].map(karte).join('');
+
+  /* Am Ende: je Nachweis sein Stand und der Weg zur Ausgabe. */
+  $('#rgEnde').innerHTML = `<div class="eyebrow">Ausgeben</div>
+    <p class="muted small" style="margin:-4px 0 8px">Ausgegeben wird je Nachweis – mit Unterschrift, wo sie verlangt ist.</p>`
+    + teile.map(t => {
+      const rest = t.objekte.filter(o => o.offen).length;
+      return `<button class="btn${rest ? ' ghost' : ''}" data-nw="${t.k}" data-ziel="">${esc(t.n.label)} · ${
+        rest ? rest + ' offen' : 'vollständig, zur Ausgabe'}</button>`;
+    }).join('')
+    /* Neu bilden hilft, wenn nach dem ersten Öffnen noch viele Marken gesetzt
+       wurden – der bestehende Weg ordnet nur Neues ein. */
+    + `<div class="eyebrow">Weg</div>
+       <p class="muted small" style="margin:-4px 0 8px">Bildet den Weg neu aus den Reihenfolgen der Nachweise und den Marken im Grundriss – etwa nachdem viele Marken dazugekommen sind.</p>
+       <button class="btn ghost klein" id="rgNeuBilden">Weg neu bilden</button>`;
+  knoepfeVerdrahten($('#rgEnde'));
+  $('#rgNeuBilden').onclick = () =>
+    frage('Weg neu bilden',
+      'Der Weg entsteht neu aus den Reihenfolgen der Nachweise und den Marken im Grundriss.\n\nWas du mit den Pfeilen verschoben hast, geht dabei verloren. Erfasste Ergebnisse bleiben erhalten.',
+      'Neu bilden', () => {
+        CFG.weg = []; saveCfg();
+        renderRundgang(); window.scrollTo(0, 0);
+        toast('Weg neu gebildet');
+      });
+
+  const datum = $('#rgMedDatum');
+  if(datum) datum.oninput = datum.onchange = () => { DAT.medien.datum = datum.value; saveDat(); };
+
+  /* Nach einem Neuaufbau die Karte wiederfinden, auf die man gerade schaut. */
+  const neuUndHalten = (top, ziel) => {
+    renderRundgang();
+    if(ziel) lageHalten(top, () => $(`#rgListe .pos[data-w="${CSS.escape(ziel)}"]`));
+  };
+  const naechsteOffene = w => { const i = offene.indexOf(w); return i >= 0 ? offene[i + 1] : null; };
+
+  $$('#rgListe .pos').forEach(box => {
+    const w = box.dataset.w, o = obj.get(w), d = DAT[o.k];
+    const ortKnopf = box.querySelector('[data-ort]');
+    if(ortKnopf) ortKnopf.onclick = () => {
+      const z = o.k === 'medien' ? stellenListe.find(x => x.key === o.id) : null;
+      verorten(o.ort, z ? `${z.partei} · ${namen[o.id] || z.medium}` : o.id);
+    };
+    /* Pfeile: Tausch mit der benachbarten offenen Karte – im gemeinsamen Weg. */
+    const schieben = richtung => {
+      const k = offene.indexOf(w), nb = offene[k + richtung];
+      if(k < 0 || !nb) return;
+      const top = box.getBoundingClientRect().top;
+      const neu = wegAktuell().filter(x => x !== w);
+      const j = neu.indexOf(nb);
+      neu.splice(richtung < 0 ? j : j + 1, 0, w);
+      CFG.weg = neu; saveCfg();
+      neuUndHalten(top, w);
+    };
+    const hoch = box.querySelector('[data-hoch]'), runter = box.querySelector('[data-runter]');
+    if(hoch)   hoch.onclick   = () => schieben(-1);
+    if(runter) runter.onclick = () => schieben(1);
+
+    if(o.k === 'medien'){
+      const feld = box.querySelector('[data-stand]');
+      feld.oninput = e => {
+        d.stand[o.id] = e.target.value.trim();
+        if(d.stand[o.id]){ zeitMerken(d, o.id); if(!d.datum){ d.datum = heute(); if(datum) datum.value = d.datum; } }
+        saveDat();
+        box.classList.toggle('fertig', !!d.stand[o.id]);
+      };
+      /* Wie in der Ablesung: beim Verlassen des Feldes wandert der Zähler nach
+         oben, als Umhängen der einen Karte – ein Neuaufbau risse Feld und
+         Tastatur mit weg, wenn der Daumen schon im nächsten steht. */
+      feld.onblur = () => {
+        if(!steht(o) || (d.n || {})[o.id]) return;
+        d.n = d.n || {}; d.n[o.id] = laufNr(d); saveDat();
+        const top = box.getBoundingClientRect().top, nach = box.nextElementSibling;
+        const erste = $('#rgListe .pos');
+        if(erste && erste !== box) $('#rgListe').insertBefore(box, erste);
+        box.querySelectorAll('[data-hoch],[data-runter]').forEach(b => b.remove());
+        const i = offene.indexOf(w); if(i >= 0) offene.splice(i, 1);
+        $$('#rgListe .pos').forEach(el => {
+          const k = offene.indexOf(el.dataset.w);
+          const h = el.querySelector('[data-hoch]'), r = el.querySelector('[data-runter]');
+          if(h) h.disabled = k <= 0;
+          if(r) r.disabled = k < 0 || k >= offene.length - 1;
+        });
+        if(nach) lageHalten(top, () => nach);
+      };
+      return;
+    }
+    const z = d.zeilen[o.id], n = NW(o.k);
+    if(box.classList.contains('kompakt')){
+      box.onclick = () => {
+        const top = box.getBoundingClientRect().top;
+        rgOffen.add(w); rgGeprueft.add(w);
+        neuUndHalten(top, w);
+      };
+      return;
+    }
+    const kopf = box.querySelector('.name.zu');
+    if(kopf) kopf.onclick = () => {
+      const top = box.getBoundingClientRect().top, nach = oben(w) ? w : naechsteOffene(w);
+      rgOffen.delete(w); rgGeprueft.add(w);
+      neuUndHalten(top, nach || w);
+    };
+    box.querySelectorAll('[data-status]').forEach(b => b.onclick = () => {
+      const top = box.getBoundingClientRect().top, nach = naechsteOffene(w);
+      z.status = z.status === b.dataset.status ? '' : b.dataset.status;
+      if(z.status && !z.datum) z.datum = heute();
+      if(z.status) zeitMerken(d, o.id);               // fürs Tätigkeitsbuch
+      const mangel = /mangel|defekt/i.test(z.status || '');
+      if(z.status && mangel){ rgOffen.add(w); }
+      else{ rgOffen.delete(w); if(z.status) rgGeprueft.add(w); }
+      saveDat();
+      /* Wandert die Karte nach oben, rückt die nächste offene an ihren Platz. */
+      neuUndHalten(top, z.status && !mangel && nach ? nach : w);
+    });
+    box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
+    box.querySelector('[data-feld="bem"]').oninput = e => { z.bem = e.target.value; saveDat(); };
+  });
+
+  /* Rückkehr aus dem Grundriss an die alte Stelle, beim Betreten zur ersten
+     offenen Karte – mit der letzten erledigten darüber im Bild. */
+  if(listenLage != null){ lageZurueck(); rgSprung = false; return; }
+  if(!rgSprung) return;
+  rgSprung = false;
+  const karten = $$('#rgListe .pos'), i = fertig.length;
+  if(i <= 0 || i >= karten.length) return;
+  const kopfH = $('header') ? $('header').getBoundingClientRect().height : 0;
+  const obenY = karten[i - 1].getBoundingClientRect().top + window.scrollY;
+  window.scrollTo(0, Math.max(0, Math.round(obenY - kopfH - 8)));
+}
+
 /* ---------- Eine Aufgabe ----------------------------------------------------
    Dieselbe Seite für Mängel, eigene Aufgaben und den Entwurf einer neuen. Der
    Entwurf liegt nur im Speicher der Seite und kommt erst mit „Aufgabe anlegen“
@@ -3644,6 +4162,7 @@ function renderSettings(){
                     : (teilCfg(n.k).anlagen || []).length;
   $('#setMenue').innerHTML =
       knopf('obj', '', 'Objekt und Prüfer')
+    + knopf('abwesend', '', 'Abwesenheit und Feiertage')
     + '<div class="eyebrow">Anlagen und Prüfumfang</div>'
     + NACHWEISE.filter(n => !n.spaeter).map(n => knopf('nw', n.k, n.label, anzahl(n))).join('')
     + '<div class="eyebrow">Gerät</div>'
@@ -3669,6 +4188,7 @@ function setOeffnen(art, k){
   setSeite = {art, k:k || ''};
   setTitel = art === 'nw'     ? NW(k).label
            : art === 'obj'    ? 'Objekt und Prüfer'
+           : art === 'abwesend' ? 'Abwesenheit'
            : art === 'check'  ? 'Checkliste'
            : art === 'akkus'  ? 'Akkutypen'
            : art === 'tausch' ? 'Zählertausch'
@@ -3686,19 +4206,86 @@ function renderSetSub(){
   if(a === 'plaene'){ renderPlaene(); return; }
   if(a === 'geraet' || a === 'zugang') return;
   if(a === 'obj')   { setObjekt(dyn);   return; }
+  if(a === 'abwesend'){ setAbwesend(dyn); return; }
   if(a === 'check') { setCheck(dyn, k); return; }
   if(a === 'tausch'){ setTausch(dyn);   return; }
   if(a === 'akkus') { setAkkus(dyn);     return; }
   const n = NW(k);
   /* Oben die Wichtigkeit für die Aufgabenliste, darunter wie gehabt die Seite
      des Nachweises in einem eigenen Behälter. */
-  dyn.innerHTML = '<div id="setWichtig"></div><div id="setNwInhalt"></div>';
+  dyn.innerHTML = '<div id="setWichtig"></div><div id="setRundgang"></div><div id="setNwInhalt"></div>';
   wichtigWahl($('#setWichtig'), k);
+  if(RUNDGANG_TYPEN.includes(k)) rundgangWahl($('#setRundgang'), k);
   const box = $('#setNwInhalt');
   if(n.art === 'medien')         setStellen(box);
   else if(n.art === 'fremd')     setFremd(box, k);
   else if(n.art === 'sprinkler') setSprinkler(box, k);
   else                           setAnlagen(box, k);
+}
+/* Abwesenheiten und Bundesland. Sortiert wird beim Betreten der Seite, nicht
+   bei jeder Eingabe – sonst spränge die gerade bearbeitete Karte weg. Vergangene
+   stehen darunter, damit sie sich löschen lassen; auf Fristen wirken sie nicht
+   mehr. Gespeichert wird bei jeder Eingabe. */
+function setAbwesend(box){
+  CFG.abwesend = Array.isArray(CFG.abwesend) ? CFG.abwesend : [];
+  const h = heute();
+  const reihe = CFG.abwesend.map((x, i) => ({x, i}))
+    .sort((p, q) => String(p.x.von).localeCompare(String(q.x.von)));
+  const kommend = reihe.filter(r => !r.x.bis || r.x.bis >= h), vorbei = reihe.filter(r => r.x.bis && r.x.bis < h).reverse();
+  const karte = ({x, i}) => `<div class="card abw" data-i="${i}">
+      <div class="row">
+        <label class="field" style="flex:1;margin:0"><span>von</span><input type="date" data-f="von" value="${esc(x.von || '')}"></label>
+        <label class="field" style="flex:1;margin:0"><span>bis</span><input type="date" data-f="bis" value="${esc(x.bis || '')}"></label>
+      </div>
+      <input data-f="text" value="${esc(x.text || '')}" placeholder="Bezeichnung, z. B. Urlaub" style="margin-top:10px">
+      <button class="btn ghost klein" data-weg="1" style="margin-top:10px">Löschen</button>
+    </div>`;
+  box.innerHTML = `
+    <div class="eyebrow" style="margin-top:0">Feiertage</div>
+    <label class="field"><span>Bundesland</span><select id="abwLand">
+      <option value="">– ohne Feiertage –</option>
+      ${BUNDESLAENDER.map(([k, t]) => `<option value="${k}"${CFG.bundesland === k ? ' selected' : ''}>${t}</option>`).join('')}
+    </select></label>
+    <p class="muted small" style="margin:-6px 0 14px">Gerechnet werden die landesweiten Feiertage. Solche, die nur in Teilen eines Landes gelten – Fronleichnam in Teilen Sachsens und Thüringens, Mariä Himmelfahrt in Teilen Bayerns, das Augsburger Friedensfest –, trägst du bei Bedarf unten als Abwesenheit ein.</p>
+    <div class="eyebrow">Abwesenheiten</div>
+    <p class="muted small" style="margin:-4px 0 10px">Fällt eine Frist aufs Wochenende, auf einen Feiertag oder in eine Abwesenheit, rechnet die Aufgabenliste mit dem letzten Arbeitstag davor. Zwei Wochen vor einer Abwesenheit steht oben auf der Startseite, was vorher zu erledigen ist.</p>
+    <div id="abwKommend">${kommend.map(karte).join('')}</div>
+    <button class="btn" id="abwNeu">+ Abwesenheit hinzufügen</button>
+    ${vorbei.length ? `<div class="eyebrow">Vergangen</div><div id="abwVorbei">${vorbei.map(karte).join('')}</div>` : ''}`;
+  $('#abwLand').onchange = e => { CFG.bundesland = e.target.value; saveCfg(); };
+  $('#abwNeu').onclick = () => {
+    CFG.abwesend.push({von:'', bis:'', text:''}); saveCfg(); setAbwesend(box);
+    const neu = box.querySelector(`.abw[data-i="${CFG.abwesend.length - 1}"] [data-f="von"]`);
+    if(neu) neu.focus();
+  };
+  box.querySelectorAll('.abw').forEach(k => {
+    const x = CFG.abwesend[+k.dataset.i];
+    k.querySelectorAll('[data-f]').forEach(f => {
+      /* Datumsfelder mit beiden Ereignissen – iOS meldet "change" erst beim
+         Schließen der Datumswahl. Ein Ende vor dem Beginn wird angeglichen. */
+      f.oninput = f.onchange = () => {
+        x[f.dataset.f] = f.dataset.f === 'text' ? f.value : f.value;
+        if(f.dataset.f === 'von' && x.von && (!x.bis || x.bis < x.von)){
+          x.bis = x.von; k.querySelector('[data-f="bis"]').value = x.bis;
+        }
+        if(f.dataset.f === 'bis' && x.bis && x.von && x.bis < x.von){
+          x.von = x.bis; k.querySelector('[data-f="von"]').value = x.von;
+        }
+        saveCfg();
+      };
+    });
+    k.querySelector('[data-weg]').onclick = () => {
+      frage('Abwesenheit löschen', `${x.text || 'Abwesenheit'}${x.von ? ' vom ' + dText(x.von) : ''}${x.bis ? ' bis ' + dText(x.bis) : ''} wird gelöscht.`,
+        'Löschen', () => { CFG.abwesend.splice(+k.dataset.i, 1); saveCfg(); setAbwesend(box); });
+    };
+  });
+}
+function rundgangWahl(box, k){
+  box.innerHTML = `<label class="haken"><input type="checkbox" id="rgHaken"${imRundgang(k) ? ' checked' : ''}>
+      <span>In kombinierte Rundgänge integrieren</span></label>
+    <p class="muted small" style="margin:0 0 14px">Sind mindestens zwei integrierte Nachweise offen, steht auf der Startseite ein gemeinsamer Rundgang. Die Objekte ordnen sich nach deinen Wegen und ihrer Lage im Grundriss, Objekte ohne Marke hängen hinten an. Zurechtschieben geht im Rundgang mit den Pfeilen.${
+      k === 'medien' ? ' Die Zähler kommen im letzten Monat des Quartals dazu.' : ''}</p>`;
+  $('#rgHaken').onchange = e => { teilCfg(k).rundgang = e.target.checked; saveCfg(); };
 }
 /* Drei Stufen, gesichert beim Antippen. Aufgefrischt wird nur die Wahl selbst. */
 function wichtigWahl(box, k){
@@ -4349,6 +4936,7 @@ function tauschAnwenden(dran){
     if(CFG.orte[x.key]){ CFG.orte[neuStelle.key] = CFG.orte[x.key]; delete CFG.orte[x.key]; }
     zeitUmhaengen(d, x.key, neuStelle.key);
     aufgabenUmhaengen('medien', x.key, neuStelle.key);
+    wegUmhaengen('medien', x.key, neuStelle.key);
   });
   saveCfg(); saveAlt(); saveDat(); saveTausch();
   return getan;
@@ -4394,6 +4982,7 @@ function anlageUmbenennen(k, alt, neu){
     zeitUmhaengen(d, alt, neu); saveDat();
   }
   aufgabenUmhaengen(k, alt, neu);
+  wegUmhaengen(k, alt, neu);
 }
 /* Dasselbe für eine Zählstelle: an ihrem Schlüssel hängen zusätzlich der Stand
    des Vorquartals, der laufende Wert und der Platz im Ableseweg. */
@@ -4409,6 +4998,7 @@ function stelleUmbenennen(alt, neu){
   const j = (t.folge || []).indexOf(alt);
   if(j >= 0) t.folge[j] = neu;
   aufgabenUmhaengen('medien', alt, neu);
+  wegUmhaengen('medien', alt, neu);
 }
 
 /* --- Grundrisse -------------------------------------------------------------
@@ -4682,7 +5272,7 @@ function ortStatus(key){
     const d = DAT.medien;
     if(d && String((d.stand || {})[key] ?? '').trim() !== '') return 'gruen';
     if(rundeUeberfaellig(NW('medien'))) return 'rot';
-    return tageBis(quartalsEnde(jetzt)) <= 14 ? 'rot' : 'gelb';
+    return restQuartal(jetzt) <= 14 ? 'rot' : 'gelb';
   }
   const t = String(key).split('|');
   /* Fremdprüfungen kennen keine Runde, nur Fristen – die Marke steht wie der
@@ -4700,7 +5290,7 @@ function ortStatus(key){
   if(z && z.status) return 'gruen';
   const n = NW(t[0]);
   if(n && rundeUeberfaellig(n)) return 'rot';      // Runde eines vergangenen Monats
-  return tageBis(monatsEnde(jetzt)) <= 7 ? 'rot' : 'gelb';
+  return restMonat(jetzt) <= 7 ? 'rot' : 'gelb';
 }
 /* --- Etagen -----------------------------------------------------------------
    Ein Aufzug reicht über mehrere Geschosse. Er hat trotzdem nur eine Stelle
