@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.12 15.09.2026  Die Aufgabenliste war nach der Rückkehr aus einem Nachweis
+                    manchmal nicht aktuell. Vermutete Ursache (auf dem Gerät
+                    noch nicht bestätigt): iOS meldet die Änderung eines
+                    Datumsfeldes erst, wenn die Datumswahl schließt – tippt man
+                    gleich auf Zurück, kommt die Meldung nach dem Aufbau der
+                    Startseite. Gespeichert wurde richtig, nur die Liste stand
+                    schon. Jetzt baut sich die Liste (ebenso „Alle Nachweise“)
+                    nach jeder Speicherung neu auf, solange sie zu sehen ist, und
+                    ebenso, wenn die App wieder in den Vordergrund kommt – sonst
+                    zeigte sie am nächsten Morgen die Tage von gestern.
   v1.11 15.09.2026  Die Startseite ist jetzt eine Aufgabenliste (Stufe 1 des
                     Umbaus zum Arbeitsassistenten). Je laufende Runde eine
                     Zeile mit Stand und Frist, gruppiert nach Überfällig,
@@ -1165,7 +1175,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.11';
+const VERSION = 'v1.12';
 const BUILD   = VERSION + ' · 15.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1688,20 +1698,36 @@ const saveAlt = () => Store.set('nwMedAlt', MED_ALT);
 let TAUSCH = Store.get('nwTausch', []);
 const saveTausch = () => Store.set('nwTausch', TAUSCH);
 const WOCH_MAX = 5;                  // mehr wöchentliche Gänge hat kein Monat
-const saveCfg = () => Store.set('nwCfg', CFG);
+/* Die Startseite folgt jeder Speicherung. Anlass: iOS meldet die Änderung eines
+   Datumsfeldes erst, wenn die Datumswahl schließt – wer gleich auf Zurück tippt,
+   bekommt die Meldung NACH dem Aufbau der Liste, die dann einen Stand zu alt
+   ist. Gebündelt über eine kurze Uhr, damit mehrere Speicherungen hintereinander
+   nur einen Aufbau auslösen; ob Startseite oder „Alle Nachweise“ gerade stehen,
+   wird erst beim Ablauf gefragt – beim Laden der Datei gibt es die Ansichten
+   noch nicht, und vor dem Entsperren soll hinter dem Schloss nichts entstehen. */
+let listeUhr = null, listeGebaut = false;
+function listeNachziehen(){
+  clearTimeout(listeUhr);
+  listeUhr = setTimeout(() => {
+    if(!listeGebaut) return;
+    if(current === 'home') renderHome();
+    else if(current === 'alle') renderAlle();
+  }, 60);
+}
+const saveCfg = () => { Store.set('nwCfg', CFG); listeNachziehen(); };
 
 /* Der laufende Nachweis: je Anlage Datum, Zustand, Bemerkung, dazu die
    Unterschrift. Bleibt liegen, bis er ausgegeben wurde – eine Prüfung kann sich
    über mehrere Tage ziehen. */
 let DAT = Store.get('nwDat', {});
-const saveDat = () => Store.set('nwDat', DAT);
+const saveDat = () => { Store.set('nwDat', DAT); listeNachziehen(); };
 /* Welche RUNDE zuletzt hinausging – nicht, an welchem Tag das geschah. Wer die
    August-Runde am 2. September abschließt, hätte sonst den September als
    erledigt markiert und bekäme dort keine Mahnung mehr. Vermerkt wird deshalb
    "2026-08" bzw. "2026-Q3". Die Daten selbst werden beim Ausgeben geleert – ohne
    diesen Vermerk wüsste die Startseite nichts vom Stand der Runde. */
 let EXP = Store.get('nwExp', {});
-const saveExp = () => Store.set('nwExp', EXP);
+const saveExp = () => { Store.set('nwExp', EXP); listeNachziehen(); };
 /* --- Tätigkeitsbuch ---------------------------------------------------------
    Vorarbeit für die Zeitfenster einer späteren Stufe: je ausgegebener Runde eine
    Zeile mit Nachweis, Zeitraum, Ausgabetag und Arbeitszeit. Die Zeit entsteht
@@ -1970,6 +1996,11 @@ function zurueck(){
   if(p) go(p, false);
 }
 $('#btnBack').onclick = zurueck;
+/* Kommt die App aus dem Hintergrund zurück, kann ein neuer Tag begonnen haben –
+   Fristen und Gruppen der Liste rechnen dann neu. */
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible') listeNachziehen();
+});
 
 /* Rückfrage im eigenen Fenster. Der Aufruf übergibt, was bei Zustimmung
    geschehen soll – abgelehnt wird durch Nichtstun. */
@@ -2338,6 +2369,7 @@ const knoepfeVerdrahten = box =>
     b.dataset.akku ? akkuOeffnen() : nachweisOeffnen(b.dataset.nw, b.dataset.ziel));
 
 function renderHome(){
+  listeGebaut = true;
   const liste = aufgaben(), gibt = irgendeinNachweis();
   let inhalt = GRUPPEN.map(([g, titel]) => {
     const teil = liste.filter(a => a.gruppe === g);
