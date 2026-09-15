@@ -10,6 +10,39 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.15 15.09.2026  Zählertausch behält die Marke im Grundriss. Bisher blieb sie
+                    am alten Schlüssel (Partei, Medium, Nummer) hängen, und der
+                    neue Zähler stand ohne Ort da – das Umbenennen einer
+                    Zählstelle nahm den Ort schon immer mit, der Tausch nicht.
+                    Aufgaben folgen jetzt ihrer Anlage bzw. ihrem Zähler: beim
+                    Tausch, beim Umbenennen einer Zählstelle und beim Umbenennen
+                    einer Anlage (ein offener Mangel wird so auch in der
+                    nächsten Runde wiedererkannt). Der Name eines Zählers in
+                    einer Aufgabe kommt aus der aktuellen Liste.
+  v1.14 15.09.2026  Die Frist eines Mangels zählt jetzt ab der Ausgabe, nicht
+                    mehr ab dem Tag der Feststellung (so von Jean festgelegt).
+                    Mängel, die v1.13 schon angelegt hat, rechnen einmalig neu –
+                    aber nur, wenn ihr Termin noch unverändert ist. Eigene
+                    Aufgaben lassen sich jetzt auch mit einem Zähler der
+                    Medienverbräuche verknüpfen, samt Weg zu seiner Marke im
+                    Grundriss.
+  v1.13 15.09.2026  Stufe 2 der Aufgabenliste: Mängel und eigene Aufgaben.
+                    Mit der Ausgabe einer Runde wird jeder Mangel zur Aufgabe –
+                    bei Aufzügen, Rollbandfiltern und Feststellanlagen je
+                    Anlage mit ihrer Bemerkung, beim Sprinkler je Prüfpunkt mit
+                    dem Text aus „Mängel und Bemerkungen“. Die Frist zählt ab dem
+                    Tag der Feststellung und richtet sich nach der Wichtigkeit
+                    des Nachweises (hoch 7, normal 30, niedrig 90 Tage). Ist
+                    derselbe Mangel noch offen, entsteht keine zweite Aufgabe,
+                    die bestehende vermerkt „erneut festgestellt“; im Rundgang
+                    zeigt die Karte „Offener Mangel seit …“. Eine Aufgabe hat
+                    eine eigene Seite: Herkunft, Termin, Wichtigkeit, Notiz, der
+                    Weg zum Grundriss und zum Nachweis, „Erledigt“ mit Datum und
+                    Vermerk. Eigene Aufgaben über „+ Aufgabe“ auf der
+                    Startseite, wahlweise mit Nachweis und Anlage. Erledigtes
+                    steht unter „Erledigte Aufgaben“ und bleibt erhalten; Mängel
+                    lassen sich nur erledigen, nicht löschen. Das Nachweisblatt
+                    bleibt unverändert. Aufgaben reisen in der Sicherungsdatei.
   v1.12 15.09.2026  Die Aufgabenliste war nach der Rückkehr aus einem Nachweis
                     manchmal nicht aktuell. Vermutete Ursache (auf dem Gerät
                     noch nicht bestätigt): iOS meldet die Änderung eines
@@ -634,6 +667,11 @@ main{flex:1;padding:16px var(--pad) 0;width:100%;max-width:var(--col);margin:0 a
 .btn.ring-gruen{border-color:#4E9A2F}
 /* Eine Aufgabe der Startseite: oben der Nachweis, darunter Stand und Frist
    in kleinerer Schrift, damit die Liste auch bei vielen Zeilen lesbar bleibt. */
+/* Hinweis im Rundgang auf einen noch offenen Mangel derselben Anlage. */
+.mangelHinweis{font-size:14px;font-weight:600;margin:2px 0 6px}
+/* Kopf der Aufgabenseite. */
+.aufgKopf{font-size:18px;font-weight:600;margin:0}
+.aufgText{margin:6px 0 0;white-space:pre-wrap}
 .btn.aufgabe small{display:block;margin-top:3px;font-size:14px;font-weight:400;color:var(--ink-soft)}
 
 .field{display:block;margin-bottom:14px}
@@ -1050,6 +1088,16 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
       <div id="alleListe"></div>
     </section>
 
+    <!-- Eine Aufgabe: Mangel oder eigene -->
+    <section class="view" id="view-aufgabe">
+      <div id="aufgBox"></div>
+    </section>
+
+    <!-- Erledigte Aufgaben -->
+    <section class="view" id="view-erledigt">
+      <div id="erledigtListe"></div>
+    </section>
+
     <!-- Ein Nachweis -->
     <section class="view" id="view-nachweis">
       <div class="eyebrow" id="nwObjekt"></div>
@@ -1175,7 +1223,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.12';
+const VERSION = 'v1.15';
 const BUILD   = VERSION + ' · 15.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1741,6 +1789,77 @@ if(!Array.isArray(BUCH)) BUCH = [];
 const saveBuch = () => Store.set('nwBuch', BUCH);
 const PAUSE_MS = 30 * 60000;
 const zeitMerken = (o, s) => { o.zt = o.zt || {}; if(!o.zt[s]) o.zt[s] = Date.now(); };
+/* --- Aufgaben ---------------------------------------------------------------
+   Anders als die Runden überdauern sie die Ausgabe, deshalb ein eigener
+   Speicher. Zwei Arten: "mangel" entsteht beim Ausgeben einer Runde, "eigen"
+   legt man von Hand an. "quelle" verbindet einen Mangel mit seiner Anlage bzw.
+   seinem Prüfpunkt – daran erkennt die nächste Runde, dass er schon offen ist. */
+let AUFG = Store.get('nwAufg', []);
+if(!Array.isArray(AUFG)) AUFG = [];
+const saveAufg = () => { Store.set('nwAufg', AUFG); listeNachziehen(); };
+const FRIST_TAGE = {hoch:7, normal:30, niedrig:90};
+const isoTag = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const tagPlus = (iso, tage) => { const d = alsDatum(iso); d.setDate(d.getDate() + tage); return isoTag(d); };
+const neueId = () => 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const offenerMangel = quelle => AUFG.find(a => a.art === 'mangel' && !a.erledigt && a.quelle === quelle);
+/* Aufgaben hängen an Anlage bzw. Zähler. Ändert sich deren Name oder Schlüssel,
+   ziehen sie mit – auch die Quelle eines Mangels, sonst erkennte die nächste
+   Runde ihn nicht wieder. Ein Mangeltitel trägt den Anlagennamen und folgt mit. */
+function aufgabenUmhaengen(k, alt, neu){
+  let n = 0;
+  AUFG.forEach(a => {
+    if(a.k !== k || a.anlage !== alt) return;
+    a.anlage = neu;
+    if(a.quelle === `${k}|${alt}`) a.quelle = `${k}|${neu}`;
+    if(a.art === 'mangel' && a.titel === alt) a.titel = neu;
+    n++;
+  });
+  if(n) saveAufg();
+}
+/* Uhrzeiten fürs Tätigkeitsbuch wandern ebenfalls mit. */
+const zeitUmhaengen = (d, alt, neu) => {
+  if(d && d.zt && d.zt[alt] != null){ d.zt[neu] = d.zt[alt]; delete d.zt[alt]; }
+};
+const mangelHinweis = quelle => {
+  const m = offenerMangel(quelle);
+  return m ? `<div class="mangelHinweis">Offener Mangel seit ${esc(dText(m.festgestellt))}</div>` : '';
+};
+/* Beim Ausgeben: jeder Mangel der Runde wird zur Aufgabe. Die Frist zählt ab der
+   Ausgabe; der Tag der Feststellung bleibt als Angabe erhalten. Beim Sprinkler zählt der Prüfpunkt: ist er in mehreren
+   Kontrollgängen mangelhaft, bleibt es ein Mangel, festgestellt beim ersten. */
+function maengelUebernehmen(k, d, zeitraum){
+  const n = NW(k), t = teilCfg(k), funde = [];
+  if(n.art === 'sprinkler'){
+    [['woch', t.woch], ['mon', t.mon]].forEach(([art, punkte]) =>
+      ((d && d[art]) || []).forEach(g => punkte.forEach((p, i) => {
+        if((g.w || {})[i] !== 'mangel') return;
+        const quelle = `sprinkler|${art}|${p}`, tag = g.datum || heute();
+        const f = funde.find(x => x.quelle === quelle);
+        if(f){ if(tag < f.tag) f.tag = tag; return; }
+        funde.push({quelle, anlage:'', punkt:p, tag, text:String(d.maengel || '').trim()});
+      })));
+  }else if(n.art !== 'medien' && n.art !== 'fremd'){
+    t.anlagen.forEach(a => {
+      const z = ((d && d.zeilen) || {})[a];
+      if(z && /mangel|defekt/i.test(z.status || ''))
+        funde.push({quelle:`${k}|${a}`, anlage:a, punkt:'', tag:z.datum || heute(), text:String(z.bem || '').trim()});
+    });
+  }
+  funde.forEach(f => {
+    const alt = offenerMangel(f.quelle);
+    if(alt){
+      alt.erneut = alt.erneut || [];
+      if(!alt.erneut.some(e => e.zeitraum === zeitraum)) alt.erneut.push({datum:f.tag, zeitraum, text:f.text});
+      return;
+    }
+    const w = wichtigVon(k);
+    AUFG.push({id:neueId(), art:'mangel', quelle:f.quelle, k, anlage:f.anlage, punkt:f.punkt,
+      titel:f.anlage || f.punkt, text:f.text, notiz:'', zeitraum, festgestellt:f.tag,
+      angelegt:heute(), frist:tagPlus(heute(), FRIST_TAGE[w] || 30), wichtig:w,
+      erneut:[], erledigt:'', vermerk:''});
+  });
+  if(funde.length) saveAufg();
+}
 function buchSchreiben(k, d, zeitraum){
   const t = Object.values((d && d.zt) || {});
   [...((d && d.woch) || []), ...((d && d.mon) || [])].forEach(g => t.push(...Object.values(g.zt || {})));
@@ -1936,7 +2055,7 @@ function ring(n, takt){
 }
 
 /* ---------- Ansichten ---------- */
-const TITEL = {home:'Betriebsnachweise', alle:'Alle Nachweise', nachweis:'Nachweis', blatt:'Blatt',
+const TITEL = {home:'Betriebsnachweise', alle:'Alle Nachweise', aufgabe:'Aufgabe', erledigt:'Erledigte Aufgaben', nachweis:'Nachweis', blatt:'Blatt',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
@@ -1980,6 +2099,8 @@ function go(name, push = true){
   window.scrollTo(0, 0);
   if(name === 'home')     renderHome();
   if(name === 'alle')     renderAlle();
+  if(name === 'aufgabe')  renderAufgabe();
+  if(name === 'erledigt') renderErledigt();
   if(name === 'nachweis') renderNachweis();
   if(name === 'akku')     renderAkku();
   if(name === 'plaene')   renderPlaeneWahl();
@@ -2246,7 +2367,26 @@ const ttmm = d => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth()
 const irgendeinNachweis = () => NACHWEISE.some(n => !n.spaeter
   && (hatEintraege(n, 'monat') || hatEintraege(n, 'woche')));
 
+/* v1.13 rechnete die Frist ab der Feststellung. Einmal beim ersten Aufbau
+   umstellen – nur wo der Termin noch genau dem alten Vorschlag entspricht, ein
+   von Hand gesetzter bleibt. Nicht schon beim Laden: dort gibt es die
+   Datumshelfer noch nicht. */
+let fristenUmgestellt = false;
+function fristenUmstellen(){
+  if(fristenUmgestellt) return;
+  fristenUmgestellt = true;
+  let geaendert = false;
+  AUFG.forEach(a => {
+    const tage = FRIST_TAGE[a.wichtig] || 30;
+    if(a.art === 'mangel' && !a.erledigt && a.festgestellt && a.angelegt
+       && a.festgestellt !== a.angelegt && a.frist === tagPlus(a.festgestellt, tage)){
+      a.frist = tagPlus(a.angelegt, tage); geaendert = true;
+    }
+  });
+  if(geaendert) Store.set('nwAufg', AUFG);
+}
 function aufgaben(){
+  fristenUmstellen();
   const liste = [], jetzt = new Date(), heute0 = tagAnfang(jetzt);
   const neu = (n, a) => liste.push(Object.assign(
     {k:n.k, ziel:'', akku:false, begonnen:false, wichtig:wichtigVon(n.k), pos:NACHWEISE.indexOf(n)}, a));
@@ -2318,6 +2458,14 @@ function aufgaben(){
             ring: ring(n, quartal ? 'quartal' : 'monat'),
             faellig: zeitraumEnde(runde), begonnen: los, stand});
   });
+  /* Mängel und eigene Aufgaben: sie stehen immer in der Liste, auch wenn ihr
+     Termin weiter weg ist als die Vorwarnzeit – eine offene Sache soll nicht
+     aus dem Blick geraten. */
+  AUFG.filter(a => !a.erledigt).forEach(a => liste.push({
+    k:a.k || '', aufg:a.id, ziel:'', akku:false, begonnen:true,
+    wichtig: WICHTIG.some(x => x[0] === a.wichtig) ? a.wichtig : 'normal', pos:1000,
+    titel:aufgTitel(a), stand:aufgStand(a), ring:'',
+    faellig: a.frist ? alsDatum(a.frist) : null}));
   const sonntag = (() => { const w = wochenBeginn(jetzt);
                            return new Date(w.getFullYear(), w.getMonth(), w.getDate() + 6); })();
   const monatLetzter = new Date(heute0.getFullYear(), heute0.getMonth() + 1, 0);
@@ -2325,6 +2473,7 @@ function aufgaben(){
   const rang = w => WICHTIG.findIndex(x => x[0] === w);
   liste.forEach(a => {
     a.tage = a.faellig ? Math.round((a.faellig - heute0) / TAG_MS) : null;
+    if(a.aufg) a.ring = a.tage === null || a.tage < 0 ? 'rot' : a.tage <= 7 ? 'gelb' : '';
     a.gruppe = !a.faellig || a.tage < 0   ? 'ueber'
              : a.faellig <= sonntag       ? 'woche'
              : a.faellig <= monatLetzter  ? 'monat' : 'bald';
@@ -2349,8 +2498,23 @@ function fristText0(a){
   if(a.tage === 1) return 'fällig morgen';
   return `bis ${ttmm(a.faellig)} · noch ${a.tage} Tage`;
 }
+const kurz = (t, max = 48) => {
+  t = String(t || '').replace(/\s+/g, ' ').trim();
+  return t.length > max ? t.slice(0, max - 1) + '…' : t;
+};
+const aufgTitel = a => a.art === 'mangel'
+  ? ['Mangel', (NW(a.k) || {}).label, a.titel].filter(Boolean).join(' · ')
+  : (a.titel || 'Ohne Titel');
+function aufgStand(a){
+  if(a.art === 'mangel')
+    return [kurz(a.text) || 'ohne Bemerkung', (a.erneut || []).length ? 'erneut festgestellt' : '']
+      .filter(Boolean).join(' · ');
+  const n = a.k && NW(a.k);
+  return [n ? n.label + (a.anlage ? ' · ' + anlageName(a) : '') : '', kurz(a.notiz)].filter(Boolean).join(' · ');
+}
 const aufgabeKnopf = a =>
-  `<button class="btn aufgabe${a.ring ? ' ring-' + a.ring : ''}" data-nw="${a.k}" data-ziel="${a.ziel}"${a.akku ? ' data-akku="1"' : ''}>`
+  `<button class="btn aufgabe${a.ring ? ' ring-' + a.ring : ''}" ${a.aufg ? `data-aufg="${a.aufg}"`
+    : `data-nw="${a.k}" data-ziel="${a.ziel}"`}${a.akku ? ' data-akku="1"' : ''}>`
   + `${esc(a.titel)}<small>${esc([a.stand, fristZeile(a)].filter(Boolean).join(' · '))}</small></button>`;
 
 /* Einen Nachweis öffnen – von der Aufgabenliste wie von „Alle Nachweise“ aus. */
@@ -2364,9 +2528,11 @@ function nachweisOeffnen(k, ziel){
   go('nachweis');
 }
 function akkuOeffnen(){ datenFuer('rwa'); go('akku'); }
-const knoepfeVerdrahten = box =>
+const knoepfeVerdrahten = box => {
   box.querySelectorAll('[data-nw]').forEach(b => b.onclick = () =>
     b.dataset.akku ? akkuOeffnen() : nachweisOeffnen(b.dataset.nw, b.dataset.ziel));
+  box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => aufgabeOeffnen(b.dataset.aufg));
+};
 
 function renderHome(){
   listeGebaut = true;
@@ -2382,14 +2548,165 @@ function renderHome(){
     : `<p class="muted small">Noch nichts eingetragen. Über das Zahnrad oben links geht es in die Einstellungen – dort legst du je Nachweis an, was im Haus steht.</p>`;
   /* Darunter der Weg zu allem Übrigen. Die Grundrisse hängen sich nach, sobald
      der Bilderspeicher geantwortet hat. */
-  $('#homeListe').innerHTML = inhalt + '<div id="homeMehr">'
-    + (gibt ? `<div class="eyebrow">Übersicht</div><button class="btn" data-alle="1">Alle Nachweise</button>` : '')
-    + '</div>';
+  const erledigt = AUFG.filter(a => a.erledigt).length;
+  const mehr = (gibt ? `<button class="btn" data-alle="1">Alle Nachweise</button>` : '')
+    + (erledigt ? `<button class="btn" data-erledigt="1">Erledigte Aufgaben · ${erledigt}</button>` : '');
+  $('#homeListe').innerHTML = inhalt
+    + `<button class="btn" data-neuaufg="1" style="margin-top:12px">+ Aufgabe</button>`
+    + '<div id="homeMehr">' + (mehr ? `<div class="eyebrow">Übersicht</div>${mehr}` : '') + '</div>';
   knoepfeVerdrahten($('#homeListe'));
   const alle = $('#homeListe [data-alle]');
   if(alle) alle.onclick = () => go('alle');
+  const erl = $('#homeListe [data-erledigt]');
+  if(erl) erl.onclick = () => go('erledigt');
+  $('#homeListe [data-neuaufg]').onclick = aufgabeNeu;
   $('#buildTag').textContent = BUILD;
   hausKnopf();
+}
+/* ---------- Eine Aufgabe ----------------------------------------------------
+   Dieselbe Seite für Mängel, eigene Aufgaben und den Entwurf einer neuen. Der
+   Entwurf liegt nur im Speicher der Seite und kommt erst mit „Aufgabe anlegen“
+   in die Liste – wer vorher zurückgeht, verwirft ihn. Gespeichert wird sonst
+   bei jeder Eingabe; die Seite baut sich dabei nicht neu auf, damit Feld und
+   Tastatur stehen bleiben. */
+let aufgAktiv = null;
+function aufgabeOeffnen(id){
+  aufgAktiv = AUFG.find(a => a.id === id) || null;
+  if(aufgAktiv) go('aufgabe');
+}
+function aufgabeNeu(){
+  aufgAktiv = {id:neueId(), art:'eigen', quelle:'', k:'', anlage:'', punkt:'', titel:'', text:'',
+    notiz:'', zeitraum:'', festgestellt:'', angelegt:heute(), frist:tagPlus(heute(), 7),
+    wichtig:'normal', erneut:[], erledigt:'', vermerk:'', entwurf:true};
+  go('aufgabe');
+}
+/* Worauf sich eine eigene Aufgabe beziehen kann: Anlagen und Zähler, beides
+   Orte im Haus mit Marke im Grundriss. Prüfpunkte des Sprinklers sind es nicht.
+   Beim Zähler wird sein Schlüssel gemerkt (derselbe wie für seine Marke), dazu
+   der lesbare Name, falls der Zähler später getauscht wird. */
+function bezugsAnlagen(k){
+  const n = k && NW(k);
+  if(!n || n.art === 'sprinkler') return [];
+  if(n.art === 'medien'){
+    const namen = medienNamen();
+    return stellenSortiert().map(z => ({wert:z.key, text:`${z.partei} · ${namen[z.key] || z.medium}`}));
+  }
+  return teilCfg(k).anlagen.map(a => ({wert:a, text:a}));
+}
+/* Schlüssel der Marke im Grundriss: Zähler tragen ihren eigenen, Anlagen den
+   des Nachweises davor. Ein nicht mehr vorhandener Zähler hat keine Marke. */
+/* Anzeigename der Anlage einer Aufgabe; beim Zähler aus der aktuellen Liste,
+   damit ein geänderter Parteiname auch hier ankommt. */
+function anlageName(a){
+  if(a.k === 'medien'){
+    const z = bezugsAnlagen('medien').find(x => x.wert === a.anlage);
+    if(z) return z.text;
+  }
+  return a.anlageText || a.anlage;
+}
+function aufgOrt(a){
+  if(!a.k || !a.anlage) return '';
+  if(a.k !== 'medien') return `${a.k}|${a.anlage}`;
+  return stellen().some(z => z.key === a.anlage) ? a.anlage : '';
+}
+function renderAufgabe(){
+  const a = aufgAktiv, box = $('#aufgBox');
+  if(!a){ box.innerHTML = ''; return; }
+  const mangel = a.art === 'mangel', neu = !!a.entwurf, n = a.k ? NW(a.k) : null;
+  const sichern = () => { if(!neu) saveAufg(); };
+  $('#titel').textContent = neu ? 'Neue Aufgabe' : mangel ? 'Mangel' : 'Aufgabe';
+  let kopf;
+  if(mangel){
+    kopf = `<div class="card">
+      <div class="eyebrow" style="margin:0 0 6px">${esc([n ? n.label : '', 'Runde ' + zeitraumText(a.zeitraum)].filter(Boolean).join(' · '))}</div>
+      <p class="aufgKopf">${esc(a.titel)}</p>
+      ${a.text ? `<p class="aufgText">${esc(a.text)}</p>` : `<p class="muted small" style="margin:6px 0 0">Keine Bemerkung eingetragen.</p>`}
+      <p class="muted small" style="margin:8px 0 0">Festgestellt am ${esc(dText(a.festgestellt))}</p>
+      ${(a.erneut || []).map(e => `<p class="muted small" style="margin:4px 0 0">Erneut festgestellt am ${
+        esc(dText(e.datum))} (Runde ${esc(zeitraumText(e.zeitraum))})${e.text && e.text !== a.text ? ': ' + esc(e.text) : ''}</p>`).join('')}
+    </div>`;
+  }else{
+    const anlagen = bezugsAnlagen(a.k);
+    kopf = `<label class="field"><span>Titel</span>
+        <input id="aufgTitel" value="${esc(a.titel)}" placeholder="Was ist zu tun?"></label>
+      <label class="field"><span>Nachweis (wenn es einen Bezug gibt)</span>
+        <select id="aufgNw"><option value="">– ohne –</option>${
+          NACHWEISE.filter(x => !x.spaeter).map(x =>
+            `<option value="${x.k}"${x.k === a.k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
+      ${anlagen.length ? `<label class="field"><span>${a.k === 'medien' ? 'Zähler' : 'Anlage'}</span>
+        <select id="aufgAnlage"><option value="">– ohne –</option>${
+          anlagen.map(x => `<option value="${esc(x.wert)}"${x.wert === a.anlage ? ' selected' : ''}>${esc(x.text)}</option>`).join('')}</select></label>` : ''}`;
+  }
+  const wege = !neu && a.k && n ? `<div class="row" style="margin-bottom:14px">
+      ${aufgOrt(a) ? `<button class="btn" data-weg="plan">⌖ Grundriss</button>` : ''}
+      <button class="btn" data-weg="nw">Zum Nachweis</button></div>` : '';
+  const erledigung = neu ? `<button class="btn" id="aufgAnlegen">Aufgabe anlegen</button>`
+    : a.erledigt
+      ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erledigt</div>
+           <p style="margin:0">am ${esc(dText(a.erledigt))}</p>
+           ${a.vermerk ? `<p class="aufgText">${esc(a.vermerk)}</p>` : ''}
+           <button class="btn ghost klein" id="aufgWieder" style="margin-top:10px">Wieder öffnen</button></div>`
+      : `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erledigen</div>
+           <input type="date" id="erlDatum" value="${heute()}" aria-label="Erledigt am">
+           <input id="erlVermerk" placeholder="Vermerk, z. B. Firma und was getan wurde" style="margin-top:10px">
+           <button class="btn" id="erlSetzen" style="margin-top:10px">Als erledigt vermerken</button></div>`;
+  box.innerHTML = kopf
+    + `<label class="field"><span>Termin</span><input type="date" id="aufgFrist" value="${esc(a.frist)}"></label>
+       <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
+         WICHTIG.map(([w, t]) => `<button type="button" data-w="${w}" aria-pressed="${a.wichtig === w}">${t}</button>`).join('')}</div></div>
+       <label class="field"><span>Notiz</span><textarea id="aufgNotiz" style="min-height:90px">${esc(a.notiz)}</textarea></label>`
+    + wege + erledigung
+    + (!neu && !mangel ? `<button class="btn ghost klein" id="aufgWeg" style="margin-top:18px">Aufgabe löschen</button>` : '');
+
+  if(!mangel){
+    $('#aufgTitel').oninput = e => { a.titel = e.target.value; sichern(); };
+    $('#aufgNw').onchange = e => { a.k = e.target.value; a.anlage = ''; a.anlageText = ''; sichern(); renderAufgabe(); };
+    if($('#aufgAnlage')) $('#aufgAnlage').onchange = e => {
+      const wahl = bezugsAnlagen(a.k).find(x => x.wert === e.target.value);
+      a.anlage = wahl ? wahl.wert : ''; a.anlageText = wahl ? wahl.text : '';
+      sichern(); renderAufgabe();
+    };
+  }
+  /* Beide Ereignisse: iOS meldet "change" erst beim Schließen der Datumswahl. */
+  const frist = $('#aufgFrist');
+  frist.oninput = frist.onchange = () => { if(frist.value && frist.value !== a.frist){ a.frist = frist.value; sichern(); } };
+  box.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
+    a.wichtig = b.dataset.w; sichern();
+    box.querySelectorAll('[data-w]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  });
+  $('#aufgNotiz').oninput = e => { a.notiz = e.target.value; sichern(); };
+  const plan = box.querySelector('[data-weg="plan"]');
+  if(plan) plan.onclick = () => verorten(aufgOrt(a), anlageName(a));
+  const nw = box.querySelector('[data-weg="nw"]');
+  if(nw) nw.onclick = () => nachweisOeffnen(a.k, mangel && a.punkt ? String(a.quelle).split('|')[1] : '');
+  if(neu) $('#aufgAnlegen').onclick = () => {
+    if(!a.titel.trim()){ toast('Bitte einen Titel eintragen'); $('#aufgTitel').focus(); return; }
+    delete a.entwurf; AUFG.push(a); saveAufg();
+    toast('Aufgabe angelegt'); zurueck();
+  };
+  if($('#erlSetzen')) $('#erlSetzen').onclick = () => {
+    a.erledigt = $('#erlDatum').value || heute();
+    a.vermerk = $('#erlVermerk').value.trim();
+    saveAufg(); toast('Als erledigt vermerkt'); zurueck();
+  };
+  if($('#aufgWieder')) $('#aufgWieder').onclick = () => {
+    a.erledigt = ''; a.vermerk = ''; saveAufg(); renderAufgabe();
+  };
+  /* Nur eigene Aufgaben lassen sich löschen. Ein Mangel gehört zum Nachweis und
+     wird erledigt, nicht entfernt. */
+  if($('#aufgWeg')) $('#aufgWeg').onclick = () =>
+    frage('Aufgabe löschen', `„${a.titel || 'Ohne Titel'}“ wird gelöscht.`, 'Löschen', () => {
+      AUFG = AUFG.filter(x => x !== a); saveAufg(); zurueck();
+    });
+}
+function renderErledigt(){
+  const liste = AUFG.filter(a => a.erledigt)
+    .sort((x, y) => String(y.erledigt).localeCompare(String(x.erledigt)));
+  $('#erledigtListe').innerHTML = liste.length
+    ? liste.map(a => `<button class="btn aufgabe" data-aufg="${a.id}">${esc(aufgTitel(a))}<small>${
+        esc(['erledigt am ' + dText(a.erledigt), kurz(a.vermerk)].filter(Boolean).join(' · '))}</small></button>`).join('')
+    : `<p class="muted small">Noch nichts erledigt.</p>`;
+  knoepfeVerdrahten($('#erledigtListe'));
 }
 /* Die frühere Startseite: alle Nachweise nach Takt, die Fremdprüfungen nach
    Abstand, darunter die eigene Wartung. */
@@ -2695,7 +3012,7 @@ function renderNachweis(){
        zwischen überblickbar und endlosem Blättern. */
     if(n.kompakt && z.status && !offenKarten.has(a))
       return `<div class="pos${klasse} kompakt" data-i="${i}">
-        <div class="name">${esc(a)}</div>
+        <div class="name">${esc(a)}</div>${mangelHinweis(offen + '|' + a)}
         <div class="muted small">${esc(dText(z.datum))}${z.datum ? ' · ' : ''}${esc(z.status)}${
           z.bem ? ' · ' + esc(z.bem) : ''}</div>
       </div>`;
@@ -2704,7 +3021,7 @@ function renderNachweis(){
        Erdgeschoss, Gang neben Treppenhaus" in eine schmale Spalte und brach in
        viele kurze Zeilen um. */
     return `<div class="pos${klasse}" data-i="${i}">
-      <div class="name${n.kompakt ? ' zu' : ''}">${esc(a)}</div>
+      <div class="name${n.kompakt ? ' zu' : ''}">${esc(a)}</div>${mangelHinweis(offen + '|' + a)}
       <div class="kopf">
         <input type="date" data-feld="datum" value="${esc(z.datum)}" aria-label="Datum">
         ${pfeile}
@@ -2900,7 +3217,7 @@ function gangKarte(art, punkte, g, idx){
     ${punkte.map((p, i) => {
       const wert = g.w[i] ?? '';
       return `<div class="punkt">
-        <div class="ptext">${esc(p)}</div>
+        <div class="ptext">${esc(p)}</div>${mangelHinweis(`sprinkler|${art}|${p}`)}
         ${istBar(p)
           ? `<input inputmode="decimal" data-p="${i}" value="${esc(wert)}" placeholder="bar" class="bar">`
           : `<div class="seg" data-p="${i}">
@@ -3690,6 +4007,11 @@ function tauschAnwenden(dran){
     if(d && d.stand){ d.stand[neuStelle.key] = d.stand[x.key] || ''; delete d.stand[x.key]; }
     const i = (t.folge || []).indexOf(x.key);    // Platz im Ableseweg behalten
     if(i >= 0) t.folge[i] = neuStelle.key;
+    /* Der neue Zähler hängt am selben Platz wie der alte – die Marke im
+       Grundriss bleibt also, wo sie ist. */
+    if(CFG.orte[x.key]){ CFG.orte[neuStelle.key] = CFG.orte[x.key]; delete CFG.orte[x.key]; }
+    zeitUmhaengen(d, x.key, neuStelle.key);
+    aufgabenUmhaengen('medien', x.key, neuStelle.key);
   });
   saveCfg(); saveAlt(); saveDat(); saveTausch();
   return getan;
@@ -3726,8 +4048,10 @@ function anlageUmbenennen(k, alt, neu){
   const va = k + '|' + alt, vb = k + '|' + neu, d = DAT[k];
   if(CFG.orte[va]){ CFG.orte[vb] = CFG.orte[va]; delete CFG.orte[va]; }
   if(d && d.zeilen && d.zeilen[alt]){
-    d.zeilen[neu] = d.zeilen[alt]; delete d.zeilen[alt]; saveDat();
+    d.zeilen[neu] = d.zeilen[alt]; delete d.zeilen[alt];
+    zeitUmhaengen(d, alt, neu); saveDat();
   }
+  aufgabenUmhaengen(k, alt, neu);
 }
 /* Dasselbe für eine Zählstelle: an ihrem Schlüssel hängen zusätzlich der Stand
    des Vorquartals, der laufende Wert und der Platz im Ableseweg. */
@@ -3737,10 +4061,12 @@ function stelleUmbenennen(alt, neu){
   if(CFG.orte[alt]){ CFG.orte[neu] = CFG.orte[alt]; delete CFG.orte[alt]; }
   if(MED_ALT[alt]){ MED_ALT[neu] = MED_ALT[alt]; delete MED_ALT[alt]; saveAlt(); }
   if(d && d.stand && d.stand[alt] != null){
-    d.stand[neu] = d.stand[alt]; delete d.stand[alt]; saveDat();
+    d.stand[neu] = d.stand[alt]; delete d.stand[alt];
+    zeitUmhaengen(d, alt, neu); saveDat();
   }
   const j = (t.folge || []).indexOf(alt);
   if(j >= 0) t.folge[j] = neu;
+  aufgabenUmhaengen('medien', alt, neu);
 }
 
 /* --- Grundrisse -------------------------------------------------------------
@@ -4371,7 +4697,7 @@ async function alsDateiSichern(){
         daten:await blobZuText(new Blob([q.daten], {type:'application/pdf'}))})));
   }catch(e){ /* ohne Bilderspeicher eben ohne Pläne */ }
   const paket = {format:CFG_FORMAT, stand:heute(),
-                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, plaene, quellen};
+                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, plaene, quellen};
   const name = `Nachweise ${heute().slice(2)}.json`;
   void plaene;
   const datei = new File([new Blob([JSON.stringify(paket, null, 1)], {type:'application/json'})],
@@ -4400,6 +4726,7 @@ async function paketUebernehmen(paket){
   /* Ältere Sicherungen kennen das Tätigkeitsbuch nicht – dann bleibt das
      vorhandene stehen, statt geleert zu werden. */
   if(Array.isArray(paket.buch)){ BUCH = paket.buch; saveBuch(); }
+  if(Array.isArray(paket.aufg)){ AUFG = paket.aufg; saveAufg(); }
   /* Die Pläne kommen zurück in den Bilderspeicher; vorhandene gleichen Namens
      werden ersetzt, weil die Kennung mitreist. */
   let n = 0;
@@ -4986,6 +5313,7 @@ async function ausgeben(){
   EXP[offen] = n.art === 'medien' ? quartalVon(stichtag) : monatVon(stichtag);
   saveExp();
   buchSchreiben(offen, d0, EXP[offen]);
+  maengelUebernehmen(offen, d0, EXP[offen]);
   /* Nach der Ausgabe steht der Nachweis wieder leer bereit – die nächste Runde
      beginnt von vorn. */
   delete DAT[offen]; saveDat();
