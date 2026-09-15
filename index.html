@@ -10,6 +10,33 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.25 15.09.2026  Suche, Etappe A (Stufe 3 von 3). Oben auf der Startseite
+                    ein Suchfeld; solange etwas darin steht, ersetzt die
+                    Trefferliste die Aufgabenliste. Durchsucht werden Anlagen,
+                    Türen, Feuerlöscher, RWA und Zählstellen (Partei, Medium,
+                    Nummer, Ort), ohne Rücksicht auf Groß- und Kleinschreibung;
+                    bei Nummern zählen Striche und Leerzeichen nicht. Treffer
+                    nach Nachweis gruppiert, darunter der Stand. Ein Treffer
+                    öffnet eine Kurzinfo (letzter Befund bzw. Stand, offener
+                    Mangel, Grundriss) mit „Zur Karte“, „Im Grundriss“ (nur mit
+                    Marke) und „Verlauf“. Zur Karte klappt eine zugeklappte Tür
+                    auf und umrandet die Karte kurz. Etappe B bringt offene
+                    Aufgaben und Bemerkungen in die Suche.
+  v1.24 15.09.2026  Plausibilitätsprüfung der Zählerstände (Stufe 2 von 3).
+                    Beim Verlassen des Zählerfeldes – in der Ablesung wie im
+                    Rundgang – meldet ein Fenster einen Stand unter dem
+                    Vorquartal (nach Tausch: unter dem Einbaustand), eine
+                    Stelle mehr vor dem Komma (nicht nach Tausch), einen
+                    Verbrauch von null und eine Abweichung vom Vorjahresquartal
+                    über 50 % bei zugleich mehr als der Mindestmenge
+                    (Kaltwasser 5 m³, Warmwasser 3 m³, Wärme 500 kWh, Strom
+                    250 kWh; MWh umgerechnet). Der Vorjahresvergleich greift,
+                    sobald die Historie das Quartal kennt. „Wert stimmt“ mit
+                    freiwilligem Grund bestätigt, der Grund steht in Karte und
+                    Verlauf, nicht im Blatt. Unbestätigt trägt die Karte den
+                    Balken, bleibt an ihrem Platz und sperrt die Ausgabe; ein
+                    geänderter Wert wird erneut geprüft. Prozent und
+                    Mindestmengen in den Einstellungen der Medienverbräuche.
   v1.23 15.09.2026  Prüfhistorie (Stufe 1 von 3). Beim Ausgeben legt die App
                     eine Kopie des Blattes ab, genau so, wie es an den
                     Kurzbefehl ging, dazu die Ergebnisse je Anlage bzw. Zähler.
@@ -1187,6 +1214,19 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .vzeile{padding:7px 0}
 .vzeile + .vzeile{border-top:1px solid var(--line)}
 .vzeile .vwann{font-weight:600;font-size:15px}
+/* Auffälliger Zählerstand: die Zeile in der Karte öffnet die Prüfung erneut. */
+.pruefZeile{margin-top:6px}
+.pruefZeile:empty{display:none}
+/* Suche */
+.suchfeld{margin:0 0 12px}
+#sucheListe[hidden],#homeListe[hidden]{display:none}
+/* Die gesuchte Karte wird kurz umrandet, damit das Auge sie gleich findet. */
+.pos.gesucht{outline:3px solid var(--ink);outline-offset:2px}
+.auffKnopf{
+  -webkit-appearance:none;appearance:none;display:block;width:100%;margin:0;
+  padding:8px 10px;border:1px solid var(--ink);border-radius:9px;background:var(--surface);
+  color:var(--ink);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer;
+}
 </style>
 </head>
 <body>
@@ -1201,6 +1241,11 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
   <main>
     <!-- Startseite -->
     <section class="view active" id="view-home">
+      <!-- Das Suchfeld steht außerhalb der Liste: die baut sich nach jeder
+           Speicherung neu auf und nähme Feld und Tastatur sonst mit. -->
+      <div class="suchfeld"><input type="search" id="suche" placeholder="Anlage, Tür, Zähler suchen"
+        enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+      <div id="sucheListe" hidden></div>
       <!-- Die Überschriften kommen aus den Taktgruppen selbst, eine gemeinsame
            gäbe es nicht mehr richtig: es sind nicht mehr nur monatliche. -->
       <div id="homeListe"></div>
@@ -1367,7 +1412,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.23';
+const VERSION = 'v1.25';
 const BUILD   = VERSION + ' · 15.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -2409,6 +2454,7 @@ function hinweis(titel, text){
 /* Dasselbe Fenster, nur mit einer Liste statt Ja und Nein. */
 function dlgZuruecksetzen(){
   $('#dlgNein').hidden = false;
+  $('#dlgNein').textContent = 'Abbrechen';
   $('#dlgText').hidden = false;
   $('#dlgKnoepfe').hidden = false;
   $('#dlgListe').hidden = true;
@@ -2710,8 +2756,10 @@ function aufgaben(){
     if(n.art === 'medien'){
       const l = stellen();
       const fertig = d ? l.filter(z => String((d.stand || {})[z.key] ?? '').trim() !== '').length : 0;
+      const unb = unbestaetigtZahl(d);
       stand = !fertig ? 'noch nicht begonnen'
             : medienVoll(d) ? 'vollständig, noch nicht ausgegeben'
+            : fertig === l.length && unb ? `${unb} ${unb === 1 ? 'Stand' : 'Stände'} nicht bestätigt`
             : `${fertig} von ${l.length} abgelesen`;
     }else if(n.art === 'sprinkler'){
       stand = !los ? 'noch nicht begonnen'
@@ -2890,6 +2938,10 @@ function abwesenheitsKarte(liste){
 }
 function renderHome(){
   listeGebaut = true;
+  /* Von hier aus (Suche) geöffnete Grundrisse und Verläufe merken sich eine
+     Lage für die Rückkehr, die auf der Startseite niemand braucht – sie darf
+     nicht in der nächsten Liste landen, die sich aufbaut. */
+  listenLage = null;
   const liste = aufgaben(), gibt = irgendeinNachweis();
   let inhalt = abwesenheitsKarte(liste) + GRUPPEN.map(([g, titel]) => {
     const teil = liste.filter(a => a.gruppe === g);
@@ -2916,6 +2968,7 @@ function renderHome(){
   $('#homeListe [data-neuaufg]').onclick = aufgabeNeu;
   $('#buildTag').textContent = BUILD;
   hausKnopf();
+  renderSuche();
 }
 /* ---------- Kombinierter Rundgang -------------------------------------------
    Die Runden mehrerer Nachweise als ein Weg durchs Haus. Welche mitmachen,
@@ -2949,7 +3002,7 @@ function rundgangTeile(){
       /* Abgelesen wird zum Quartalsende – vorher nur, wenn schon begonnen. */
       if(!begonnen(n) && new Date().getMonth() % 3 !== 2) return;
       teile.push({k, n, objekte:rgEigene(k).map(o => Object.assign(o,
-        {offen:!d || String((d.stand || {})[o.id] ?? '').trim() === ''}))});
+        {offen:!d || String((d.stand || {})[o.id] ?? '').trim() === '' || unbestaetigt(d, o.id)}))});
     }else{
       if(expMonat(k) === jetztZeitraum(false)) return;
       teile.push({k, n, objekte:rgEigene(k).map(o => Object.assign(o,
@@ -3018,7 +3071,7 @@ function renderRundgang(){
   const weg = wegAktuell().filter(w => obj.has(w));
   obj.forEach((o, w) => { if(!weg.includes(w)) weg.push(w); });
   const namen = medienNamen(), stellenListe = stellen();
-  const steht = o => String((DAT.medien.stand || {})[o.id] ?? '').trim() !== '';
+  const steht = o => String((DAT.medien.stand || {})[o.id] ?? '').trim() !== '' && !unbestaetigt(DAT.medien, o.id);
   const zeile = o => DAT[o.k].zeilen[o.id];
 
   /* Laufnummern wie in den Einzelansichten, damit diese nach dem Rundgang
@@ -3072,7 +3125,7 @@ function renderRundgang(){
       const z = stellenListe.find(x => x.key === o.id) || {}, d = DAT.medien, alt = MED_ALT[o.id];
       const v = zahl(d.stand[o.id]) != null && alt && zahl(alt.stand) != null
         ? zahlText(zahl(d.stand[o.id]) - zahl(alt.stand)) : '';
-      return `<div class="pos${steht(o) ? ' fertig' : ''}" data-w="${esc(w)}">${typ}
+      return `<div class="pos${standKlasse(d, o.id)}" data-w="${esc(w)}">${typ}
         ${nameMitVerlauf(`${esc(z.partei)} · ${esc(namen[o.id] || z.medium)}`)}
         <div class="muted small">Nr. ${esc(z.nr)}${z.ort ? ' · ' + esc(z.ort) : ''}</div>
         <div class="row" style="margin-top:8px;align-items:center">
@@ -3083,6 +3136,7 @@ function renderRundgang(){
         <div class="muted small" style="margin-top:6px">${
           alt ? `Vorquartal ${esc(zahlText(zahl(alt.stand)))} ${esc(z.einheit)}${v ? ` · Verbrauch ${esc(v)} ${esc(z.einheit)}` : ''}`
               : 'Keine Ablesung aus dem Vorquartal'}</div>
+        <div class="pruefZeile" data-pz="${esc(o.id)}">${pruefZeileHtml(d, o.id)}</div>
       </div>`;
     }
     const z = zeile(o);
@@ -3178,7 +3232,7 @@ function renderRundgang(){
       /* Wie in der Ablesung: beim Verlassen des Feldes wandert der Zähler nach
          oben, als Umhängen der einen Karte – ein Neuaufbau risse Feld und
          Tastatur mit weg, wenn der Daumen schon im nächsten steht. */
-      feld.onblur = () => {
+      const umhaengen = () => {
         if(!steht(o) || (d.n || {})[o.id]) return;
         d.n = d.n || {}; d.n[o.id] = laufNr(d); saveDat();
         const top = box.getBoundingClientRect().top, nach = box.nextElementSibling;
@@ -3194,6 +3248,8 @@ function renderRundgang(){
         });
         if(nach) lageHalten(top, () => nach);
       };
+      feld.onblur = () => standPruefen(d, o.id, box, umhaengen);
+      pruefVerdrahten(d, o.id, box, umhaengen);
       return;
     }
     const z = d.zeilen[o.id], n = NW(o.k);
@@ -4001,7 +4057,10 @@ function renderNachweis(){
    Datumsfelder. */
 function renderMedien(){
   const d = datenFuer('medien'), liste = stellenSortiert(), namen = medienNamen();
-  const steht = z => String(d.stand[z.key] ?? '').trim() !== '';
+  /* Abgelesen heißt: ein Stand steht da und ist nicht unbestätigt auffällig.
+     Ein auffälliger Wert bleibt bis zur Bestätigung unter den offenen Karten –
+     dort, wo korrigiert wird. */
+  const steht = z => String(d.stand[z.key] ?? '').trim() !== '' && !unbestaetigt(d, z.key);
   /* Wie in den Anlagenlisten: Abgelesenes wandert an den Anfang, zuletzt
      Abgelesenes zuoberst, die offenen Zähler behalten unter sich den Weg. Ein
      wieder geleertes Feld gibt die Nummer zurück und die Karte damit ihren
@@ -4028,7 +4087,7 @@ function renderMedien(){
     const alt = MED_ALT[z.key];
     const v = zahl(d.stand[z.key]) != null && alt && zahl(alt.stand) != null
       ? zahlText(zahl(d.stand[z.key]) - zahl(alt.stand)) : '';
-    return `<div class="pos${d.stand[z.key] ? ' fertig' : ''}" data-i="${i}">
+    return `<div class="pos${standKlasse(d, z.key)}" data-i="${i}">
       ${nameMitVerlauf(`${esc(z.partei)} · ${esc(namen[z.key] || z.medium)}`)}
       <div class="muted small">Nr. ${esc(z.nr)}${z.ort ? ' · ' + esc(z.ort) : ''}</div>
       <div class="row" style="margin-top:8px;align-items:center">
@@ -4044,6 +4103,7 @@ function renderMedien(){
         alt ? `Vorquartal ${esc(zahlText(zahl(alt.stand)))} ${esc(z.einheit)}${
                 v ? ` · Verbrauch ${esc(v)} ${esc(z.einheit)}` : ''}`
             : 'Keine Ablesung aus dem Vorquartal'}</div>
+      <div class="pruefZeile" data-pz="${esc(z.key)}">${pruefZeileHtml(d, z.key)}</div>
     </div>`;
   }).join('');
 
@@ -4072,7 +4132,7 @@ function renderMedien(){
        der Daumen schon im nächsten Feld, risse ein Neuaufbau Feld und Tastatur
        mit weg. Ein geleertes Feld ordnet sich erst beim nächsten Aufbau zurück,
        das kommt selten vor und darf warten. */
-    feld.onblur = () => {
+    const umhaengen = () => {
       if(!steht(z) || d.n[z.key]) return;
       d.n[z.key] = laufNr(d); saveDat();
       const top = box.getBoundingClientRect().top, nach = box.nextElementSibling;
@@ -4082,6 +4142,10 @@ function renderMedien(){
       pfeileFrisch();
       if(nach) lageHalten(top, () => nach);
     };
+    /* Erst prüfen, dann umhängen: ein auffälliger Wert bleibt stehen, bis er
+       bestätigt ist. */
+    feld.onblur = () => standPruefen(d, z.key, box, umhaengen);
+    pruefVerdrahten(d, z.key, box, umhaengen);
     const tausch = j => {
       if(j < 0 || j >= liste.length) return;
       const top = box.getBoundingClientRect().top;
@@ -4103,7 +4167,8 @@ function renderMedien(){
 }
 const medienVoll = d => {
   const l = stellen();
-  return !!d.datum && l.length > 0 && l.every(z => String(d.stand[z.key] ?? '').trim() !== '');
+  return !!d.datum && l.length > 0 && l.every(z => String(d.stand[z.key] ?? '').trim() !== '')
+    && !l.some(z => unbestaetigt(d, z.key));
 };
 
 /* ---------- Sprinkler: zwei Abschnitte mit Kontrollgängen -------------------
@@ -4826,12 +4891,14 @@ function setStellen(box){
     `<p class="muted small" style="margin:0 0 6px">Partei, Medium und Zählernummer bilden zusammen den Schlüssel eines Zählers. Wird einer davon geändert, wandern Vorquartalsstand, laufender Wert, Ableseplatz und die Stelle im Grundriss mit – ein Tippfehler lässt sich also gefahrlos berichtigen. Wasser rechnet immer in m³.</p>
      <div id="setStellenListe"></div>
      <button class="btn ghost klein" id="setStellePlus" style="margin-top:12px">+ Zählstelle hinzufügen</button>
+     <div id="setPlaus"></div>
      <div class="eyebrow" style="margin-top:20px">Zählertausch</div>
      <p class="muted small" style="margin:-4px 0 10px">Für einen wirklich getauschten Zähler: neue Nummer, Wechseldatum, Ausbau- und Einbaustand. Der Stand des Vorquartals wird dabei verworfen.</p>
      <button class="btn ghost klein" id="setZuTausch">Zähler getauscht</button>
      <div class="eyebrow" style="margin-top:20px">Alles zurücksetzen</div>
      <button class="btn ghost klein" id="btnMedReset">Ablesewerte zurücksetzen</button>
      <p class="muted small" style="margin:8px 0 0">Löscht die laufende Ablesung und die gemerkten Stände sämtlicher Zähler. Für einen einzelnen Zählertausch ist das der zu große Hammer – dafür ist der Knopf darüber da.</p>`;
+  plausEinstellungen($('#setPlaus'));
   $('#setZuTausch').onclick = () => setOeffnen('tausch');
   $('#btnMedReset').onclick = medienZuruecksetzen;
   $('#setStellePlus').onclick = () => {
@@ -5027,6 +5094,7 @@ function tauschAnwenden(dran){
        sein Verbrauch bis zum Quartalsende. */
     MED_ALT[neuStelle.key] = {stand:x.ein, datum:x.datum};
     if(d && d.stand){ d.stand[neuStelle.key] = d.stand[x.key] || ''; delete d.stand[x.key]; }
+    if(d && d.quitt && d.quitt[x.key]){ d.quitt[neuStelle.key] = d.quitt[x.key]; delete d.quitt[x.key]; }
     const i = (t.folge || []).indexOf(x.key);    // Platz im Ableseweg behalten
     if(i >= 0) t.folge[i] = neuStelle.key;
     /* Der neue Zähler hängt am selben Platz wie der alte – die Marke im
@@ -5093,6 +5161,7 @@ function stelleUmbenennen(alt, neu){
   if(MED_ALT[alt]){ MED_ALT[neu] = MED_ALT[alt]; delete MED_ALT[alt]; saveAlt(); }
   if(d && d.stand && d.stand[alt] != null){
     d.stand[neu] = d.stand[alt]; delete d.stand[alt];
+    if(d.quitt && d.quitt[alt]){ d.quitt[neu] = d.quitt[alt]; delete d.quitt[alt]; }
     zeitUmhaengen(d, alt, neu); saveDat();
   }
   const j = (t.folge || []).indexOf(alt);
@@ -5814,6 +5883,7 @@ async function paketUebernehmen(paket){
       await Historie.leeren();
       for(const e of paket.historie) await Historie.put(e);
     }catch(e){ toast('Historie konnte nicht übernommen werden'); }
+    histMedLaden();
   }
   /* Die Pläne kommen zurück in den Bilderspeicher; vorhandene gleichen Namens
      werden ersetzt, weil die Kennung mitreist. */
@@ -5868,11 +5938,13 @@ function renderBar(){
       /* Ohne Unterschrift reicht die vollständige Ablesung zum Ausgeben. */
       voll = medienVoll(d);
       const l0 = stellen(), off0 = l0.filter(z => String(d.stand[z.key] ?? '').trim() === '').length;
+      const unb0 = unbestaetigtZahl(d);
       b.innerHTML =
         `<button class="btn primary" id="barA"${voll ? '' : ' disabled'}>Nachweis ausgeben</button>
          <button class="btn ghost" id="barB">Blatt ansehen</button>
          <p class="muted small" style="margin:10px 0 0;text-align:center">${
-           !d.datum ? 'Ablesedatum fehlt' : off0 ? `${off0} von ${l0.length} Zählern offen` : 'Vollständig'}</p>`;
+           !d.datum ? 'Ablesedatum fehlt' : off0 ? `${off0} von ${l0.length} Zählern offen`
+           : unb0 ? `${unb0} ${unb0 === 1 ? 'auffälliger Stand' : 'auffällige Stände'} nicht bestätigt` : 'Vollständig'}</p>`;
       $('#barA').onclick = ausgeben;
       $('#barB').onclick = () => { blattZeigen(); go('blatt'); };
       return;
@@ -6396,7 +6468,9 @@ function rundeFuerHistorie(k, d, zeitraum, name, html){
       const v = verbrauchVon(d, z, zeitraum);
       e.ergebnisse[z.key] = {nr:z.nr, name:namen[z.key] || z.medium, einheit:z.einheit,
         stand:String((d.stand || {})[z.key] ?? '').trim(), vor:alt ? alt.stand : '',
-        verbrauch:v.verbrauch, wechsel:v.wechsel, datum:d.datum || ''};
+        verbrauch:v.verbrauch, wechsel:v.wechsel, datum:d.datum || '',
+        bestaetigt:quittiert(d, z.key) && standGruende(d, z.key).length > 0,
+        grund:quittiert(d, z.key) ? (d.quitt[z.key].grund || '') : ''};
     });
   }else if(n.art !== 'sprinkler'){
     teilCfg(k).anlagen.forEach(a => {
@@ -6463,12 +6537,13 @@ function historieUmhaengen(k, alt, neu){
       let anders = false;
       if(e.art === 'runde' && e.k === k){
         const r = e.roh || {};
-        [e.ergebnisse, e.altVorher, r.zeilen, r.stand, r.zt, r.n].forEach(o => { if(um(o)) anders = true; });
+        [e.ergebnisse, e.altVorher, r.zeilen, r.stand, r.zt, r.n, r.quitt].forEach(o => { if(um(o)) anders = true; });
       }else if(e.art !== 'runde' && e.k === k && e.anlage === alt){
         e.anlage = neu; anders = true;
       }
       if(anders) await Historie.put(e);
     }
+    if(k === 'medien') await histMedLaden();
   }).catch(() => {});
 }
 
@@ -6561,6 +6636,7 @@ function fassungLoeschen(e){
     'Löschen', async () => {
       try{ await Historie.weg(e.id); toast('Gelöscht'); }
       catch(x){ toast('Löschen nicht möglich'); }
+      if(e.k === 'medien') histMedLaden();
       renderHistNw();
     });
 }
@@ -6671,16 +6747,21 @@ function verlaufZaehler(v, liste){
   const d = DAT.medien;
   const lauf = d && d.stand ? String(d.stand[v.id] ?? '').trim() : '';
   if(lauf) zeilen.push(vZeile('Laufende Ablesung',
-    `Stand ${zahlText(zahl(lauf))} ${z.einheit || ''}`.trim()));
+    [`Stand ${zahlText(zahl(lauf))} ${z.einheit || ''}`.trim(),
+     unbestaetigt(d, v.id) ? 'auffällig, nicht bestätigt'
+       : quittiert(d, v.id) && standGruende(d, v.id).length
+         ? 'auffällig, bestätigt' + (d.quitt[v.id].grund ? ': ' + d.quitt[v.id].grund : '') : ''
+    ].filter(Boolean).join(' · ')));
   historieOrdnen(liste)
     .filter(e => e.k === 'medien' && !e.ersetzt && e.ergebnisse && e.ergebnisse[v.id])
     .forEach(e => {
       const r = e.ergebnisse[v.id];
       zeilen.push(vZeile(zeitraumVoll(e.zeitraum), [
         r.datum ? 'abgelesen ' + dText(r.datum) : '',
-        r.stand ? `Stand ${zahlText(zahl(r.stand))} ${r.einheit}` : '',
-        r.verbrauch != null ? `Verbrauch ${zahlText(r.verbrauch)} ${r.einheit}` : 'Verbrauch –',
+        r.stand ? `Stand ${zahlText(zahl(r.stand))} ${r.einheit || z.einheit || ''}`.trim() : '',
+        r.verbrauch != null ? `Verbrauch ${zahlText(r.verbrauch)} ${r.einheit || z.einheit || ''}`.trim() : 'Verbrauch –',
         r.wechsel ? 'mit Zählerwechsel' : '',
+        r.bestaetigt ? 'auffällig, bestätigt' + (r.grund ? ': ' + r.grund : '') : '',
         r.nr && z.nr && r.nr !== z.nr ? `Zähler Nr. ${r.nr}` : ''
       ].filter(Boolean).join(' · ')));
     });
@@ -6706,6 +6787,356 @@ function verlaufFremd(v, liste){
 const nameMitVerlauf = (html, zusatz = '') =>
   `<div class="name mitVerlauf${zusatz}"><span>${html}</span>`
   + `<button type="button" class="verlaufKnopf" data-verlauf="1" aria-label="Verlauf">${UHR_SVG}</button></div>`;
+
+/* ---------- Plausibilitätsprüfung der Zählerstände -------------------------
+   Beim Verlassen des Zählerfeldes prüft die App den Stand. Auffällig ist:
+   – ein Stand unter dem Vorquartal (nach einem Tausch: unter dem Einbaustand),
+   – eine Stelle mehr vor dem Komma als im Vorquartal – der typische Tippfehler;
+     nach einem Tausch entfällt das, der neue Zähler beginnt bei null,
+   – ein Verbrauch von null,
+   – ein Verbrauch, der um mehr als die eingestellten Prozent vom gleichen
+     Quartal des Vorjahres abweicht UND dessen Differenz die Mindestmenge des
+     Mediums überschreitet. Das Vorquartal taugt dafür nicht: bei Wärme schlüge
+     Sommer gegen Winter immer an. Dieser Vergleich greift erst, wenn die
+     Historie ein Vorjahresquartal kennt.
+   Ein auffälliger Wert wird trotzdem übernommen. Er muss bestätigt werden,
+   sonst lässt sich die Ablesung nicht ausgeben. Die Bestätigung gilt genau für
+   den bestätigten Wert – wird er geändert, fragt die App erneut. Der Grund steht
+   in der Karte und im Verlauf, nicht im Blatt. */
+const PLAUS_STD = {prozent:50, min:{'Kaltwasser':5, 'Warmwasser':3, 'Wärme':500, 'Strom':250}};
+const plaus = () => {
+  const p = teilCfg('medien').plaus || {};
+  return {prozent: p.prozent > 0 ? p.prozent : PLAUS_STD.prozent,
+          min: Object.assign({}, PLAUS_STD.min, p.min || {})};
+};
+/* Die Mindestmenge steht in m³ bzw. kWh; ein Zähler in MWh rechnet sie um. */
+const mindestmenge = z => {
+  const m = plaus().min[z.medium];
+  if(!(m >= 0)) return 0;
+  return z.einheit === 'MWh' ? m / 1000 : m;
+};
+const vorjahrQuartal = q => { const [j, r] = String(q).split('-'); return `${+j - 1}-${r}`; };
+const stellenVorKomma = x => String(Math.floor(Math.abs(x))).length;
+
+/* Die Verbräuche der Historie je Quartal, einmal geholt und bereitgehalten: die
+   Leiste fragt bei jedem Tastendruck, ob noch etwas unbestätigt ist, und der
+   Speicher antwortet nur mit Verzögerung. Neu geholt wird nach allem, was die
+   Historie ändert. */
+let HIST_MED = {};
+async function histMedLaden(){
+  try{
+    const m = {};
+    historieOrdnen(await Historie.alle())
+      .filter(e => e.k === 'medien' && !e.ersetzt)
+      .forEach(e => {
+        m[e.zeitraum] = {};
+        Object.entries(e.ergebnisse || {}).forEach(([key, r]) => { m[e.zeitraum][key] = r.verbrauch; });
+      });
+    HIST_MED = m;
+  }catch(e){ return; }
+  if(current === 'nachweis' && offen === 'medien'){ renderBar(); pruefZeilenFrisch(); }
+}
+
+/* Was an einem Stand auffällt – als Liste von Sätzen, leer heißt unauffällig. */
+function standGruende(d, key){
+  const stand = String(((d && d.stand) || {})[key] ?? '').trim();
+  const z = stellen().find(x => x.key === key);
+  const jetzt = zahl(stand);
+  if(!stand || !z || jetzt == null) return [];
+  const quartal = quartalVon(d.datum || heute());
+  const getauscht = tauscheIm(quartal).some(w => w.neuKey === key);
+  const alt = MED_ALT[key], vor = alt ? zahl(alt.stand) : null;
+  const g = [];
+  const {verbrauch} = verbrauchVon(d, z, quartal);
+  if(vor != null){
+    if(jetzt < vor) g.push(getauscht ? 'Der Stand liegt unter dem Einbaustand.' : 'Der Stand liegt unter dem Vorquartal.');
+    if(!getauscht && jetzt >= vor && stellenVorKomma(jetzt) > stellenVorKomma(vor))
+      g.push('Der Stand hat eine Stelle mehr vor dem Komma als im Vorquartal.');
+  }
+  if(verbrauch === 0) g.push('Der Verbrauch ist null.');
+  const vj = (HIST_MED[vorjahrQuartal(quartal)] || {})[key];
+  /* Null und ein Rücklauf sind oben schon genannt – der Vergleich käme nur
+     noch als zweite Meldung derselben Sache dazu. */
+  if(vj != null && verbrauch != null && verbrauch > 0 && !(vor != null && jetzt < vor)){
+    const diff = Math.abs(verbrauch - vj);
+    const prozent = vj > 0 ? diff / vj * 100 : (diff > 0 ? Infinity : 0);
+    if(prozent > plaus().prozent && diff > mindestmenge(z))
+      g.push(`Der Verbrauch weicht ${isFinite(prozent) ? 'um ' + Math.round(prozent) + ' % ' : ''}`
+        + `vom Vorjahresquartal ab (damals ${zahlText(vj)} ${z.einheit}).`);
+  }
+  return g;
+}
+const quittiert = (d, key) => {
+  const q = ((d && d.quitt) || {})[key];
+  return !!q && q.wert === String(((d && d.stand) || {})[key] ?? '').trim();
+};
+const unbestaetigt = (d, key) => !quittiert(d, key) && standGruende(d, key).length > 0;
+const unbestaetigtZahl = d => d ? stellen().filter(z => unbestaetigt(d, z.key)).length : 0;
+/* Kartenklasse: auffällig und unbestätigt trägt den Balken wie ein Mangel. */
+const standKlasse = (d, key) => unbestaetigt(d, key) ? ' mangel'
+  : String(((d && d.stand) || {})[key] ?? '').trim() ? ' fertig' : '';
+function pruefZeileHtml(d, key){
+  if(unbestaetigt(d, key))
+    return `<button type="button" class="auffKnopf" data-pruef="1">Auffällig, nicht bestätigt – prüfen</button>`;
+  if(quittiert(d, key) && standGruende(d, key).length){
+    const q = d.quitt[key];
+    return `<div class="muted small">Bestätigt${q.grund ? ': ' + esc(q.grund) : ''}</div>`;
+  }
+  return '';
+}
+/* Nur die Zeile und die Klasse der einen Karte – ein Neuaufbau risse Feld und
+   Tastatur weg (siehe v0.88). Die Liste der offenen Ablesung wird dabei nicht
+   umsortiert. */
+function pruefZeileSetzen(box, d, key){
+  const zeile = box.querySelector('[data-pz]');
+  if(zeile){
+    zeile.innerHTML = pruefZeileHtml(d, key);
+    /* Der Knopf entsteht dabei neu und braucht seine Belegung jedes Mal. */
+    const k = zeile.querySelector('[data-pruef]');
+    if(k) k.onclick = () => standPruefen(d, key, box, box._umhaengen || (() => {}), true);
+  }
+  const kl = standKlasse(d, key);
+  box.classList.toggle('mangel', kl === ' mangel');
+  box.classList.toggle('fertig', kl === ' fertig');
+}
+function pruefZeilenFrisch(){
+  const d = DAT.medien; if(!d) return;
+  $$('[data-pz]').forEach(z => {
+    const box = z.closest('.pos'); if(!box) return;
+    pruefZeileSetzen(box, d, z.dataset.pz);
+    pruefVerdrahten(d, z.dataset.pz, box, box._umhaengen || (() => {}));
+  });
+}
+
+/* Welcher Wert zuletzt gefragt wurde: wer das Feld nur antippt und ohne Änderung
+   wieder verlässt, soll nicht jedes Mal dasselbe Fenster bekommen. Bestätigen
+   geht dann über die Zeile „prüfen“ in der Karte. */
+const gefragt = {};
+let pruefOffen = false;
+function standPruefen(d, key, box, weiter, erzwingen){
+  const stand = String((d.stand || {})[key] ?? '').trim();
+  pruefZeileSetzen(box, d, key);
+  if(!stand || !unbestaetigt(d, key)){ if(!erzwingen) weiter(); return; }
+  if(pruefOffen) return;
+  if(!erzwingen && gefragt[key] === stand) return;
+  gefragt[key] = stand;
+  pruefFenster(d, key, standGruende(d, key), ok => {
+    pruefZeileSetzen(box, d, key);
+    renderBar();
+    /* Wurde beim Verlassen des Feldes zugleich die Ansicht gewechselt, steht
+       die Karte nicht mehr im Bild – dann nichts umhängen. */
+    if(ok && box.isConnected && box.offsetParent) weiter();
+  });
+}
+function pruefVerdrahten(d, key, box, weiter){
+  box._umhaengen = weiter;
+  const k = box.querySelector('[data-pruef]');
+  if(k) k.onclick = () => standPruefen(d, key, box, weiter, true);
+}
+function pruefFenster(d, key, gruende, fertig){
+  const z = stellen().find(x => x.key === key) || {};
+  const name = `${z.partei} · ${medienNamen()[key] || z.medium}`;
+  const stand = String(d.stand[key] ?? '').trim();
+  const alt = MED_ALT[key];
+  const {verbrauch} = verbrauchVon(d, z, quartalVon(d.datum || heute()));
+  pruefOffen = true;
+  frage('Zählerstand prüfen',
+    `${name} (Nr. ${z.nr})\n`
+    + `Eingegeben: ${zahlText(zahl(stand))} ${z.einheit}\n`
+    + (alt ? `Vorquartal: ${zahlText(zahl(alt.stand))} ${z.einheit}` : 'Kein Stand aus dem Vorquartal')
+    + (verbrauch != null ? ` · Verbrauch ${zahlText(verbrauch)} ${z.einheit}` : '')
+    + '\n\n' + gruende.map(g => '– ' + g).join('\n'),
+    'Wert stimmt', () => {
+      const grund = ($('#pruefGrund') ? $('#pruefGrund').value : '').trim();
+      d.quitt = d.quitt || {};
+      d.quitt[key] = {wert:stand, grund, am:heute()};
+      pruefOffen = false;
+      saveDat();
+      fertig(true);
+    });
+  $('#dlgNein').textContent = 'Korrigieren';
+  $('#dlgNein').onclick = () => { $('#dlg').hidden = true; pruefOffen = false; fertig(false); };
+  const liste = $('#dlgListe');
+  liste.hidden = false;
+  liste.innerHTML = `<label class="field" style="margin:12px 0 0"><span>Grund (freiwillig)</span>
+    <input id="pruefGrund" placeholder="z. B. Leerstand" value="${esc((((d.quitt || {})[key]) || {}).grund || '')}"></label>`;
+}
+/* Einstellungen: Prozent und Mindestmengen, gesichert beim Verlassen des Feldes. */
+function plausEinstellungen(box){
+  const p = plaus();
+  const einheit = m => /wasser/i.test(m) ? 'm³' : 'kWh';
+  box.innerHTML = `<div class="eyebrow" style="margin-top:20px">Plausibilitätsprüfung</div>
+    <p class="muted small" style="margin:-4px 0 10px">Ein Verbrauch gilt als auffällig, wenn er um mehr als die Prozentzahl vom gleichen Quartal des Vorjahres abweicht und die Differenz zugleich die Mindestmenge überschreitet. Zähler in MWh rechnen die Mindestmenge um. Ein Stand unter dem Vorquartal, eine Stelle mehr vor dem Komma und ein Verbrauch von null werden immer gemeldet.</p>
+    <label class="field"><span>Abweichung in %</span>
+      <input inputmode="decimal" class="schmal" id="plProzent" value="${esc(zahlText(p.prozent))}"></label>
+    ${MEDIEN.map(m => `<label class="field"><span>Mindestmenge ${esc(m)} (${einheit(m)})</span>
+      <input inputmode="decimal" class="schmal" data-min="${esc(m)}" value="${esc(zahlText(p.min[m]))}"></label>`).join('')}`;
+  const sichern = () => {
+    const t = teilCfg('medien');
+    const pr = zahl($('#plProzent').value);
+    const min = {};
+    box.querySelectorAll('[data-min]').forEach(f => {
+      const v = zahl(f.value);
+      min[f.dataset.min] = v != null && v >= 0 ? v : PLAUS_STD.min[f.dataset.min];
+    });
+    t.plaus = {prozent: pr != null && pr > 0 ? pr : PLAUS_STD.prozent, min};
+    saveCfg();
+  };
+  box.querySelectorAll('input').forEach(f => { f.onchange = sichern; });
+}
+
+/* ---------- Suche ------------------------------------------------------------
+   Ein Feld oben auf der Startseite. Solange etwas darin steht, ersetzt die
+   Trefferliste die Aufgabenliste; geleert, ist alles wie vorher. Durchsucht
+   wird der heutige Bestand: Anlagen und Türen, Feuerlöscher, RWA und
+   Zählstellen (Partei, Medium, Nummer, Ort). Groß- und Kleinschreibung zählen
+   nicht, mehrere Wörter müssen alle vorkommen. Bei Wörtern mit Ziffern werden
+   Leerzeichen, Striche und Punkte übergangen – „214711“ findet „21-4711“.
+   Ein Treffer öffnet eine Kurzinfo mit den Wegen zur Karte, in den Grundriss
+   (nur mit gesetzter Marke) und in den Verlauf. */
+const suchNorm = t => String(t || '').toLocaleLowerCase('de');
+const nurZeichen = t => suchNorm(t).replace(/[\s\-–./_,;:]+/g, '');
+function suchObjekte(){
+  const l = [];
+  NACHWEISE.forEach(n => {
+    if(n.spaeter || n.art === 'sprinkler') return;
+    if(n.art === 'medien'){
+      const namen = medienNamen();
+      stellen().forEach(z => l.push({k:'medien', id:z.key, ort:z.key, einheit:z.einheit,
+        titel:`${z.partei} · ${namen[z.key] || z.medium}`,
+        zusatz:`Nr. ${z.nr}${z.ort ? ' · ' + z.ort : ''}`,
+        text:[z.partei, z.medium, namen[z.key], z.nr, z.ort].join(' ')}));
+      return;
+    }
+    (teilCfg(n.k).anlagen || []).forEach(a =>
+      l.push({k:n.k, id:a, ort:`${n.k}|${a}`, titel:a, zusatz:'', text:a}));
+  });
+  return l;
+}
+function suchTreffer(frage){
+  const woerter = suchNorm(frage).split(/\s+/).filter(Boolean);
+  if(!woerter.length) return [];
+  return suchObjekte().filter(o => {
+    const t = suchNorm(o.text), tz = nurZeichen(o.text);
+    return woerter.every(w => t.includes(w) || (/\d/.test(w) && tz.includes(nurZeichen(w))));
+  });
+}
+/* Die kleine Zeile unter einem Treffer: woran man bei diesem Objekt gerade ist. */
+function suchStand(o){
+  const n = NW(o.k);
+  if(n.art === 'medien'){
+    const d = DAT.medien, st = d && d.stand ? String(d.stand[o.id] ?? '').trim() : '';
+    const alt = MED_ALT[o.id];
+    return [o.zusatz,
+      st ? `abgelesen ${zahlText(zahl(st))} ${o.einheit}` : alt ? `Vorquartal ${zahlText(zahl(alt.stand))} ${o.einheit}` : ''
+    ].filter(Boolean).join(' · ');
+  }
+  const z = zeileVon(o.k, o.id);
+  if(n.art === 'fremd') return z.datum ? fristText(frist(z.datum, teilCfg(o.k).jahre)) : 'noch nicht geprüft';
+  const m = offenerMangel(o.ort);
+  return [z.status ? `${dText(z.datum)} · ${z.status}` : 'in dieser Runde noch offen',
+          m ? `Mangel seit ${dText(m.festgestellt)}` : ''].filter(Boolean).join(' · ');
+}
+let suchListe = [];
+function renderSuche(){
+  const feld = $('#suche'), box = $('#sucheListe');
+  if(!feld || !box) return;
+  const q = feld.value.trim();
+  box.hidden = !q;
+  $('#homeListe').hidden = !!q;
+  if(!q){ box.innerHTML = ''; suchListe = []; return; }
+  suchListe = suchTreffer(q);
+  if(!suchListe.length){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
+  box.innerHTML = NACHWEISE.filter(n => suchListe.some(t => t.k === n.k)).map(n =>
+    `<div class="eyebrow" style="margin-top:6px">${esc(n.art === 'medien' ? 'Zähler' : n.label)}</div>`
+    + suchListe.map((t, i) => t.k !== n.k ? '' :
+        `<button class="btn aufgabe" data-t="${i}">${esc(t.titel)}<small>${esc(suchStand(t))}</small></button>`).join('')
+  ).join('');
+  box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => kurzinfo(suchListe[+b.dataset.t]));
+}
+$('#suche').oninput = renderSuche;
+$('#suche').addEventListener('search', renderSuche);
+/* Die Eingabetaste schließt nur die Tastatur – gesucht wird ohnehin beim Tippen. */
+$('#suche').onkeydown = e => { if(e.key === 'Enter') e.target.blur(); };
+
+/* Kurzinfo zu einem Treffer. Grundrisse und Historie liegen im Bilderspeicher –
+   das Fenster öffnet deshalb einen Wimpernschlag später. */
+async function kurzinfo(o){
+  const n = NW(o.k);
+  let plaene = [], hist = [];
+  try{ plaene = (await Bilder.alle()) || []; }catch(e){ /* ohne Pläne */ }
+  try{ hist = historieOrdnen(await Historie.alle()); }catch(e){ /* ohne Historie */ }
+  const letzte = hist.find(e => e.k === o.k && !e.ersetzt && e.ergebnisse && e.ergebnisse[o.id]);
+  const zeilen = [n.art === 'medien' ? 'Zähler' : n.label];
+  if(n.art === 'medien'){
+    const z = stellen().find(x => x.key === o.id) || {};
+    zeilen.push(`Nr. ${z.nr}${z.ort ? ' · ' + z.ort : ''}`);
+    const d = DAT.medien, st = d && d.stand ? String(d.stand[o.id] ?? '').trim() : '';
+    const alt = MED_ALT[o.id];
+    if(st)  zeilen.push(`Laufende Ablesung: ${zahlText(zahl(st))} ${z.einheit}`);
+    if(alt) zeilen.push(`Vorquartal: ${zahlText(zahl(alt.stand))} ${z.einheit}${alt.datum ? ' (' + dText(alt.datum) + ')' : ''}`);
+    if(letzte && letzte.ergebnisse[o.id].verbrauch != null)
+      zeilen.push(`Verbrauch ${zeitraumVoll(letzte.zeitraum)}: ${zahlText(letzte.ergebnisse[o.id].verbrauch)} ${z.einheit}`);
+  }else if(n.art === 'fremd'){
+    const z = zeileVon(o.k, o.id), f = frist(z.datum, teilCfg(o.k).jahre);
+    zeilen.push(z.datum ? `Zuletzt geprüft am ${dText(z.datum)} · ${fristText(f)}` : 'Noch nicht geprüft');
+    if(z.bem) zeilen.push(`Bemerkung: ${z.bem}`);
+    if(o.k === 'rwa' && z.akkuTyp){
+      const j = akkuJahre(z.akkuTyp);
+      zeilen.push('Akkus: ' + akkuText(z, j, j ? frist(z.akkuDatum, j) : null));
+    }
+  }else{
+    const z = zeileVon(o.k, o.id);
+    if(z.status) zeilen.push(`Diese Runde: ${[dText(z.datum), z.status, z.bem].filter(Boolean).join(' · ')}`);
+    else if(letzte){
+      const r = letzte.ergebnisse[o.id];
+      zeilen.push(`Zuletzt (${zeitraumVoll(letzte.zeitraum)}): ${[dText(r.datum), r.status, r.bem].filter(Boolean).join(' · ')}`);
+    }else zeilen.push('In dieser Runde noch nicht geprüft');
+    const m = offenerMangel(o.ort);
+    if(m) zeilen.push(`Offener Mangel seit ${dText(m.festgestellt)}`);
+  }
+  const marke = CFG.orte[o.ort];
+  const plan = marke && plaene.find(p => p.id === marke.plan);
+  if(plan) zeilen.push(`Grundriss: ${plan.name}`);
+
+  dlgZuruecksetzen();
+  $('#dlgTitel').textContent = o.titel;
+  $('#dlgText').textContent = zeilen.join('\n');
+  $('#dlgKnoepfe').hidden = true;
+  const liste = $('#dlgListe');
+  liste.hidden = false;
+  liste.innerHTML = `<button class="btn primary" data-w="karte" style="margin-top:14px">Zur Karte</button>`
+    + (plan ? `<button class="btn" data-w="plan">Im Grundriss</button>` : '')
+    + `<button class="btn" data-w="verlauf">Verlauf</button>`
+    + `<button class="btn ghost" data-w="zu" style="margin-top:14px">Schließen</button>`;
+  $('#dlg').hidden = false;
+  liste.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
+    $('#dlg').hidden = true;
+    dlgZuruecksetzen();
+    if(b.dataset.w === 'karte')   zurKarte(o);
+    if(b.dataset.w === 'plan')    verorten(o.ort, o.titel);
+    if(b.dataset.w === 'verlauf') verlaufOeffnen(o.k, o.id, o.titel);
+  });
+}
+/* Zur Karte: der Nachweis öffnet sich, die Karte steht oben unter der Kopfzeile
+   und ist kurz umrandet. Eine zugeklappte Tür wird dabei aufgeklappt – gesucht
+   hat man sie ja, um etwas nachzusehen oder zu ändern. */
+function zurKarte(o){
+  const n = NW(o.k);
+  nachweisOeffnen(o.k);
+  let i;
+  if(n.art === 'medien') i = stellenSortiert().findIndex(z => z.key === o.id);
+  else{
+    i = teilCfg(o.k).anlagen.indexOf(o.id);
+    if(n.kompakt && zeileVon(o.k, o.id).status){ offenKarten.add(o.id); renderNachweis(); }
+  }
+  const el = i >= 0 ? $(`#nwListe .pos[data-i="${i}"]`) : null;
+  if(!el) return;
+  const kopf = $('header') ? $('header').getBoundingClientRect().height : 0;
+  window.scrollTo(0, Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY - kopf - 12)));
+  el.classList.add('gesucht');
+  setTimeout(() => el.classList.remove('gesucht'), 1800);
+}
 
 /* ---------- Übergabe an den Kurzbefehl --------------------------------------
    Wie im E-Assistenten: die Blätter gehen als HTML mit der Gestaltung im Kopf
@@ -6742,6 +7173,7 @@ async function dateiTeilen(name, inhalt){
 }
 async function ausgeben(){
   const n = NW(offen);
+  if(n.art === 'medien' && unbestaetigtZahl(DAT.medien)){ toast('Erst die auffälligen Stände bestätigen'); return; }
   /* Der Dateiname ist fertig, wie er ist: Prüfmonat und der Kurzname des
      Nachweises, z.B. "26-08 Kontrolle Sprinkler". Der Kurzbefehl muss ihn nur
      durchreichen – kommen später weitere Nachweise dazu, ändert sich dort
@@ -6764,6 +7196,7 @@ async function ausgeben(){
   let histOk = true;
   try{ await Historie.put(rundeFuerHistorie(offen, d0, zeitraum, name, html)); }
   catch(e){ histOk = false; }
+  if(n.art === 'medien') histMedLaden();
   /* Vor dem Leeren die Zählerstände sichern: aus ihnen entsteht im nächsten
      Quartal der Verbrauch. */
   if(n.art === 'medien'){
@@ -6810,7 +7243,7 @@ async function ableiten(pw, salzHex){
 
 (function zugang(){
   const schloss = $('#schloss'), feld = $('#schlossFeld'), ok = $('#schlossOk');
-  const auf = () => { schloss.remove(); renderHome(); go('home', false); };
+  const auf = () => { schloss.remove(); histMedLaden(); renderHome(); go('home', false); };
 
   if(!window.crypto || !crypto.subtle){
     $('#schlossText').textContent = 'Dieser Browser kann die Prüfung nicht ausführen.';
