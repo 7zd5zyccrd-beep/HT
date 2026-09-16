@@ -10,6 +10,10 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.36 16.09.2026  Suchfeld: eine kleine Lupe am Anfang, im selben Grau wie der
+                    Platzhaltertext. Beide Grautöne sind jetzt fest gesetzt –
+                    vorher bestimmte der Browser das Grau des Platzhalters
+                    selbst, und es wich je nach Gerät ab.
   v1.35 16.09.2026  Einstellungen: „+ … hinzufügen“ steht jetzt über der
                     Liste statt darunter – bei Anlagen, Sprinkler-Punkten,
                     Objekten (Feuerlöscher, RWA), Zählstellen, Akkutypen,
@@ -1379,7 +1383,13 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .pruefZeile{margin-top:6px}
 .pruefZeile:empty{display:none}
 /* Suche */
-.suchfeld{margin:0 0 12px}
+.suchfeld{margin:0 0 12px;position:relative}
+/* Lupe am Anfang des Suchfelds, im Grau des Platzhalters; sie nimmt keine
+   Tipps an, das Feld darunter bleibt überall antippbar. */
+.suchfeld .lupe{position:absolute;left:13px;top:50%;width:18px;height:18px;margin-top:-9px;
+  color:var(--ink-soft);pointer-events:none}
+.suchfeld input{padding-left:40px}
+#suche::placeholder{color:var(--ink-soft);opacity:1}
 #sucheListe[hidden],#homeListe[hidden]{display:none}
 /* Die gesuchte Karte wird kurz umrandet, damit das Auge sie gleich findet. */
 .pos.gesucht{outline:3px solid var(--ink);outline-offset:2px}
@@ -1404,7 +1414,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
     <section class="view active" id="view-home">
       <!-- Das Suchfeld steht außerhalb der Liste: die baut sich nach jeder
            Speicherung neu auf und nähme Feld und Tastatur sonst mit. -->
-      <div class="suchfeld"><input type="search" id="suche" placeholder="Anlage, Tür, Zähler suchen"
+      <div class="suchfeld"><svg class="lupe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><input type="search" id="suche" placeholder="Anlage, Tür, Zähler suchen"
         enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
       <div id="sucheListe" hidden></div>
       <!-- Die Überschriften kommen aus den Taktgruppen selbst, eine gemeinsame
@@ -1578,7 +1588,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.35';
+const VERSION = 'v1.36';
 const BUILD   = VERSION + ' · 16.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
