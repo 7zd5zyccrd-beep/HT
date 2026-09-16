@@ -10,6 +10,49 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.35 16.09.2026  Einstellungen: „+ … hinzufügen“ steht jetzt über der
+                    Liste statt darunter – bei Anlagen, Sprinkler-Punkten,
+                    Objekten (Feuerlöscher, RWA), Zählstellen, Akkutypen,
+                    Abwesenheiten und Grundrissen. Das leere Feld erscheint
+                    direkt unter dem Knopf. Gespeichert wird der neue Eintrag
+                    wie bisher am Ende der Liste, weil die Reihenfolge dort
+                    Prüf- und Ableseweg ist. Solange die Seite offen bleibt,
+                    stehen frisch angelegte Einträge noch oben (das Neueste
+                    zuerst), damit Typ, Anzahl oder weitere Felder gleich
+                    ausgefüllt werden können; ihre Pfeile sind dort gesperrt.
+                    Beim nächsten Öffnen stehen sie an ihrem Platz am Ende.
+  v1.34 16.09.2026  Grundrisse ausrichten und überlagern, Etappe F der
+                    Design-Überarbeitung. In den Einstellungen unter
+                    Grundrisse hat jeder Plan „Ausrichten“: der Plan öffnet
+                    sich, und man tippt zwei Bezugspunkte an, die es auf allen
+                    Etagen gibt – etwa zwei Ecken des Treppenhauses. Sind zwei
+                    Pläne ausgerichtet, rechnet die App Versatz, Maßstab und
+                    Drehung zwischen ihnen selbst aus. Dadurch sitzt die Marke
+                    eines Aufzugs auch dann auf jeder Etage richtig, wenn die
+                    Pläne unterschiedlich geschnitten sind; ohne Bezugspunkte
+                    gilt wie bisher dieselbe Stelle. In der Übersicht eines
+                    ausgerichteten Plans legt „Überlagern“ einen anderen
+                    ausgerichteten Plan halbdurchsichtig darüber. Die
+                    Bezugspunkte stehen in CFG.bezug (je Plan zwei Punkte und
+                    das Seitenverhältnis des Bildes) und reisen mit der
+                    Sicherung; gelöscht werden sie mit dem Plan.
+  v1.33 16.09.2026  Erklärtexte, Etappe E der Design-Überarbeitung. Die
+                    längeren Erklärungen stehen nicht mehr offen da, sondern
+                    hinter einem kleinen ⓘ – neben der Abschnittsüberschrift
+                    oder Feldbeschriftung, bei Seiten ohne Überschrift rechts
+                    oben über dem Inhalt. Ein Tipp klappt den Text darunter
+                    auf, ein zweiter wieder zu. Die Texte sind dabei gekürzt.
+                    Sichtbar bleiben Hinweise, die zum nächsten Schritt führen
+                    (leere Listen), Stände und die Warnung beim Zurücksetzen der
+                    Ablesewerte. Die Zählstellen haben dafür eine eigene
+                    Überschrift bekommen. „Mehr als 1 sind nicht vorgesehen“
+                    unter der Monatskontrolle entfällt.
+  v1.32 16.09.2026  Sprinkler: auch die wöchentlichen Kontrollgänge lassen sich
+                    abschließen und stehen danach zugeklappt und grau da –
+                    genauso wie die Monatskontrolle seit v1.31. Ein Tipp holt
+                    einen Gang zurück, „Zuklappen“ schließt ihn wieder. Die
+                    Aufgabenliste rechnet beim Wochengang weiter mit „alle
+                    Punkte erfasst“; abschließen ist dort nicht nötig.
   v1.31 16.09.2026  Sprinkler, Etappe D der Design-Überarbeitung. Die
                     monatliche Kontrolle lässt sich abschließen, sobald alle
                     Punkte erfasst sind; danach steht sie zugeklappt und grau
@@ -985,6 +1028,21 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .stelle .knopfreihe .seg.anz button{padding:0 4px}
 /* Grundriss in den Einstellungen: Name, darunter Pfeile, Ansehen und Löschen. */
 .planKarte > input{height:42px;padding:9px 10px;font-size:16px}
+/* ⓘ: kleiner Knopf neben einer Überschrift, klappt den Erklärtext darunter auf.
+   Die Tippfläche ist größer als der Kreis; negative Ränder halten die Zeile
+   trotzdem so hoch wie ohne Knopf. */
+.mitInfo{display:flex !important;align-items:center;justify-content:space-between;gap:8px}
+.info{flex:0 0 auto;width:34px;height:28px;margin:-6px -7px -6px 0;padding:0;border:0;background:none;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-soft);
+  -webkit-appearance:none;appearance:none}
+.info span{width:19px;height:19px;border-radius:50%;border:1.5px solid currentColor;box-sizing:border-box;
+  display:flex;align-items:center;justify-content:center;font:600 12px/1 var(--f-body);
+  font-style:normal;text-transform:none;letter-spacing:0}
+.info[aria-expanded="true"] span{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.infozeile{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:22px;margin:0 0 8px}
+.infotext[hidden]{display:none}
+/* Grundrisskarte: Stand der Ausrichtung und ihr Knopf in einer Zeile. */
+.planBezug{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
 /* Eine Karte je Zählstelle: fünf Felder und der Löschen-Knopf. */
 .stelle{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
 .stelle .field{margin-bottom:10px}
@@ -1129,6 +1187,17 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 /* Der aus der PDF neu gezeichnete Ausschnitt liegt deckungsgleich über dem
    gespeicherten Bild, aber unter den Marken. */
 #planBox canvas.scharf{position:absolute;z-index:1;pointer-events:none}
+/* Überlagerter Plan: halbdurchsichtig über dem eigenen, unter den Marken. Lage
+   und Drehung rechnet planDeckZeichnen() aus den Bezugspunkten. */
+#planBox img.deck{position:absolute;z-index:2;top:0;left:0;height:100%;width:auto;
+  max-width:none;opacity:.45;transform-origin:0 0;pointer-events:none;mix-blend-mode:multiply}
+/* Bezugspunkte beim Ausrichten: schwarzes Fadenkreuz mit Ziffer. */
+#planBox .marke.bezug{width:28px;height:28px;margin:-14px 0 0 -14px;border:2px solid #111;
+  border-radius:50%;background:none;color:#111;box-shadow:0 0 0 2px rgba(255,255,255,.8)}
+#planBox .marke.bezug::before{content:'';position:absolute;left:50%;top:50%;width:5px;height:5px;
+  margin:-2.5px 0 0 -2.5px;border-radius:50%;background:#111}
+#planBox .marke.bezug b{position:absolute;left:100%;bottom:100%;margin:0 0 -4px -2px;padding:1px 4px;
+  border-radius:4px;background:#111;color:#fff;font:700 11px/1.2 var(--f-body)}
 /* Die Marke sitzt in Anteilen der Bildkanten, nicht in Pixeln – so stimmt sie
    bei jeder Größe. Die eigene pulst langsam, die übrigen der Kategorie stehen
    still, damit man sieht, wo man ist, ohne die anderen zu verlieren. */
@@ -1409,6 +1478,8 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
           <div class="knoepfe">
             <button class="btn ghost klein" id="btnPlanObjekte" hidden>Objekte</button>
             <button class="btn ghost klein" id="btnPlanBlatt" hidden>Ausgeben</button>
+            <button class="btn ghost klein" id="btnPlanDeck" hidden>Überlagern</button>
+            <button class="btn ghost klein" id="btnPlanRicht" hidden>Abbrechen</button>
             <button class="btn ghost klein" id="btnPlanZieh">Verschieben</button>
           </div>
         </div>
@@ -1447,22 +1518,24 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
       <div id="setSubDyn"></div>
 
       <div id="blockPlaene" hidden>
-        <p class="muted small" style="margin:0 0 10px">Pläne des Objekts, damit zu jedem Zähler und jeder Tür die Stelle im Haus gezeigt werden kann. Bild oder PDF; eine mehrseitige PDF ergibt einen Grundriss je Seite. Für die Umwandlung einer PDF ist einmalig eine Netzverbindung nötig. Die Pläne liegen in einem eigenen Speicher und wandern mit in die Sicherungsdatei.</p>
+        <div class="infozeile"><span class="muted small"></span><button type="button" class="info" aria-label="Erklärung" aria-expanded="false" aria-controls="infPlaene"><span>i</span></button></div>
+        <p class="muted small infotext" id="infPlaene" hidden style="margin:-2px 0 12px">Bild oder PDF; eine mehrseitige PDF ergibt einen Plan je Seite, zum Umwandeln ist einmal Netz nötig. Die Reihenfolge folgt der Etage im Namen, mit den Pfeilen legst du sie selbst fest. „Ausrichten“: auf jedem Plan dieselben zwei Stellen antippen, etwa zwei Ecken des Treppenhauses – dann sitzen Aufzugsmarken auf allen Etagen richtig, und Pläne lassen sich überlagern. Die Pläne reisen mit der Sicherung.</p>
+        <button class="btn ghost klein" id="btnPlanNeu" style="margin:0 0 10px">+ Grundriss hinzufügen</button>
         <div id="planListe"><p class="muted small">wird geladen …</p></div>
-        <button class="btn ghost klein" id="btnPlanNeu" style="margin-top:10px">Grundriss hinzufügen</button>
         <input type="file" id="planFile" accept="image/*,application/pdf,.pdf" hidden>
       </div>
 
       <div id="blockGeraet" hidden>
-        <p class="muted small" style="margin:0 0 10px">Sichert Objekt, Prüfer, Anlagenlisten, Checklisten, Zählstellen samt Ablesereihenfolge, die laufenden Nachweise, die Stände des Vorquartals, die vermerkten Zählerwechsel, die Grundrisse und die Historie in eine Datei. Auf dem neuen Gerät dieselbe Datei einlesen.</p>
-        <p class="small" id="sicherStand" style="margin:0 0 10px"></p>
+        <div class="infozeile"><span class="small" id="sicherStand"></span><button type="button" class="info" aria-label="Erklärung" aria-expanded="false" aria-controls="infGeraet"><span>i</span></button></div>
+        <p class="muted small infotext" id="infGeraet" hidden style="margin:-2px 0 12px">Die Datei enthält alles: Einstellungen, laufende Nachweise, Stände, Zählerwechsel, Grundrisse und Historie. Auf einem neuen Gerät dieselbe Datei mit „Aus Datei übernehmen“ einlesen. 30 Tage nach der letzten Sicherung erinnert die Startseite.</p>
         <button class="btn ghost klein" id="btnCfgAus">Jetzt sichern</button>
         <button class="btn ghost klein" id="btnCfgEin" style="margin-top:10px">Aus Datei übernehmen</button>
         <input type="file" id="cfgFile" accept="application/json,.json" hidden>
       </div>
 
       <div id="blockZugang" hidden>
-        <p class="muted small" style="margin:0 0 10px">Dieses Gerät bleibt nach der einmaligen Eingabe offen. Sperren heißt: beim nächsten Öffnen wird das Passwort wieder verlangt. Auf anderen Geräten ändert sich nichts.</p>
+        <div class="infozeile"><span class="muted small"></span><button type="button" class="info" aria-label="Erklärung" aria-expanded="false" aria-controls="infZugang"><span>i</span></button></div>
+        <p class="muted small infotext" id="infZugang" hidden style="margin:-2px 0 12px">Nach der einmaligen Eingabe bleibt dieses Gerät offen. Gesperrt verlangt es beim nächsten Öffnen wieder das Passwort; andere Geräte bleiben unberührt.</p>
         <button class="btn ghost klein" id="btnSperren">Gerät sperren</button>
       </div>
     </section>
@@ -1505,7 +1578,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.31';
+const VERSION = 'v1.35';
 const BUILD   = VERSION + ' · 16.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3029,7 +3102,7 @@ function nachweisOeffnen(k, ziel){
      aus einem früheren Grundrissbesuch gilt dann nicht mehr. */
   sprungOffen = true; listenLage = null;
   offenKarten = new Set();            // Bewertetes aus früheren Runden zeigt sich klein
-  spMonAuf = false;                   // eine abgeschlossene Monatskontrolle steht zugeklappt
+  spAuf = new Set();                  // abgeschlossene Kontrollgänge stehen zugeklappt
   go('nachweis');
 }
 function akkuOeffnen(){ datenFuer('rwa'); go('akku'); }
@@ -3303,8 +3376,9 @@ function renderRundgang(){
   $('#rgListe').innerHTML = [...fertig, ...offene].map(karte).join('');
 
   /* Am Ende: je Nachweis sein Stand und der Weg zur Ausgabe. */
-  $('#rgEnde').innerHTML = `<div class="eyebrow">Ausgeben</div>
-    <p class="muted small" style="margin:-4px 0 8px">Ausgegeben wird je Nachweis – mit Unterschrift, wo sie verlangt ist.</p>`
+  const iAus = info('Ausgegeben wird je Nachweis, mit Unterschrift, wo sie verlangt ist.', 'margin:-4px 0 8px');
+  const iWeg = info('Ordnet den Weg neu nach den Reihenfolgen der Nachweise und den Marken im Grundriss – sinnvoll, wenn viele Marken dazugekommen sind.', 'margin:-4px 0 8px');
+  $('#rgEnde').innerHTML = `<div class="eyebrow mitInfo">Ausgeben ${iAus.knopf}</div>${iAus.text}`
     + teile.map(t => {
       const rest = t.objekte.filter(o => o.offen).length;
       return `<button class="btn${rest ? ' ghost' : ''}" data-nw="${t.k}" data-ziel="">${esc(t.n.label)} · ${
@@ -3312,8 +3386,7 @@ function renderRundgang(){
     }).join('')
     /* Neu bilden hilft, wenn nach dem ersten Öffnen noch viele Marken gesetzt
        wurden – der bestehende Weg ordnet nur Neues ein. */
-    + `<div class="eyebrow">Weg</div>
-       <p class="muted small" style="margin:-4px 0 8px">Bildet den Weg neu aus den Reihenfolgen der Nachweise und den Marken im Grundriss – etwa nachdem viele Marken dazugekommen sind.</p>
+    + `<div class="eyebrow mitInfo">Weg ${iWeg.knopf}</div>${iWeg.text}
        <button class="btn ghost klein" id="rgNeuBilden">Weg neu bilden</button>`;
   knoepfeVerdrahten($('#rgEnde'));
   $('#rgNeuBilden').onclick = () =>
@@ -3744,7 +3817,7 @@ async function renderPlaeneWahl(){
   box.querySelectorAll('[data-id]').forEach(b =>
     b.onclick = () => planZeigen(b.dataset.id, null));
 }
-let sprungZiel = '', spMonAuf = false;
+let sprungZiel = '', spAuf = new Set();   // spAuf: aufgeklappte, z. B. "woch:0"
 
 /* ---------- Fremdprüfung ----------------------------------------------------
    Oben der Sammel-Eintrag: die Firma war da und hat alles geprüft, also steht
@@ -3760,11 +3833,10 @@ function fristText(f){
 }
 function renderFremd(){
   const n = NW(offen), t = teilCfg(offen), d = datenFuer(offen);
+  const iFirma = info(`Setzt das Prüfdatum für ${t.anlagen.length === 1 ? 'das Objekt' : 'alle ' + t.anlagen.length + ' Objekte'} auf denselben Tag; einzelne ziehst du danach nach.`, 'margin:0 0 10px');
   $('#nwListe').innerHTML = vorbKarte(offen) +
     `<div class="card">
-       <div class="eyebrow" style="margin:0 0 6px">Die Firma war da</div>
-       <p class="muted small" style="margin:0 0 10px">Setzt das Prüfdatum für alle ${
-         t.anlagen.length} ${t.anlagen.length === 1 ? 'Objekt' : 'Objekte'} auf denselben Tag. Einzelne lassen sich danach nachziehen.</p>
+       <div class="eyebrow mitInfo" style="margin:0 0 6px">Die Firma war da ${iFirma.knopf}</div>${iFirma.text}
        <div class="row">
          <input type="date" id="alleDatum" value="${heute()}" aria-label="Prüfdatum">
          <button class="btn" id="alleSetzen">Übernehmen</button>
@@ -3880,12 +3952,12 @@ function akkuVerdrahten(box){
 }
 function renderAkku(){
   const t = teilCfg('rwa'), d = datenFuer('rwa'), typen = akkuTypen();
+  const iAlle = info('Setzt das Tauschdatum für alle Anlagen mit gewähltem Akkutyp auf denselben Tag.', 'margin:0 0 10px');
   $('#akkuListe').innerHTML =
     (typen.length ? '' : `<p class="muted small">Noch kein Akkutyp angelegt – das geht in den Einstellungen unter RWA.</p>`)
     + `<div id="vorbPlatz">${vorbKarte('akku')}</div>`
     + `<div class="card">
-       <div class="eyebrow" style="margin:0 0 6px">Alle getauscht</div>
-       <p class="muted small" style="margin:0 0 10px">Setzt das Tauschdatum für alle Anlagen mit gewähltem Akkutyp auf denselben Tag.</p>
+       <div class="eyebrow mitInfo" style="margin:0 0 6px">Alle getauscht ${iAlle.knopf}</div>${iAlle.text}
        <div class="row">
          <input type="date" class="dat" id="akkuAlleDatum" value="${heute()}" aria-label="Tauschdatum">
          <button class="btn" id="akkuAlleSetzen">Übernehmen</button>
@@ -4320,18 +4392,19 @@ const medienVoll = d => {
    Papierformulars entfällt; unterschrieben wird einmal am Ende. */
 function gangKarte(art, punkte, g, idx){
   const voll = gangVoll(g, punkte);
-  /* Abgeschlossene Monatskontrolle: zugeklappt wie eine geprüfte Tür. */
-  if(art === 'mon' && g.zu && voll && !spMonAuf){
+  const titel = art === 'woch' ? 'Kontrollgang ' + (idx + 1) : 'Monatliche Kontrolle';
+  /* Abgeschlossener Gang: zugeklappt wie eine geprüfte Tür. */
+  if(g.zu && voll && !spAuf.has(art + ':' + idx)){
     const m = punkte.filter((p, i) => g.w[i] === 'mangel').length;
-    return `<div class="pos fertig kompakt" data-art="mon" data-g="${idx}" data-zu="1">
-      <div class="name">Monatliche Kontrolle</div>
+    return `<div class="pos fertig kompakt" data-art="${art}" data-g="${idx}" data-zu="1">
+      <div class="name">${titel}</div>
       <div class="muted small">${esc(dText(g.datum))}${g.datum ? ' · ' : ''}abgeschlossen${
         m ? ` · ${m} ${m === 1 ? 'Mangel' : 'Mängel'}` : ''}</div>
     </div>`;
   }
   return `<div class="pos" data-art="${art}" data-g="${idx}">
     <div class="kopf">
-      <span class="name">${art === 'woch' ? 'Kontrollgang ' + (idx + 1) : 'Monatliche Kontrolle'}</span>
+      <span class="name">${titel}</span>
       <input type="date" data-feld="datum" value="${esc(g.datum)}" aria-label="Datum">
     </div>
     ${punkte.map((p, i) => {
@@ -4346,10 +4419,8 @@ function gangKarte(art, punkte, g, idx){
              </div>`}
       </div>`;
     }).join('')}
-    ${art === 'mon'
-      ? `<button class="btn primary klein" data-abschluss="1" style="margin-top:10px"${voll ? '' : ' disabled'}>${g.zu && voll ? 'Zuklappen' : 'Abschließen'}</button>
-         <button class="btn ghost klein" data-weg="1">Kontrollgang entfernen</button>`
-      : `<button class="btn ghost klein" data-weg="1" style="margin-top:10px">Kontrollgang entfernen</button>`}
+    <button class="btn primary klein" data-abschluss="1" style="margin-top:10px"${voll ? '' : ' disabled'}>${g.zu && voll ? 'Zuklappen' : 'Abschließen'}</button>
+    <button class="btn ghost klein" data-weg="1">Kontrollgang entfernen</button>
   </div>`;
 }
 function renderSprinkler(){
@@ -4360,7 +4431,7 @@ function renderSprinkler(){
       + gaenge.map((g, i) => gangKarte(art, punkte, g, i)).join('')
       + (gaenge.length < max
           ? `<button class="btn" data-neu="${art}">Kontrollgang hinzufügen</button>`
-          : `<p class="muted small">Mehr als ${max} sind nicht vorgesehen.</p>`);
+          : max > 1 ? `<p class="muted small">Mehr als ${max} sind nicht vorgesehen.</p>` : '');
   };
   $('#nwListe').innerHTML =
       abschnitt('woch', t.woch, 'Wöchentliche Kontrollen', WOCH_MAX)
@@ -4373,16 +4444,17 @@ function renderSprinkler(){
     d[b.dataset.neu].push({datum: heute(), w:{}});
     saveDat(); renderSprinkler(); renderBar();
   });
-  /* Die Monatskarte bleibt beim Auf- und Zuklappen an ihrem Platz auf dem Schirm. */
-  const monUmbauen = box => {
-    const top = box.getBoundingClientRect().top;
+  /* Eine Karte bleibt beim Auf- und Zuklappen an ihrem Platz auf dem Schirm. */
+  const karteUmbauen = box => {
+    const top = box.getBoundingClientRect().top, art = box.dataset.art, gi = box.dataset.g;
     renderSprinkler(); renderBar();
-    lageHalten(top, () => $('#nwListe .pos[data-art="mon"]'));
+    lageHalten(top, () => $(`#nwListe .pos[data-art="${art}"][data-g="${gi}"]`));
   };
   $$('#nwListe .pos').forEach(box => {
     const art = box.dataset.art, g = d[art][+box.dataset.g];
     const punkte = art === 'woch' ? t.woch : t.mon;
-    if(box.dataset.zu){ box.onclick = () => { spMonAuf = true; monUmbauen(box); }; return; }
+    const schluessel = art + ':' + box.dataset.g;
+    if(box.dataset.zu){ box.onclick = () => { spAuf.add(schluessel); karteUmbauen(box); }; return; }
     /* Wird ein Wert geleert, ist die Kontrolle nicht mehr abgeschlossen. */
     const abschlussPruefen = () => {
       if(g.zu && !gangVoll(g, punkte)) delete g.zu;
@@ -4406,11 +4478,13 @@ function renderSprinkler(){
     const ab = box.querySelector('[data-abschluss]');
     if(ab) ab.onclick = () => {
       if(!gangVoll(g, punkte)) return;
-      g.zu = true; spMonAuf = false; saveDat(); monUmbauen(box);
-      toast('Monatliche Kontrolle abgeschlossen');
+      const neu = !g.zu;
+      g.zu = true; spAuf.delete(schluessel); saveDat(); karteUmbauen(box);
+      if(neu) toast(art === 'mon' ? 'Monatliche Kontrolle abgeschlossen' : 'Kontrollgang abgeschlossen');
     };
     box.querySelector('[data-weg]').onclick = () => {
-      d[art].splice(+box.dataset.g, 1); saveDat(); renderSprinkler(); renderBar();
+      d[art].splice(+box.dataset.g, 1); spAuf.clear();   // die Nummern rücken nach
+      saveDat(); renderSprinkler(); renderBar();
     };
   });
   $('#spMaengel').oninput = e => { d.maengel = e.target.value; saveDat(); };
@@ -4484,6 +4558,37 @@ function initPad(){
   window.addEventListener('mouseup', end);
 })();
 window.addEventListener('resize', () => { if(current === 'nachweis') initPad(); });
+
+/* ---------- Erklärtexte hinter ⓘ -------------------------------------------
+   info(text) liefert den Knopf und den verborgenen Text; beide sind über die
+   Kennung verbunden und dürfen daher an getrennten Stellen stehen – der Knopf
+   in der Überschrift, der Text darunter oder hinter dem Feld. infoZeile() ist
+   für Seiten ohne Überschrift: links ein kleiner Stand oder nichts, rechts ⓘ.
+   Geöffnet wird nicht gemerkt; baut sich eine Seite neu auf, ist der Text
+   wieder zu. */
+let infoNr = 0;
+function info(text, stil = ''){
+  const id = 'inf' + (++infoNr);
+  return {
+    knopf:`<button type="button" class="info" aria-label="Erklärung" aria-expanded="false" aria-controls="${id}"><span>i</span></button>`,
+    text:`<p class="muted small infotext" id="${id}" hidden${stil ? ` style="${stil}"` : ''}>${text}</p>`
+  };
+}
+const infoZeile = (text, links = '') => {
+  const i = info(text, 'margin:-2px 0 12px');
+  return `<div class="infozeile"><span class="muted small">${links}</span>${i.knopf}</div>${i.text}`;
+};
+/* Im Einfangen, damit ein ⓘ in einer Beschriftung weder das Feld dahinter
+   anspringt noch die Karte darum herum auslöst. */
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('button.info');
+  if(!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const t = document.getElementById(b.getAttribute('aria-controls'));
+  if(!t) return;
+  t.hidden = !t.hidden;
+  b.setAttribute('aria-expanded', String(!t.hidden));
+}, true);
 
 /* ---------- Einstellungen ----------------------------------------------------
    Die Einstellungen sind nur noch ein Menü: jeder Eintrag öffnet eine eigene
@@ -4581,17 +4686,17 @@ function setAbwesend(box){
       <label class="abwZeile"><span>von</span><input type="date" class="dat" data-f="von" value="${esc(x.von || '')}"></label>
       <label class="abwZeile"><span>bis</span><input type="date" class="dat" data-f="bis" value="${esc(x.bis || '')}"></label>
     </div>`;
+  const iFei = info('Gerechnet werden die landesweiten Feiertage. Regionale – etwa Fronleichnam in Teilen Sachsens und Thüringens oder Mariä Himmelfahrt in Teilen Bayerns – trägst du unten als Abwesenheit ein.', 'margin:-2px 0 10px');
+  const iAbw = info('Fällt eine Frist aufs Wochenende, einen Feiertag oder in eine Abwesenheit, gilt der Arbeitstag davor. Zwei Wochen vorher zeigt die Startseite, was vorher zu erledigen ist.', 'margin:-2px 0 10px');
   box.innerHTML = `
-    <div class="eyebrow" style="margin-top:0">Feiertage</div>
+    <div class="eyebrow mitInfo" style="margin-top:0">Feiertage ${iFei.knopf}</div>${iFei.text}
     <label class="field"><span>Bundesland</span><select id="abwLand">
       <option value="">– ohne Feiertage –</option>
       ${BUNDESLAENDER.map(([k, t]) => `<option value="${k}"${CFG.bundesland === k ? ' selected' : ''}>${t}</option>`).join('')}
     </select></label>
-    <p class="muted small" style="margin:-6px 0 14px">Gerechnet werden die landesweiten Feiertage. Solche, die nur in Teilen eines Landes gelten – Fronleichnam in Teilen Sachsens und Thüringens, Mariä Himmelfahrt in Teilen Bayerns, das Augsburger Friedensfest –, trägst du bei Bedarf unten als Abwesenheit ein.</p>
-    <div class="eyebrow">Abwesenheiten</div>
-    <p class="muted small" style="margin:-4px 0 10px">Fällt eine Frist aufs Wochenende, auf einen Feiertag oder in eine Abwesenheit, rechnet die Aufgabenliste mit dem letzten Arbeitstag davor. Zwei Wochen vor einer Abwesenheit steht oben auf der Startseite, was vorher zu erledigen ist.</p>
+    <div class="eyebrow mitInfo">Abwesenheiten ${iAbw.knopf}</div>${iAbw.text}
+    <button class="btn" id="abwNeu" style="margin:0 0 10px">+ Abwesenheit hinzufügen</button>
     <div id="abwKommend">${kommend.map(karte).join('')}</div>
-    <button class="btn" id="abwNeu">+ Abwesenheit hinzufügen</button>
     ${vorbei.length ? `<div class="eyebrow">Vergangen</div><div id="abwVorbei">${vorbei.map(karte).join('')}</div>` : ''}`;
   $('#abwLand').onchange = e => { CFG.bundesland = e.target.value; saveCfg(); };
   $('#abwNeu').onclick = () => {
@@ -4622,22 +4727,23 @@ function setAbwesend(box){
   });
 }
 function rundgangWahl(box, k){
-  box.innerHTML = `<label class="haken"><input type="checkbox" id="rgHaken"${imRundgang(k) ? ' checked' : ''}>
-      <span>In kombinierte Rundgänge integrieren</span></label>
-    <p class="muted small" style="margin:0 0 14px">Sind mindestens zwei integrierte Nachweise offen, steht auf der Startseite ein gemeinsamer Rundgang. Die Objekte ordnen sich nach deinen Wegen und ihrer Lage im Grundriss, Objekte ohne Marke hängen hinten an. Zurechtschieben geht im Rundgang mit den Pfeilen.${
-      k === 'medien' ? ' Die Zähler kommen im letzten Monat des Quartals dazu.' : ''}</p>`;
+  const i = info('Sind mindestens zwei integrierte Nachweise offen, steht auf der Startseite ein gemeinsamer Rundgang, geordnet nach deinen Wegen und der Lage im Grundriss. Zurechtschieben geht dort mit den Pfeilen.'
+    + (k === 'medien' ? ' Die Zähler kommen im letzten Monat des Quartals dazu.' : ''), 'margin:0 0 14px');
+  box.innerHTML = `<div class="mitInfo" style="margin:0 0 6px"><label class="haken" style="margin:0"><input type="checkbox" id="rgHaken"${imRundgang(k) ? ' checked' : ''}>
+      <span>In kombinierte Rundgänge integrieren</span></label>${i.knopf}</div>${i.text}
+    <div style="height:8px"></div>`;
   $('#rgHaken').onchange = e => { teilCfg(k).rundgang = e.target.checked; saveCfg(); };
 }
 /* Drei Stufen, gesichert beim Antippen. Aufgefrischt wird nur die Wahl selbst. */
 function wichtigWahl(box, k){
   const zeichnen = () => {
     const w = wichtigVon(k);
+    const i = info('Ordnet die Aufgabenliste innerhalb einer Gruppe; Überfälliges steht trotzdem immer zuerst.'
+      + (NW(k).akku ? ' Gilt auch für den Akkutausch.' : ''), 'margin:-6px 0 14px');
     box.innerHTML =
-      `<div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
+      `<div class="field wichtig"><span class="mitInfo">Wichtigkeit ${i.knopf}</span><div class="seg">${
         WICHTIG.map(([s, t]) => `<button type="button" data-w="${s}" aria-pressed="${w === s}">${t}</button>`).join('')
-      }</div></div>
-       <p class="muted small" style="margin:-6px 0 14px">Ordnet die Aufgabenliste innerhalb einer Gruppe: Wichtiges steht weiter oben. Überfälliges steht trotzdem immer zuerst.${
-         NW(k).akku ? ' Gilt auch für den Akkutausch.' : ''}</p>`;
+      }</div></div>${i.text}`;
     box.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
       teilCfg(k).wichtig = b.dataset.w; saveCfg(); zeichnen();
     });
@@ -4653,10 +4759,10 @@ function menueAuffrischen(){ if(current === 'settings') renderSettings(); }
 function setZurueck(){ zurueck(); }
 
 function setObjekt(box){
+  const i = info('Objekt und Prüfer stehen im Kopf jedes Protokolls.', 'margin:-6px 0 14px');
   box.innerHTML =
-    `<label class="field"><span>Objekt</span><input id="setObjekt" placeholder="z.B. Musterhaus, Musterstraße 1"></label>
-     <label class="field"><span>Prüfer</span><input id="setPruefer" placeholder="Vor- und Nachname"></label>
-     <p class="muted small">Beides steht im Kopf jedes Protokolls. Gesichert wird, sobald du das Feld verlässt.</p>`;
+    `<label class="field"><span class="mitInfo">Objekt ${i.knopf}</span><input id="setObjekt" placeholder="z.B. Musterhaus, Musterstraße 1"></label>${i.text}
+     <label class="field"><span>Prüfer</span><input id="setPruefer" placeholder="Vor- und Nachname"></label>`;
   $('#setObjekt').value  = CFG.objekt  || '';
   $('#setPruefer').value = CFG.pruefer || '';
   $('#setObjekt').onchange  = e => { CFG.objekt  = e.target.value.trim(); saveCfg(); };
@@ -4664,8 +4770,8 @@ function setObjekt(box){
 }
 function setCheck(box, k){
   box.innerHTML =
-    `<p class="muted small" style="margin:0 0 10px">Die Checkliste steht im Protokoll genau so, wie sie hier eingetragen ist – Nummern, Spiegelstriche und „&gt;“ bleiben erhalten.</p>
-     <textarea id="setCheckText" style="min-height:340px"></textarea>`;
+    infoZeile('Steht im Protokoll genau so wie hier – Nummern, Spiegelstriche und „&gt;“ bleiben erhalten.')
+    + `<textarea id="setCheckText" style="min-height:340px"></textarea>`;
   const ta = $('#setCheckText');
   ta.value = teilCfg(k).checkliste || '';
   ta.onchange = () => { teilCfg(k).checkliste = ta.value; saveCfg(); };
@@ -4682,6 +4788,17 @@ function setCheck(box, k){
    opt.beiLoeschen    (i) – räumt auf, bevor der Eintrag verschwindet
    opt.loeschHinweis  zweiter Absatz der Rückfrage
    opt.nachZeichnen   (box) – ergänzt die frisch gebauten Zeilen (Etagen) */
+/* Reihenfolge der Anzeige in den Einstellungslisten (v1.35): was seit dem
+   Öffnen der Seite angelegt wurde – Index ab basis, gespeichert am Ende –, steht
+   oben, das Neueste zuerst; darunter der Rest wie gespeichert. Die Pfeile
+   arbeiten nur im Rest, frisch Angelegtes verschiebt sich erst nach dem
+   nächsten Öffnen. So bleibt es am Ende, und Tauschen bleibt ein Tausch mit
+   dem sichtbaren Nachbarn. */
+const anzeigeFolge = (n, basis) => {
+  const alt = [], frisch = [];
+  for(let i = 0; i < n; i++) (i < basis ? alt : frisch).push(i);
+  return frisch.reverse().concat(alt);
+};
 const feldHoehe = ta => {
   ta.style.height = 'auto';
   ta.style.height = Math.max(42, ta.scrollHeight + 2) + 'px';
@@ -4695,12 +4812,13 @@ function listeBauen(box, opt){
   /* Wer an einer frisch angelegten Zeile "Löschen" tippt, verwirft sie. Das
      Verlassen des Feldes kommt aber VOR dem Klick – ohne diesen Merker wäre der
      Eintrag schon gespeichert, bevor der Knopf überhaupt drankommt. */
-  let verworfen = false;
+  let verworfen = false, basis = opt.liste().length;
   const zeichnen = mitNeuer => {
     verworfen = false;
-    box.innerHTML = opt.liste().map(zeile).join('')
+    const liste = opt.liste();
+    box.innerHTML = `<button class="btn ghost klein" data-plus="1" style="margin:0 0 10px">+ ${esc(opt.wort)} hinzufügen</button>`
       + (mitNeuer ? zeile('', -1) : '')
-      + `<button class="btn ghost klein" data-plus="1" style="margin-top:12px">+ ${esc(opt.wort)} hinzufügen</button>`;
+      + anzeigeFolge(liste.length, basis).map(i => zeile(liste[i], i)).join('');
     if(opt.nachZeichnen) opt.nachZeichnen(box);
     box.querySelectorAll('.zeile').forEach(r => {
       const ta = r.querySelector('textarea'), i = +r.dataset.i, neu = i < 0;
@@ -4731,7 +4849,7 @@ function listeBauen(box, opt){
           + (opt.loeschHinweis ? '\n\n' + opt.loeschHinweis : ''),
           'Löschen', () => {
             if(opt.beiLoeschen) opt.beiLoeschen(i);
-            liste.splice(i, 1); saveCfg(); toast('Gelöscht');
+            liste.splice(i, 1); if(i < basis) basis--; saveCfg(); toast('Gelöscht');
             zeichnen(false); menueAuffrischen();
             if(opt.nachher) opt.nachher();
           });
@@ -4747,11 +4865,11 @@ function listeBauen(box, opt){
 }
 
 function setAnlagen(box, k){
+  const i = info('Die Reihenfolge stellst du beim Prüfen mit den Pfeilen ein; neue Anlagen hängen sich hinten an.'
+    + (k === 'aufzuege' ? ' Unter jedem Aufzug wählst du seine Etagen. Die Marke gilt auf allen und wandert beim Verschieben mit. Sind die Etagenpläne unterschiedlich geschnitten, richte sie unter Grundrisse aus.' : ''), 'margin:-4px 0 6px');
   box.innerHTML =
     `<button class="btn ghost klein" id="setZuCheck">Checkliste bearbeiten</button>
-     <div class="eyebrow">Anlagen</div>
-     <p class="muted small" style="margin:-4px 0 6px">Die Reihenfolge stellst du beim Prüfen mit den Pfeilen ein; neue Anlagen hängen sich hinten an.${
-       k === 'aufzuege' ? ' Unter jedem Aufzug wählst du die Etagen, auf denen er steht; seine Marke gilt auf allen gewählten und wandert beim Verschieben überall mit. Das passt, solange die Etagenpläne denselben Ausschnitt haben.' : ''}</p>
+     <div class="eyebrow mitInfo">Anlagen ${i.knopf}</div>${i.text}
      <div id="setListe"></div>`;
   $('#setZuCheck').onclick = () => setOeffnen('check', k);
   const liste = $('#setListe');
@@ -4808,9 +4926,9 @@ function etagenKnoepfe(box, plaene){
    an seinem Text: ein gelöschter Punkt muss deshalb auch aus den laufenden
    Kontrollgängen heraus, sonst rutschen die Werte dahinter um einen weiter. */
 function setSprinkler(box, k){
+  const i = info('Endet ein Punkt auf „(bar)“, bekommt er beim Erfassen ein Zahlenfeld statt der Zustandswahl – wöchentlich wie monatlich.', 'margin:-4px 0 6px');
   box.innerHTML =
-    `<p class="muted small" style="margin:0 0 6px">Ein Punkt, dessen Text auf „(bar)“ endet, bekommt beim Erfassen ein Zahlenfeld statt der Zustandswahl.</p>
-     <div class="eyebrow">Wöchentliche Punkte</div>
+    `<div class="eyebrow mitInfo">Wöchentliche Punkte ${i.knopf}</div>${i.text}
      <div id="setWoch"></div>
      <div class="eyebrow" style="margin-top:18px">Monatliche Punkte</div>
      <div id="setMon"></div>`;
@@ -4835,13 +4953,14 @@ function setSprinkler(box, k){
    Art und ändert sich höchstens, wenn sich die Vorschrift ändert. */
 function setFremd(box, k){
   const n = NW(k), t = teilCfg(k);
+  const iAbst = info('Aus dem letzten Prüfdatum und diesem Abstand ergibt sich der nächste Termin – und unter welcher Überschrift der Nachweis in „Alle Nachweise“ steht.', 'margin:-6px 0 14px');
+  const iObj = info('Neue Objekte hängen sich hinten an. ⌖ zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge.'
+    + (n.akku ? ' Unter dem Namen wählst du den Akkutyp, rechts in der Knopfreihe die Anzahl.' : ''), 'margin:-4px 0 6px');
   box.innerHTML =
-    `<label class="field"><span>Prüfabstand in Jahren</span>
-       <input type="number" id="setJahre" class="schmal" min="1" max="20" step="1" inputmode="numeric" value="${t.jahre}"></label>
-     <p class="muted small" style="margin:-6px 0 14px">Aus dem letzten Prüfdatum und diesem Abstand ergibt sich der nächste Termin. Danach richtet sich auch, unter welcher Überschrift der Nachweis auf der Startseite steht.</p>`
+    `<label class="field"><span class="mitInfo">Prüfabstand in Jahren ${iAbst.knopf}</span>
+       <input type="number" id="setJahre" class="schmal" min="1" max="20" step="1" inputmode="numeric" value="${t.jahre}"></label>${iAbst.text}`
     + (n.akku ? `<button class="btn ghost klein" id="setZuAkkus">Akkutypen</button>` : '')
-    + `<div class="eyebrow">Objekte</div>
-       <p class="muted small" style="margin:-4px 0 6px">Neue Objekte hängen sich hinten an.</p>
+    + `<div class="eyebrow mitInfo">Objekte ${iObj.knopf}</div>${iObj.text}
        <div id="setListe"></div>`;
   $('#setJahre').onchange = e => {
     const j = Math.round(+e.target.value);
@@ -4859,7 +4978,7 @@ function setFremd(box, k){
    gleichem Termin, auch im Akkutausch. Sichern, Umbenennen und Löschen laufen
    wie in listeBauen; der Rest der Einstellungen bleibt dort. */
 function objektKarten(box, k){
-  let verworfen = false;
+  let verworfen = false, basis = teilCfg(k).anlagen.length;
   /* Der Typ steht in einer eigenen Zeile über die volle Breite, die Anzahl in
      der Knopfreihe rechts vor Löschen (v1.28) – vorher nahm sie ab vier Typen
      eine ganze Zeile ein. Zusammen zu lesen als "2 × 12 Ah".
@@ -4884,8 +5003,8 @@ function objektKarten(box, k){
       ${akkuWahl(text, i)}
       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
         <button class="btn ghost klein" data-ort="1" aria-label="Grundriss"${i < 0 ? ' disabled' : ''}>⌖</button>
-        <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 ? ' disabled' : ''}>↑</button>
-        <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i < 0 || i >= n - 1 ? ' disabled' : ''}>↓</button>
+        <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= basis ? ' disabled' : ''}>↑</button>
+        <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i < 0 || i >= basis - 1 ? ' disabled' : ''}>↓</button>
         ${anzWahl(text, i)}
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
@@ -4893,14 +5012,14 @@ function objektKarten(box, k){
   const zeichnen = mitNeuer => {
     verworfen = false;
     const liste = teilCfg(k).anlagen;
-    box.innerHTML = liste.map((x, i) => karte(x, i, liste.length)).join('')
+    box.innerHTML = `<button class="btn ghost klein" data-plus="1" style="margin:0 0 10px">+ Objekt hinzufügen</button>`
       + (mitNeuer ? karte('', -1, liste.length) : '')
-      + `<button class="btn ghost klein" data-plus="1" style="margin-top:12px">+ Objekt hinzufügen</button>`;
+      + anzeigeFolge(liste.length, basis).map(i => karte(liste[i], i, liste.length)).join('');
     /* Die bewegte Karte bleibt auf dem Schirm stehen, die anderen wandern daran
        vorbei – wie beim Verschieben in den Nachweisen (v0.53). */
     const tausch = (i, j) => {
       const l = teilCfg(k).anlagen;
-      if(i < 0 || j < 0 || j >= l.length) return;
+      if(i < 0 || j < 0 || i >= basis || j >= basis) return;
       const karteJetzt = box.querySelector(`.stelle[data-i="${i}"]`);
       const top = karteJetzt ? karteJetzt.getBoundingClientRect().top : null;
       [l[i], l[j]] = [l[j], l[i]]; saveCfg(); zeichnen(false);
@@ -4955,7 +5074,7 @@ function objektKarten(box, k){
           + 'Prüfdatum, Bemerkung und die Stelle im Grundriss bleiben gespeichert – '
           + 'wer das Objekt mit demselben Namen wieder anlegt, findet alles wieder.',
           'Löschen', () => {
-            liste.splice(i, 1); saveCfg(); toast('Gelöscht');
+            liste.splice(i, 1); if(i < basis) basis--; saveCfg(); toast('Gelöscht');
             zeichnen(false); menueAuffrischen();
           });
       };
@@ -4974,9 +5093,10 @@ function objektKarten(box, k){
    während man noch darin tippt (wie bei den Zählstellen). */
 function setAkkus(box){
   box.innerHTML =
-    `<p class="muted small" style="margin:0 0 10px">Je nach Kapazität wird der Akku alle drei oder vier Jahre getauscht; hier stehen die Typen mit ihrem Zyklus. Welcher davon in welcher Anlage steckt und wie viele, steht eine Ebene höher bei den Objekten.</p>
-     <div id="akkuTypListe"></div>
-     <button class="btn ghost klein" id="akkuTypPlus" style="margin-top:12px">+ Akkutyp hinzufügen</button>`;
+    infoZeile('Je nach Kapazität wird alle drei oder vier Jahre getauscht; hier stehen die Typen mit ihrem Zyklus. Welcher Typ in welcher Anlage steckt und wie viele, stellst du eine Ebene höher bei den Objekten ein.')
+    + `<button class="btn ghost klein" id="akkuTypPlus" style="margin:0 0 10px">+ Akkutyp hinzufügen</button>
+     <div id="akkuTypListe"></div>`;
+  akkuTypBasis = teilCfg('rwa').akkus.length;
   $('#akkuTypPlus').onclick = () => {
     akkuTypZeichnen(true);
     const f = $('#akkuTypListe .stelle[data-i="-1"] [data-f="name"]');
@@ -4984,6 +5104,7 @@ function setAkkus(box){
   };
   akkuTypZeichnen(false);
 }
+let akkuTypBasis = 0;
 function akkuTypZeichnen(mitNeuer){
   const box = $('#akkuTypListe'); if(!box) return;
   const t = teilCfg('rwa');
@@ -4995,17 +5116,17 @@ function akkuTypZeichnen(mitNeuer){
         <label class="field"><span>Jahre</span><input data-f="jahre" type="number" min="1" max="20" step="1" inputmode="numeric" value="${x.jahre}"></label>
       </div>
       <div class="zeile" style="border-top:0;padding:0">
-        <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 ? ' disabled' : ''}>↑</button>
-        <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i < 0 || i >= n - 1 ? ' disabled' : ''}>↓</button>
+        <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= akkuTypBasis ? ' disabled' : ''}>↑</button>
+        <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i < 0 || i >= akkuTypBasis - 1 ? ' disabled' : ''}>↓</button>
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
     </div>`;
-  box.innerHTML = t.akkus.map((x, i) => karte(x, i, t.akkus.length)).join('')
-    + (mitNeuer ? karte({name:'', jahre:4}, -1, t.akkus.length) : '');
+  box.innerHTML = (mitNeuer ? karte({name:'', jahre:4}, -1, t.akkus.length) : '')
+    + anzeigeFolge(t.akkus.length, akkuTypBasis).map(i => karte(t.akkus[i], i, t.akkus.length)).join('');
   /* Die Reihenfolge bestimmt, in welcher Folge die Typknöpfe unter "Akkus je
      Anlage" stehen. Die bewegte Karte bleibt dabei auf dem Schirm stehen. */
   const tausch = (i, j) => {
-    if(i < 0 || j < 0 || j >= t.akkus.length) return;
+    if(i < 0 || j < 0 || i >= akkuTypBasis || j >= akkuTypBasis) return;
     const karteJetzt = box.querySelector(`.stelle[data-i="${i}"]`);
     const top = karteJetzt ? karteJetzt.getBoundingClientRect().top : null;
     [t.akkus[i], t.akkus[j]] = [t.akkus[j], t.akkus[i]]; saveCfg(); akkuTypZeichnen(false);
@@ -5043,7 +5164,7 @@ function akkuTypZeichnen(mitNeuer){
         `„${t.akkus[i].name}“ verschwindet aus der Auswahl.\n\n`
         + 'Anlagen, in denen dieser Typ steckt, stehen danach ohne Typ da und bekommen erst wieder eine Frist, wenn ein anderer gewählt ist.',
         'Löschen', () => {
-          t.akkus.splice(i, 1); saveCfg(); toast('Gelöscht'); akkuTypZeichnen(false);
+          t.akkus.splice(i, 1); if(i < akkuTypBasis) akkuTypBasis--; saveCfg(); toast('Gelöscht'); akkuTypZeichnen(false);
         });
     };
   });
@@ -5063,20 +5184,22 @@ function akkuTypUmbenennen(alt, neu){
    wirkliche Zählertausch (mit Aus- und Einbaustand) hat seine eigene Seite. */
 const MEDIEN = ['Kaltwasser', 'Warmwasser', 'Wärme', 'Strom'];
 function setStellen(box){
+  const iSt = info('Partei, Medium und Zählernummer bilden den Schlüssel eines Zählers. Wird einer davon geändert, wandern Vorquartalsstand, laufender Wert, Ableseplatz und Stelle im Grundriss mit – Tippfehler lassen sich gefahrlos berichtigen. Wasser rechnet immer in m³.', 'margin:-4px 0 6px');
+  const iTa = info('Für einen wirklich getauschten Zähler: neue Nummer, Wechseldatum, Aus- und Einbaustand. Der Stand des Vorquartals wird dabei verworfen.', 'margin:-4px 0 10px');
   box.innerHTML =
-    `<p class="muted small" style="margin:0 0 6px">Partei, Medium und Zählernummer bilden zusammen den Schlüssel eines Zählers. Wird einer davon geändert, wandern Vorquartalsstand, laufender Wert, Ableseplatz und die Stelle im Grundriss mit – ein Tippfehler lässt sich also gefahrlos berichtigen. Wasser rechnet immer in m³.</p>
+    `<div class="eyebrow mitInfo">Zählstellen ${iSt.knopf}</div>${iSt.text}
+     <button class="btn ghost klein" id="setStellePlus" style="margin:0 0 10px">+ Zählstelle hinzufügen</button>
      <div id="setStellenListe"></div>
-     <button class="btn ghost klein" id="setStellePlus" style="margin-top:12px">+ Zählstelle hinzufügen</button>
      <div id="setPlaus"></div>
-     <div class="eyebrow" style="margin-top:20px">Zählertausch</div>
-     <p class="muted small" style="margin:-4px 0 10px">Für einen wirklich getauschten Zähler: neue Nummer, Wechseldatum, Ausbau- und Einbaustand. Der Stand des Vorquartals wird dabei verworfen.</p>
+     <div class="eyebrow mitInfo" style="margin-top:20px">Zählertausch ${iTa.knopf}</div>${iTa.text}
      <button class="btn ghost klein" id="setZuTausch">Zähler getauscht</button>
      <div class="eyebrow" style="margin-top:20px">Alles zurücksetzen</div>
      <button class="btn ghost klein" id="btnMedReset">Ablesewerte zurücksetzen</button>
-     <p class="muted small" style="margin:8px 0 0">Löscht die laufende Ablesung und die gemerkten Stände sämtlicher Zähler. Für einen einzelnen Zählertausch ist das der zu große Hammer – dafür ist der Knopf darüber da.</p>`;
+     <p class="muted small" style="margin:8px 0 0">Löscht die laufende Ablesung und die gemerkten Stände aller Zähler. Für einen einzelnen Tausch den Knopf darüber nehmen.</p>`;
   plausEinstellungen($('#setPlaus'));
   $('#setZuTausch').onclick = () => setOeffnen('tausch');
   $('#btnMedReset').onclick = medienZuruecksetzen;
+  stellenBasis = teilCfg('medien').stellen.length;
   $('#setStellePlus').onclick = () => {
     stellenZeichnen(true);
     const f = $('#setStellenListe .stelle[data-i="-1"] [data-f="partei"]');
@@ -5100,12 +5223,13 @@ function stelleKarte(z, i){
     <button class="btn danger klein" data-weg="1">Löschen</button>
   </div>`;
 }
+let stellenBasis = 0;
 function stellenZeichnen(mitNeuer){
   const box = $('#setStellenListe'); if(!box) return;
   const t = teilCfg('medien');
   let verworfen = false;
-  box.innerHTML = t.stellen.map((z, i) => stelleKarte(stelleLesen(z), i)).join('')
-    + (mitNeuer ? stelleKarte({partei:'', medium:'Kaltwasser', nr:'', ort:'', einheit:'m³'}, -1) : '');
+  box.innerHTML = (mitNeuer ? stelleKarte({partei:'', medium:'Kaltwasser', nr:'', ort:'', einheit:'m³'}, -1) : '')
+    + anzeigeFolge(t.stellen.length, stellenBasis).map(i => stelleKarte(stelleLesen(t.stellen[i]), i)).join('');
   box.querySelectorAll('.stelle').forEach(r => {
     const i = +r.dataset.i, neu = i < 0;
     const feld = f => r.querySelector(`[data-f="${f}"]`);
@@ -5149,7 +5273,7 @@ function stellenZeichnen(mitNeuer){
         + 'Der Stand des Vorquartals, der laufende Wert und die Stelle im Grundriss bleiben '
         + 'gespeichert – wer die Zählstelle mit denselben Angaben wieder anlegt, findet alles wieder.',
         'Löschen', () => {
-          t.stellen.splice(i, 1); saveCfg(); toast('Gelöscht');
+          t.stellen.splice(i, 1); if(i < stellenBasis) stellenBasis--; saveCfg(); toast('Gelöscht');
           stellenZeichnen(false); menueAuffrischen();
         });
     };
@@ -5160,8 +5284,8 @@ function stellenZeichnen(mitNeuer){
    nur über Speichern" (v0.51) ist hinfällig – es gibt kein Speichern mehr. */
 function setTausch(box){
   box.innerHTML =
-    `<p class="muted small" style="margin:0 0 10px">Zähler anhaken, Wechseldatum, neue Nummer sowie Aus- und Einbaustand eintragen. Für die angehakten Zähler wird der Stand des Vorquartals verworfen; gerechnet wird ab dem Einbaustand. Alle anderen bleiben unberührt.</p>
-     <div id="tauschListe">${medienNamenListe()}</div>
+    infoZeile('Zähler anhaken, dann Wechseldatum, neue Nummer sowie Aus- und Einbaustand eintragen. Für die angehakten Zähler wird der Vorquartalsstand verworfen und ab dem Einbaustand gerechnet; alle anderen bleiben unberührt.')
+    + `<div id="tauschListe">${medienNamenListe()}</div>
      <button class="btn primary" id="btnTauschOk" style="margin-top:16px">Tausch vermerken</button>`;
   /* Das Nummernfeld öffnet sich erst mit dem Haken – so ist auf einen Blick zu
      sehen, welche Zähler wirklich gemeint sind. */
@@ -5407,6 +5531,8 @@ async function renderPlaene(){
   const n = liste.length;
   box.innerHTML = n ? liste.map((pl, i) => `<div class="stelle planKarte" data-id="${esc(pl.id)}" data-i="${i}">
       <input type="text" data-name="1" value="${esc(pl.name)}" aria-label="Name">
+      <div class="planBezug"><span class="muted small">${bezugVon(pl.id) ? 'Ausgerichtet' : 'Nicht ausgerichtet'}</span>
+        <button class="btn ghost klein" data-richt="1">${bezugVon(pl.id) ? 'Neu ausrichten' : 'Ausrichten'}</button></div>
       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
         <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 ? ' disabled' : ''}>↑</button>
         <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i >= n - 1 ? ' disabled' : ''}>↓</button>
@@ -5447,10 +5573,15 @@ async function renderPlaene(){
       planListe = liste;                      // von hier aus wird geblättert
       planZeigen(id, null);
     };
+    r.querySelector('[data-richt]').onclick = () => {
+      planListe = liste; planRichtStart = true;
+      planZeigen(id, null);
+    };
     r.querySelector('[data-weg]').onclick = () => frage('Grundriss löschen',
       'Der Plan wird aus dem Gerät entfernt.', 'Löschen',
       async () => { await Bilder.weg(id); await quellenAufraeumen();
                     if(Array.isArray(CFG.planOrdnung)){ CFG.planOrdnung = CFG.planOrdnung.filter(x => x !== id); saveCfg(); }
+                    if(CFG.bezug && CFG.bezug[id]){ delete CFG.bezug[id]; saveCfg(); }
                     toast('Gelöscht'); renderPlaene(); });
   });
   const auto = box.querySelector('[data-auto]');
@@ -5661,6 +5792,20 @@ async function scharfZeichnen(){
 function markenZeichnen(planId, ziehen){
   const box = $('#planBox'); if(!box) return;
   box.querySelectorAll('.marke').forEach(m => m.remove());
+  /* Beim Ausrichten zählen nur die Bezugspunkte: die schon gesetzten oder der
+     erste frisch getippte. */
+  if(planRicht){
+    const b = bezugVon(planId);
+    const pts = planRicht === 2 ? [planRichtP1] : b ? [b.p1, b.p2] : [];
+    pts.forEach((p, i) => {
+      const m = document.createElement('div');
+      m.className = 'marke bezug';
+      m.style.left = (p.x * 100) + '%'; m.style.top = (p.y * 100) + '%';
+      m.innerHTML = `<b>${i + 1}</b>`;
+      box.appendChild(m);
+    });
+    return;
+  }
   const punkt = (x, y, klassen, text, farbe) => {
     const m = document.createElement('div');
     m.className = 'marke ' + klassen;
@@ -5680,8 +5825,11 @@ function markenZeichnen(planId, ziehen){
   const eigen = CFG.orte[planZiel.key] || {};
   andereOrte(planId, planZiel.key)
     .forEach(o => punkt(o.x, o.y, 'andere st-' + ortStatus(o.key)));
-  if(ortPlaene(planZiel.key).includes(planId))
-    punkt(eigen.x, eigen.y, (ziehen ? 'zieh' : 'aktiv') + ' st-' + ortStatus(planZiel.key));
+  if(ortPlaene(planZiel.key).includes(planId)){
+    const p = ortAuf(planZiel.key, planId);
+    punkt(p.x, p.y, (ziehen ? 'zieh' : 'aktiv') + ' st-' + ortStatus(planZiel.key));
+  }
+  void eigen;
 }
 /* Wie steht dieses eine Objekt in der laufenden Runde da? Grün, sobald etwas
    erfasst ist – ein Zustand bei den Anlagen, ein Zählerstand bei den Zählern;
@@ -5722,10 +5870,41 @@ function ortStatus(key){
    (x, y), und die gilt auf allen seinen Etagen – verschoben wird deshalb immer
    überall. Welche Etagen, steht in den Einstellungen der Aufzüge (CFG.etagen,
    Schlüssel wie bei den Orten); der Plan, auf dem die Marke gesetzt wurde,
-   gehört stets dazu. Das geht auf, solange die Etagenpläne denselben Ausschnitt
-   haben. Andere Nachweise tragen keine Etagen – die Helfer schaden dort nicht,
+   gehört stets dazu. Sind die Etagenpläne ausgerichtet (CFG.bezug), rechnet
+   ortAuf() die Stelle auf jeden Plan um; sonst gilt dieselbe Stelle. Andere Nachweise tragen keine Etagen – die Helfer schaden dort nicht,
    sie liefern einfach den einen Plan. */
 const etagenVon = key => ((CFG.etagen || {})[key] || []);
+/* --- Ausrichtung ------------------------------------------------------------
+   Je Plan zwei Bezugspunkte (in Anteilen des Bildes) und sein Seitenverhältnis:
+   CFG.bezug[planId] = {p1:{x,y}, p2:{x,y}, asp}. Es sind auf allen Plänen
+   dieselben zwei Stellen im Haus. Aus zwei Punktpaaren ergibt sich eine
+   Ähnlichkeitsabbildung – Versatz, Maßstab, Drehung –, gerechnet in einem
+   entzerrten Maß (x mal Seitenverhältnis), damit ungleich breite Bilder nicht
+   verzogen werden. Als komplexe Zahl: z' = m·z + c. */
+const bezugVon = id => { const b = (CFG.bezug || {})[id]; return b && b.p1 && b.p2 && b.asp > 0 ? b : null; };
+function bezugAbb(vonId, nachId){
+  const a = bezugVon(vonId), b = bezugVon(nachId);
+  if(!a || !b) return null;
+  const A1 = [a.p1.x * a.asp, a.p1.y], A2 = [a.p2.x * a.asp, a.p2.y];
+  const B1 = [b.p1.x * b.asp, b.p1.y], B2 = [b.p2.x * b.asp, b.p2.y];
+  const dA = [A2[0] - A1[0], A2[1] - A1[1]], dB = [B2[0] - B1[0], B2[1] - B1[1]];
+  const n = dA[0] * dA[0] + dA[1] * dA[1];
+  if(!(n > 1e-9)) return null;
+  const m = [(dB[0] * dA[0] + dB[1] * dA[1]) / n, (dB[1] * dA[0] - dB[0] * dA[1]) / n];
+  const c = [B1[0] - (m[0] * A1[0] - m[1] * A1[1]), B1[1] - (m[1] * A1[0] + m[0] * A1[1])];
+  return {m, c, aspVon:a.asp, aspNach:b.asp,
+          punkt:(x, y) => { const X = x * a.asp, Y = y;
+            return {x:(m[0] * X - m[1] * Y + c[0]) / b.asp, y:m[1] * X + m[0] * Y + c[1]}; }};
+}
+/* Wo die Marke eines Objekts auf einem bestimmten Plan sitzt. Auf dem eigenen
+   Plan und ohne Bezugspunkte dieselbe Stelle wie bisher. */
+function ortAuf(key, planId){
+  const o = CFG.orte[key];
+  if(!o || o.x == null) return {x:null, y:null};
+  if(!planId || o.plan === planId) return {x:o.x, y:o.y};
+  const f = bezugAbb(o.plan, planId);
+  return f ? f.punkt(o.x, o.y) : {x:o.x, y:o.y};
+}
 function ortPlaene(key){
   const o = CFG.orte[key];
   if(!o || o.x == null) return [];
@@ -5772,7 +5951,7 @@ function katOrte(k, planId){
     const o = CFG.orte[key];
     if(!o || o.x == null || !ortPlaene(key).includes(id)) return;
     if(!nummer[key]) nummer[key] = ++nr;
-    if(id === planId) raus.push({key, kat:k, x:o.x, y:o.y, nr:nummer[key]});
+    if(id === planId) raus.push(Object.assign({key, kat:k, nr:nummer[key]}, ortAuf(key, planId)));
   }));
   return raus;
 }
@@ -5788,7 +5967,7 @@ function andereOrte(planId, key){
   const passt = k => k !== key && ortPlaene(k).includes(planId) && daheim.has(k);
   /* Der Schlüssel reist mit: er wird gebraucht, wenn jemand die Marke antippt
      und wissen will, was dort steht. */
-  return Object.keys(CFG.orte).filter(passt).map(k => Object.assign({key:k}, CFG.orte[k]));
+  return Object.keys(CFG.orte).filter(passt).map(k => Object.assign({key:k}, CFG.orte[k], ortAuf(k, planId)));
 }
 /* Wie heißt, was an dieser Stelle steht? Bei Zählern Partei und Zähler wie in
    der Karte, sonst der Name der Anlage – der Nachweis steht schon im Schlüssel
@@ -5822,6 +6001,37 @@ function tippZeigen(o){
 /* Zwei Aufgaben, eine Ansicht: nur ansehen (aus den Einstellungen) oder eine
    Stelle festlegen (aus einer Karte heraus). Der Unterschied ist planZiel. */
 let planZiehen = false, streifenUhr = null, planAktuell = null, planListe = [];
+/* Ausrichten: 0 aus, 1 wartet auf den ersten, 2 auf den zweiten Bezugspunkt.
+   planRichtStart setzt, wer den Plan zum Ausrichten öffnet. planDeck ist der
+   überlagerte Plan, planDeckUrl sein Bild. */
+let planRicht = 0, planRichtP1 = null, planRichtStart = false, planDeck = null, planDeckUrl = null;
+function planDeckWeg(){
+  const alt = $('#planBox') && $('#planBox').querySelector('img.deck');
+  if(alt) alt.remove();
+  if(planDeckUrl){ URL.revokeObjectURL(planDeckUrl); planDeckUrl = null; }
+}
+/* Den überlagerten Plan so legen, dass seine Bezugspunkte auf denen des offenen
+   liegen. Breite und Versatz in Prozent der Planfläche, Drehung und Maßstab als
+   Matrix – das bleibt bei jeder Zoomstufe richtig. */
+async function planDeckZeichnen(){
+  planDeckWeg();
+  if(!planDeck || !planAktuell) return;
+  const f = bezugAbb(planDeck, planAktuell);
+  const pl = await Bilder.get(planDeck), b = planBlob(pl);
+  const box = $('#planBox');
+  if(!f || !b || !box || current !== 'plan') return;
+  planDeckUrl = URL.createObjectURL(b);
+  const img = document.createElement('img');
+  img.className = 'deck'; img.alt = '';
+  img.src = planDeckUrl;
+  img.style.width  = (100 * f.aspVon / f.aspNach) + '%';
+  img.style.height = '100%';
+  img.style.left   = (100 * f.c[0] / f.aspNach) + '%';
+  img.style.top    = (100 * f.c[1]) + '%';
+  img.style.transform = `matrix(${f.m[0]},${f.m[1]},${-f.m[1]},${f.m[0]},0,0)`;
+  const erstesMarke = box.querySelector('.marke');
+  box.insertBefore(img, erstesMarke || null);
+}
 const MARKE_FANG = 16;        // wie nah ein Tipp an einer Marke liegen muss
 
 /* Gewechselt wird über den Knopf rechts in der Kopfzeile – ein Auswahlfeld über
@@ -5842,8 +6052,9 @@ function planZurStelle(){
   const wrap = $('#planWrap'), box = $('#planBox');
   const bild = box && box.querySelector('img');
   if(!wrap || !bild || !planZiel) return;
-  const o = CFG.orte[planZiel.key];
-  if(!o || o.x == null || !ortPlaene(planZiel.key).includes(planAktuell)) return;
+  const o0 = CFG.orte[planZiel.key];
+  if(!o0 || o0.x == null || !ortPlaene(planZiel.key).includes(planAktuell)) return;
+  const o = ortAuf(planZiel.key, planAktuell);
   const bw = bild.offsetWidth, bh = bild.offsetHeight;
   if(!bw || !bh) return;
   wrap.scrollLeft = Math.max(0, Math.min(bw - wrap.clientWidth,  o.x * bw - wrap.clientWidth  / 2));
@@ -5860,6 +6071,9 @@ function streifenZeigen(dauerhaft){
 async function planZeigen(id, ziel){
   planZiel = ziel || null;
   planZiehen = false;
+  planRicht = planRichtStart && !ziel ? 1 : 0; planRichtStart = false; planRichtP1 = null;
+  if(planAktuell !== id) planDeck = null;      // eine Überlagerung gilt für den offenen Plan
+  planDeckWeg();
   planAktuell = id;
   planZoom = 1;                                // jeder Plan beginnt ganz
   scharfWeg(); scharfPlan = null; tippWeg();
@@ -5886,6 +6100,7 @@ async function planZeigen(id, ziel){
     planHoehe(); planZurStelle();
     box.classList.add('bereit');
     scharfSpaeter();
+    if(planDeck) planDeckZeichnen();
   };
   bild.onload = fertig;
   bild.onerror = fertig;                      // sonst bliebe die Ansicht leer
@@ -5893,15 +6108,27 @@ async function planZeigen(id, ziel){
   const gesetzt = () => ortPlaene(planZiel.key).includes(id);
   const hinweis = () => {
     const kn = $('#btnPlanZieh'), ob = $('#btnPlanObjekte'), au = $('#btnPlanBlatt');
+    const deck = $('#btnPlanDeck'), richt = $('#btnPlanRicht');
+    deck.hidden = richt.hidden = true;
+    if(planRicht){
+      $('#planHinweis').textContent = planRicht === 1
+        ? 'Ersten Bezugspunkt antippen.'
+        : 'Zweiten Bezugspunkt antippen.';
+      kn.hidden = ob.hidden = au.hidden = true; richt.hidden = false;
+      streifenZeigen(true);
+      return;
+    }
     if(!planZiel){
       /* In der Übersicht trägt der Streifen, was eingeblendet ist, und den Weg
          zur Auswahl. Solange nichts steht, bleibt er stehen – er ist der
          einzige Zugang dazu; danach macht er dem Plan Platz. */
       const gewaehlt = katWahl();
-      $('#planHinweis').textContent = gewaehlt.length
+      const deckPlan = planDeck && planListe.find(p => p.id === planDeck);
+      $('#planHinweis').textContent = (gewaehlt.length
         ? gewaehlt.map(kat => NW(kat.k).label).join(', ')
-        : 'Nichts eingeblendet.';
+        : 'Nichts eingeblendet.') + (deckPlan ? ` · darüber ${deckPlan.name}` : '');
       kn.hidden = true; ob.hidden = false;
+      deck.hidden = !bezugVon(id) || !planListe.some(p => p.id !== id && bezugVon(p.id));
       au.hidden = !gewaehlt.length;            // ohne Marken gäbe es nichts auszugeben
       streifenZeigen(!gewaehlt.length);
       return;
@@ -5931,6 +6158,16 @@ async function planZeigen(id, ziel){
       planBlattZeigen(ids);
     });
   };
+  $('#btnPlanRicht').onclick = () => {
+    planRicht = 0; planRichtP1 = null; markenZeichnen(id, false); hinweis();
+  };
+  $('#btnPlanDeck').onclick = () => {
+    const andere = planListe.filter(p => p.id !== id && bezugVon(p.id));
+    wahlFenster('Überlagern',
+      [{id:'', text:'Keine Überlagerung', aktiv:!planDeck}]
+        .concat(andere.map(p => ({id:p.id, text:p.name, aktiv:p.id === planDeck}))),
+      w => { planDeck = w.id || null; planDeckZeichnen(); hinweis(); });
+  };
   $('#btnPlanObjekte').onclick = () => {
     const eintraege = KATEGORIEN.map(kat => ({
       k:kat.k, farbe:kat.farbe,
@@ -5944,7 +6181,7 @@ async function planZeigen(id, ziel){
   };
 
   const setzen = e => {
-    const bild = box.querySelector('img');
+    const bild = box.querySelector('img:not(.deck)');
     const r = bild.getBoundingClientRect();
     const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
     const y = Math.min(1, Math.max(0, (e.clientY - r.top)  / r.height));
@@ -5964,7 +6201,7 @@ async function planZeigen(id, ziel){
      auch solange noch nichts eingetragen ist. Wer wirklich dicht daneben setzen
      muss, zoomt vorher hinein; dann liegen die Marken weit auseinander. */
   const nahAn = (e, orte) => {
-    const bild = box.querySelector('img'); if(!bild) return null;
+    const bild = box.querySelector('img:not(.deck)'); if(!bild) return null;
     const r = bild.getBoundingClientRect();
     let nah = null, best = MARKE_FANG;
     orte.forEach(o => {
@@ -5976,6 +6213,24 @@ async function planZeigen(id, ziel){
   };
   box.onclick = e => {
     if(planGezoomt) return;                   // das war das Ende einer Zoom-Geste
+    if(planRicht){
+      const bild = box.querySelector('img:not(.deck)');
+      const r = bild.getBoundingClientRect();
+      const p = {x:Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)),
+                 y:Math.min(1, Math.max(0, (e.clientY - r.top)  / r.height))};
+      if(planRicht === 1){ planRichtP1 = p; planRicht = 2; markenZeichnen(id, false); hinweis(); return; }
+      const asp = bild.naturalWidth && bild.naturalHeight ? bild.naturalWidth / bild.naturalHeight : r.width / r.height;
+      /* Liegen die Punkte zu dicht, wird die Drehung ungenau. */
+      if(Math.hypot((p.x - planRichtP1.x) * asp, p.y - planRichtP1.y) < 0.15){
+        toast('Zu nah am ersten Punkt – weiter entfernt wählen'); return;
+      }
+      CFG.bezug = CFG.bezug || {};
+      CFG.bezug[id] = {p1:planRichtP1, p2:p, asp};
+      saveCfg();
+      planRicht = 0; planRichtP1 = null;
+      markenZeichnen(id, false); hinweis(); toast('Bezugspunkte gemerkt');
+      return;
+    }
     /* In der Übersicht sagt ein Tipp auf eine Marke, was dort steht; daneben
        holt er den Streifen zurück. Gesetzt wird hier nichts. */
     if(!planZiel){
@@ -7266,8 +7521,8 @@ function pruefFenster(d, key, gruende, fertig){
 function plausEinstellungen(box){
   const p = plaus();
   const einheit = m => /wasser/i.test(m) ? 'm³' : 'kWh';
-  box.innerHTML = `<div class="eyebrow" style="margin-top:20px">Plausibilitätsprüfung</div>
-    <p class="muted small" style="margin:-4px 0 10px">Ein Verbrauch gilt als auffällig, wenn er um mehr als die Prozentzahl vom gleichen Quartal des Vorjahres abweicht und die Differenz zugleich die Mindestmenge überschreitet. Zähler in MWh rechnen die Mindestmenge um. Ein Stand unter dem Vorquartal, eine Stelle mehr vor dem Komma und ein Verbrauch von null werden immer gemeldet.</p>
+  const i = info('Auffällig ist ein Verbrauch, der um mehr als die Prozentzahl vom gleichen Quartal des Vorjahres abweicht und dabei die Mindestmenge überschreitet; MWh-Zähler rechnen sie um. Ein Stand unter dem Vorquartal, eine Stelle mehr vor dem Komma und ein Verbrauch von null werden immer gemeldet.', 'margin:-4px 0 10px');
+  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:20px">Plausibilitätsprüfung ${i.knopf}</div>${i.text}
     <label class="field"><span>Abweichung in %</span>
       <input inputmode="decimal" class="schmal" id="plProzent" value="${esc(zahlText(p.prozent))}"></label>
     ${MEDIEN.map(m => `<label class="field"><span>Mindestmenge ${esc(m)} (${einheit(m)})</span>
