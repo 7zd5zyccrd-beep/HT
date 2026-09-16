@@ -10,6 +10,10 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.41 16.09.2026  Platzhaltertexte in leeren Feldern etwas heller (#949494
+                    statt des Grautons der übrigen grauen Texte) – einheitlich
+                    in allen Eingabefeldern und Textbereichen, nicht nur in der
+                    Suche. Die Lupe im Suchfeld trägt dasselbe Grau.
   v1.40 16.09.2026  Fußleiste der Nachweise kompakter: der Hinweis klein oben,
                     „Nachweis ausgeben“ und „Blatt ansehen“ nebeneinander.
                     Fehlt das Objekt, steht über dem Nachweis eine kleine
@@ -851,6 +855,7 @@
   --ok-bg:#EDEDED;
   --warn-bg:#ffffff;
   --field-border:#8A8A8A;
+  --placeholder:#949494;          /* Vorschläge in leeren Feldern und die Lupe */
   --f-label:"Barlow Condensed","Arial Narrow",sans-serif;
   --f-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --pad:18px;
@@ -1461,9 +1466,12 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 /* Lupe am Anfang des Suchfelds, im Grau des Platzhalters; sie nimmt keine
    Tipps an, das Feld darunter bleibt überall antippbar. */
 .suchfeld .lupe{position:absolute;left:13px;top:50%;width:18px;height:18px;margin-top:-9px;
-  color:var(--ink-soft);pointer-events:none}
+  color:var(--placeholder);pointer-events:none}
 .suchfeld input{padding-left:40px}
-#suche::placeholder{color:var(--ink-soft);opacity:1}
+/* Ein Grau für alle Platzhalter (v1.41) – ohne feste Angabe wählte jeder
+   Browser sein eigenes. opacity:1, weil Firefox den Platzhalter sonst noch
+   zusätzlich abschwächt. */
+input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 #sucheListe[hidden],#homeListe[hidden]{display:none}
 /* Die gesuchte Karte wird kurz umrandet, damit das Auge sie gleich findet. */
 .pos.gesucht{outline:3px solid var(--ink);outline-offset:2px}
@@ -1663,7 +1671,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.40';
+const VERSION = 'v1.41';
 const BUILD   = VERSION + ' · 16.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
