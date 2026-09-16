@@ -10,6 +10,29 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.46 16.09.2026  Regler: ein kurzer, leiser Tick beim Einrasten – zu denselben
+                    Gelegenheiten, bei denen der Knauf zuckt. Der Ton wird im
+                    Code erzeugt, ohne Tondatei. Die App meldet sich als
+                    Umgebungston an (audioSession „ambient“): der Stummschalter
+                    bzw. „Stumm“ im Kontrollzentrum gilt, laufende Musik wird
+                    nicht unterbrochen. iOS lässt Töne erst nach einer
+                    Berührung zu; die erste Berührung des Reglers schaltet sie
+                    frei, der allererste Tick kann ausbleiben. Ab Werk ein, in
+                    den Einstellungen unter Grundrisse abschaltbar („Ton beim
+                    Einrasten“, je Gerät gemerkt). Beim Ausrichten bleibt es
+                    ohne Regler (so von Jean entschieden). Der Erklärtext unter
+                    Grundrisse spricht nicht mehr vom Überlagern.
+  v1.45 16.09.2026  Regler: das Einrasten ist zu sehen. Erreicht der Knauf einen
+                    Punkt – beim Ziehen, per Tipp oder Pfeiltaste –, zuckt er
+                    kurz größer, und die Beschriftung des Punktes wird fett.
+                    Fett steht sie nur, solange der Regler genau auf dem Punkt
+                    steht; dazwischen ist die Beschriftung des näheren Plans
+                    dunkel, aber nicht fett. Haptik war gewünscht, geht aber
+                    nicht: Safari hat keine Vibration, und der Umweg über einen
+                    unsichtbaren Schalter ist seit iOS 26.5 geschlossen.
+                    Einstellungen der Aufzüge: die Etagen-Knöpfe tragen dieselben
+                    Kurzbezeichnungen wie der Regler (TG, EG, 1. OG, Dach …),
+                    der volle Planname steht in der Beschreibung des Knopfes.
   v1.44 16.09.2026  Nachzeichnen auch in der Überblendung (von Jean gemeldet:
                     zwischen zwei Punkten wurde beim Hineinzoomen nicht
                     nachgeschärft, der eingeblendete Plan erst auf dem Punkt).
@@ -1330,14 +1353,19 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 #planRegler .pkt span{position:absolute;white-space:nowrap;
   font-family:var(--f-label);font-size:14px;font-weight:500;line-height:1;letter-spacing:.03em;
   color:var(--ink-soft)}
-#planRegler .pkt.jetzt span{color:var(--ink);font-weight:600}
+#planRegler .pkt.naeher span{color:var(--ink)}
+#planRegler .pkt.jetzt span{font-weight:600}
 /* Wird es eng, bleibt nur die Beschriftung des gezeigten Plans stehen – der
    volle Name steht ohnehin über dem Plan. */
-#planRegler .spur.eng .pkt:not(.jetzt) span{display:none}
+#planRegler .spur.eng .pkt:not(.naeher) span{display:none}
 #planRegler .knauf{position:absolute;z-index:1;width:26px;height:26px;margin:-13px 0 0 -13px;
   border-radius:50%;background:var(--strong);border:3px solid #fff;pointer-events:none;
   box-shadow:0 0 0 1px var(--strong), 0 1px 4px rgba(0,0,0,.3)}
 #planRegler .knauf.fahrt{transition:left .2s ease, top .2s ease}
+/* Einrasten: der Knauf zuckt kurz größer. */
+@keyframes rast{0%{transform:scale(1)}40%{transform:scale(1.32)}100%{transform:scale(1)}}
+#planRegler .knauf.rast{animation:rast .22s ease-out}
+@media (prefers-reduced-motion:reduce){#planRegler .knauf.rast{animation:none}}
 #planRegler:focus-visible .knauf{box-shadow:0 0 0 1px var(--strong), 0 0 0 5px rgba(17,17,17,.25)}
 /* Waagerecht: links die unterste Etage. Das untere Sicherheitspolster gehört
    in den Regler, der Plan darüber endet an seiner Oberkante. */
@@ -1718,7 +1746,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
       <div id="blockPlaene" hidden>
         <div class="infozeile"><span class="muted small"></span><button type="button" class="info" aria-label="Erklärung" aria-expanded="false" aria-controls="infPlaene"><span>i</span></button></div>
-        <p class="muted small infotext" id="infPlaene" hidden style="margin:-2px 0 12px">Bild oder PDF; eine mehrseitige PDF ergibt einen Plan je Seite, zum Umwandeln ist einmal Netz nötig. Die Reihenfolge folgt der Etage im Namen, mit den Pfeilen legst du sie selbst fest. „Ausrichten“: auf jedem Plan dieselben zwei Stellen antippen, etwa zwei Ecken des Treppenhauses – dann sitzen Aufzugsmarken auf allen Etagen richtig, und Pläne lassen sich überlagern. Die Pläne reisen mit der Sicherung.</p>
+        <p class="muted small infotext" id="infPlaene" hidden style="margin:-2px 0 12px">Bild oder PDF; eine mehrseitige PDF ergibt einen Plan je Seite, zum Umwandeln ist einmal Netz nötig. Die Reihenfolge folgt der Etage im Namen, mit den Pfeilen legst du sie selbst fest. „Ausrichten“: auf jedem Plan dieselben zwei Stellen antippen, etwa zwei Ecken des Treppenhauses – dann sitzen Aufzugsmarken auf allen Etagen richtig, und am Regler wird zwischen den Plänen überblendet. Die Pläne reisen mit der Sicherung.</p>
+        <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="tonHaken"><span>Ton beim Einrasten</span></label>
         <button class="btn ghost klein" id="btnPlanNeu" style="margin:0 0 10px">+ Grundriss hinzufügen</button>
         <div id="planListe"><p class="muted small">wird geladen …</p></div>
         <input type="file" id="planFile" accept="image/*,application/pdf,.pdf" hidden>
@@ -1777,7 +1806,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.44';
+const VERSION = 'v1.46';
 const BUILD   = VERSION + ' · 16.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4878,7 +4907,7 @@ function renderSetSub(){
   $('#blockGeraet').hidden = a !== 'geraet';
   $('#blockZugang').hidden = a !== 'zugang';
   dyn.innerHTML = '';
-  if(a === 'plaene'){ renderPlaene(); return; }
+  if(a === 'plaene'){ $('#tonHaken').checked = tonAn(); renderPlaene(); return; }
   if(a === 'geraet'){ sicherStandZeigen(); return; }
   if(a === 'zugang') return;
   if(a === 'obj')   { setObjekt(dyn);   return; }
@@ -5135,9 +5164,11 @@ function etagenKnoepfe(box, plaene){
   box.querySelectorAll('.zeile').forEach(r => {
     const i = +r.dataset.i; if(i < 0 || anlagen[i] == null) return;
     const key = 'aufzuege|' + anlagen[i];
-    const an = etagenAuswahl(key);
+    const an = etagenAuswahl(key), kurz = planKurzNamen(plaene);
+    /* Dieselben Kurzbezeichnungen wie am Regler; der volle Planname steht in der
+       Beschreibung des Knopfes. */
     r.insertAdjacentHTML('afterend', `<div class="etagen" data-key="${esc(key)}"><span class="etw">Etagen</span>${
-      plaene.map(p => `<button type="button" data-plan="${esc(p.id)}" aria-pressed="${an.includes(p.id)}">${esc(p.name)}</button>`).join('')}</div>`);
+      plaene.map((p, j) => `<button type="button" data-plan="${esc(p.id)}" aria-pressed="${an.includes(p.id)}" title="${esc(p.name)}" aria-label="${esc(p.name)}">${esc(kurz[j])}</button>`).join('')}</div>`);
     const zeile = r.nextElementSibling;
     zeile.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => {
       const jetzt = etagenAuswahl(key), id = b.dataset.plan;
@@ -6554,20 +6585,25 @@ function reglerLage(){
 }
 /* Punkte neu setzen, wenn sich die Pläne geändert haben; sonst nur nachsehen,
    ob einer inzwischen ausgerichtet ist. */
+/* Kurzbezeichnungen für eine sortierte Planliste – dieselben am Regler und an
+   den Etagen-Knöpfen der Aufzüge. Zwei Pläne derselben Etage (etwa zwei Seiten
+   einer PDF) bekommen eine Zählung dahinter, sonst stünde zweimal dasselbe da. */
+function planKurzNamen(liste){
+  const kurz = liste.map((p, i) => etagenKurz(p.name, i + 1));
+  const zahl = {}, lauf = {};
+  kurz.forEach(k => { zahl[k] = (zahl[k] || 0) + 1; });
+  return kurz.map(k => zahl[k] > 1 ? `${k} ${lauf[k] = (lauf[k] || 0) + 1}` : k);
+}
 function reglerAufbauen(){
   const spur = $('#planRegler .spur'); if(!spur) return;
   const ids = planListe.map(p => p.id), n = ids.length;
   if(ids.join('\n') !== Regler.ids.join('\n')){
     Regler.ids = ids;
     spur.querySelectorAll('.pkt').forEach(d => d.remove());
-    const kurz = planListe.map((p, i) => etagenKurz(p.name, i + 1));
-    const zahl = {}, lauf = {};
-    kurz.forEach(k => { zahl[k] = (zahl[k] || 0) + 1; });
+    const namen = planKurzNamen(planListe);
     const knauf = spur.querySelector('.knauf');
     planListe.forEach((p, i) => {
-      /* Zwei Pläne derselben Etage (etwa zwei Seiten einer PDF) bekommen eine
-         Zählung dahinter, sonst stünde zweimal dasselbe am Regler. */
-      const k = zahl[kurz[i]] > 1 ? `${kurz[i]} ${lauf[kurz[i]] = (lauf[kurz[i]] || 0) + 1}` : kurz[i];
+      const k = namen[i];
       const d = document.createElement('div');
       d.className = 'pkt';
       d.dataset.i = i;
@@ -6582,11 +6618,26 @@ function reglerStellen(p, fahrt){
   const rg = $('#planRegler'), kn = rg && rg.querySelector('.knauf');
   const n = Regler.ids.length;
   if(!kn || n < 2) return;
+  const punkt = q => Math.abs(q - Math.round(q)) < 0.002;
+  const vorher = Regler.p;
   Regler.p = Math.max(0, Math.min(n - 1, p));
   kn.classList.toggle('fahrt', !!fahrt);
   kn.style.setProperty('--f', Regler.p / (n - 1));
-  const jetzt = Math.round(Regler.p);
-  rg.querySelectorAll('.pkt').forEach(d => d.classList.toggle('jetzt', +d.dataset.i === jetzt));
+  const jetzt = Math.round(Regler.p), aufPunkt = punkt(Regler.p);
+  /* naeher: der Plan, der gezeigt wird (dunkle Beschriftung); jetzt: der Regler
+     steht genau auf seinem Punkt (fett). */
+  rg.querySelectorAll('.pkt').forEach(d => {
+    d.classList.toggle('naeher', +d.dataset.i === jetzt);
+    d.classList.toggle('jetzt', aufPunkt && +d.dataset.i === jetzt);
+  });
+  /* Einrasten sichtbar machen – nur wenn der Nutzer den Regler bewegt (Ziehen,
+     Tipp, Taste), nicht beim Öffnen eines Plans. Dazu ein Tick (v1.46). */
+  if(aufPunkt && (Regler.zieht || fahrt) && (!punkt(vorher) || Math.round(vorher) !== jetzt)){
+    kn.classList.remove('rast');
+    void kn.offsetWidth;                       // Animation neu anstoßen
+    kn.classList.add('rast');
+    tonTick();
+  }
   const pl = planListe[jetzt];
   rg.setAttribute('aria-valuemax', n - 1);
   rg.setAttribute('aria-valuenow', jetzt);
@@ -6670,6 +6721,59 @@ function reglerFolgen(){
   rg.oncontextmenu = e => e.preventDefault();
 })();
 let planLauf = 0;             // nur der jüngste Aufruf von planZeigen() baut auf
+
+/* --- Tick beim Einrasten (v1.46) --------------------------------------------
+   Haptik gibt Safari nicht her, einen Ton schon. Er wird einmal im Code erzeugt
+   – ein paar Millisekunden gefiltertes Rauschen mit schnellem Abklingen, wie
+   die Rastung eines Drehrads – und bei Bedarf abgespielt. Als Umgebungston
+   angemeldet gilt der Stummschalter, und Musik aus anderen Apps läuft weiter.
+   iOS gibt Töne erst nach einer Berührung frei; tonBereit() hängt deshalb an
+   den Berührungen des Reglers. Die Einstellung gilt je Gerät. */
+const tonAn = () => Store.get('nwReglerTon', true) !== false;
+const Ton = {ctx:null, puffer:null};
+function tonBereit(){
+  if(!tonAn()) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return;
+  try{
+    if(!Ton.ctx){
+      try{ if('audioSession' in navigator) navigator.audioSession.type = 'ambient'; }catch(e){}
+      Ton.ctx = new AC();
+      const rate = Ton.ctx.sampleRate, n = Math.round(rate * 0.03);
+      const b = Ton.ctx.createBuffer(1, n, rate), d = b.getChannelData(0);
+      let vorher = 0;
+      for(let i = 0; i < n; i++){
+        const t = i / rate;
+        /* Rauschen, leicht geglättet (nimmt die Schärfe), dazu ein kurzer
+           heller Anteil; beides klingt in wenigen Millisekunden ab. */
+        const rausch = Math.random() * 2 - 1;
+        vorher = vorher * 0.55 + rausch * 0.45;
+        d[i] = (vorher * 0.8 + Math.sin(2 * Math.PI * 2400 * t) * 0.35) * Math.exp(-t / 0.004);
+      }
+      Ton.puffer = b;
+    }
+    if(Ton.ctx.state === 'suspended') Ton.ctx.resume();
+  }catch(e){ Ton.ctx = null; }
+}
+function tonTick(){
+  if(!tonAn() || !Ton.ctx || !Ton.puffer || Ton.ctx.state !== 'running') return;
+  try{
+    const quelle = Ton.ctx.createBufferSource(), laut = Ton.ctx.createGain();
+    quelle.buffer = Ton.puffer;
+    laut.gain.value = 0.5;
+    quelle.connect(laut); laut.connect(Ton.ctx.destination);
+    quelle.start();
+  }catch(e){}
+}
+(function tonBinden(){
+  const rg = $('#planRegler'), h = $('#tonHaken');
+  if(rg) ['pointerdown', 'touchend', 'click', 'keydown'].forEach(art =>
+    rg.addEventListener(art, tonBereit, {passive:true}));
+  if(h) h.onchange = e => {
+    Store.set('nwReglerTon', e.target.checked);
+    if(e.target.checked){ tonBereit(); setTimeout(tonTick, 60); }   // gleich zum Hören
+  };
+})();
 async function planZeigen(id, ziel){
   /* Beim Schieben folgen die Aufrufe dicht aufeinander: ein älterer, dessen
      Bild erst später kommt, darf den neueren nicht überschreiben. */
