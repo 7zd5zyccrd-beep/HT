@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  BDS Betriebsnachweise – eine einzige Datei, wie der E-Assistent.
+  Betriebsnachweise – eine einzige Datei, wie der E-Assistent.
 
   Fasst die wiederkehrenden Nachweise des Objektbetriebs zusammen – Kontrollen,
   Prüfungen und Ablesungen. Aufzüge, Rollbandfilter und
@@ -10,6 +10,75 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.31 16.09.2026  Sprinkler, Etappe D der Design-Überarbeitung. Die
+                    monatliche Kontrolle lässt sich abschließen, sobald alle
+                    Punkte erfasst sind; danach steht sie zugeklappt und grau
+                    (Datum, „abgeschlossen“, Zahl der Mängel), ein Tipp holt sie
+                    zurück. Wird ein Wert wieder geleert, ist sie von selbst
+                    nicht mehr abgeschlossen. Ausgegeben wird wie bisher mit dem
+                    letzten Wochengang. In der Aufgabenliste steht der Sprinkler
+                    nur noch einmal; die Zeile nennt beide Teile („Woche: …
+                    · Monat: …“). Der Ring zeigt den dringlicheren offenen
+                    Teil, ein abgeschlossener färbt nie mit – eine früh
+                    erledigte Monatskontrolle steht also nicht mehr bis
+                    Monatsende gelb. Sind Wochengang und Monatskontrolle
+                    erledigt, verschwindet die Zeile bis zur nächsten Woche. In
+                    der letzten Woche des Monats erscheint nach dem Wochengang
+                    „bereit zur Ausgabe“, eine nicht ausgegebene Runde des
+                    Vormonats steht rot. Ein unvollständiger Gang aus einer
+                    früheren Woche meldet sich jederzeit. „Alle Nachweise“
+                    rechnet den monatlichen Ring genauso.
+  v1.30 16.09.2026  Grundrisse ordnen, Etappe C der Design-Überarbeitung.
+                    Bisher standen die Pläne alphabetisch, „1. OG“ also vor
+                    „EG“ und „Dach“ vor „UG“. Jetzt ordnen sie sich nach der
+                    Etage, die im Namen steht: Tiefgarage, Keller und
+                    Untergeschosse, Erdgeschoss, Obergeschosse nach Nummer,
+                    Dach; Namen ohne erkennbare Etage hinten, alphabetisch. In
+                    den Einstellungen hat jeder Plan eine Karte mit Pfeilen;
+                    wer verschiebt, legt die Reihenfolge fest, neue Pläne
+                    sortieren sich darin nach ihrer Etage ein. „Nach Etagen
+                    ordnen“ verwirft die eigene Reihenfolge wieder. Die
+                    Ordnung gilt überall – Blattwahl, Planwechsel, Etagen der
+                    Aufzüge – und damit auch für die durchgehenden Nummern im
+                    Planblatt. Sie steht in CFG.planOrdnung und reist mit der
+                    Sicherung.
+  v1.29 16.09.2026  Sicherung, Etappe B der Design-Überarbeitung. Der Eintrag
+                    „Gerätewechsel“ heißt jetzt „Sicherung und Gerätewechsel“,
+                    der Knopf „Jetzt sichern“, darunter steht das Datum der
+                    letzten Sicherung. Als gesichert zählt nur ein Teilen, das
+                    wirklich durchlief – ein Abbruch in iOS zählt nicht. 30 Tage
+                    nach der letzten Sicherung (oder solange auf diesem Gerät nie
+                    gesichert wurde) steht oben auf der Startseite die Karte
+                    „Sicherung fällig“; ihr Knopf „Jetzt sichern“ startet sofort.
+                    Das Datum liegt auf dem Gerät, nicht in der Sicherungsdatei;
+                    wer eine Datei einliest, übernimmt deren Stand als letzte
+                    Sicherung.
+  v1.28 16.09.2026  Einstellungen, Etappe A der Design-Überarbeitung.
+                    Abwesenheit: die beiden Datumsfelder standen nebeneinander
+                    und liefen aus der Karte, weil Safari sie nicht unter ihren
+                    Inhalt schrumpfen lässt. Jetzt oben Bezeichnung und
+                    „Löschen“, darunter „von“ und „bis“ je in einer Zeile mit
+                    dem festen Datumsmaß. Aufzüge: die eigene Rubrik „Etagen“
+                    entfällt; unter jedem Aufzug stehen die Grundrisse als
+                    Umschaltknöpfe, ein Tipp je Etage, ohne Fenster. RWA: die
+                    Anzahl der Akkus (1 × / 2 ×) steht in der Knopfreihe der
+                    Objektkarte statt in einer eigenen Zeile.
+  v1.27 16.09.2026  Das Kürzel vor dem App-Namen ist gestrichen – Seitentitel
+                    und Kopf dieser Datei heißen nur noch „Betriebsnachweise“.
+                    Die interne Formatkennung der Sicherungsdatei bleibt, damit
+                    ältere Sicherungen weiter eingelesen werden.
+  v1.26 16.09.2026  Suche, Etappe B (Stufe 3 von 3). Die Suche findet jetzt
+                    auch offene Aufgaben – Mängel und eigene, auch
+                    wiederkehrende, deren Termin noch weit weg ist. Sie stehen
+                    als eigene Gruppe zuoberst und öffnen sich direkt, ohne
+                    Kurzinfo. Durchsucht werden Titel, Mangeltext, Notiz,
+                    Nachweis, Anlage bzw. Zähler und die Vorbereitung. Dazu
+                    die Bemerkungen des heutigen Stands bei Anlagen, Türen,
+                    Feuerlöschern und RWA, bei Zählern der Grund einer
+                    Bestätigung. Passt ein Treffer erst über die Bemerkung,
+                    steht sie in seiner kleinen Zeile. Die Kurzinfo eines
+                    Zählers nennt den Bestätigungsgrund. Außen vor bleiben
+                    Bemerkungen aus der Historie und der Sprinkler.
   v1.25 15.09.2026  Suche, Etappe A (Stufe 3 von 3). Oben auf der Startseite
                     ein Suchfeld; solange etwas darin steht, ersetzt die
                     Trefferliste die Aufgabenliste. Durchsucht werden Anlagen,
@@ -655,7 +724,7 @@
 <!-- Die Datei liegt in einem öffentlichen Repository. Diese Zeile hält sie aus
      Suchmaschinen heraus – der realistische Weg, auf dem jemand hier landet. -->
 <meta name="robots" content="noindex, nofollow">
-<title>BDS Betriebsnachweise</title>
+<title>Betriebsnachweise</title>
 <!-- Symbol für den Startbildschirm: Klemmbrett mit Haken, schwarz-weiß wie die
      App. Es steckt als Bild in der Datei, damit die App eine einzige Datei
      bleibt; iOS rundet die Ecken selbst. -->
@@ -893,6 +962,29 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
    und die eigene display-Angabe muss die Regel für [hidden] dulden (v0.83). */
 .zeile .btn + .btn,.stelle .btn + .btn{margin-top:0}
 .zeile .btn[hidden],.stelle .btn[hidden]{display:none}
+/* Abwesenheit: oben Bezeichnung und Löschen, darunter von und bis je in einer
+   Zeile. Nebeneinander passten die Datumsfelder nicht in die Karte (v1.28). */
+.abwKopf{display:flex;align-items:center;gap:10px}
+.abwKopf input{flex:1;min-width:0;height:42px;padding:9px 10px;font-size:16px}
+.abwKopf .btn{flex:0 0 auto;width:auto;height:42px;padding:0 12px;margin:0;font-size:14px;
+  display:flex;align-items:center;justify-content:center}
+.abwZeile{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
+.abwZeile > span{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;
+  font-size:13px;color:var(--ink-soft)}
+/* Etagen eines Aufzugs: die Grundrisse als Umschaltknöpfe unter seiner Zeile. */
+.etagen{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0 0 10px}
+.etagen .etw{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;
+  font-size:13px;color:var(--ink-soft);margin-right:2px}
+.etagen button{padding:7px 10px;border:1px solid var(--field-border);border-radius:9px;
+  background:var(--surface);color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+.etagen button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong);border-color:var(--strong)}
+/* Knopfreihe der Objektkarte: mit der Anzahl der Akkus wird es eng, deshalb
+   etwas kleinere Abstände; die Anzahl steht rechts vor Löschen. */
+.stelle .knopfreihe{gap:8px}
+.stelle .knopfreihe .seg.anz{flex:0 0 88px;margin-left:auto;height:42px}
+.stelle .knopfreihe .seg.anz button{padding:0 4px}
+/* Grundriss in den Einstellungen: Name, darunter Pfeile, Ansehen und Löschen. */
+.planKarte > input{height:42px;padding:9px 10px;font-size:16px}
 /* Eine Karte je Zählstelle: fünf Felder und der Löschen-Knopf. */
 .stelle{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
 .stelle .field{margin-bottom:10px}
@@ -1363,7 +1455,8 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
       <div id="blockGeraet" hidden>
         <p class="muted small" style="margin:0 0 10px">Sichert Objekt, Prüfer, Anlagenlisten, Checklisten, Zählstellen samt Ablesereihenfolge, die laufenden Nachweise, die Stände des Vorquartals, die vermerkten Zählerwechsel, die Grundrisse und die Historie in eine Datei. Auf dem neuen Gerät dieselbe Datei einlesen.</p>
-        <button class="btn ghost klein" id="btnCfgAus">Alles sichern</button>
+        <p class="small" id="sicherStand" style="margin:0 0 10px"></p>
+        <button class="btn ghost klein" id="btnCfgAus">Jetzt sichern</button>
         <button class="btn ghost klein" id="btnCfgEin" style="margin-top:10px">Aus Datei übernehmen</button>
         <input type="file" id="cfgFile" accept="application/json,.json" hidden>
       </div>
@@ -1412,8 +1505,8 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.25';
-const BUILD   = VERSION + ' · 15.09.2026';
+const VERSION = 'v1.31';
+const BUILD   = VERSION + ' · 16.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -2333,6 +2426,45 @@ function zeitraumText(z){
   const text = r[0] === 'Q' ? `${r.slice(1)}. Quartal` : MONATE[+r - 1];
   return +j === new Date().getFullYear() ? text : `${text} ${j}`;
 }
+/* --- Sprinkler: Wochengang und Monatsrunde getrennt betrachtet ------------
+   Beide Teile liefern, was in der Aufgabenliste steht: Ring, Text, Frist,
+   Sprungziel – oder null, wenn nichts ansteht. Die Monatsrunde kennt drei
+   Lagen: Kontrolle offen, Kontrolle abgeschlossen und nichts zu tun, oder
+   Ausgabe fällig (letzte Woche des Monats, Vormonat nicht ausgegeben, ein
+   unvollständiger Gang aus einer früheren Woche). */
+const monAbgeschlossen = d => !!d && (d.mon || []).length > 0
+  && d.mon.every(g => g.zu && gangVoll(g, teilCfg('sprinkler').mon));
+function sprinklerWoche(n, jetzt = new Date()){
+  if(!hatEintraege(n, 'woche')) return null;
+  const d = DAT[n.k], punkte = teilCfg(n.k).woch;
+  const gaenge = ((d && d.woch) || []).filter(g => inWoche(g.datum, jetzt));
+  if(gaenge.length && gaenge.every(g => gangVoll(g, punkte))) return null;
+  const w = wochenBeginn(jetzt);
+  return {offen:true, ziel:'woch', ring:ring(n, 'woche'), frueh:w,
+          faellig:new Date(w.getFullYear(), w.getMonth(), w.getDate() + 6),
+          text: gaenge.length ? 'Woche: Kontrollgang unvollständig' : 'Woche: Kontrollgang fehlt'};
+}
+function sprinklerMonat(n, jetzt = new Date(), wocheOffen = false){
+  if(!hatEintraege(n, 'monat') || expMonat(n.k) === jetztZeitraum(false)) return null;
+  const d = DAT[n.k], runde = rundeVon(n), ueber = runde < jetztZeitraum(false);
+  const ende = zeitraumEnde(runde), frueh = new Date(ende.getFullYear(), ende.getMonth(), 1);
+  const mon = (d && d.mon) || [], mPunkte = teilCfg(n.k).mon;
+  const basis = {runde, ueber, faellig:ende, frueh};
+  if(!monAbgeschlossen(d)) return Object.assign(basis, {offen:true, ziel:'mon',
+    ring: ueber ? 'rot' : mon.length ? 'gelb' : restMonat(jetzt) <= 7 ? 'rot' : '',
+    text: !mon.length ? 'Monat: Kontrolle fehlt'
+        : mon.every(g => gangVoll(g, mPunkte)) ? 'Monat: nicht abgeschlossen' : 'Monat: unvollständig'});
+  const wPunkte = teilCfg(n.k).woch;
+  const altUnvoll = ((d && d.woch) || []).some(g => !inWoche(g.datum, jetzt) && !gangVoll(g, wPunkte));
+  const letzteWoche = wochenBeginn(ende) <= tagAnfang(jetzt);
+  /* Abgeschlossen und nichts weiter zu tun – oder in der letzten Woche erst
+     noch der Wochengang, danach die Ausgabe. */
+  if(!ueber && !altUnvoll && (!letzteWoche || wocheOffen)) return Object.assign(basis, {abgeschlossen:true, letzteWoche});
+  return Object.assign(basis, {offen:true, abgeschlossen:true, ziel:'',
+    ring: ueber ? 'rot' : 'gelb',
+    text: altUnvoll ? 'Monat: Kontrollgang unvollständig'
+        : sprinklerVoll(d) ? 'bereit zur Ausgabe' : 'Monat: noch nicht vollständig'});
+}
 function ring(n, takt){
   if(n.art === 'fremd') return fremdRing(n.k);
   const jetzt = new Date();
@@ -2349,6 +2481,11 @@ function ring(n, takt){
   }
   const jetztMonat   = `${jetzt.getFullYear()}-${String(jetzt.getMonth() + 1).padStart(2, '0')}`;
   const jetztQuartal = `${jetzt.getFullYear()}-Q${Math.floor(jetzt.getMonth() / 3) + 1}`;
+  if(takt === 'monat' && n.art === 'sprinkler'){
+    if(expMonat(n.k) === jetztMonat) return 'gruen';
+    const m = sprinklerMonat(n, jetzt, !!sprinklerWoche(n, jetzt));
+    return m && m.offen ? m.ring : '';
+  }
   if(takt === 'monat'){
     if(expMonat(n.k) === jetztMonat) return 'gruen';
     if(begonnen(n)) return rundeUeberfaellig(n) ? 'rot' : 'gelb';
@@ -2611,8 +2748,9 @@ function homeStand(n){
     return stand;
 }
 /* Sortiert nach Takt, weil der die Runde bestimmt: was diese Woche ansteht,
-   steht oben. Die Sprinkleranlage taucht zweimal auf – wöchentlich und
-   monatlich –, weil beides zu verschiedenen Zeiten fällig ist. Der monatliche
+   steht oben. Die Sprinkleranlage taucht hier zweimal auf – wöchentlich und
+   monatlich –, weil beides zu verschiedenen Zeiten fällig ist; in der
+   Aufgabenliste steht sie seit v1.31 nur einmal. Der monatliche
    Eintrag springt in der Ansicht gleich zum passenden Abschnitt, sonst müsste
    man an bis zu fünf Wochenkarten vorbeiblättern. */
 const TAKTE = [['woche','Wöchentlich'], ['monat','Monatlich'], ['quartal','Quartalsweise']];
@@ -2733,18 +2871,25 @@ function aufgaben(){
       return;
     }
     if(n.art === 'sprinkler'){
-      /* Der wöchentliche Gang ist eine eigene Aufgabe bis Sonntag. Ein versäumter
-         Gang der Vorwoche verfällt wie bisher. */
-      if(hatEintraege(n, 'woche')){
-        const punkte = teilCfg(n.k).woch;
-        const gaenge = ((d && d.woch) || []).filter(g => inWoche(g.datum, jetzt));
-        const w = wochenBeginn(jetzt);
-        if(!(gaenge.length && gaenge.every(g => gangVoll(g, punkte))))
-          neu(n, {titel:n.label + ' · wöchentlich', ziel:'woch', ring:ring(n, 'woche'), frueh:w,
-            faellig:new Date(w.getFullYear(), w.getMonth(), w.getDate() + 6),
-            stand: gaenge.length ? 'Kontrollgang unvollständig' : 'Kontrollgang fehlt'});
-      }
-      if(!hatEintraege(n, 'monat')) return;
+      /* Eine Zeile für beide Teile (v1.31). Frist und Sprungziel kommen vom Teil,
+         der zuerst fällig ist, der Ring vom dringlicheren. Ein versäumter Gang
+         der Vorwoche verfällt wie bisher. */
+      const w = sprinklerWoche(n, jetzt), m = sprinklerMonat(n, jetzt, !!w);
+      const teile = [w, m && m.offen ? m : null].filter(Boolean);
+      if(!teile.length) return;
+      const ringRang = r => ['rot', 'gelb', ''].indexOf(r || '');
+      /* In der letzten Woche des Monats zählt auch dessen Ende als Frist – der
+         Wochengang muss vor der Ausgabe liegen, auch wenn der Sonntag schon im
+         nächsten Monat liegt. */
+      const fristen = teile.concat(m && m.letzteWoche && !m.offen ? [Object.assign({}, m, {ziel:'woch'})] : []);
+      const erster = fristen.sort((x, y) => x.faellig - y.faellig)[0];
+      const texte = teile.map(t => t.text);
+      if(w && m && m.abgeschlossen && !m.offen) texte.push('Monat: abgeschlossen');
+      neu(n, {titel: n.label + (m && m.ueber ? ' · ' + zeitraumText(m.runde) : ''),
+              ziel: erster.ziel, faellig: erster.faellig, frueh: erster.frueh,
+              ring: teile.map(t => t.ring).sort((x, y) => ringRang(x) - ringRang(y))[0] || '',
+              begonnen: begonnen(n), stand: texte.join(' · ')});
+      return;
     }
     const quartal = n.art === 'medien';
     if(!hatEintraege(n, quartal ? 'quartal' : 'monat')) return;
@@ -2761,11 +2906,6 @@ function aufgaben(){
             : medienVoll(d) ? 'vollständig, noch nicht ausgegeben'
             : fertig === l.length && unb ? `${unb} ${unb === 1 ? 'Stand' : 'Stände'} nicht bestätigt`
             : `${fertig} von ${l.length} abgelesen`;
-    }else if(n.art === 'sprinkler'){
-      stand = !los ? 'noch nicht begonnen'
-            : sprinklerVoll(d) ? 'vollständig, noch nicht ausgegeben'
-            : !(d.mon || []).length ? 'monatliche Kontrolle fehlt'
-            : 'noch nicht vollständig';
     }else{
       const alle = teilCfg(n.k).anlagen.length;
       const erfasst = zeilenJetzt(n.k).filter(z => z.status).length;
@@ -2773,9 +2913,8 @@ function aufgaben(){
             : erfasst >= alle ? 'vollständig, noch nicht ausgegeben'
             : `${alle - erfasst} von ${alle} offen`;
     }
-    neu(n, {titel: n.label + (n.art === 'sprinkler' ? ' · monatlich' : '')
-                 + (ueber ? ' · ' + zeitraumText(runde) : ''),
-            ziel: n.art === 'sprinkler' ? 'mon' : '',
+    neu(n, {titel: n.label + (ueber ? ' · ' + zeitraumText(runde) : ''),
+            ziel: '',
             ring: ring(n, quartal ? 'quartal' : 'monat'),
             faellig: zeitraumEnde(runde), begonnen: los, stand,
             frueh: (() => { const e = zeitraumEnde(runde);
@@ -2890,6 +3029,7 @@ function nachweisOeffnen(k, ziel){
      aus einem früheren Grundrissbesuch gilt dann nicht mehr. */
   sprungOffen = true; listenLage = null;
   offenKarten = new Set();            // Bewertetes aus früheren Runden zeigt sich klein
+  spMonAuf = false;                   // eine abgeschlossene Monatskontrolle steht zugeklappt
   go('nachweis');
 }
 function akkuOeffnen(){ datenFuer('rwa'); go('akku'); }
@@ -2957,7 +3097,7 @@ function renderHome(){
   const erledigt = AUFG.filter(a => a.erledigt).length;
   const mehr = (gibt ? `<button class="btn" data-alle="1">Alle Nachweise</button>` : '')
     + (erledigt ? `<button class="btn" data-erledigt="1">Erledigte Aufgaben · ${erledigt}</button>` : '');
-  $('#homeListe').innerHTML = inhalt
+  $('#homeListe').innerHTML = sicherungsKarte(gibt) + inhalt
     + `<button class="btn" data-neuaufg="1" style="margin-top:12px">+ Aufgabe</button>`
     + '<div id="homeMehr">' + (mehr ? `<div class="eyebrow">Übersicht</div>${mehr}` : '') + '</div>';
   knoepfeVerdrahten($('#homeListe'));
@@ -2966,6 +3106,8 @@ function renderHome(){
   const erl = $('#homeListe [data-erledigt]');
   if(erl) erl.onclick = () => go('erledigt');
   $('#homeListe [data-neuaufg]').onclick = aufgabeNeu;
+  const sich = $('#homeListe [data-sichern]');
+  if(sich) sich.onclick = alsDateiSichern;
   $('#buildTag').textContent = BUILD;
   hausKnopf();
   renderSuche();
@@ -3574,7 +3716,7 @@ async function hausKnopf(){
   try{ liste = (await Bilder.alle()) || []; }catch(e){ return; }
   const box = $('#homeMehr');
   if(!liste.length || current !== 'home' || !box || box.querySelector('[data-plaene]')) return;
-  liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
+  liste = planSortieren(liste);
   /* Ohne Nachweise fehlt die Überschrift des Blocks – dann bringt sie der Knopf mit. */
   box.insertAdjacentHTML('beforeend',
     (box.querySelector('.eyebrow') ? '' : `<div class="eyebrow">Übersicht</div>`)
@@ -3594,7 +3736,7 @@ async function renderPlaeneWahl(){
   let liste = [];
   try{ liste = (await Bilder.alle()) || []; }
   catch(e){ box.innerHTML = `<p class="muted small">Bilderspeicher nicht verfügbar.</p>`; return; }
-  liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
+  liste = planSortieren(liste);
   planListe = liste;                          // von hier aus wird geblättert
   box.innerHTML = liste.length
     ? liste.map(pl => `<button class="btn" data-id="${esc(pl.id)}">${esc(pl.name)}</button>`).join('')
@@ -3602,7 +3744,7 @@ async function renderPlaeneWahl(){
   box.querySelectorAll('[data-id]').forEach(b =>
     b.onclick = () => planZeigen(b.dataset.id, null));
 }
-let sprungZiel = '';
+let sprungZiel = '', spMonAuf = false;
 
 /* ---------- Fremdprüfung ----------------------------------------------------
    Oben der Sammel-Eintrag: die Firma war da und hat alles geprüft, also steht
@@ -4177,6 +4319,16 @@ const medienVoll = d => {
    alle übrigen die Wahl zwischen In Ordnung und Mangel. Das Kurzzeichen des
    Papierformulars entfällt; unterschrieben wird einmal am Ende. */
 function gangKarte(art, punkte, g, idx){
+  const voll = gangVoll(g, punkte);
+  /* Abgeschlossene Monatskontrolle: zugeklappt wie eine geprüfte Tür. */
+  if(art === 'mon' && g.zu && voll && !spMonAuf){
+    const m = punkte.filter((p, i) => g.w[i] === 'mangel').length;
+    return `<div class="pos fertig kompakt" data-art="mon" data-g="${idx}" data-zu="1">
+      <div class="name">Monatliche Kontrolle</div>
+      <div class="muted small">${esc(dText(g.datum))}${g.datum ? ' · ' : ''}abgeschlossen${
+        m ? ` · ${m} ${m === 1 ? 'Mangel' : 'Mängel'}` : ''}</div>
+    </div>`;
+  }
   return `<div class="pos" data-art="${art}" data-g="${idx}">
     <div class="kopf">
       <span class="name">${art === 'woch' ? 'Kontrollgang ' + (idx + 1) : 'Monatliche Kontrolle'}</span>
@@ -4194,7 +4346,10 @@ function gangKarte(art, punkte, g, idx){
              </div>`}
       </div>`;
     }).join('')}
-    <button class="btn ghost klein" data-weg="1" style="margin-top:10px">Kontrollgang entfernen</button>
+    ${art === 'mon'
+      ? `<button class="btn primary klein" data-abschluss="1" style="margin-top:10px"${voll ? '' : ' disabled'}>${g.zu && voll ? 'Zuklappen' : 'Abschließen'}</button>
+         <button class="btn ghost klein" data-weg="1">Kontrollgang entfernen</button>`
+      : `<button class="btn ghost klein" data-weg="1" style="margin-top:10px">Kontrollgang entfernen</button>`}
   </div>`;
 }
 function renderSprinkler(){
@@ -4218,20 +4373,42 @@ function renderSprinkler(){
     d[b.dataset.neu].push({datum: heute(), w:{}});
     saveDat(); renderSprinkler(); renderBar();
   });
+  /* Die Monatskarte bleibt beim Auf- und Zuklappen an ihrem Platz auf dem Schirm. */
+  const monUmbauen = box => {
+    const top = box.getBoundingClientRect().top;
+    renderSprinkler(); renderBar();
+    lageHalten(top, () => $('#nwListe .pos[data-art="mon"]'));
+  };
   $$('#nwListe .pos').forEach(box => {
     const art = box.dataset.art, g = d[art][+box.dataset.g];
+    const punkte = art === 'woch' ? t.woch : t.mon;
+    if(box.dataset.zu){ box.onclick = () => { spMonAuf = true; monUmbauen(box); }; return; }
+    /* Wird ein Wert geleert, ist die Kontrolle nicht mehr abgeschlossen. */
+    const abschlussPruefen = () => {
+      if(g.zu && !gangVoll(g, punkte)) delete g.zu;
+      const ab = box.querySelector('[data-abschluss]');
+      if(ab){ ab.disabled = !gangVoll(g, punkte); ab.textContent = g.zu ? 'Zuklappen' : 'Abschließen'; }
+    };
     box.querySelector('[data-feld="datum"]').onchange = e => { g.datum = e.target.value; saveDat(); };
     box.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
       const i = seg.dataset.p;
       g.w[i] = g.w[i] === b.dataset.w ? '' : b.dataset.w;
       if(g.w[i]) zeitMerken(g, i);                    // fürs Tätigkeitsbuch
+      abschlussPruefen();
       saveDat(); renderSprinkler(); renderBar();
     }));
     box.querySelectorAll('input.bar').forEach(inp => inp.oninput = () => {
       g.w[inp.dataset.p] = inp.value.trim();
       if(g.w[inp.dataset.p]) zeitMerken(g, inp.dataset.p);
+      abschlussPruefen();
       saveDat(); renderBar();
     });
+    const ab = box.querySelector('[data-abschluss]');
+    if(ab) ab.onclick = () => {
+      if(!gangVoll(g, punkte)) return;
+      g.zu = true; spMonAuf = false; saveDat(); monUmbauen(box);
+      toast('Monatliche Kontrolle abgeschlossen');
+    };
     box.querySelector('[data-weg]').onclick = () => {
       d[art].splice(+box.dataset.g, 1); saveDat(); renderSprinkler(); renderBar();
     };
@@ -4330,7 +4507,7 @@ function renderSettings(){
     + NACHWEISE.filter(n => !n.spaeter).map(n => knopf('nw', n.k, n.label, anzahl(n))).join('')
     + '<div class="eyebrow">Gerät</div>'
     + knopf('plaene', '', 'Grundrisse', '…')
-    + knopf('geraet', '', 'Gerätewechsel')
+    + knopf('geraet', '', 'Sicherung und Gerätewechsel')
     + knopf('zugang', '', 'Zugang');
   $$('#setMenue [data-art]').forEach(b =>
     b.onclick = () => setOeffnen(b.dataset.art, b.dataset.k));
@@ -4356,7 +4533,7 @@ function setOeffnen(art, k){
            : art === 'akkus'  ? 'Akkutypen'
            : art === 'tausch' ? 'Zählertausch'
            : art === 'plaene' ? 'Grundrisse'
-           : art === 'geraet' ? 'Gerätewechsel'
+           : art === 'geraet' ? 'Sicherung'
            : art === 'zugang' ? 'Zugang' : 'Einstellungen';
   go('setsub');
 }
@@ -4367,7 +4544,8 @@ function renderSetSub(){
   $('#blockZugang').hidden = a !== 'zugang';
   dyn.innerHTML = '';
   if(a === 'plaene'){ renderPlaene(); return; }
-  if(a === 'geraet' || a === 'zugang') return;
+  if(a === 'geraet'){ sicherStandZeigen(); return; }
+  if(a === 'zugang') return;
   if(a === 'obj')   { setObjekt(dyn);   return; }
   if(a === 'abwesend'){ setAbwesend(dyn); return; }
   if(a === 'check') { setCheck(dyn, k); return; }
@@ -4396,12 +4574,12 @@ function setAbwesend(box){
     .sort((p, q) => String(p.x.von).localeCompare(String(q.x.von)));
   const kommend = reihe.filter(r => !r.x.bis || r.x.bis >= h), vorbei = reihe.filter(r => r.x.bis && r.x.bis < h).reverse();
   const karte = ({x, i}) => `<div class="card abw" data-i="${i}">
-      <div class="row">
-        <label class="field" style="flex:1;margin:0"><span>von</span><input type="date" data-f="von" value="${esc(x.von || '')}"></label>
-        <label class="field" style="flex:1;margin:0"><span>bis</span><input type="date" data-f="bis" value="${esc(x.bis || '')}"></label>
+      <div class="abwKopf">
+        <input data-f="text" value="${esc(x.text || '')}" placeholder="Bezeichnung, z. B. Urlaub">
+        <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
-      <input data-f="text" value="${esc(x.text || '')}" placeholder="Bezeichnung, z. B. Urlaub" style="margin-top:10px">
-      <button class="btn ghost klein" data-weg="1" style="margin-top:10px">Löschen</button>
+      <label class="abwZeile"><span>von</span><input type="date" class="dat" data-f="von" value="${esc(x.von || '')}"></label>
+      <label class="abwZeile"><span>bis</span><input type="date" class="dat" data-f="bis" value="${esc(x.bis || '')}"></label>
     </div>`;
   box.innerHTML = `
     <div class="eyebrow" style="margin-top:0">Feiertage</div>
@@ -4418,7 +4596,7 @@ function setAbwesend(box){
   $('#abwLand').onchange = e => { CFG.bundesland = e.target.value; saveCfg(); };
   $('#abwNeu').onclick = () => {
     CFG.abwesend.push({von:'', bis:'', text:''}); saveCfg(); setAbwesend(box);
-    const neu = box.querySelector(`.abw[data-i="${CFG.abwesend.length - 1}"] [data-f="von"]`);
+    const neu = box.querySelector(`.abw[data-i="${CFG.abwesend.length - 1}"] [data-f="text"]`);
     if(neu) neu.focus();
   };
   box.querySelectorAll('.abw').forEach(k => {
@@ -4502,7 +4680,8 @@ function setCheck(box, k){
    opt.liste()        liefert das Array; es wird an Ort und Stelle geändert
    opt.beiUmbenennen  (alt, neu) – zieht die Verknüpfungen mit
    opt.beiLoeschen    (i) – räumt auf, bevor der Eintrag verschwindet
-   opt.loeschHinweis  zweiter Absatz der Rückfrage */
+   opt.loeschHinweis  zweiter Absatz der Rückfrage
+   opt.nachZeichnen   (box) – ergänzt die frisch gebauten Zeilen (Etagen) */
 const feldHoehe = ta => {
   ta.style.height = 'auto';
   ta.style.height = Math.max(42, ta.scrollHeight + 2) + 'px';
@@ -4522,6 +4701,7 @@ function listeBauen(box, opt){
     box.innerHTML = opt.liste().map(zeile).join('')
       + (mitNeuer ? zeile('', -1) : '')
       + `<button class="btn ghost klein" data-plus="1" style="margin-top:12px">+ ${esc(opt.wort)} hinzufügen</button>`;
+    if(opt.nachZeichnen) opt.nachZeichnen(box);
     box.querySelectorAll('.zeile').forEach(r => {
       const ta = r.querySelector('textarea'), i = +r.dataset.i, neu = i < 0;
       feldHoehe(ta);
@@ -4570,61 +4750,58 @@ function setAnlagen(box, k){
   box.innerHTML =
     `<button class="btn ghost klein" id="setZuCheck">Checkliste bearbeiten</button>
      <div class="eyebrow">Anlagen</div>
-     <p class="muted small" style="margin:-4px 0 6px">Die Reihenfolge stellst du beim Prüfen mit den Pfeilen ein; neue Anlagen hängen sich hinten an.</p>
-     <div id="setListe"></div>`
-    + (k === 'aufzuege'
-      ? `<div class="eyebrow" style="margin-top:18px">Etagen</div>
-         <p class="muted small" style="margin:-4px 0 6px">Auf welchen Grundrissen jeder Aufzug steht. Seine Marke setzt du einmal; sie gilt auf allen gewählten Etagen und wandert beim Verschieben überall mit. Das passt, solange die Etagenpläne denselben Ausschnitt haben.</p>
-         <div id="setEtagen"></div>`
-      : '');
+     <p class="muted small" style="margin:-4px 0 6px">Die Reihenfolge stellst du beim Prüfen mit den Pfeilen ein; neue Anlagen hängen sich hinten an.${
+       k === 'aufzuege' ? ' Unter jedem Aufzug wählst du die Etagen, auf denen er steht; seine Marke gilt auf allen gewählten und wandert beim Verschieben überall mit. Das passt, solange die Etagenpläne denselben Ausschnitt haben.' : ''}</p>
+     <div id="setListe"></div>`;
   $('#setZuCheck').onclick = () => setOeffnen('check', k);
-  if(k === 'aufzuege') etagenBauen();
-  listeBauen($('#setListe'), {
+  const liste = $('#setListe');
+  /* Die Pläne kommen aus dem Bilderspeicher und damit verzögert. Bis dahin
+     stehen die Zeilen ohne Etagen da; danach werden sie nur ergänzt, nicht neu
+     gebaut – ein Feld, in dem gerade getippt wird, bleibt unberührt. */
+  let plaene = null;
+  const etagen = b => { if(k === 'aufzuege' && plaene) etagenKnoepfe(b, plaene); };
+  listeBauen(liste, {
     wort:'Anlage',
     liste:() => teilCfg(k).anlagen,
-    nachher:() => { if(k === 'aufzuege') etagenBauen(); },
+    nachZeichnen:etagen,
+    nachher:() => etagen(liste),               // nach Umbenennen: Knöpfe am neuen Namen
     beiUmbenennen:(alt, neu) => anlageUmbenennen(k, alt, neu),
     loeschHinweis:'Das bisher Erfasste und die Stelle im Grundriss bleiben gespeichert – '
       + 'wer die Anlage mit demselben Namen wieder anlegt, findet beides wieder.'
   });
+  if(k === 'aufzuege') Bilder.alle().then(l => {
+    plaene = planSortieren(l || []);
+    if(liste.isConnected) etagen(liste);
+  }).catch(() => {});
 }
-/* Je Aufzug ein Knopf mit seinen Etagen; ein Tipp öffnet die Auswahl der Pläne.
-   Die Pläne kommen aus dem Bilderspeicher und damit verzögert – ist die Seite
-   bis dahin verlassen, bleibt es beim Nichtstun. */
-async function etagenBauen(){
-  let plaene = [];
-  try{ plaene = (await Bilder.alle()) || []; }catch(e){}
-  const box = $('#setEtagen');
-  if(!box || !box.isConnected) return;
-  plaene.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
+/* Etagen je Aufzug: unter jeder gespeicherten Zeile die Grundrisse als
+   Umschaltknöpfe. Ein Tipp nimmt die Etage auf oder heraus; aufgefrischt werden
+   nur die Knöpfe dieser Zeile. Wird die Etage abgewählt, auf der die Marke
+   gesetzt wurde, zieht sie auf die erste gewählte um – die Stelle selbst
+   bleibt. Die Etage mit der Marke lässt sich nicht als letzte abwählen: ohne
+   sie hätte die Marke keinen Plan. */
+function etagenKnoepfe(box, plaene){
+  box.querySelectorAll('.etagen').forEach(e => e.remove());
+  if(!plaene.length) return;
   const anlagen = teilCfg('aufzuege').anlagen;
-  if(!plaene.length){
-    box.innerHTML = `<p class="muted small">Noch kein Grundriss hinterlegt.</p>`; return;
-  }
-  const namen = key => {
-    const auf = etagenAuswahl(key);
-    return plaene.filter(p => auf.includes(p.id)).map(p => p.name);
-  };
-  box.innerHTML = anlagen.map((a, i) => {
-    const n = namen('aufzuege|' + a);
-    return `<button class="btn ghost klein" data-i="${i}" style="text-align:left">${esc(a)} · ${
-      esc(n.length ? n.join(', ') : 'keine Etage gewählt')}</button>`;
-  }).join('');
-  box.querySelectorAll('[data-i]').forEach(b => b.onclick = () => {
-    const a = anlagen[+b.dataset.i], key = 'aufzuege|' + a, an = etagenAuswahl(key);
-    kastenFenster(`Etagen · ${a}`,
-      [{alle:true, an:plaene.every(p => an.includes(p.id)), text:'Alle Etagen'}]
-        .concat(plaene.map(p => ({id:p.id, an:an.includes(p.id), text:p.name}))),
-      gewaehlt => {
-        const ids = gewaehlt.filter(e => e.an && !e.alle).map(e => e.id);
-        CFG.etagen = CFG.etagen || {};
-        if(ids.length) CFG.etagen[key] = ids; else delete CFG.etagen[key];
-        /* Wird die Etage abgewählt, auf der die Marke gesetzt wurde, zieht sie
-           auf die erste gewählte um – die Stelle selbst bleibt. */
-        const o = CFG.orte[key];
-        if(o && o.x != null && ids.length && !ids.includes(o.plan)) o.plan = ids[0];
-        saveCfg(); etagenBauen();
-      });
+  box.querySelectorAll('.zeile').forEach(r => {
+    const i = +r.dataset.i; if(i < 0 || anlagen[i] == null) return;
+    const key = 'aufzuege|' + anlagen[i];
+    const an = etagenAuswahl(key);
+    r.insertAdjacentHTML('afterend', `<div class="etagen" data-key="${esc(key)}"><span class="etw">Etagen</span>${
+      plaene.map(p => `<button type="button" data-plan="${esc(p.id)}" aria-pressed="${an.includes(p.id)}">${esc(p.name)}</button>`).join('')}</div>`);
+    const zeile = r.nextElementSibling;
+    zeile.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => {
+      const jetzt = etagenAuswahl(key), id = b.dataset.plan;
+      const ids = jetzt.includes(id) ? jetzt.filter(x => x !== id) : [...jetzt, id];
+      CFG.etagen = CFG.etagen || {};
+      if(ids.length) CFG.etagen[key] = ids; else delete CFG.etagen[key];
+      const o = CFG.orte[key];
+      if(o && o.x != null && ids.length && !ids.includes(o.plan)) o.plan = ids[0];
+      saveCfg();
+      const neu = etagenAuswahl(key);
+      zeile.querySelectorAll('[data-plan]').forEach(x => x.setAttribute('aria-pressed', neu.includes(x.dataset.plan)));
+    });
   });
 }
 /* Beim Sprinkler hängen die erfassten Werte an der Position des Punktes, nicht
@@ -4683,34 +4860,33 @@ function setFremd(box, k){
    wie in listeBauen; der Rest der Einstellungen bleibt dort. */
 function objektKarten(box, k){
   let verworfen = false;
-  /* Anzahl und Typ teilen sich eine Zeile: zwei Gruppen nebeneinander, jede mit
-     eigenem Rahmen, zusammen zu lesen als "2 × 12 Ah". Ab vier Typen wird das zu
-     eng – die Knöpfe können nicht unter ihre Beschriftung schrumpfen und liefen
-     aus dem Rahmen –, dann steht die Typwahl in einer eigenen Zeile darüber und
-     die Anzahl bekommt ihre Beschriftung zurück.
+  /* Der Typ steht in einer eigenen Zeile über die volle Breite, die Anzahl in
+     der Knopfreihe rechts vor Löschen (v1.28) – vorher nahm sie ab vier Typen
+     eine ganze Zeile ein. Zusammen zu lesen als "2 × 12 Ah".
      Eine frisch angelegte Karte zeigt beides noch nicht: solange der Name nicht
      gesichert ist, gibt es keinen Eintrag, an dem es hängen könnte. */
   const akkuWahl = (name, i) => {
     if(!NW(k).akku || i < 0) return '';
     const z = datenFuer(k).zeilen[name] || {}, typen = akkuTypen();
-    const anz = `<span class="seg" style="flex:0 0 96px">${[1, 2].map(m =>
-      `<button type="button" data-anz="${m}" aria-pressed="${akkuAnzahl(z) === m}">${m} ×</button>`).join('')}</span>`;
     if(!typen.length)
       return `<p class="muted small" style="margin:10px 0 0">Erst einen Akkutyp anlegen.</p>`;
-    const typ = `<span class="seg">${typen.map(x =>
-      `<button type="button" data-typ="${esc(x.name)}" aria-pressed="${x.name === z.akkuTyp}">${esc(x.name)}</button>`).join('')}</span>`;
-    return typen.length > 3
-      ? `<div style="margin-top:10px">${typ}</div>
-         <div class="kopf" style="margin:8px 0 0"><span class="muted small">Anzahl</span>${anz}</div>`
-      : `<div class="row" style="margin-top:10px">${anz}${typ}</div>`;
+    return `<div style="margin-top:10px"><span class="seg">${typen.map(x =>
+      `<button type="button" data-typ="${esc(x.name)}" aria-pressed="${x.name === z.akkuTyp}">${esc(x.name)}</button>`).join('')}</span></div>`;
+  };
+  const anzWahl = (name, i) => {
+    if(!NW(k).akku || i < 0 || !akkuTypen().length) return '';
+    const z = datenFuer(k).zeilen[name] || {};
+    return `<span class="seg anz" role="group" aria-label="Akkus je Anlage">${[1, 2].map(m =>
+      `<button type="button" data-anz="${m}" aria-pressed="${akkuAnzahl(z) === m}">${m} ×</button>`).join('')}</span>`;
   };
   const karte = (text, i, n) => `<div class="stelle" data-i="${i}">
       <textarea rows="1" data-f="name"${i < 0 ? ' placeholder="Objekt"' : ''}>${esc(text)}</textarea>
       ${akkuWahl(text, i)}
-      <div class="zeile" style="border-top:0;padding:10px 0 0">
+      <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
         <button class="btn ghost klein" data-ort="1" aria-label="Grundriss"${i < 0 ? ' disabled' : ''}>⌖</button>
         <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 ? ' disabled' : ''}>↑</button>
         <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i < 0 || i >= n - 1 ? ' disabled' : ''}>↓</button>
+        ${anzWahl(text, i)}
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
     </div>`;
@@ -5171,6 +5347,53 @@ function stelleUmbenennen(alt, neu){
   historieUmhaengen('medien', alt, neu);
 }
 
+/* --- Reihenfolge der Grundrisse --------------------------------------------
+   Aus dem Namen wird eine Etage gelesen: Untergeschosse negativ, Erdgeschoss 0,
+   Obergeschosse nach Nummer, Dach zuletzt. Ohne erkennbare Etage steht ein Plan
+   hinter allen erkannten; untereinander entscheidet der Name, mit Rücksicht auf
+   Zahlen („S. 2“ vor „S. 10“).
+   Hat Jean mit den Pfeilen verschoben, gilt diese Reihenfolge (CFG.planOrdnung,
+   eine Liste von Kennungen). Ein Plan, der darin fehlt – etwa frisch
+   hinzugefügt –, wird vor dem ersten eingereiht, dessen Etage höher liegt. */
+function etagenRang(name){
+  const t = ' ' + String(name || '').toLowerCase().replace(/[._,;:()\/\-–]/g, ' ') + ' ';
+  const zahl = (re) => { const m = t.match(re); return m ? +m[1] : null; };
+  const unter = zahl(/(\d+)\s*(?:ug|kg|untergeschoss|kellergeschoss)\b/) ?? zahl(/\b(?:ug|kg|untergeschoss|kellergeschoss)\s*(\d+)/);
+  if(unter != null) return -unter;
+  if(/\b(?:tg|tiefgarage)\b/.test(t)) return -9;
+  if(/\b(?:ug|kg|untergeschoss|kellergeschoss|keller)\b/.test(t)) return -1;
+  if(/\b(?:eg|erdgeschoss|parterre|hochparterre)\b/.test(t)) return 0;
+  if(/\b(?:zg|zwischengeschoss|mezzanin)\b/.test(t)) return 0.5;
+  const ober = zahl(/(\d+)\s*(?:og|obergeschoss|etage|stock)\b/) ?? zahl(/\b(?:og|obergeschoss|etage|stock)\s*(\d+)/);
+  if(ober != null) return ober;
+  if(/\b(?:og|obergeschoss)\b/.test(t)) return 1;
+  if(/\b(?:dg|dachgeschoss)\b/.test(t)) return 100;
+  if(/\b(?:dach|dachboden|dachzentrale)\b/.test(t)) return 101;
+  if(/\bspitzboden\b/.test(t)) return 102;
+  return null;
+}
+const planVergleich = (a, b) => {
+  const ra = etagenRang(a.name), rb = etagenRang(b.name);
+  if(ra !== rb){
+    if(ra == null) return 1;
+    if(rb == null) return -1;
+    return ra - rb;
+  }
+  return String(a.name).localeCompare(String(b.name), 'de', {numeric:true});
+};
+function planSortieren(liste){
+  const auto = (liste || []).slice().sort(planVergleich);
+  const ordnung = Array.isArray(CFG.planOrdnung) ? CFG.planOrdnung : [];
+  if(!ordnung.length) return auto;
+  const nachId = new Map(auto.map(p => [p.id, p]));
+  const fest = ordnung.filter(id => nachId.has(id)).map(id => nachId.get(id));
+  auto.filter(p => !ordnung.includes(p.id)).forEach(p => {
+    const i = fest.findIndex(q => planVergleich(p, q) < 0);
+    if(i < 0) fest.push(p); else fest.splice(i, 0, p);
+  });
+  return fest;
+}
+
 /* --- Grundrisse -------------------------------------------------------------
    Verwaltung in den Einstellungen: hinzufügen, benennen, ansehen, löschen. Die
    Namen stehen bei den Bildern selbst, nicht in den Einstellungen – so bleibt
@@ -5180,28 +5403,60 @@ async function renderPlaene(){
   let liste = [];
   try{ liste = (await Bilder.alle()) || []; }
   catch(e){ box.innerHTML = `<p class="muted small">Bilderspeicher nicht verfügbar.</p>`; return; }
-  liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
-  box.innerHTML = liste.length ? liste.map(pl => `<div class="plan" data-id="${esc(pl.id)}">
-      <span class="wer"><input type="text" data-name="1" value="${esc(pl.name)}" aria-label="Name"></span>
-      <button class="btn" data-sehen="1">Ansehen</button>
-      <button class="btn danger" data-weg="1">Löschen</button>
-    </div>`).join('') : `<p class="muted small">Noch kein Grundriss hinterlegt.</p>`;
-  $$('#planListe .plan').forEach(r => {
-    const id = r.dataset.id;
+  liste = planSortieren(liste);
+  const n = liste.length;
+  box.innerHTML = n ? liste.map((pl, i) => `<div class="stelle planKarte" data-id="${esc(pl.id)}" data-i="${i}">
+      <input type="text" data-name="1" value="${esc(pl.name)}" aria-label="Name">
+      <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
+        <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 ? ' disabled' : ''}>↑</button>
+        <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i >= n - 1 ? ' disabled' : ''}>↓</button>
+        <button class="btn klein" data-sehen="1" style="margin-left:auto">Ansehen</button>
+        <button class="btn danger klein" data-weg="1">Löschen</button>
+      </div>
+    </div>`).join('')
+    + ((CFG.planOrdnung || []).length && n > 1
+      ? `<button class="btn ghost klein" data-auto="1" style="margin-top:2px">Nach Etagen ordnen</button>` : '')
+    : `<p class="muted small">Noch kein Grundriss hinterlegt.</p>`;
+  /* Verschieben legt die ganze sichtbare Reihenfolge fest. Die bewegte Karte
+     bleibt auf dem Schirm stehen, wie überall beim Verschieben (v0.53). */
+  const tausch = async (i, j) => {
+    if(j < 0 || j >= n) return;
+    const karte = box.querySelector(`.planKarte[data-i="${i}"]`);
+    const top = karte ? karte.getBoundingClientRect().top : null;
+    const ids = liste.map(p => p.id);
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    CFG.planOrdnung = ids; saveCfg();
+    await renderPlaene();
+    lageHalten(top, () => box.querySelector(`.planKarte[data-i="${j}"]`));
+  };
+  box.querySelectorAll('.planKarte').forEach(r => {
+    const id = r.dataset.id, i = +r.dataset.i;
     r.querySelector('[data-name]').onchange = async e => {
       const pl = await Bilder.get(id);
-      if(pl){ pl.name = e.target.value.trim() || pl.name; await Bilder.put(pl); }
+      if(!pl) return;
+      pl.name = e.target.value.trim() || pl.name; await Bilder.put(pl);
+      /* Ohne eigene Reihenfolge kann der neue Name den Platz ändern. Neu gebaut
+         wird nur dann – sonst risse es ein Feld weg, in das schon getippt wird. */
+      const vorher = liste.map(p => p.id).join();
+      liste = planSortieren(liste.map(p => p.id === id ? Object.assign({}, p, {name:pl.name}) : p));
+      if(liste.map(p => p.id).join() !== vorher) renderPlaene();
     };
+    r.querySelector('[data-hoch]').onclick   = () => tausch(i, i - 1);
+    r.querySelector('[data-runter]').onclick = () => tausch(i, i + 1);
     r.querySelector('[data-sehen]').onclick = () => {
       planListe = liste;                      // von hier aus wird geblättert
       planZeigen(id, null);
     };
-
     r.querySelector('[data-weg]').onclick = () => frage('Grundriss löschen',
       'Der Plan wird aus dem Gerät entfernt.', 'Löschen',
       async () => { await Bilder.weg(id); await quellenAufraeumen();
+                    if(Array.isArray(CFG.planOrdnung)){ CFG.planOrdnung = CFG.planOrdnung.filter(x => x !== id); saveCfg(); }
                     toast('Gelöscht'); renderPlaene(); });
   });
+  const auto = box.querySelector('[data-auto]');
+  if(auto) auto.onclick = () => frage('Nach Etagen ordnen',
+    'Die eigene Reihenfolge wird verworfen; die Pläne ordnen sich wieder nach der Etage in ihrem Namen.',
+    'Ordnen', () => { delete CFG.planOrdnung; saveCfg(); renderPlaene(); });
 }
 /* Eine PDF trägt oft mehrere Etagen und damit mehrere Pläne. Sie darf deshalb
    erst weg, wenn die letzte Seite gelöscht ist. */
@@ -5502,8 +5757,8 @@ const katSchluessel = k => k === 'medien'
   ? stellenSortiert().map(z => z.key)
   : (teilCfg(k).anlagen || []).map(a => k + '|' + a);
 /* Was davon auf diesem Plan liegt. Die Nummer gehört zum Objekt, nicht zum
-   Blatt: sie läuft über alle Pläne in deren fester Ordnung (nach Namen sortiert,
-   wie in den Einstellungen). Deshalb zeigt der Bildschirm dieselbe Nummer wie
+   Blatt: sie läuft über alle Pläne in deren fester Ordnung (planSortieren, wie in
+   den Einstellungen). Deshalb zeigt der Bildschirm dieselbe Nummer wie
    das Blatt – auch dann, wenn erst beim Ausgeben feststeht, welche Pläne
    mitkommen. Ein zweites Geschoss fängt also nicht wieder bei 1 an. Ein
    Aufzug über mehrere Etagen bekommt seine Nummer beim ersten Vorkommen und
@@ -5750,7 +6005,7 @@ async function verorten(key, titel){
   let liste = [];
   try{ liste = (await Bilder.alle()) || []; }catch(e){}
   if(!liste.length){ toast('Erst einen Grundriss hinterlegen'); return; }
-  liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', {numeric:true}));
+  liste = planSortieren(liste);
   const ort = CFG.orte[key] || {};
   /* Ohne Marke, aber mit gewählten Etagen öffnet die erste davon. */
   const id = liste.some(p => p.id === ort.plan) ? ort.plan
@@ -5829,7 +6084,45 @@ const blobZuText = b => new Promise((ok, fehl) => {
   l.readAsDataURL(b);
 });
 const textZuBlob = t => fetch(t).then(r => r.blob());
+/* --- Wann zuletzt gesichert wurde ------------------------------------------
+   Das Datum liegt im Speicher des Geräts, nicht in CFG: sonst reiste es in der
+   Sicherungsdatei mit und sagte auf einem anderen Gerät etwas Falsches. */
+const SICHERUNG_TAGE = 30;
+const letzteSicherung = () => Store.get('nwSicherung', '');
+function sicherStandZeigen(){
+  const el = $('#sicherStand'); if(!el) return;
+  const l = letzteSicherung();
+  el.textContent = l ? `Letzte Sicherung: ${dText(l)}` : 'Auf diesem Gerät wurde noch nicht gesichert.';
+}
+/* Die Karte oben auf der Startseite. Nur wenn es überhaupt etwas zu sichern
+   gibt – eine leere App mahnt nicht. */
+function sicherungsKarte(gibt){
+  if(!gibt) return '';
+  const l = letzteSicherung(), h = heute();
+  if(l && tagPlus(l, SICHERUNG_TAGE) > h) return '';
+  const tage = l ? Math.round((alsDatum(h) - alsDatum(l)) / 86400000) : 0;
+  return `<div class="card">
+    <div class="eyebrow" style="margin:0 0 6px">Sicherung fällig</div>
+    <p style="margin:0 0 10px">${l ? `Letzte Sicherung am ${esc(dText(l))}, vor ${tage} Tagen.` : 'Auf diesem Gerät wurde noch nicht gesichert.'}</p>
+    <button class="btn primary" data-sichern="1">Jetzt sichern</button>
+  </div>`;
+}
+let sichernLaeuft = false;
 async function alsDateiSichern(){
+  /* Ein zweiter Tipp, während die Datei noch entsteht, öffnete ein zweites
+     Teilen-Menü – iOS lehnt das ab. */
+  if(sichernLaeuft) return;
+  sichernLaeuft = true;
+  try{ if(await dateiSichernLauf()){
+    Store.set('nwSicherung', heute());
+    toast('Gesichert');
+    sicherStandZeigen();
+    if(current === 'home') renderHome();
+  } }finally{ sichernLaeuft = false; }
+}
+/* Liefert true, wenn die Datei hinausging: Teilen lief durch oder – ohne
+   Teilen – der Download wurde angestoßen. */
+async function dateiSichernLauf(){
   let plaene = [], quellen = [];
   try{
     plaene = await Promise.all(((await Bilder.alle()) || []).map(async pl =>
@@ -5852,15 +6145,20 @@ async function alsDateiSichern(){
                          name, {type:'application/json'});
   try{
     if(navigator.canShare && navigator.canShare({files:[datei]})){
-      try{ await navigator.share({files:[datei]}); }catch(e){ /* Abbruchmeldung von iOS */ }
+      try{ await navigator.share({files:[datei]}); }
+      catch(e){
+        /* Abbruch in iOS: nichts melden, aber auch nicht als gesichert zählen. */
+        if(e && e.name === 'AbortError') return false;
+        throw e;
+      }
     }else{
       const a = document.createElement('a');
       a.href = URL.createObjectURL(datei); a.download = name;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     }
-    toast('Gesichert');
-  }catch(e){ toast('Sichern nicht möglich'); }
+    return true;
+  }catch(e){ toast('Sichern nicht möglich'); return false; }
 }
 async function paketUebernehmen(paket){
   CFG = Object.assign({}, CFG_STD, paket.cfg || {});
@@ -5899,6 +6197,9 @@ async function paketUebernehmen(paket){
            await textZuBlob(pl.bild)); n++; }
     catch(e){ /* einzelnes Bild überspringen */ }
   }
+  /* Was gerade eingelesen wurde, liegt als Datei vor – ihr Stand gilt als letzte
+     Sicherung, sofern er nicht älter ist als die bisher vermerkte. */
+  if(paket.stand && paket.stand > letzteSicherung()) Store.set('nwSicherung', paket.stand);
   toast(n ? `Übernommen, ${n} Grundriss${n === 1 ? '' : 'e'}` : 'Übernommen');
   if(current === 'setsub') setZurueck(); else renderSettings();
 }
@@ -6989,7 +7290,10 @@ function plausEinstellungen(box){
    Ein Feld oben auf der Startseite. Solange etwas darin steht, ersetzt die
    Trefferliste die Aufgabenliste; geleert, ist alles wie vorher. Durchsucht
    wird der heutige Bestand: Anlagen und Türen, Feuerlöscher, RWA und
-   Zählstellen (Partei, Medium, Nummer, Ort). Groß- und Kleinschreibung zählen
+   Zählstellen (Partei, Medium, Nummer, Ort), dazu die Bemerkungen des heutigen
+   Stands (bei Zählern der Grund einer Bestätigung) und die offenen Aufgaben.
+   Bemerkungen aus der Historie und der Sprinkler bleiben außen vor. Groß- und
+   Kleinschreibung zählen
    nicht, mehrere Wörter müssen alle vorkommen. Bei Wörtern mit Ziffern werden
    Leerzeichen, Striche und Punkte übergangen – „214711“ findet „21-4711“.
    Ein Treffer öffnet eine Kurzinfo mit den Wegen zur Karte, in den Grundriss
@@ -7005,24 +7309,66 @@ function suchObjekte(){
       stellen().forEach(z => l.push({k:'medien', id:z.key, ort:z.key, einheit:z.einheit,
         titel:`${z.partei} · ${namen[z.key] || z.medium}`,
         zusatz:`Nr. ${z.nr}${z.ort ? ' · ' + z.ort : ''}`,
-        text:[z.partei, z.medium, namen[z.key], z.nr, z.ort].join(' ')}));
+        text:[z.partei, z.medium, namen[z.key], z.nr, z.ort].join(' '),
+        bem:bestaetigGrund(z.key)}));
       return;
     }
     (teilCfg(n.k).anlagen || []).forEach(a =>
-      l.push({k:n.k, id:a, ort:`${n.k}|${a}`, titel:a, zusatz:'', text:a}));
+      l.push({k:n.k, id:a, ort:`${n.k}|${a}`, titel:a, zusatz:'', text:a,
+        bem:String(zeileVon(n.k, a).bem || '').trim()}));
   });
   return l;
 }
+/* Der Grund einer Bestätigung – nur solange er zum eingetragenen Stand gehört
+   und der Stand auffällig ist, also genau dann, wenn die Karte ihn zeigt. */
+function bestaetigGrund(key){
+  const d = DAT.medien;
+  if(!d || !d.quitt || !d.quitt[key] || !quittiert(d, key)) return '';
+  return standGruende(d, key).length ? String(d.quitt[key].grund || '').trim() : '';
+}
+const suchWoerter = frage => suchNorm(frage).split(/\s+/).filter(Boolean);
+/* Passt ein Wort in diesen Text? Bei Wörtern mit Ziffern zählen Leerzeichen,
+   Striche und Punkte nicht. */
+const wortIn = (w, text) => suchNorm(text).includes(w)
+  || (/\d/.test(w) && nurZeichen(text).includes(nurZeichen(w)));
 function suchTreffer(frage){
-  const woerter = suchNorm(frage).split(/\s+/).filter(Boolean);
+  const woerter = suchWoerter(frage);
   if(!woerter.length) return [];
   return suchObjekte().filter(o => {
-    const t = suchNorm(o.text), tz = nurZeichen(o.text);
-    return woerter.every(w => t.includes(w) || (/\d/.test(w) && tz.includes(nurZeichen(w))));
+    if(!woerter.every(w => wortIn(w, o.text) || (o.bem && wortIn(w, o.bem)))) return false;
+    /* Erst über die Bemerkung gefunden: dann gehört sie in die kleine Zeile,
+       sonst sieht man nicht, warum der Treffer dasteht. */
+    o.ueberBem = !woerter.every(w => wortIn(w, o.text));
+    return true;
   });
+}
+/* Offene Aufgaben – auch wiederkehrende, die in der Aufgabenliste noch nicht
+   stehen, weil ihr Termin weiter weg ist: gesucht wird ja gerade, was man nicht
+   vor Augen hat. Geordnet nach Termin, ohne Termin zuletzt. */
+function suchAufgaben(frage){
+  const woerter = suchWoerter(frage);
+  if(!woerter.length) return [];
+  return AUFG.filter(a => !a.erledigt).filter(a => {
+    const n = a.k ? NW(a.k) : null;
+    const text = [aufgTitel(a), a.text, a.notiz, n ? n.label : '', a.anlage ? anlageName(a) : '',
+                  a.vorb ? a.vorb.text : ''].filter(Boolean).join(' ');
+    return woerter.every(w => wortIn(w, text));
+  }).sort((x, y) => (x.frist || '9999').localeCompare(y.frist || '9999'));
+}
+function suchAufgStand(a){
+  const h = heute();
+  const termin = !a.frist ? 'ohne Termin'
+    : a.frist < h ? `überfällig seit ${dText(a.frist)}`
+    : a.frist === h ? 'fällig heute' : `bis ${dText(a.frist)}`;
+  return [aufgStand(a), termin].filter(Boolean).join(' · ');
 }
 /* Die kleine Zeile unter einem Treffer: woran man bei diesem Objekt gerade ist. */
 function suchStand(o){
+  const bem = o.ueberBem && o.bem
+    ? (NW(o.k).art === 'medien' ? 'Bestätigt: ' : 'Bemerkung: ') + kurz(o.bem) : '';
+  return [suchStand0(o), bem].filter(Boolean).join(' · ');
+}
+function suchStand0(o){
   const n = NW(o.k);
   if(n.art === 'medien'){
     const d = DAT.medien, st = d && d.stand ? String(d.stand[o.id] ?? '').trim() : '';
@@ -7046,13 +7392,20 @@ function renderSuche(){
   $('#homeListe').hidden = !!q;
   if(!q){ box.innerHTML = ''; suchListe = []; return; }
   suchListe = suchTreffer(q);
-  if(!suchListe.length){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
-  box.innerHTML = NACHWEISE.filter(n => suchListe.some(t => t.k === n.k)).map(n =>
+  const aufg = suchAufgaben(q);
+  if(!suchListe.length && !aufg.length){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
+  /* Aufgaben zuoberst und ohne Kurzinfo: ihre eigene Seite sagt ohnehin alles. */
+  box.innerHTML = (aufg.length
+    ? `<div class="eyebrow" style="margin-top:6px">Aufgaben</div>`
+      + aufg.map(a => `<button class="btn aufgabe" data-aufg="${esc(a.id)}">${esc(aufgTitel(a))}<small>${esc(suchAufgStand(a))}</small></button>`).join('')
+    : '')
+  + NACHWEISE.filter(n => suchListe.some(t => t.k === n.k)).map(n =>
     `<div class="eyebrow" style="margin-top:6px">${esc(n.art === 'medien' ? 'Zähler' : n.label)}</div>`
     + suchListe.map((t, i) => t.k !== n.k ? '' :
         `<button class="btn aufgabe" data-t="${i}">${esc(t.titel)}<small>${esc(suchStand(t))}</small></button>`).join('')
   ).join('');
   box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => kurzinfo(suchListe[+b.dataset.t]));
+  box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => aufgabeOeffnen(b.dataset.aufg));
 }
 $('#suche').oninput = renderSuche;
 $('#suche').addEventListener('search', renderSuche);
@@ -7074,6 +7427,8 @@ async function kurzinfo(o){
     const d = DAT.medien, st = d && d.stand ? String(d.stand[o.id] ?? '').trim() : '';
     const alt = MED_ALT[o.id];
     if(st)  zeilen.push(`Laufende Ablesung: ${zahlText(zahl(st))} ${z.einheit}`);
+    const grund = bestaetigGrund(o.id);
+    if(grund) zeilen.push(`Bestätigt: ${grund}`);
     if(alt) zeilen.push(`Vorquartal: ${zahlText(zahl(alt.stand))} ${z.einheit}${alt.datum ? ' (' + dText(alt.datum) + ')' : ''}`);
     if(letzte && letzte.ergebnisse[o.id].verbrauch != null)
       zeilen.push(`Verbrauch ${zeitraumVoll(letzte.zeitraum)}: ${zahlText(letzte.ergebnisse[o.id].verbrauch)} ${z.einheit}`);
