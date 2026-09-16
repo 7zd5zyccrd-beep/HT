@@ -10,6 +10,18 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.48 16.09.2026  Regler auf dem iPad hochkant waagerecht unter dem Plan, wie
+                    auf dem iPhone (von Jean gewünscht). Senkrecht rechts steht
+                    er nur noch auf dem großen Schirm im Querformat. Beim Drehen
+                    stellt er sich um, die Höhe des Plans rechnet neu.
+  v1.47 16.09.2026  Regler holt den Streifen über dem Plan nicht mehr hervor (von
+                    Jean gemeldet: beim Schieben erschien jedes Mal die Leiste
+                    mit „Objekte“ und „Ausgeben“). Text und Knöpfe des Streifens
+                    werden weiter auf den gezeigten Plan umgestellt, aber
+                    unsichtbar: ist er ausgeblendet, bleibt er es. Steht er
+                    gerade da, blendet er sich wie gewohnt nach vier Sekunden
+                    aus, sobald der neue Plan ihn nicht mehr dauerhaft braucht.
+                    Ein Tipp auf den Plan holt ihn wie bisher zurück.
   v1.46 16.09.2026  Regler: ein kurzer, leiser Tick beim Einrasten – zu denselben
                     Gelegenheiten, bei denen der Knauf zuckt. Der Ton wird im
                     Code erzeugt, ohne Tondatei. Die App meldet sich als
@@ -1806,7 +1818,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.46';
+const VERSION = 'v1.48';
 const BUILD   = VERSION + ' · 16.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6509,7 +6521,7 @@ function planImRahmen(id){
   $('#planWelcher').textContent = planZiel ? pl.name : '';
   scharfPlan = pl.quelle ? pl : null;
   markenPlaene = '';                          // Marken des neuen Plans ganz neu
-  planHinweisen();
+  planHinweisen(true);
 }
 
 /* Steht die Stelle schon, soll man sie beim Öffnen gleich sehen und nicht erst
@@ -6532,9 +6544,19 @@ function planZurStelle(){
    vier Sekunden aus – der Plan soll die Fläche haben, nicht der Hinweis. */
 function streifenZeigen(dauerhaft){
   const s = $('#planStreifen');
-  clearTimeout(streifenUhr);
+  clearTimeout(streifenUhr); streifenUhr = null;
   s.hidden = false; s.classList.remove('weg');
-  if(!dauerhaft) streifenUhr = setTimeout(() => s.classList.add('weg'), 4000);
+  if(!dauerhaft) streifenUhr = setTimeout(() => { s.classList.add('weg'); streifenUhr = null; }, 4000);
+}
+/* Vom Regler aus wird der Streifen nie hervorgeholt (v1.47): ausgeblendet bleibt
+   ausgeblendet. Steht er gerade da und wird nicht mehr dauerhaft gebraucht,
+   läuft die gewohnte Frist bis zum Ausblenden – eine bereits laufende wird
+   nicht verlängert, sonst bliebe er beim Schieben stehen. */
+function streifenLassen(dauerhaft){
+  const s = $('#planStreifen');
+  if(s.hidden || s.classList.contains('weg')) return;
+  if(dauerhaft){ clearTimeout(streifenUhr); streifenUhr = null; return; }
+  if(!streifenUhr) streifenUhr = setTimeout(() => { s.classList.add('weg'); streifenUhr = null; }, 4000);
 }
 /* --- Regler zwischen den Plänen (v1.42) -------------------------------------
    Statt über ein Fenster wird zwischen den Plänen geschoben: je Plan ein Punkt,
@@ -6565,13 +6587,14 @@ function etagenKurz(name, nr){
   return `${r}. OG`;
 }
 /* Sichtbar ist der Regler ab zwei Plänen, nicht beim Ausrichten. Senkrecht
-   steht er auf dem großen Schirm – dieselbe Grenze wie beim Nachzeichnen.
+   steht er nur auf dem großen Schirm im Querformat (Grenze wie beim
+   Nachzeichnen); hochkant liegt er auch dort waagerecht unter dem Plan (v1.48).
    Meldet zurück, ob sich an Lage oder Sichtbarkeit etwas geändert hat, denn
    dann muss die Höhe des Plans neu gerechnet werden. */
 function reglerLage(){
   const rg = $('#planRegler'), bu = $('.planBuehne');
   if(!rg || !bu) return false;
-  const senk = GROSSER_SCHIRM();
+  const senk = GROSSER_SCHIRM() && window.innerWidth > window.innerHeight;
   const zeigen = !planRicht && planListe.length > 1 && Regler.ids.includes(planAktuell);
   const neu = `${zeigen}|${senk}`;
   if(bu.dataset.regler === neu) return false;
@@ -6811,7 +6834,7 @@ async function planZeigen(id, ziel){
   const box = $('#planBox');
   box.classList.remove('bereit');             // verdeckt aufbauen
   box.innerHTML = '';
-  planHinweisen();
+  planHinweisen(vomRegler);
   /* Das Seitenverhältnis steht erst fest, wenn das Bild gelesen ist – vorher
      ließe sich der Rahmen nicht rechnen. Sichtbar wird er danach, mit einem
      kurzen Aufblenden statt eines Sprungs. */
@@ -6831,7 +6854,8 @@ async function planZeigen(id, ziel){
 }
 /* Der Streifen über dem Plan: was gerade gilt und welche Knöpfe dazu passen. */
 const planGesetzt = () => !!planZiel && ortPlaene(planZiel.key).includes(planAktuell);
-function planHinweisen(){
+function planHinweisen(ausRegler){
+  const zeigen = ausRegler ? streifenLassen : streifenZeigen;
   /* Beginnt oder endet das Ausrichten, erscheint oder verschwindet der Regler
      – dann ändert sich die Höhe, die dem Plan bleibt. Ob ein Punkt hohl steht,
      kann sich beim Ausrichten ebenfalls ändern. */
@@ -6849,7 +6873,7 @@ function planHinweisen(){
     kn.hidden = ob.hidden = au.hidden = true; richt.hidden = false;
     neu.hidden = planRicht !== 3;
     richt.textContent = planRicht === 3 ? 'Fertig' : 'Abbrechen';
-    streifenZeigen(true);
+    zeigen(true);
     return;
   }
   if(!planZiel){
@@ -6862,7 +6886,7 @@ function planHinweisen(){
       : 'Nichts eingeblendet.';
     kn.hidden = true; ob.hidden = false;
     au.hidden = !gewaehlt.length;              // ohne Marken gäbe es nichts auszugeben
-    streifenZeigen(!gewaehlt.length);
+    zeigen(!gewaehlt.length);
     return;
   }
   ob.hidden = au.hidden = true;
@@ -6872,7 +6896,7 @@ function planHinweisen(){
                     : 'Auf die Stelle tippen, an der sich das Objekt befindet.';
   kn.hidden = !planGesetzt() || planZiehen;
   /* Solange nichts steht, wird der Hinweis gebraucht – dann bleibt er. */
-  streifenZeigen(!planGesetzt() || planZiehen);
+  zeigen(!planGesetzt() || planZiehen);
 }
 /* Die Knöpfe gelten immer für den Plan, der gerade gezeigt wird (planAktuell) –
    deshalb einmal gebunden statt bei jedem Öffnen neu. */
