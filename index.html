@@ -10,6 +10,20 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.44 16.09.2026  Nachzeichnen auch in der Überblendung (von Jean gemeldet:
+                    zwischen zwei Punkten wurde beim Hineinzoomen nicht
+                    nachgeschärft, der eingeblendete Plan erst auf dem Punkt).
+                    Ruht der Regler zwischen zwei Plänen, bekommen beide ihre
+                    Auflage aus der PDF, jede in ihrer Ebene – 250 ms nach der
+                    letzten Bewegung, wie beim Zoomen, auch mit dem Finger noch
+                    auf dem Regler. Der überwiegende Plan kommt zuerst. Auf
+                    dem großen Schirm teilen sich die beiden die Obergrenze
+                    (je 8 statt 16 Mio. Punkte); auf einem Punkt bekommt der
+                    verbliebene wieder die ganze. Eine Auflage für denselben
+                    Ausschnitt in derselben Größe wird nicht neu gezeichnet –
+                    beim Schieben ändert sich meist nur die Deckkraft. Es
+                    bleiben bis zu zwei PDF-Dateien geöffnet, damit Pläne aus
+                    verschiedenen Dateien nicht bei jedem Durchgang neu laden.
   v1.43 16.09.2026  Regler, Etappe 2: Überblendung im Hausrahmen. Ausgerichtete
                     Pläne liegen jetzt in einem gemeinsamen Rahmen um das
                     größte Geschoss. Steht der Regler zwischen zwei Punkten,
@@ -1763,7 +1777,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.43';
+const VERSION = 'v1.44';
 const BUILD   = VERSION + ' · 16.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5958,37 +5972,70 @@ const GROSSER_SCHIRM = () => {
 };
 const SCHARF_LUFT = 0.25;     // Zugabe ringsum, in Anteilen des Ausschnitts
 const SCHARF_MAX  = 16e6;     // Sicherheitsgrenze, weit unter Safaris Canvas-Grenze
-let scharfPlan = null;        // der gerade gezeigte Plan, wenn er eine PDF hat
-let scharfUhr = null, scharfLauf = 0, scharfDoc = {id:null, doc:null};
+let scharfPlan = null;        // der gezeigte (überwiegende) Plan, wenn er eine PDF hat
+let scharfUhr = null, scharfLauf = 0;
+/* Geöffnete PDF-Dateien, höchstens zwei: in der Überblendung können die beiden
+   Pläne aus verschiedenen Dateien stammen, und eine einzige gemerkte Datei
+   würde dann bei jedem Durchgang neu geladen. Die zuletzt gebrauchte steht vorn. */
+const SCHARF_DOCS = 2;
+let scharfDocs = [];          // [{id, doc}]
 
-function scharfWeg(){
-  document.querySelectorAll('#planBox canvas.scharf').forEach(c => { canvasFrei(c); c.remove(); });
+/* Die Auflagen eines Plans entfernen – ohne Kennung alle. */
+function scharfWeg(id){
+  document.querySelectorAll('#planBox .ebene').forEach(el => {
+    if(id != null && el.dataset.id !== id) return;
+    el.querySelectorAll('canvas.scharf').forEach(c => { canvasFrei(c); c.remove(); });
+  });
+}
+/* Die sichtbaren Pläne, die eine PDF haben – der überwiegende zuerst, damit er
+   als Erster scharf wird. */
+function scharfPlaene(){
+  return sichtbarePlaene().slice().sort((a, b) => b.w - a.w).map(s => {
+    if(scharfPlan && scharfPlan.id === s.id) return scharfPlan;
+    const pl = planListe.find(p => p.id === s.id);
+    return pl && pl.quelle ? pl : null;
+  }).filter(Boolean);
 }
 function scharfSpaeter(){
   clearTimeout(scharfUhr);
-  if(!scharfPlan) return;
+  if(!scharfPlaene().length) return;
   scharfUhr = setTimeout(scharfZeichnen, 250);
 }
 async function scharfDocHolen(qid, lib){
-  if(scharfDoc.id === qid && scharfDoc.doc) return scharfDoc.doc;
+  const da = scharfDocs.find(d => d.id === qid);
+  if(da){ scharfDocs = [da].concat(scharfDocs.filter(d => d !== da)); return da.doc; }
   const q = await Bilder.quelleGet(qid);
   if(!q || !q.daten) return null;
   /* pdf.js nimmt den Puffer an sich – deshalb eine eigene Kopie übergeben. */
   const doc = await lib.getDocument({data:new Uint8Array(q.daten).slice(0)}).promise;
-  scharfDoc = {id:qid, doc};
+  const noch = scharfDocs.find(d => d.id === qid);         // inzwischen von anderer Seite geöffnet
+  if(noch){ try{ doc.destroy(); }catch(e){} return noch.doc; }
+  scharfDocs.unshift({id:qid, doc});
+  scharfDocs.splice(SCHARF_DOCS).forEach(d => { try{ d.doc.destroy(); }catch(e){} });
   return doc;
 }
+/* Alle sichtbaren Pläne nacheinander nachzeichnen. In der Überblendung teilen
+   sich die beiden Auflagen die Obergrenze – Safari führt über alle Canvas ein
+   gemeinsames Speicherkonto. Steht der Regler wieder auf einem Punkt, bekommt
+   der verbliebene Plan beim nächsten Durchgang wieder die ganze. */
 async function scharfZeichnen(){
   const wrap = $('#planWrap'), box = $('#planBox');
-  if(!wrap || !box || !scharfPlan || current !== 'plan') return;
-  const lage = [...box.querySelectorAll('.ebene')].find(el => el.dataset.id === scharfPlan.id);
-  if(!lage) return;
-  /* In der Überblendung reicht das gespeicherte Bild; gezeichnet wird, wenn der
-     Regler auf einem Punkt ruht. */
-  if(sichtbarePlaene().length > 1) return;
+  if(!wrap || !box || current !== 'plan') return;
+  const plaene = scharfPlaene();
+  if(!plaene.length) return;
   const gross = GROSSER_SCHIRM();
   if(!gross && planZoom < SCHARF_AB){ scharfWeg(); return; }
-
+  const lauf = ++scharfLauf;
+  const grenze = SCHARF_MAX / plaene.length;
+  for(const pl of plaene){
+    if(lauf !== scharfLauf) return;
+    await scharfPlanZeichnen(pl, grenze, gross, lauf);
+  }
+}
+async function scharfPlanZeichnen(pl, grenze, gross, lauf){
+  const wrap = $('#planWrap'), box = $('#planBox');
+  const lage = [...box.querySelectorAll('.ebene')].find(el => el.dataset.id === pl.id);
+  if(!lage) return;
   const BW = box.offsetWidth, BH = box.offsetHeight;
   const bw = lage.offsetWidth, bh = lage.offsetHeight;   // der Plan selbst, ohne Drehung
   if(!BW || !BH || !bw || !bh) return;
@@ -5997,30 +6044,31 @@ async function scharfZeichnen(){
      Zugabe ringsum. */
   const fx0 = wrap.scrollLeft / BW, fy0 = wrap.scrollTop / BH;
   const fx1 = (wrap.scrollLeft + wrap.clientWidth) / BW, fy1 = (wrap.scrollTop + wrap.clientHeight) / BH;
-  const ecken = [[fx0, fy0], [fx1, fy0], [fx0, fy1], [fx1, fy1]].map(([a, b]) => ausRahmen(scharfPlan.id, a, b));
+  const ecken = [[fx0, fy0], [fx1, fy0], [fx0, fy1], [fx1, fy1]].map(([a, b]) => ausRahmen(pl.id, a, b));
   let x = Math.max(0, Math.min(...ecken.map(q => q.x))), y = Math.max(0, Math.min(...ecken.map(q => q.y)));
   let w = Math.min(1, Math.max(...ecken.map(q => q.x))) - x, h = Math.min(1, Math.max(...ecken.map(q => q.y))) - y;
-  if(w <= 0 || h <= 0) return;
+  /* Liegt der Plan ganz außerhalb des Ausschnitts (ein kleineres Geschoss im
+     Hausrahmen), gibt es nichts zu zeichnen. */
+  if(w <= 0 || h <= 0){ scharfWeg(pl.id); return; }
   x = Math.max(0, x - w * SCHARF_LUFT); y = Math.max(0, y - h * SCHARF_LUFT);
   w = Math.min(1 - x, w * (1 + 2 * SCHARF_LUFT));
   h = Math.min(1 - y, h * (1 + 2 * SCHARF_LUFT));
   if(w <= 0 || h <= 0) return;
 
-  const lauf = ++scharfLauf;
   let lib;
   try{ lib = await pdfLib(); }catch(e){ return; }      // kein Netz, kein Ärger
   if(lauf !== scharfLauf) return;
   let doc;
-  try{ doc = await scharfDocHolen(scharfPlan.quelle, lib); }catch(e){ return; }
+  try{ doc = await scharfDocHolen(pl.quelle, lib); }catch(e){ return; }
   if(!doc || lauf !== scharfLauf) return;
 
   try{
-    const seite = await doc.getPage(scharfPlan.seite || 1);
+    const seite = await doc.getPage(pl.seite || 1);
     if(lauf !== scharfLauf) return;
     const roh = seite.getViewport({scale:1});
     /* Das Bild zeigt nur den beschnittenen Teil der Seite: der Ausschnitt muss
        erst in Anteile der ganzen Rohseite umgerechnet werden. */
-    const r  = scharfPlan.rahmen || {x:0, y:0, w:1, h:1};
+    const r  = pl.rahmen || {x:0, y:0, w:1, h:1};
     const rx = (r.x + x * r.w) * roh.width,  ry = (r.y + y * r.h) * roh.height;
     const rw = w * r.w * roh.width,          rh = h * r.h * roh.height;
 
@@ -6028,10 +6076,17 @@ async function scharfZeichnen(){
     let s = (w * bw * px) / rw;                        // Bildschirmauflösung des Ausschnitts
     /* Auf dem großen Schirm das Punktkonto ausschöpfen statt beim Bildschirm
        stehenzubleiben: der Ausschnitt kommt so fein, wie die Grenze zulässt. */
-    if(gross) s = Math.max(s, Math.sqrt(SCHARF_MAX / (rw * rh)));
+    if(gross) s = Math.max(s, Math.sqrt(grenze / (rw * rh)));
     const flaeche = rw * s * rh * s;
-    if(flaeche > SCHARF_MAX) s *= Math.sqrt(SCHARF_MAX / flaeche);
+    if(flaeche > grenze) s *= Math.sqrt(grenze / flaeche);
     const cw = Math.max(1, Math.round(rw * s)), ch = Math.max(1, Math.round(rh * s));
+
+    /* Liegt für genau diesen Ausschnitt in genau dieser Größe schon eine Auflage,
+       bleibt sie – beim Schieben am Regler ändert sich meist nur die Deckkraft,
+       und jedes Neuzeichnen kostete auf dem iPhone spürbar Zeit. */
+    const merk = [x, y, w, h].map(v => v.toFixed(4)).join(',') + `|${cw}x${ch}`;
+    const alt = lage.querySelector('canvas.scharf');
+    if(alt && alt.dataset.merk === merk) return;
 
     const c = document.createElement('canvas');
     c.width = cw; c.height = ch;
@@ -6040,14 +6095,13 @@ async function scharfZeichnen(){
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cw, ch);
     await seite.render({canvasContext:ctx,
       viewport:seite.getViewport({scale:s, offsetX:-rx * s, offsetY:-ry * s})}).promise;
-    if(lauf !== scharfLauf || current !== 'plan' || !lage.isConnected || sichtbarePlaene().length > 1){
-      canvasFrei(c); return;
-    }
+    if(lauf !== scharfLauf || current !== 'plan' || !lage.isConnected){ canvasFrei(c); return; }
 
     c.className = 'scharf';
+    c.dataset.merk = merk;
     c.style.left = (x * 100) + '%';  c.style.top    = (y * 100) + '%';
     c.style.width = (w * 100) + '%'; c.style.height = (h * 100) + '%';
-    scharfWeg();
+    scharfWeg(pl.id);
     lage.appendChild(c);
   }catch(e){ /* ein misslungener Ausschnitt lässt einfach das Grundbild stehen */ }
 }
