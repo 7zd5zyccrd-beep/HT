@@ -10,6 +10,22 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.43 16.09.2026  Regler, Etappe 2: Überblendung im Hausrahmen. Ausgerichtete
+                    Pläne liegen jetzt in einem gemeinsamen Rahmen um das
+                    größte Geschoss. Steht der Regler zwischen zwei Punkten,
+                    sind beide Pläne zu sehen, jeder mit seinem Anteil; Zoom
+                    und Ausschnitt bleiben beim Schieben stehen. Die Marken
+                    blenden mit ihrem Plan, ein Objekt auf beiden Etagen bleibt
+                    voll sichtbar. Ein Tipp gilt dem Plan, der gerade überwiegt;
+                    gesetzt wird nur auf einem Punkt, dazwischen sagt der
+                    Streifen „Zum Setzen auf einen Plan stellen“. Nachgezeichnet
+                    wird erst, wenn der Regler auf einem Punkt ruht. Zu einem
+                    nicht ausgerichteten Plan wird weiter in der Mitte hart
+                    umgeschaltet, dort beginnt die Ansicht wieder ganz. Beim
+                    Ausrichten ist der Rahmen der Plan allein. „Überlagern“ ist
+                    entfallen, der Regler ersetzt es. Überblendet wird additiv
+                    (plus-lighter); ältere Browser legen den näheren Plan voll
+                    unter den anderen.
   v1.42 16.09.2026  Regler zwischen den Grundrissen, Etappe 1. Statt über das
                     Fenster in der Kopfzeile wird zwischen den Plänen geschoben:
                     je Plan ein Punkt in der Reihenfolge aus den Einstellungen,
@@ -1332,15 +1348,18 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
    stört das, weil derselbe Druck das Verschieben freischaltet. */
 #planBox{position:relative;display:inline-block;height:100%;
   -webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-#planBox img{display:block;height:100%;width:auto;max-width:none;
+/* Der Rahmen trägt je sichtbarem Plan eine Ebene (v1.43). Die Gruppe ist
+   abgeschlossen, damit die additive Überblendung nur die Pläne untereinander
+   mischt und erst das Ergebnis über dem Grau liegt. Lage und Größe setzt
+   ebenenStellen() in Prozent des Rahmens. */
+#planBox .ebenen{position:absolute;left:0;top:0;right:0;bottom:0;z-index:0;isolation:isolate;
+  pointer-events:none}
+#planBox .ebene{position:absolute;transform-origin:0 0;pointer-events:none}
+#planBox .ebene img{display:block;width:100%;height:100%;max-width:none;
   -webkit-touch-callout:none;pointer-events:none}
 /* Der aus der PDF neu gezeichnete Ausschnitt liegt deckungsgleich über dem
-   gespeicherten Bild, aber unter den Marken. */
+   gespeicherten Bild – in dessen Ebene, damit er mit ihm blendet. */
 #planBox canvas.scharf{position:absolute;z-index:1;pointer-events:none}
-/* Überlagerter Plan: halbdurchsichtig über dem eigenen, unter den Marken. Lage
-   und Drehung rechnet planDeckZeichnen() aus den Bezugspunkten. */
-#planBox img.deck{position:absolute;z-index:2;top:0;left:0;height:100%;width:auto;
-  max-width:none;opacity:.45;transform-origin:0 0;pointer-events:none;mix-blend-mode:multiply}
 /* Bezugspunkte beim Ausrichten: schwarzes Fadenkreuz mit Ziffer. */
 #planBox .marke.bezug{width:28px;height:28px;margin:-14px 0 0 -14px;border:2px solid #111;
   border-radius:50%;background:none;color:#111;box-shadow:0 0 0 2px rgba(255,255,255,.8)}
@@ -1355,8 +1374,10 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 #planBox .marke{
   position:absolute;z-index:3;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
   border:3px solid;color:#C0392B;background:rgba(192,57,43,.25);pointer-events:none;
+  /* --w: wie stark der Plan dieser Marke gerade steht (Überblendung). */
+  opacity:var(--w, 1);
 }
-#planBox .marke.andere{width:20px;height:20px;margin:-10px 0 0 -10px;opacity:.62}
+#planBox .marke.andere{width:20px;height:20px;margin:-10px 0 0 -10px;opacity:calc(.62 * var(--w, 1))}
 /* Die Farbe sagt den Prüfstand: grün geprüft, gelb in dieser Runde noch offen,
    rot offen und die Frist läuft ab. Es sind dieselben drei Farben wie bei den
    Ringen der Startseite – dort steht der Nachweis, hier das einzelne Objekt.
@@ -1638,7 +1659,6 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
           <div class="knoepfe">
             <button class="btn ghost klein" id="btnPlanObjekte" hidden>Objekte</button>
             <button class="btn ghost klein" id="btnPlanBlatt" hidden>Ausgeben</button>
-            <button class="btn ghost klein" id="btnPlanDeck" hidden>Überlagern</button>
             <button class="btn ghost klein" id="btnPlanRichtNeu" hidden>Beide neu setzen</button>
             <button class="btn ghost klein" id="btnPlanRicht" hidden>Abbrechen</button>
             <button class="btn ghost klein" id="btnPlanZieh">Verschieben</button>
@@ -1743,7 +1763,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.42';
+const VERSION = 'v1.43';
 const BUILD   = VERSION + ' · 16.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5795,14 +5815,45 @@ async function quellenAufraeumen(){
     for(const q of quellen) if(!gebraucht.has(q.id)) await Bilder.quelleWeg(q.id);
   }catch(e){ /* ohne Aufräumen liegt eben eine Quelle zu viel herum */ }
 }
-let planUrl = null, planZiel = null;      // planZiel: Schlüssel der Sache, die verortet wird
+let planZiel = null;          // planZiel: Schlüssel der Sache, die verortet wird
+/* Bildverweise je Plan: beim Schieben wird der Nachbar sofort gebraucht. Ein
+   Verweis kostet nur den gespeicherten Plan, entpackt wird erst beim Zeigen.
+   Freigegeben wird, wenn die Grundrissansicht neu geöffnet wird. */
+const planUrls = new Map(), planFormate = new Map();
 async function planBild(id){
   const pl = await Bilder.get(id);
   const b = planBlob(pl);
   if(!pl || !b || !b.size) return null;
-  if(planUrl) URL.revokeObjectURL(planUrl);
-  planUrl = URL.createObjectURL(b);
+  if(!planUrls.has(id)) planUrls.set(id, URL.createObjectURL(b));
   return pl;
+}
+function planUrlVon(id){
+  if(planUrls.has(id)) return planUrls.get(id);
+  const b = planBlob(planListe.find(p => p.id === id));
+  if(!b || !b.size) return null;
+  const u = URL.createObjectURL(b);
+  planUrls.set(id, u);
+  return u;
+}
+function planUrlsFrei(){
+  planUrls.forEach(u => URL.revokeObjectURL(u));
+  planUrls.clear();
+}
+/* Seitenverhältnis eines Plans, einmal aus dem Bild gelesen. */
+async function planFormat(id){
+  if(planFormate.has(id)) return planFormate.get(id);
+  const url = planUrlVon(id);
+  const asp = await new Promise(res => {
+    if(!url) return res(null);
+    const i = new Image();
+    i.onload  = () => res(i.naturalWidth && i.naturalHeight ? i.naturalWidth / i.naturalHeight : null);
+    i.onerror = () => res(null);
+    i.src = url;
+  });
+  const b = bezugVon(id);
+  const wert = asp || (b && b.asp) || Math.SQRT2;
+  if(asp) planFormate.set(id, wert);
+  return wert;
 }
 /* Der Plan bekommt die volle verfügbare Höhe: Unterkante Bildschirm, Oberkante
    dort, wo der Platz beginnt. Gerechnet wird bei jeder Anzeige neu, weil die
@@ -5833,7 +5884,9 @@ let planZoom = 1;
 function planZoomAnwenden(){
   const wrap = $('#planWrap'), box = $('#planBox');
   if(!wrap || !box) return;
-  box.style.height = Math.round(wrap.clientHeight * planZoom) + 'px';
+  const hoch = Math.round(wrap.clientHeight * planZoom);
+  box.style.height = hoch + 'px';
+  box.style.width  = Math.round(hoch * (Rahmen.asp || 1)) + 'px';
   /* Passt der Plan in der Breite ganz ins Bild, steht er in der Mitte statt
      links mit Grau daneben – auf einem breiten Schirm ist das der Regelfall.
      Reicht er über den Rand hinaus, bleibt er linksbündig: sonst wäre sein
@@ -5909,8 +5962,7 @@ let scharfPlan = null;        // der gerade gezeigte Plan, wenn er eine PDF hat
 let scharfUhr = null, scharfLauf = 0, scharfDoc = {id:null, doc:null};
 
 function scharfWeg(){
-  const alt = $('#planBox canvas.scharf');
-  if(alt){ canvasFrei(alt); alt.remove(); }
+  document.querySelectorAll('#planBox canvas.scharf').forEach(c => { canvasFrei(c); c.remove(); });
 }
 function scharfSpaeter(){
   clearTimeout(scharfUhr);
@@ -5928,16 +5980,27 @@ async function scharfDocHolen(qid, lib){
 }
 async function scharfZeichnen(){
   const wrap = $('#planWrap'), box = $('#planBox');
-  const bild = box && box.querySelector('img');
-  if(!wrap || !bild || !scharfPlan || current !== 'plan') return;
+  if(!wrap || !box || !scharfPlan || current !== 'plan') return;
+  const lage = [...box.querySelectorAll('.ebene')].find(el => el.dataset.id === scharfPlan.id);
+  if(!lage) return;
+  /* In der Überblendung reicht das gespeicherte Bild; gezeichnet wird, wenn der
+     Regler auf einem Punkt ruht. */
+  if(sichtbarePlaene().length > 1) return;
   const gross = GROSSER_SCHIRM();
   if(!gross && planZoom < SCHARF_AB){ scharfWeg(); return; }
 
-  const bw = bild.offsetWidth, bh = bild.offsetHeight;
-  if(!bw || !bh) return;
-  /* Sichtbarer Ausschnitt in Anteilen des angezeigten Bildes, mit Zugabe. */
-  let x = wrap.scrollLeft / bw, y = wrap.scrollTop / bh;
-  let w = Math.min(1, wrap.clientWidth / bw), h = Math.min(1, wrap.clientHeight / bh);
+  const BW = box.offsetWidth, BH = box.offsetHeight;
+  const bw = lage.offsetWidth, bh = lage.offsetHeight;   // der Plan selbst, ohne Drehung
+  if(!BW || !BH || !bw || !bh) return;
+  /* Sichtbarer Ausschnitt: erst im Rahmen, dann auf den Plan umgerechnet. Liegt
+     der Plan gedreht im Rahmen, zählt das umschließende Rechteck. Dazu die
+     Zugabe ringsum. */
+  const fx0 = wrap.scrollLeft / BW, fy0 = wrap.scrollTop / BH;
+  const fx1 = (wrap.scrollLeft + wrap.clientWidth) / BW, fy1 = (wrap.scrollTop + wrap.clientHeight) / BH;
+  const ecken = [[fx0, fy0], [fx1, fy0], [fx0, fy1], [fx1, fy1]].map(([a, b]) => ausRahmen(scharfPlan.id, a, b));
+  let x = Math.max(0, Math.min(...ecken.map(q => q.x))), y = Math.max(0, Math.min(...ecken.map(q => q.y)));
+  let w = Math.min(1, Math.max(...ecken.map(q => q.x))) - x, h = Math.min(1, Math.max(...ecken.map(q => q.y))) - y;
+  if(w <= 0 || h <= 0) return;
   x = Math.max(0, x - w * SCHARF_LUFT); y = Math.max(0, y - h * SCHARF_LUFT);
   w = Math.min(1 - x, w * (1 + 2 * SCHARF_LUFT));
   h = Math.min(1 - y, h * (1 + 2 * SCHARF_LUFT));
@@ -5977,61 +6040,94 @@ async function scharfZeichnen(){
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cw, ch);
     await seite.render({canvasContext:ctx,
       viewport:seite.getViewport({scale:s, offsetX:-rx * s, offsetY:-ry * s})}).promise;
-    if(lauf !== scharfLauf || current !== 'plan'){ canvasFrei(c); return; }
+    if(lauf !== scharfLauf || current !== 'plan' || !lage.isConnected || sichtbarePlaene().length > 1){
+      canvasFrei(c); return;
+    }
 
     c.className = 'scharf';
     c.style.left = (x * 100) + '%';  c.style.top    = (y * 100) + '%';
     c.style.width = (w * 100) + '%'; c.style.height = (h * 100) + '%';
     scharfWeg();
-    box.appendChild(c);
-    markenZeichnen(scharfPlan.id, planZiehen);         // Marken bleiben obenauf
+    lage.appendChild(c);
   }catch(e){ /* ein misslungener Ausschnitt lässt einfach das Grundbild stehen */ }
 }
 
 /* Alle Marken neu zeichnen: die eigene pulsend, die übrigen der Kategorie
    still. So sieht man beim Verorten zugleich, was ringsum schon eingetragen
    ist – und setzt den Punkt nicht versehentlich auf einen Nachbarn. */
+let markenPlaene = '';        // welche Pläne die Marken gerade tragen
 function markenZeichnen(planId, ziehen){
   const box = $('#planBox'); if(!box) return;
   box.querySelectorAll('.marke').forEach(m => m.remove());
+  markenPlaene = '';
   /* Beim Ausrichten zählen nur die Bezugspunkte: beim Verschieben die beiden
      gesetzten, beim Neusetzen der erste frisch getippte. */
   if(planRicht){
     const b = bezugVon(planId);
     const pts = planRicht === 2 ? [planRichtP1] : planRicht === 3 && b ? [b.p1, b.p2] : [];
     pts.forEach((p, i) => {
+      const q = inRahmen(planId, p.x, p.y);
       const m = document.createElement('div');
       m.className = 'marke bezug' + (planRicht === 3 && planRichtWahl === i ? ' gewaehlt' : '');
-      m.style.left = (p.x * 100) + '%'; m.style.top = (p.y * 100) + '%';
+      m.style.left = (q.x * 100) + '%'; m.style.top = (q.y * 100) + '%';
       m.innerHTML = `<b>${i + 1}</b>`;
       box.appendChild(m);
     });
     return;
   }
-  const punkt = (x, y, klassen, text, farbe) => {
+  /* In der Überblendung tragen beide Pläne ihre Marken. Jede blendet mit ihrem
+     Plan; steht dasselbe Objekt auf beiden (ein Aufzug über zwei Etagen),
+     bleibt es voll sichtbar. Die Lage kommt im Rahmen, deshalb decken sich die
+     beiden Stellen eines ausgerichteten Objekts. */
+  const sicht = sichtbarePlaene();
+  markenPlaene = sicht.map(s => s.id).join('\n');
+  const marken = new Map();
+  sicht.forEach(({id:pid}) => {
+    const eintragen = (schluessel, pos, klassen, text, farbe) => {
+      const da = marken.get(schluessel);
+      if(da){ da.plaene.push(pid); return; }
+      const q = inRahmen(pid, pos.x, pos.y);
+      marken.set(schluessel, {x:q.x, y:q.y, klassen, text, farbe, plaene:[pid]});
+    };
+    /* Übersicht: es wird keine Stelle gesucht, sondern gezeigt, was auf diesem
+       Plan steht – je Kategorie eine Farbe, je Marke ihre Nummer. */
+    if(!planZiel){
+      katWahl().forEach(kat => katOrte(kat.k, pid)
+        .forEach(o => eintragen('n|' + o.key, o, 'nummer', o.nr, kat.farbe)));
+      return;
+    }
+    andereOrte(pid, planZiel.key)
+      .forEach(o => eintragen('a|' + o.key, o, 'andere st-' + ortStatus(o.key)));
+    if(ortPlaene(planZiel.key).includes(pid))
+      eintragen('e|' + planZiel.key, ortAuf(planZiel.key, pid),
+                (ziehen ? 'zieh' : 'aktiv') + ' st-' + ortStatus(planZiel.key));
+  });
+  marken.forEach(o => {
     const m = document.createElement('div');
-    m.className = 'marke ' + klassen;
-    m.style.left = (x * 100) + '%';
-    m.style.top  = (y * 100) + '%';
-    if(farbe) m.style.setProperty('--kat', farbe);
-    if(text != null) m.textContent = text;
+    m.className = 'marke ' + o.klassen;
+    m.style.left = (o.x * 100) + '%';
+    m.style.top  = (o.y * 100) + '%';
+    if(o.farbe) m.style.setProperty('--kat', o.farbe);
+    if(o.text != null) m.textContent = o.text;
+    m.dataset.plaene = o.plaene.join('\n');
     box.appendChild(m);
-  };
-  /* Übersicht: es wird keine Stelle gesucht, sondern gezeigt, was auf diesem
-     Plan steht – je Kategorie eine Farbe, je Marke ihre Nummer. */
-  if(!planZiel){
-    katWahl().forEach(kat => katOrte(kat.k, planId)
-      .forEach(o => punkt(o.x, o.y, 'nummer', o.nr, kat.farbe)));
-    return;
-  }
-  const eigen = CFG.orte[planZiel.key] || {};
-  andereOrte(planId, planZiel.key)
-    .forEach(o => punkt(o.x, o.y, 'andere st-' + ortStatus(o.key)));
-  if(ortPlaene(planZiel.key).includes(planId)){
-    const p = ortAuf(planZiel.key, planId);
-    punkt(p.x, p.y, (ziehen ? 'zieh' : 'aktiv') + ' st-' + ortStatus(planZiel.key));
-  }
-  void eigen;
+  });
+  markenGewichte();
+}
+/* Beim Schieben ändert sich meist nur, wie stark jeder der beiden Pläne steht –
+   dann werden nur die Deckkräfte nachgezogen statt alle Marken neu gebaut. */
+function markenGewichte(){
+  const box = $('#planBox'); if(!box) return;
+  const w = new Map(sichtbarePlaene().map(s => [s.id, s.w]));
+  box.querySelectorAll('.marke[data-plaene]').forEach(m => {
+    const summe = m.dataset.plaene.split('\n').reduce((n, id) => n + (w.get(id) || 0), 0);
+    m.style.setProperty('--w', Math.min(1, summe).toFixed(3));
+  });
+}
+function markenAuffrischen(){
+  if(planRicht) return;
+  if(sichtbarePlaene().map(s => s.id).join('\n') !== markenPlaene) markenZeichnen(planAktuell, planZiehen);
+  else markenGewichte();
 }
 /* Wie steht dieses eine Objekt in der laufenden Runde da? Grün, sobald etwas
    erfasst ist – ein Zustand bei den Anlagen, ein Zählerstand bei den Zählern;
@@ -6204,41 +6300,132 @@ function tippZeigen(o){
    Stelle festlegen (aus einer Karte heraus). Der Unterschied ist planZiel. */
 let planZiehen = false, streifenUhr = null, planAktuell = null, planListe = [];
 /* Ausrichten: 0 aus, 1 wartet auf den ersten, 2 auf den zweiten Bezugspunkt.
-   planRichtStart setzt, wer den Plan zum Ausrichten öffnet. planDeck ist der
-   überlagerte Plan, planDeckUrl sein Bild. */
-let planRicht = 0, planRichtP1 = null, planRichtStart = false, planDeck = null, planDeckUrl = null;
+   planRichtStart setzt, wer den Plan zum Ausrichten öffnet. */
+let planRicht = 0, planRichtP1 = null, planRichtStart = false;
 /* planRicht 3: beide Punkte stehen und lassen sich einzeln verschieben;
    planRichtWahl ist dann der gewählte (0 oder 1) oder null. */
 let planRichtWahl = null;
-function planDeckWeg(){
-  const alt = $('#planBox') && $('#planBox').querySelector('img.deck');
-  if(alt) alt.remove();
-  if(planDeckUrl){ URL.revokeObjectURL(planDeckUrl); planDeckUrl = null; }
-}
-/* Den überlagerten Plan so legen, dass seine Bezugspunkte auf denen des offenen
-   liegen. Breite und Versatz in Prozent der Planfläche, Drehung und Maßstab als
-   Matrix – das bleibt bei jeder Zoomstufe richtig. */
-async function planDeckZeichnen(){
-  planDeckWeg();
-  if(!planDeck || !planAktuell) return;
-  const f = bezugAbb(planDeck, planAktuell);
-  const pl = await Bilder.get(planDeck), b = planBlob(pl);
-  const box = $('#planBox');
-  if(!f || !b || !box || current !== 'plan') return;
-  planDeckUrl = URL.createObjectURL(b);
-  const img = document.createElement('img');
-  img.className = 'deck'; img.alt = '';
-  img.src = planDeckUrl;
-  img.style.width  = (100 * f.aspVon / f.aspNach) + '%';
-  img.style.height = '100%';
-  img.style.left   = (100 * f.c[0] / f.aspNach) + '%';
-  img.style.top    = (100 * f.c[1]) + '%';
-  img.style.transform = `matrix(${f.m[0]},${f.m[1]},${-f.m[1]},${f.m[0]},0,0)`;
-  const erstesMarke = box.querySelector('.marke');
-  box.insertBefore(img, erstesMarke || null);
-}
 const MARKE_FANG = 16;        // wie nah ein Tipp an einer Marke liegen muss
 
+/* --- Hausrahmen (v1.43) -----------------------------------------------------
+   Sind Pläne ausgerichtet, liegen sie alle in einem gemeinsamen Rahmen, der das
+   größte Geschoss umfasst. Zoom und Ausschnitt gehören zum Rahmen, nicht zum
+   einzelnen Plan – deshalb bleibt beim Schieben stehen, was man gerade ansieht,
+   und die Wände der Etagen liegen genau übereinander. Ein kleineres Geschoss
+   steht in voller Ansicht entsprechend kleiner da, mit Grau ringsum.
+   Ohne Ausrichtung – und beim Ausrichten selbst – ist der Rahmen der Plan allein.
+
+   Gerechnet wird im Maß des Plans, von dem aus geöffnet wurde (ref): minX … dy
+   sind Anteile seiner Kanten, asp das Seitenverhältnis des ganzen Rahmens. Jeder
+   Plan liegt darin als eigene Ebene – ohne Maßstab im transform, nur mit Lage,
+   Größe und einer etwaigen Drehung. Ein skalierendes transform zeichnet Safari
+   unscharf (die Lehre aus v0.85). */
+let Rahmen = {ids:[], ref:null, aspRef:1, minX:0, minY:0, dx:1, dy:1, asp:1};
+function rahmenBilden(id, asp){
+  const b = !planRicht && bezugVon(id);
+  if(!b){
+    Rahmen = {ids:[id], ref:id, aspRef:asp || 1, minX:0, minY:0, dx:1, dy:1, asp:asp || 1};
+    return;
+  }
+  const ids = planListe.map(p => p.id).filter(pid => pid === id || (bezugVon(pid) && bezugAbb(pid, id)));
+  if(!ids.includes(id)) ids.unshift(id);
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  ids.forEach(pid => {
+    const f = pid === id ? null : bezugAbb(pid, id);
+    [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([u, v]) => {
+      const q = f ? f.punkt(u, v) : {x:u, y:v};
+      minX = Math.min(minX, q.x); maxX = Math.max(maxX, q.x);
+      minY = Math.min(minY, q.y); maxY = Math.max(maxY, q.y);
+    });
+  });
+  const dx = maxX - minX, dy = maxY - minY;
+  Rahmen = {ids, ref:id, aspRef:b.asp, minX, minY, dx, dy, asp:dx * b.asp / dy};
+}
+/* Lage einer Ebene im Rahmen, in Prozent; Drehung im Bogenmaß um die linke
+   obere Ecke. */
+function rahmenLage(pid){
+  const R = Rahmen;
+  const f = pid === R.ref ? null : bezugAbb(pid, R.ref);
+  if(!f) return {l:-R.minX / R.dx * 100, t:-R.minY / R.dy * 100, w:100 / R.dx, h:100 / R.dy, rot:0};
+  const s = Math.hypot(f.m[0], f.m[1]);
+  return {l:(f.c[0] / R.aspRef - R.minX) / R.dx * 100, t:(f.c[1] - R.minY) / R.dy * 100,
+          w:s * f.aspVon / R.aspRef / R.dx * 100, h:s / R.dy * 100, rot:Math.atan2(f.m[1], f.m[0])};
+}
+/* Von einer Stelle auf einem Plan in den Rahmen und zurück. */
+function inRahmen(pid, x, y){
+  const R = Rahmen;
+  const f = pid === R.ref || !R.ids.includes(pid) ? null : bezugAbb(pid, R.ref);
+  const q = f ? f.punkt(x, y) : {x, y};
+  return {x:(q.x - R.minX) / R.dx, y:(q.y - R.minY) / R.dy};
+}
+function ausRahmen(pid, fx, fy){
+  const R = Rahmen;
+  const rx = R.minX + fx * R.dx, ry = R.minY + fy * R.dy;
+  const f = pid === R.ref ? null : bezugAbb(R.ref, pid);
+  return f ? f.punkt(rx, ry) : {x:rx, y:ry};
+}
+/* Welche Pläne gerade zu sehen sind und wie stark: auf einem Punkt einer, sonst
+   die beiden Nachbarn – sofern beide im Rahmen liegen. Liegt einer außerhalb
+   (nicht ausgerichtet), wird in der Mitte hart umgeschaltet. */
+function sichtbarePlaene(){
+  const rg = $('#planRegler'), n = Regler.ids.length;
+  const allein = [{id:planAktuell, w:1}];
+  if(planRicht || !rg || rg.hidden || n < 2) return allein;
+  const i = Math.floor(Regler.p), t = Regler.p - i;
+  if(t < 0.002 || t > 0.998 || i >= n - 1) return allein;
+  const a = Regler.ids[i], b = Regler.ids[i + 1];
+  if(!Rahmen.ids.includes(a) || !Rahmen.ids.includes(b)) return allein;
+  if(a !== planAktuell && b !== planAktuell) return allein;   // Rahmen noch im Aufbau
+  return [{id:a, w:1 - t}, {id:b, w:t}];
+}
+/* Überblendet wird additiv (plus-lighter): an jeder Stelle ergeben beide Pläne
+   zusammen genau ein volles Bild, und wo nur einer liegt, schimmert das Grau
+   entsprechend durch. Kennt der Browser das nicht (ältere iOS-Fassungen), liegt
+   der nähere Plan voll unten und der andere mit seinem Anteil darüber. */
+const PLUS_LIGHTER = !!(window.CSS && CSS.supports && CSS.supports('mix-blend-mode', 'plus-lighter'));
+function ebenenStellen(){
+  const ebenen = $('#planBox .ebenen'); if(!ebenen) return;
+  const sicht = sichtbarePlaene(), ids = sicht.map(s => s.id);
+  [...ebenen.children].forEach(el => {
+    if(ids.includes(el.dataset.id)) return;
+    el.querySelectorAll('canvas').forEach(c => canvasFrei(c));
+    el.remove();
+  });
+  const zwei = sicht.length > 1;
+  sicht.forEach(s => {
+    let el = [...ebenen.children].find(c => c.dataset.id === s.id);
+    if(!el){
+      const url = planUrlVon(s.id); if(!url) return;
+      const L = rahmenLage(s.id);
+      el = document.createElement('div');
+      el.className = 'ebene'; el.dataset.id = s.id;
+      el.style.left  = L.l + '%'; el.style.top    = L.t + '%';
+      el.style.width = L.w + '%'; el.style.height = L.h + '%';
+      /* Eine kaum merkliche Drehung bleibt weg: jede Drehung lässt Safari neu
+         abtasten, und unter einem Zehntelgrad sieht man sie ohnehin nicht. */
+      if(Math.abs(L.rot) > 0.0017) el.style.transform = `rotate(${L.rot}rad)`;
+      const img = document.createElement('img');
+      img.alt = ''; img.draggable = false; img.src = url;
+      el.appendChild(img);
+      ebenen.appendChild(el);
+    }
+    const haupt = s.id === planAktuell;
+    if(!zwei){ el.style.opacity = ''; el.style.mixBlendMode = ''; el.style.zIndex = ''; }
+    else if(PLUS_LIGHTER){ el.style.opacity = s.w.toFixed(3); el.style.mixBlendMode = 'plus-lighter'; el.style.zIndex = ''; }
+    else { el.style.opacity = haupt ? '' : s.w.toFixed(3); el.style.mixBlendMode = ''; el.style.zIndex = haupt ? '1' : '2'; }
+  });
+}
+/* Innerhalb des Rahmens wird nicht neu aufgebaut: nur der gezeigte Plan wechselt
+   – Name, Hinweis, Nachzeichnung. Zoom und Ausschnitt bleiben. */
+function planImRahmen(id){
+  const pl = planListe.find(p => p.id === id); if(!pl) return;
+  planAktuell = id; planZiehen = false; tippWeg();
+  $('#planName').textContent    = planZiel ? planZiel.titel : pl.name;
+  $('#planWelcher').textContent = planZiel ? pl.name : '';
+  scharfPlan = pl.quelle ? pl : null;
+  markenPlaene = '';                          // Marken des neuen Plans ganz neu
+  planHinweisen();
+}
 
 /* Steht die Stelle schon, soll man sie beim Öffnen gleich sehen und nicht erst
    suchen: der Plan rückt so, dass die Marke mittig zwischen den Bildschirmrändern
@@ -6247,12 +6434,11 @@ const MARKE_FANG = 16;        // wie nah ein Tipp an einer Marke liegen muss
    rücken; nach dem Zoomen wird auch dort mittig gestellt. */
 function planZurStelle(){
   const wrap = $('#planWrap'), box = $('#planBox');
-  const bild = box && box.querySelector('img');
-  if(!wrap || !bild || !planZiel) return;
+  if(!wrap || !box || !planZiel) return;
   const o0 = CFG.orte[planZiel.key];
   if(!o0 || o0.x == null || !ortPlaene(planZiel.key).includes(planAktuell)) return;
-  const o = ortAuf(planZiel.key, planAktuell);
-  const bw = bild.offsetWidth, bh = bild.offsetHeight;
+  const p = ortAuf(planZiel.key, planAktuell), o = inRahmen(planAktuell, p.x, p.y);
+  const bw = box.offsetWidth, bh = box.offsetHeight;
   if(!bw || !bh) return;
   wrap.scrollLeft = Math.max(0, Math.min(bw - wrap.clientWidth,  o.x * bw - wrap.clientWidth  / 2));
   wrap.scrollTop  = Math.max(0, Math.min(bh - wrap.clientHeight, o.y * bh - wrap.clientHeight / 2));
@@ -6269,8 +6455,8 @@ function streifenZeigen(dauerhaft){
    Statt über ein Fenster wird zwischen den Plänen geschoben: je Plan ein Punkt,
    in der Reihenfolge aus den Einstellungen (planListe). Der Regler bleibt
    stehen, wo man ihn loslässt; nahe an einem Punkt rastet er ein, ein Tipp fährt
-   zum nächsten Punkt. Gezeigt wird der nähere Plan – umgeschaltet wird also in
-   der Mitte zwischen zwei Punkten. Die Überblendung dazwischen kommt später.
+   zum nächsten Punkt. Zwischen zwei ausgerichteten Plänen wird überblendet
+   (Hausrahmen, v1.43); planAktuell ist dabei der nähere.
    Regler.p ist die Stellung in Plänen (0 … n-1), auch zwischen den Punkten.
    Regler.eigen sagt planZeigen(), dass der Aufruf vom Regler kommt und dessen
    Stellung nicht auf den Punkt zurückgesetzt werden darf. */
@@ -6376,13 +6562,19 @@ function reglerAusEreignis(e){
                          : (e.clientX - r.left) / (r.width || 1);
   return Math.max(0, Math.min(1, f)) * (n - 1);
 }
-/* Den näheren Plan zeigen, falls es nicht schon der offene ist. Das Verorten
-   bleibt dabei, was es war: planZiel reist mit. */
+/* Dem Regler folgen. Liegen beide Pläne im selben Rahmen, wird nur überblendet
+   und bei Bedarf der nähere zum gezeigten; sonst wird der nähere neu geöffnet
+   (harter Wechsel). Das Verorten bleibt dabei, was es war: planZiel reist mit. */
 function reglerFolgen(){
   const id = Regler.ids[Math.round(Regler.p)];
-  if(!id || id === planAktuell) return;
-  Regler.eigen = true;
-  planZeigen(id, planZiel);
+  if(!id) return;
+  const imRahmen = Rahmen.ids.includes(id) && Rahmen.ids.includes(planAktuell) && !!$('#planBox .ebenen');
+  if(!imRahmen){
+    if(id !== planAktuell){ Regler.eigen = true; planZeigen(id, planZiel); }
+    return;
+  }
+  if(id !== planAktuell) planImRahmen(id);
+  ebenenStellen(); markenAuffrischen(); scharfSpaeter();
 }
 (function reglerBinden(){
   const rg = $('#planRegler'); if(!rg) return;
@@ -6433,17 +6625,17 @@ async function planZeigen(id, ziel){
   planZiehen = false;
   planRicht = planRichtStart && !ziel ? (bezugVon(id) ? 3 : 1) : 0;
   planRichtStart = false; planRichtP1 = null; planRichtWahl = null;
-  if(planAktuell !== id) planDeck = null;      // eine Überlagerung gilt für den offenen Plan
-  planDeckWeg();
   planAktuell = id;
-  planZoom = 1;                                // jeder Plan beginnt ganz
+  planZoom = 1;                                // ein neuer Rahmen beginnt ganz
   scharfWeg(); scharfPlan = null; tippWeg();
+  /* Von außen geöffnet: die Bildverweise der vorigen Sitzung freigeben. Vom
+     Regler aus bleiben sie – der Nachbar wird gleich wieder gebraucht. */
+  if(!vomRegler) planUrlsFrei();
   const pl = await planBild(id);
   if(lauf !== planLauf) return;
   if(!pl){ toast('Plan nicht gefunden'); return; }
   /* Erst die Ansicht, dann das Bild: planHoehe() rechnet nur, wenn die
-     Grundrissansicht schon die aktuelle ist. Gemalt wird ohnehin erst am Ende
-     dieses Durchlaufs, ein Zwischenbild sieht davon niemand. */
+     Grundrissansicht schon die aktuelle ist. */
   go('plan');
   /* Links steht, wonach gesucht wird, rechts der Plan – beim bloßen Ansehen
      trägt die linke Seite den Plannamen, sonst bliebe er ungenannt. */
@@ -6460,202 +6652,212 @@ async function planZeigen(id, ziel){
   scharfPlan = pl.quelle ? pl : null;
   const box = $('#planBox');
   box.classList.remove('bereit');             // verdeckt aufbauen
-  box.innerHTML = `<img src="${planUrl}" alt="${esc(pl.name)}">`;
-  /* Erst wenn das Bild da ist, steht seine Breite fest – vorher ließe sich nicht
-     rechnen, wohin gerückt werden muss. Sichtbar wird es danach, mit einem
+  box.innerHTML = '';
+  planHinweisen();
+  /* Das Seitenverhältnis steht erst fest, wenn das Bild gelesen ist – vorher
+     ließe sich der Rahmen nicht rechnen. Sichtbar wird er danach, mit einem
      kurzen Aufblenden statt eines Sprungs. */
-  const bild = box.querySelector('img');
-  const fertig = () => {
-    planHoehe(); planZurStelle();
-    box.classList.add('bereit');
-    scharfSpaeter();
-    if(planDeck) planDeckZeichnen();
-  };
-  bild.onload = fertig;
-  bild.onerror = fertig;                      // sonst bliebe die Ansicht leer
-  if(bild.complete && bild.naturalWidth) fertig();
-  const gesetzt = () => ortPlaene(planZiel.key).includes(id);
-  const hinweis = () => {
-    /* Beginnt oder endet das Ausrichten, erscheint oder verschwindet der Regler
-       – dann ändert sich die Höhe, die dem Plan bleibt. */
-    if(reglerLage()) planHoehe();
-    const kn = $('#btnPlanZieh'), ob = $('#btnPlanObjekte'), au = $('#btnPlanBlatt');
-    const deck = $('#btnPlanDeck'), richt = $('#btnPlanRicht'), neu = $('#btnPlanRichtNeu');
-    deck.hidden = richt.hidden = neu.hidden = true;
-    if(planRicht){
-      $('#planHinweis').textContent =
-          planRicht === 1 ? 'Ersten Bezugspunkt antippen.'
-        : planRicht === 2 ? 'Zweiten Bezugspunkt antippen.'
-        : planRichtWahl != null ? `Neue Stelle für Punkt ${planRichtWahl + 1}.`
-        : 'Punkt antippen.';
-      kn.hidden = ob.hidden = au.hidden = true; richt.hidden = false;
-      neu.hidden = planRicht !== 3;
-      richt.textContent = planRicht === 3 ? 'Fertig' : 'Abbrechen';
-      streifenZeigen(true);
-      return;
-    }
-    if(!planZiel){
-      /* In der Übersicht trägt der Streifen, was eingeblendet ist, und den Weg
-         zur Auswahl. Solange nichts steht, bleibt er stehen – er ist der
-         einzige Zugang dazu; danach macht er dem Plan Platz. */
-      const gewaehlt = katWahl();
-      const deckPlan = planDeck && planListe.find(p => p.id === planDeck);
-      $('#planHinweis').textContent = (gewaehlt.length
-        ? gewaehlt.map(kat => NW(kat.k).label).join(', ')
-        : 'Nichts eingeblendet.') + (deckPlan ? ` · darüber ${deckPlan.name}` : '');
-      kn.hidden = true; ob.hidden = false;
-      deck.hidden = !bezugVon(id) || !planListe.some(p => p.id !== id && bezugVon(p.id));
-      au.hidden = !gewaehlt.length;            // ohne Marken gäbe es nichts auszugeben
-      streifenZeigen(!gewaehlt.length);
-      return;
-    }
-    ob.hidden = au.hidden = true;
-    $('#planHinweis').textContent =
-        planZiehen ? 'Auf die neue Stelle tippen.'
-      : gesetzt()  ? 'Eingetragen.'
-                   : 'Auf die Stelle tippen, an der sich das Objekt befindet.';
-    kn.hidden = !gesetzt() || planZiehen;
-    /* Solange nichts steht, wird der Hinweis gebraucht – dann bleibt er. */
-    streifenZeigen(!gesetzt() || planZiehen);
-  };
-  hinweis();
-
-  $('#btnPlanBlatt').onclick = () => {
-    /* Welche Pläne mitkommen, wird hier gewählt – mit denselben Kästchen wie bei
-       den Objekten. Der offene Plan steht angehakt da, "Alle" schaltet alles um.
-       Pläne ohne eingeblendete Marken bleiben beim Bauen ohnehin draußen. */
-    if(planListe.length < 2){ planBlattZeigen([id]); return; }
-    const zahl = pid => katWahl().reduce((n, kat) => n + katOrte(kat.k, pid).length, 0);
-    const eintraege = [{alle:true, an:false, text:'Alle Pläne'}].concat(
-      planListe.map(p => ({id:p.id, an:p.id === id, text:`${p.name} (${zahl(p.id)})`})));
-    kastenFenster('Pläne ausgeben', eintraege, gewaehlt => {
-      const ids = gewaehlt.filter(e => e.an && !e.alle).map(e => e.id);
-      if(!ids.length){ toast('Kein Plan gewählt'); return; }
-      planBlattZeigen(ids);
-    });
-  };
-  /* Abbrechen beim Neusetzen führt zurück zu den alten Punkten, sofern es sie
-     gibt; Fertig beendet das Ausrichten. */
-  $('#btnPlanRicht').onclick = () => {
-    planRicht = planRicht !== 3 && bezugVon(id) ? 3 : 0;
-    planRichtP1 = null; planRichtWahl = null; markenZeichnen(id, false); hinweis();
-  };
-  $('#btnPlanRichtNeu').onclick = () => {
-    planRicht = 1; planRichtP1 = null; planRichtWahl = null; markenZeichnen(id, false); hinweis();
-  };
-  $('#btnPlanDeck').onclick = () => {
-    const andere = planListe.filter(p => p.id !== id && bezugVon(p.id));
-    wahlFenster('Überlagern',
-      [{id:'', text:'Keine Überlagerung', aktiv:!planDeck}]
-        .concat(andere.map(p => ({id:p.id, text:p.name, aktiv:p.id === planDeck}))),
-      w => { planDeck = w.id || null; planDeckZeichnen(); hinweis(); });
-  };
-  $('#btnPlanObjekte').onclick = () => {
-    const eintraege = KATEGORIEN.map(kat => ({
-      k:kat.k, farbe:kat.farbe,
-      an:(CFG.planWahl || []).includes(kat.k),
-      text:`${NW(kat.k).label} (${katOrte(kat.k, id).length})`
-    }));
-    kastenFenster('Objekte einblenden', eintraege, gewaehlt => {
-      CFG.planWahl = gewaehlt.filter(e => e.an).map(e => e.k);
-      saveCfg(); tippWeg(); markenZeichnen(id, false); hinweis();
-    });
-  };
-
-  const setzen = e => {
-    const bild = box.querySelector('img:not(.deck)');
-    const r = bild.getBoundingClientRect();
-    const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
-    const y = Math.min(1, Math.max(0, (e.clientY - r.top)  / r.height));
-    /* Wird auf einer anderen Etage verschoben, darf die bisherige nicht
-       herausfallen: sie wandert in die Etagenliste, sofern es eine gibt. */
-    const vorher = CFG.orte[planZiel.key];
-    if(etagenVon(planZiel.key).length && vorher && vorher.plan && vorher.plan !== id)
-      CFG.etagen[planZiel.key] = [...new Set([...etagenVon(planZiel.key), vorher.plan, id])];
-    CFG.orte[planZiel.key] = {plan:id, x, y};
-    saveCfg(); planZiehen = false;
-    markenZeichnen(id, false); hinweis(); toast('Stelle gesetzt');
-  };
-  /* Ein Tipp setzt nur, solange noch nichts eingetragen ist oder gerade
-     verschoben wird – sonst verrutschte die Stelle beim bloßen Nachsehen. */
-  /* Liegt der Tipp auf einer fremden Marke, will jemand wissen, was dort steht –
-     und nicht seinen eigenen Punkt daraufsetzen. Das Fenster geht deshalb vor,
-     auch solange noch nichts eingetragen ist. Wer wirklich dicht daneben setzen
-     muss, zoomt vorher hinein; dann liegen die Marken weit auseinander. */
-  const nahAn = (e, orte) => {
-    const bild = box.querySelector('img:not(.deck)'); if(!bild) return null;
-    const r = bild.getBoundingClientRect();
-    let nah = null, best = MARKE_FANG;
-    orte.forEach(o => {
-      const d = Math.hypot(e.clientX - (r.left + o.x * r.width),
-                           e.clientY - (r.top  + o.y * r.height));
-      if(d < best){ best = d; nah = o; }
-    });
-    return nah;
-  };
-  box.onclick = e => {
-    if(planGezoomt) return;                   // das war das Ende einer Zoom-Geste
-    if(planRicht){
-      const bild = box.querySelector('img:not(.deck)');
-      const r = bild.getBoundingClientRect();
-      const p = {x:Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)),
-                 y:Math.min(1, Math.max(0, (e.clientY - r.top)  / r.height))};
-      if(planRicht === 1){ planRichtP1 = p; planRicht = 2; markenZeichnen(id, false); hinweis(); return; }
-      const asp = bild.naturalWidth && bild.naturalHeight ? bild.naturalWidth / bild.naturalHeight : r.width / r.height;
-      if(planRicht === 3){
-        const b = bezugVon(id); if(!b) return;
-        /* Ein Tipp nah an einem Punkt wählt ihn – auch um die Wahl zu wechseln. */
-        const abstand = q => Math.hypot(e.clientX - (r.left + q.x * r.width), e.clientY - (r.top + q.y * r.height));
-        const nah = [b.p1, b.p2].map(abstand), naechster = nah[0] <= nah[1] ? 0 : 1;
-        if(nah[naechster] < 24 && naechster !== planRichtWahl){
-          planRichtWahl = naechster; markenZeichnen(id, false); hinweis(); return;
-        }
-        if(planRichtWahl == null){ hinweis(); return; }
-        const anderer = planRichtWahl === 0 ? b.p2 : b.p1;
-        if(Math.hypot((p.x - anderer.x) * asp, p.y - anderer.y) < 0.15){
-          toast('Zu nah am anderen Punkt – weiter entfernt wählen'); return;
-        }
-        b[planRichtWahl === 0 ? 'p1' : 'p2'] = p; b.asp = asp;
-        saveCfg(); planRichtWahl = null;
-        markenZeichnen(id, false); hinweis(); toast('Punkt verschoben');
-        if(planDeck) planDeckZeichnen();
-        return;
-      }
-      /* Liegen die Punkte zu dicht, wird die Drehung ungenau. */
-      if(Math.hypot((p.x - planRichtP1.x) * asp, p.y - planRichtP1.y) < 0.15){
-        toast('Zu nah am ersten Punkt – weiter entfernt wählen'); return;
-      }
-      CFG.bezug = CFG.bezug || {};
-      CFG.bezug[id] = {p1:planRichtP1, p2:p, asp};
-      saveCfg();
-      planRicht = 0; planRichtP1 = null;
-      markenZeichnen(id, false); hinweis(); toast('Ausgerichtet');
-      return;
-    }
-    /* In der Übersicht sagt ein Tipp auf eine Marke, was dort steht; daneben
-       holt er den Streifen zurück. Gesetzt wird hier nichts. */
-    if(!planZiel){
-      const o = nahAn(e, katWahl().reduce((alle, kat) => alle.concat(katOrte(kat.k, id)), []));
-      if(o) tippZeigen(o); else { tippWeg(); hinweis(); }
-      return;
-    }
-    const nachbar = nahAn(e, andereOrte(id, planZiel.key));
-    if(nachbar){ tippZeigen(nachbar); return; }
-    tippWeg();
-    if(!gesetzt() || planZiehen) setzen(e);
-    else hinweis();                           // steht schon: Streifen zurückholen
-  };
-  /* Verschoben wird über den Knopf. Der lange Druck ist entfallen – er stritt
-     sich mit Safaris eigenem Menü und mit dem Zoomen, und der Knopf sagt
-     ohnehin deutlicher, was er tut. */
-  box.oncontextmenu = e => e.preventDefault();
-  $('#btnPlanZieh').onclick = () => {
-    planZiehen = true; markenZeichnen(id, true); hinweis();
-  };
-
-  markenZeichnen(id, false);
+  const asp = await planFormat(id);
+  if(lauf !== planLauf) return;
+  rahmenBilden(id, asp);
+  box.innerHTML = '<div class="ebenen"></div>';
   planHoehe();
+  ebenenStellen();
+  markenZeichnen(id, false);
+  planZurStelle();
+  box.classList.add('bereit');
+  scharfSpaeter();
+  /* Die Verweise der übrigen Pläne im Rahmen gleich anlegen: das kostet nur den
+     Verweis, entpackt wird ein Bild erst, wenn es gezeigt wird. */
+  Rahmen.ids.forEach(planUrlVon);
 }
+/* Der Streifen über dem Plan: was gerade gilt und welche Knöpfe dazu passen. */
+const planGesetzt = () => !!planZiel && ortPlaene(planZiel.key).includes(planAktuell);
+function planHinweisen(){
+  /* Beginnt oder endet das Ausrichten, erscheint oder verschwindet der Regler
+     – dann ändert sich die Höhe, die dem Plan bleibt. Ob ein Punkt hohl steht,
+     kann sich beim Ausrichten ebenfalls ändern. */
+  if(reglerLage()) planHoehe();
+  reglerAufbauen();
+  const kn = $('#btnPlanZieh'), ob = $('#btnPlanObjekte'), au = $('#btnPlanBlatt');
+  const richt = $('#btnPlanRicht'), neu = $('#btnPlanRichtNeu');
+  richt.hidden = neu.hidden = true;
+  if(planRicht){
+    $('#planHinweis').textContent =
+        planRicht === 1 ? 'Ersten Bezugspunkt antippen.'
+      : planRicht === 2 ? 'Zweiten Bezugspunkt antippen.'
+      : planRichtWahl != null ? `Neue Stelle für Punkt ${planRichtWahl + 1}.`
+      : 'Punkt antippen.';
+    kn.hidden = ob.hidden = au.hidden = true; richt.hidden = false;
+    neu.hidden = planRicht !== 3;
+    richt.textContent = planRicht === 3 ? 'Fertig' : 'Abbrechen';
+    streifenZeigen(true);
+    return;
+  }
+  if(!planZiel){
+    /* In der Übersicht trägt der Streifen, was eingeblendet ist, und den Weg
+       zur Auswahl. Solange nichts steht, bleibt er stehen – er ist der
+       einzige Zugang dazu; danach macht er dem Plan Platz. */
+    const gewaehlt = katWahl();
+    $('#planHinweis').textContent = gewaehlt.length
+      ? gewaehlt.map(kat => NW(kat.k).label).join(', ')
+      : 'Nichts eingeblendet.';
+    kn.hidden = true; ob.hidden = false;
+    au.hidden = !gewaehlt.length;              // ohne Marken gäbe es nichts auszugeben
+    streifenZeigen(!gewaehlt.length);
+    return;
+  }
+  ob.hidden = au.hidden = true;
+  $('#planHinweis').textContent =
+      planZiehen    ? 'Auf die neue Stelle tippen.'
+    : planGesetzt() ? 'Eingetragen.'
+                    : 'Auf die Stelle tippen, an der sich das Objekt befindet.';
+  kn.hidden = !planGesetzt() || planZiehen;
+  /* Solange nichts steht, wird der Hinweis gebraucht – dann bleibt er. */
+  streifenZeigen(!planGesetzt() || planZiehen);
+}
+/* Die Knöpfe gelten immer für den Plan, der gerade gezeigt wird (planAktuell) –
+   deshalb einmal gebunden statt bei jedem Öffnen neu. */
+$('#btnPlanBlatt').onclick = () => {
+  /* Welche Pläne mitkommen, wird hier gewählt – mit denselben Kästchen wie bei
+     den Objekten. Der offene Plan steht angehakt da, "Alle" schaltet alles um.
+     Pläne ohne eingeblendete Marken bleiben beim Bauen ohnehin draußen. */
+  const id = planAktuell;
+  if(planListe.length < 2){ planBlattZeigen([id]); return; }
+  const zahl = pid => katWahl().reduce((n, kat) => n + katOrte(kat.k, pid).length, 0);
+  const eintraege = [{alle:true, an:false, text:'Alle Pläne'}].concat(
+    planListe.map(p => ({id:p.id, an:p.id === id, text:`${p.name} (${zahl(p.id)})`})));
+  kastenFenster('Pläne ausgeben', eintraege, gewaehlt => {
+    const ids = gewaehlt.filter(e => e.an && !e.alle).map(e => e.id);
+    if(!ids.length){ toast('Kein Plan gewählt'); return; }
+    planBlattZeigen(ids);
+  });
+};
+/* Abbrechen beim Neusetzen führt zurück zu den alten Punkten, sofern es sie
+   gibt; Fertig beendet das Ausrichten. */
+$('#btnPlanRicht').onclick = () => {
+  planRicht = planRicht !== 3 && bezugVon(planAktuell) ? 3 : 0;
+  planRichtP1 = null; planRichtWahl = null; markenZeichnen(planAktuell, false); planHinweisen();
+};
+$('#btnPlanRichtNeu').onclick = () => {
+  planRicht = 1; planRichtP1 = null; planRichtWahl = null; markenZeichnen(planAktuell, false); planHinweisen();
+};
+$('#btnPlanObjekte').onclick = () => {
+  const eintraege = KATEGORIEN.map(kat => ({
+    k:kat.k, farbe:kat.farbe,
+    an:(CFG.planWahl || []).includes(kat.k),
+    text:`${NW(kat.k).label} (${katOrte(kat.k, planAktuell).length})`
+  }));
+  kastenFenster('Objekte einblenden', eintraege, gewaehlt => {
+    CFG.planWahl = gewaehlt.filter(e => e.an).map(e => e.k);
+    saveCfg(); tippWeg(); markenZeichnen(planAktuell, false); planHinweisen();
+  });
+};
+/* Verschoben wird über den Knopf. Der lange Druck ist entfallen – er stritt
+   sich mit Safaris eigenem Menü und mit dem Zoomen, und der Knopf sagt
+   ohnehin deutlicher, was er tut. */
+$('#btnPlanZieh').onclick = () => {
+  planZiehen = true; markenZeichnen(planAktuell, true); planHinweisen();
+};
+$('#planBox').oncontextmenu = e => e.preventDefault();
+
+/* Wo auf dem gezeigten Plan getippt wurde, in Anteilen seiner Kanten. Der Tipp
+   trifft den Rahmen; von dort wird auf den Plan umgerechnet. */
+function planPunkt(e){
+  const r = $('#planBox').getBoundingClientRect();
+  const f = {x:(e.clientX - r.left) / (r.width || 1), y:(e.clientY - r.top) / (r.height || 1)};
+  const p = ausRahmen(planAktuell, f.x, f.y);
+  return {x:Math.min(1, Math.max(0, p.x)), y:Math.min(1, Math.max(0, p.y))};
+}
+function planSetzen(e){
+  const id = planAktuell, {x, y} = planPunkt(e);
+  /* Wird auf einer anderen Etage verschoben, darf die bisherige nicht
+     herausfallen: sie wandert in die Etagenliste, sofern es eine gibt. */
+  const vorher = CFG.orte[planZiel.key];
+  if(etagenVon(planZiel.key).length && vorher && vorher.plan && vorher.plan !== id)
+    CFG.etagen[planZiel.key] = [...new Set([...etagenVon(planZiel.key), vorher.plan, id])];
+  CFG.orte[planZiel.key] = {plan:id, x, y};
+  saveCfg(); planZiehen = false;
+  markenZeichnen(id, false); planHinweisen(); toast('Stelle gesetzt');
+}
+/* Liegt der Tipp auf einer fremden Marke, will jemand wissen, was dort steht –
+   und nicht seinen eigenen Punkt daraufsetzen. Das Fenster geht deshalb vor,
+   auch solange noch nichts eingetragen ist. Wer wirklich dicht daneben setzen
+   muss, zoomt vorher hinein; dann liegen die Marken weit auseinander. Die
+   gefundene Marke kommt mit ihrer Lage im Rahmen zurück. */
+function markeNah(e, orte){
+  const r = $('#planBox').getBoundingClientRect();
+  let nah = null, best = MARKE_FANG;
+  orte.forEach(o => {
+    const q = inRahmen(planAktuell, o.x, o.y);
+    const d = Math.hypot(e.clientX - (r.left + q.x * r.width), e.clientY - (r.top + q.y * r.height));
+    if(d < best){ best = d; nah = Object.assign({}, o, {x:q.x, y:q.y}); }
+  });
+  return nah;
+}
+$('#planBox').onclick = e => {
+  if(planGezoomt) return;                     // das war das Ende einer Zoom-Geste
+  const id = planAktuell;
+  if(!id || !$('#planBox .ebenen')) return;
+  if(planRicht){
+    const r = $('#planBox').getBoundingClientRect();
+    const p = planPunkt(e);
+    if(planRicht === 1){ planRichtP1 = p; planRicht = 2; markenZeichnen(id, false); planHinweisen(); return; }
+    const asp = planFormate.get(id) || r.width / r.height;
+    if(planRicht === 3){
+      const b = bezugVon(id); if(!b) return;
+      /* Ein Tipp nah an einem Punkt wählt ihn – auch um die Wahl zu wechseln. */
+      const abstand = q => { const f = inRahmen(id, q.x, q.y);
+        return Math.hypot(e.clientX - (r.left + f.x * r.width), e.clientY - (r.top + f.y * r.height)); };
+      const nah = [b.p1, b.p2].map(abstand), naechster = nah[0] <= nah[1] ? 0 : 1;
+      if(nah[naechster] < 24 && naechster !== planRichtWahl){
+        planRichtWahl = naechster; markenZeichnen(id, false); planHinweisen(); return;
+      }
+      if(planRichtWahl == null){ planHinweisen(); return; }
+      const anderer = planRichtWahl === 0 ? b.p2 : b.p1;
+      if(Math.hypot((p.x - anderer.x) * asp, p.y - anderer.y) < 0.15){
+        toast('Zu nah am anderen Punkt – weiter entfernt wählen'); return;
+      }
+      b[planRichtWahl === 0 ? 'p1' : 'p2'] = p; b.asp = asp;
+      saveCfg(); planRichtWahl = null;
+      markenZeichnen(id, false); planHinweisen(); toast('Punkt verschoben');
+      return;
+    }
+    /* Liegen die Punkte zu dicht, wird die Drehung ungenau. */
+    if(Math.hypot((p.x - planRichtP1.x) * asp, p.y - planRichtP1.y) < 0.15){
+      toast('Zu nah am ersten Punkt – weiter entfernt wählen'); return;
+    }
+    CFG.bezug = CFG.bezug || {};
+    CFG.bezug[id] = {p1:planRichtP1, p2:p, asp};
+    saveCfg();
+    planRicht = 0; planRichtP1 = null;
+    markenZeichnen(id, false); planHinweisen(); toast('Ausgerichtet');
+    return;
+  }
+  /* In der Übersicht sagt ein Tipp auf eine Marke, was dort steht; daneben
+     holt er den Streifen zurück. Gesetzt wird hier nichts. */
+  if(!planZiel){
+    const o = markeNah(e, katWahl().reduce((alle, kat) => alle.concat(katOrte(kat.k, id)), []));
+    if(o) tippZeigen(o); else { tippWeg(); planHinweisen(); }
+    return;
+  }
+  const nachbar = markeNah(e, andereOrte(id, planZiel.key));
+  if(nachbar){ tippZeigen(nachbar); return; }
+  tippWeg();
+  /* Ein Tipp setzt nur, solange noch nichts eingetragen ist oder gerade
+     verschoben wird – sonst verrutschte die Stelle beim bloßen Nachsehen. In
+     der Überblendung wird nicht gesetzt: dort ist nicht klar, welcher Plan
+     gemeint ist. */
+  if(!planGesetzt() || planZiehen){
+    if(sichtbarePlaene().length > 1){
+      $('#planHinweis').textContent = 'Zum Setzen auf einen Plan stellen.';
+      streifenZeigen(false);
+      return;
+    }
+    planSetzen(e);
+  }
+  else planHinweisen();                       // steht schon: Streifen zurückholen
+};
 /* Aus einer Karte heraus: gibt es mehrere Pläne, wird oben gewählt. */
 async function verorten(key, titel){
   let liste = [];
