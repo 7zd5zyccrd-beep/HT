@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.40 16.09.2026  Fußleiste der Nachweise kompakter: der Hinweis klein oben,
+                    „Nachweis ausgeben“ und „Blatt ansehen“ nebeneinander.
+                    Fehlt das Objekt, steht über dem Nachweis eine kleine
+                    Hinweiskarte mit dem Weg „Objekt und Prüfer“ statt eines
+                    Satzes in Großbuchstaben. Kürzere Feldbeschriftungen und
+                    Platzhalter („Nachweis“ mit „– ohne Bezug –“, „Vorbereitung“,
+                    „Bemerkung“, „Vermerk, z. B. Firma“). „Als erledigt
+                    vermerken“ ist schwarz. Die Frist in Standzeilen heißt
+                    „14 Tage (30.09.)“ statt „bis 30.09. · noch 14 Tage“. Die
+                    Datumsfelder „Termin“ und „Erledigt am“ der Aufgabe haben
+                    das schmale Maß der übrigen beschrifteten Datumsfelder.
   v1.39 16.09.2026  Einträge, die eine Seite öffnen, sehen überall gleich aus:
                     weiß, linksbündig, Titel oben, Stand klein darunter, rechts
                     ein ›. Das gilt für die Aufgabenliste, „Alle Nachweise“, die
@@ -1119,6 +1130,11 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
   background:linear-gradient(180deg,transparent 0%,var(--enclosure) 30%);
 }
 .actionbar[hidden]{display:none}
+/* Nachweis: Hinweis klein oben, beide Knöpfe in einer Zeile (v1.40). Etwas
+   weniger Polster, damit „Nachweis ausgeben“ auch auf schmalen Telefonen in
+   eine Zeile passt. */
+.actionbar .barHinweis{margin:0 0 8px;text-align:center}
+.actionbar .barKnoepfe .btn{padding:13px 6px;font-size:15px;white-space:nowrap}
 .actionbar .inner{max-width:var(--col);margin:0 auto}
 
 /* Unterschrift – dasselbe Zeichenfeld wie im E-Assistenten, 3:1 */
@@ -1518,7 +1534,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
     <!-- Ein Nachweis -->
     <section class="view" id="view-nachweis">
-      <div class="eyebrow" id="nwObjekt"></div>
+      <div id="nwObjekt"></div>
       <div id="nwListe"></div>
 
       <!-- Die Ablesung der Verbräuche braucht keine Unterschrift; dort fällt
@@ -1647,7 +1663,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 
 <script>
 'use strict';
-const VERSION = 'v1.39';
+const VERSION = 'v1.40';
 const BUILD   = VERSION + ' · 16.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3141,7 +3157,7 @@ function fristText0(a){
   if(a.tage === 1) return 'fällig morgen';
   /* Liegt der Termin im nächsten Jahr, gehört die Jahreszahl dazu. */
   const jahr = a.faellig.getFullYear() !== new Date().getFullYear() ? a.faellig.getFullYear() : '';
-  return `bis ${ttmm(a.faellig)}${jahr} · noch ${a.tage} Tage`;
+  return `${a.tage} Tage (${ttmm(a.faellig)}${jahr})`;
 }
 const kurz = (t, max = 48) => {
   t = String(t || '').replace(/\s+/g, ' ').trim();
@@ -3439,7 +3455,7 @@ function renderRundgang(){
       </div>
       <div class="seg">${n.status.map(st =>
         `<button type="button" data-status="${esc(st)}" aria-pressed="${z.status === st}">${esc(st)}</button>`).join('')}</div>
-      <input class="bem" data-feld="bem" placeholder="Bemerkung (wenn nötig)" value="${esc(z.bem)}">
+      <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem)}">
     </div>`;
   };
   $('#rgListe').innerHTML = [...fertig, ...offene].map(karte).join('');
@@ -3645,8 +3661,8 @@ function renderAufgabe(){
     const anlagen = bezugsAnlagen(a.k);
     kopf = `<label class="field"><span>Titel</span>
         <input id="aufgTitel" value="${esc(a.titel)}" placeholder="Was ist zu tun?"></label>
-      <label class="field"><span>Nachweis (wenn es einen Bezug gibt)</span>
-        <select id="aufgNw"><option value="">– ohne –</option>${
+      <label class="field"><span>Nachweis</span>
+        <select id="aufgNw"><option value="">– ohne Bezug –</option>${
           NACHWEISE.filter(x => !x.spaeter).map(x =>
             `<option value="${x.k}"${x.k === a.k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
       ${anlagen.length ? `<label class="field"><span>${a.k === 'medien' ? 'Zähler' : 'Anlage'}</span>
@@ -3669,7 +3685,7 @@ function renderAufgabe(){
         <button type="button" data-basis="termin" aria-pressed="${w.basis !== 'erledigt'}">altem Termin</button>
         <button type="button" data-basis="erledigt" aria-pressed="${w.basis === 'erledigt'}">Erledigung</button>
       </div></div>` : ''}
-    <label class="field"><span>Vorbereitung (wenn nötig)</span>
+    <label class="field"><span>Vorbereitung</span>
       <input id="vorbText" value="${esc(v.text)}" placeholder="z. B. Firma beauftragen"></label>
     <label class="field" id="vorbWochenFeld"${String(v.text || '').trim() ? '' : ' hidden'}><span>Vorlauf in Wochen</span>
       <input id="vorbWochen" type="number" inputmode="numeric" min="0" value="${esc(v.wochen ?? 4)}"></label>`;
@@ -3680,7 +3696,7 @@ function renderAufgabe(){
            <p style="margin:0">erledigt am ${esc(dText(a.vorbErledigt))}${a.vorbVermerk ? ' · ' + esc(a.vorbVermerk) : ''}</p>
            <button class="btn ghost klein" id="vorbZurueck" style="margin-top:10px">Zurücknehmen</button></div>`
       : `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Vorbereitung · ${esc(v.text)}</div>
-           <input id="vorbVermerkA" placeholder="Vermerk, z. B. Fa. X kommt am 12.10.">
+           <input id="vorbVermerkA" placeholder="z. B. Fa. X kommt am 12.10.">
            <button class="btn" id="vorbSetzen" style="margin-top:10px">Vorbereitung erledigt</button></div>`;
   const wege = !neu && a.k && n ? `<div class="row" style="margin-bottom:14px">
       ${aufgOrt(a) ? `<button class="btn" data-weg="plan">⌖ Grundriss</button>` : ''}
@@ -3692,11 +3708,11 @@ function renderAufgabe(){
            ${a.vermerk ? `<p class="aufgText">${esc(a.vermerk)}</p>` : ''}
            <button class="btn ghost klein" id="aufgWieder" style="margin-top:10px">Wieder öffnen</button></div>`
       : `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erledigen</div>
-           <input type="date" id="erlDatum" value="${heute()}" aria-label="Erledigt am">
-           <input id="erlVermerk" placeholder="Vermerk, z. B. Firma und was getan wurde" style="margin-top:10px">
-           <button class="btn" id="erlSetzen" style="margin-top:10px">Als erledigt vermerken</button></div>`;
+           <input type="date" id="erlDatum" class="schmal" value="${heute()}" aria-label="Erledigt am">
+           <input id="erlVermerk" placeholder="Vermerk, z. B. Firma" style="margin-top:10px">
+           <button class="btn primary" id="erlSetzen" style="margin-top:10px">Als erledigt vermerken</button></div>`;
   box.innerHTML = kopf
-    + `<label class="field"><span>Termin</span><input type="date" id="aufgFrist" value="${esc(a.frist)}"></label>
+    + `<label class="field"><span>Termin</span><input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}"></label>
        <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
          WICHTIG.map(([w, t]) => `<button type="button" data-w="${w}" aria-pressed="${a.wichtig === w}">${t}</button>`).join('')}</div></div>
        ${planung}
@@ -3924,7 +3940,7 @@ function renderFremd(){
             <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">⌖</button></span>
           </div>
           <div class="muted small">${esc(fristText(f))}</div>
-          <input class="bem" data-feld="bem" placeholder="Bemerkung (wenn nötig)" value="${esc(z.bem || '')}">
+          <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem || '')}">
         </div>`;
       }).join('');
   $('#alleSetzen').onclick = () => {
@@ -4139,7 +4155,7 @@ function vorbKarte(art){
       </div></div>`;
   return `<div class="card" id="vorbKarte">
       <div class="eyebrow" style="margin:0 0 6px">${titel}</div>${kopf}
-      <input id="vorbVermerk" placeholder="${akku ? 'Vermerk, z. B. im Lager vorhanden' : 'Vermerk, z. B. Fa. X kommt am 12.10.'}">
+      <input id="vorbVermerk" placeholder="${akku ? 'Vermerk, z. B. im Lager vorhanden' : 'z. B. Fa. X kommt am 12.10.'}">
       <button class="btn" data-vorb="neu" style="margin-top:10px">${akku ? 'Akkus vorhanden' : 'Firma beauftragt'}</button>
     </div>`;
 }
@@ -4199,7 +4215,18 @@ function vorbText(a){
 let offenKarten = new Set();
 function renderNachweis(){
   const n = NW(offen), t = teilCfg(offen), d = datenFuer(offen);
-  $('#nwObjekt').textContent = CFG.objekt || 'Objekt in den Einstellungen eintragen';
+  /* Mit Objekt steht sein Name über dem Nachweis; ohne eine kleine Karte mit
+     dem Weg dorthin – der Pfeil oben links führt danach hierher zurück. */
+  const ob = $('#nwObjekt');
+  if(CFG.objekt){
+    ob.innerHTML = `<div class="eyebrow">${esc(CFG.objekt)}</div>`;
+  }else{
+    ob.innerHTML = `<div class="card" style="margin-top:12px">
+        <p class="small" style="margin:0 0 10px">Noch kein Objekt eingetragen. Es steht im Kopf jedes Protokolls.</p>
+        <button class="btn eintrag" id="nwZuObjekt"><span>Objekt und Prüfer</span></button>
+      </div>`;
+    $('#nwZuObjekt').onclick = () => setOeffnen('obj');
+  }
   $('#sigBlock').hidden = n.art === 'medien' || n.art === 'fremd';
   if(n.art === 'fremd'){     renderFremd();     return; }
   if(n.art === 'medien'){    renderMedien();    return; }
@@ -4269,7 +4296,7 @@ function renderNachweis(){
       </div>
       <div class="seg">${n.status.map(s =>
         `<button type="button" data-status="${esc(s)}" aria-pressed="${z.status === s}">${esc(s)}</button>`).join('')}</div>
-      <input class="bem" data-feld="bem" placeholder="Bemerkung (wenn nötig)" value="${esc(z.bem)}">
+      <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem)}">
     </div>`;
   }).join('');
   $$('#nwListe .pos').forEach(box => {
@@ -6619,11 +6646,13 @@ function renderBar(){
       const l0 = stellen(), off0 = l0.filter(z => String(d.stand[z.key] ?? '').trim() === '').length;
       const unb0 = unbestaetigtZahl(d);
       b.innerHTML =
-        `<button class="btn primary" id="barA"${voll ? '' : ' disabled'}>Nachweis ausgeben</button>
-         <button class="btn ghost" id="barB">Blatt ansehen</button>
-         <p class="muted small" style="margin:10px 0 0;text-align:center">${
+        `<p class="muted small barHinweis">${
            !d.datum ? 'Ablesedatum fehlt' : off0 ? `${off0} von ${l0.length} Zählern offen`
-           : unb0 ? `${unb0} ${unb0 === 1 ? 'auffälliger Stand' : 'auffällige Stände'} nicht bestätigt` : 'Vollständig'}</p>`;
+           : unb0 ? `${unb0} ${unb0 === 1 ? 'auffälliger Stand' : 'auffällige Stände'} nicht bestätigt` : 'Vollständig'}</p>
+         <div class="row barKnoepfe">
+           <button class="btn primary" id="barA"${voll ? '' : ' disabled'}>Nachweis ausgeben</button>
+           <button class="btn" id="barB">Blatt ansehen</button>
+         </div>`;
       $('#barA').onclick = ausgeben;
       $('#barB').onclick = () => { blattZeigen(); go('blatt'); };
       return;
@@ -6640,10 +6669,11 @@ function renderBar(){
     }
     const bereit = voll && !!d.signatur;
     b.innerHTML =
-      `<button class="btn primary" id="barA"${bereit ? '' : ' disabled'}>Nachweis ausgeben</button>
-       <button class="btn ghost" id="barB">Blatt ansehen</button>
-       <p class="muted small" style="margin:10px 0 0;text-align:center">${
-         hinweis || (d.signatur ? 'Vollständig' : 'Unterschrift fehlt')}</p>`;
+      `<p class="muted small barHinweis">${hinweis || (d.signatur ? 'Vollständig' : 'Unterschrift fehlt')}</p>
+       <div class="row barKnoepfe">
+         <button class="btn primary" id="barA"${bereit ? '' : ' disabled'}>Nachweis ausgeben</button>
+         <button class="btn" id="barB">Blatt ansehen</button>
+       </div>`;
     $('#barA').onclick = ausgeben;
     $('#barB').onclick = () => { blattZeigen(); go('blatt'); };
   }else if(current === 'blatt'){
