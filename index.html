@@ -10,6 +10,25 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.42 16.09.2026  Regler zwischen den Grundrissen, Etappe 1. Statt über das
+                    Fenster in der Kopfzeile wird zwischen den Plänen geschoben:
+                    je Plan ein Punkt in der Reihenfolge aus den Einstellungen,
+                    beschriftet mit der Etage aus dem Namen (TG, EG, 1. OG,
+                    Dach), ohne erkennbare Etage mit der Nummer. Auf dem iPhone
+                    liegt der Regler waagerecht unter dem Plan, links die
+                    unterste Etage; auf dem großen Schirm (kurze Kante ab
+                    800 px, also iPad und PC) senkrecht rechts daneben, oben
+                    die oberste. Er bleibt stehen, wo man ihn loslässt, und
+                    rastet nahe an einem Punkt ein; ein Tipp fährt zum
+                    nächsten Punkt. Gezeigt wird der nähere Plan, umgeschaltet
+                    also in der Mitte zwischen zwei Punkten – die Überblendung
+                    im gemeinsamen Hausrahmen folgt in v1.43. Ein hohler Punkt
+                    heißt: dieser Plan ist nicht ausgerichtet. Gilt für
+                    Übersicht und Verorten; beim Ausrichten ist der Regler
+                    vorerst ausgeblendet. Er steht erst ab zwei Plänen. Der
+                    Planwechsel-Knopf oben rechts entfällt, sein Platz bleibt
+                    leer, damit der Titel mittig steht. Beim Umschalten beginnt
+                    der Plan vorerst wieder in voller Ansicht.
   v1.41 16.09.2026  Platzhaltertexte in leeren Feldern etwas heller (#949494
                     statt des Grautons der übrigen grauen Texte) – einheitlich
                     in allen Eingabefeldern und Textbereichen, nicht nur in der
@@ -1260,6 +1279,55 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
    das display:inline-flex die ausgeblendeten Knöpfe zurück ins Bild. */
 #planStreifen .btn[hidden]{display:none}
 #planStreifen.weg .btn{pointer-events:none}
+/* --- Regler zwischen den Plänen (v1.42) -------------------------------------
+   Auf dem Telefon waagerecht unter dem Plan, auf dem großen Schirm senkrecht
+   rechts daneben. Er liegt nicht auf dem Plan: sonst wäre dessen Rand in voller
+   Ansicht nicht mehr antippbar. Die Lage der Punkte und des Knaufs kommt als
+   Anteil --f (0 … 1) aus dem Skript; welche Richtung das ist, sagt allein das
+   Stilblatt über .waag und .senk. */
+#planRegler{position:relative;flex:0 0 auto;background:var(--surface);cursor:pointer;outline:none;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* Keine Geste des Browsers auf dem Regler: der Finger schiebt, sonst nichts. */
+#planRegler, #planRegler *{touch-action:none}
+#planRegler[hidden]{display:none}
+#planRegler .spur{position:absolute}
+#planRegler .linie{position:absolute;background:var(--line);border-radius:1px}
+#planRegler .pkt{position:absolute;width:0;height:0}
+#planRegler .pkt i{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;
+  background:var(--ink)}
+/* Hohl: dieser Plan hat keine Bezugspunkte. */
+#planRegler .pkt.hohl i{background:var(--surface);border:2px solid var(--ink)}
+#planRegler .pkt span{position:absolute;white-space:nowrap;
+  font-family:var(--f-label);font-size:14px;font-weight:500;line-height:1;letter-spacing:.03em;
+  color:var(--ink-soft)}
+#planRegler .pkt.jetzt span{color:var(--ink);font-weight:600}
+/* Wird es eng, bleibt nur die Beschriftung des gezeigten Plans stehen – der
+   volle Name steht ohnehin über dem Plan. */
+#planRegler .spur.eng .pkt:not(.jetzt) span{display:none}
+#planRegler .knauf{position:absolute;z-index:1;width:26px;height:26px;margin:-13px 0 0 -13px;
+  border-radius:50%;background:var(--strong);border:3px solid #fff;pointer-events:none;
+  box-shadow:0 0 0 1px var(--strong), 0 1px 4px rgba(0,0,0,.3)}
+#planRegler .knauf.fahrt{transition:left .2s ease, top .2s ease}
+#planRegler:focus-visible .knauf{box-shadow:0 0 0 1px var(--strong), 0 0 0 5px rgba(17,17,17,.25)}
+/* Waagerecht: links die unterste Etage. Das untere Sicherheitspolster gehört
+   in den Regler, der Plan darüber endet an seiner Oberkante. */
+.planBuehne.waag #planRegler{height:calc(56px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.planBuehne.waag #planRegler .spur{left:calc(var(--pad) + 14px);right:calc(var(--pad) + 14px);top:19px;height:0}
+.planBuehne.waag #planRegler .linie{left:0;right:0;top:-1px;height:2px}
+.planBuehne.waag #planRegler .pkt,
+.planBuehne.waag #planRegler .knauf{left:calc(var(--f, 0) * 100%);top:0}
+.planBuehne.waag #planRegler .pkt span{left:0;top:15px;transform:translateX(-50%)}
+/* Senkrecht: oben die oberste Etage, wie im Haus. Der Streifen über dem Plan
+   endet vor dem Regler, sonst läge er über dessen oberster Beschriftung. */
+.planBuehne.senk{display:flex;align-items:stretch}
+.planBuehne.senk #planWrap{flex:1 1 auto;min-width:0}
+.planBuehne.senk #planRegler{width:92px;border-left:1px solid var(--line)}
+.planBuehne.senk #planRegler .spur{left:22px;top:30px;bottom:30px;width:0}
+.planBuehne.senk #planRegler .linie{top:0;bottom:0;left:-1px;width:2px}
+.planBuehne.senk #planRegler .pkt,
+.planBuehne.senk #planRegler .knauf{left:0;top:calc((1 - var(--f, 0)) * 100%)}
+.planBuehne.senk #planRegler .pkt span{left:17px;top:0;transform:translateY(-50%)}
+.planBuehne.senk.mitRegler #planStreifen{right:92px}
 /* Safari bietet beim langen Druck auf ein Bild Teilen und Kopieren an – hier
    stört das, weil derselbe Druck das Verschieben freischaltet. */
 #planBox{position:relative;display:inline-block;height:100%;
@@ -1487,7 +1555,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
   <header>
     <button class="back" id="btnBack" aria-label="Zurück">←</button>
     <h1 id="titel">Betriebsnachweise</h1>
-    <button class="kopfKnopf unsichtbar" id="btnPlanWahl" aria-label="Anderer Grundriss"></button>
+    <button class="kopfKnopf unsichtbar" id="btnPlanWahl" aria-hidden="true" tabindex="-1"></button>
     <button class="kopfKnopf" id="btnNeuLaden" aria-label="Neu vom Server laden" hidden></button>
   </header>
 
@@ -1575,6 +1643,10 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
             <button class="btn ghost klein" id="btnPlanRicht" hidden>Abbrechen</button>
             <button class="btn ghost klein" id="btnPlanZieh">Verschieben</button>
           </div>
+        </div>
+        <div id="planRegler" role="slider" tabindex="0" aria-label="Grundriss"
+             aria-valuemin="0" aria-orientation="horizontal" hidden>
+          <div class="spur"><div class="linie"></div><div class="knauf"></div></div>
         </div>
       </div>
     </section>
@@ -1671,7 +1743,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.41';
+const VERSION = 'v1.42';
 const BUILD   = VERSION + ' · 16.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -1681,7 +1753,6 @@ const BUILD   = VERSION + ' · 16.09.2026';
 const FRISCH_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>';
 /* Uhr für den Verlauf einer Karte. */
 const UHR_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
-const PLAN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5 3 9l9 4.5L21 9z"/><path d="M3 15l9 4.5L21 15"/></svg>';
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -2695,9 +2766,9 @@ function go(name, push = true){
   bb.disabled = !start && !stack.length;
   /* Der Knopf rechts gehört allein der Grundrissansicht; sie zeigt ihn selbst,
      sobald feststeht, dass es überhaupt etwas zu wechseln gibt. */
-  /* Rechts oben: in den Einstellungen das Neuladen, sonst der Grundrisswechsel
-     (den zeigt die Grundrissansicht selbst, sobald es etwas zu wechseln gibt).
-     Immer nur einer von beiden, damit die Kopfzeile ihre Breite behält. */
+  /* Rechts oben: in den Einstellungen das Neuladen, sonst ein leerer Platz.
+     Er stand bis v1.41 für den Grundrisswechsel; seit dem Regler bleibt er leer,
+     hält aber die Breite, damit der Titel mittig steht. */
   const inSettings = name === 'settings';
   $('#btnPlanWahl').classList.add('unsichtbar');
   $('#btnPlanWahl').hidden = inSettings;
@@ -5739,9 +5810,15 @@ async function planBild(id){
    jede Reserve stünde als heller Streifen unter dem Plan. */
 function planHoehe(){
   const wrap = $('#planWrap'); if(!wrap || current !== 'plan') return;
+  reglerLage();
+  /* Der waagerechte Regler steht unter dem Plan und geht von der Höhe ab; der
+     senkrechte steht daneben und nimmt sich die Höhe des Plans. */
+  const rg = $('#planRegler');
+  const unten = rg && !rg.hidden && !reglerSenk() ? rg.offsetHeight : 0;
   const oben = wrap.getBoundingClientRect().top + window.scrollY;
-  const hoch = Math.max(200, Math.floor(window.innerHeight - oben));
+  const hoch = Math.max(200, Math.floor(window.innerHeight - oben - unten));
   wrap.style.height = hoch + 'px';
+  reglerDichte();
   planZoomAnwenden();
 }
 window.addEventListener('resize', planHoehe);
@@ -6162,14 +6239,6 @@ async function planDeckZeichnen(){
 }
 const MARKE_FANG = 16;        // wie nah ein Tipp an einer Marke liegen muss
 
-/* Gewechselt wird über den Knopf rechts in der Kopfzeile – ein Auswahlfeld über
-   dem Plan hätte eine ganze Zeile gekostet, und gewechselt wird selten. */
-function planWechseln(){
-  if(planListe.length < 2) return;
-  wahlFenster('Grundriss',
-    planListe.map(p => ({id:p.id, text:p.name, aktiv:p.id === planAktuell})),
-    w => { if(w.id !== planAktuell) planZeigen(w.id, planZiel); });
-}
 
 /* Steht die Stelle schon, soll man sie beim Öffnen gleich sehen und nicht erst
    suchen: der Plan rückt so, dass die Marke mittig zwischen den Bildschirmrändern
@@ -6196,7 +6265,170 @@ function streifenZeigen(dauerhaft){
   s.hidden = false; s.classList.remove('weg');
   if(!dauerhaft) streifenUhr = setTimeout(() => s.classList.add('weg'), 4000);
 }
+/* --- Regler zwischen den Plänen (v1.42) -------------------------------------
+   Statt über ein Fenster wird zwischen den Plänen geschoben: je Plan ein Punkt,
+   in der Reihenfolge aus den Einstellungen (planListe). Der Regler bleibt
+   stehen, wo man ihn loslässt; nahe an einem Punkt rastet er ein, ein Tipp fährt
+   zum nächsten Punkt. Gezeigt wird der nähere Plan – umgeschaltet wird also in
+   der Mitte zwischen zwei Punkten. Die Überblendung dazwischen kommt später.
+   Regler.p ist die Stellung in Plänen (0 … n-1), auch zwischen den Punkten.
+   Regler.eigen sagt planZeigen(), dass der Aufruf vom Regler kommt und dessen
+   Stellung nicht auf den Punkt zurückgesetzt werden darf. */
+const Regler = {p:0, ids:[], zieht:false, bewegt:false, start:null, eigen:false};
+const REGLER_FANG = 14;       // Einrastweite in Pixeln, höchstens ein Viertel des Abstands
+const reglerSenk = () => { const b = $('.planBuehne'); return !!b && b.classList.contains('senk'); };
+
+/* Kurzbezeichnung am Punkt: die Etage, die im Namen steht, sonst die Nummer. */
+function etagenKurz(name, nr){
+  const r = etagenRang(name);
+  if(r == null) return String(nr);
+  const t = ' ' + String(name || '').toLowerCase().replace(/[._,;:()\/\-–]/g, ' ') + ' ';
+  if(r === -9)  return 'TG';
+  if(r === -1)  return /\b(?:kg|keller|kellergeschoss)\b/.test(t) ? 'KG' : 'UG';
+  if(r < 0)     return `${-r}. UG`;
+  if(r === 0)   return 'EG';
+  if(r === 0.5) return 'ZG';
+  if(r === 100) return 'DG';
+  if(r === 101) return 'Dach';
+  if(r === 102) return 'Spitzb.';
+  return `${r}. OG`;
+}
+/* Sichtbar ist der Regler ab zwei Plänen, nicht beim Ausrichten. Senkrecht
+   steht er auf dem großen Schirm – dieselbe Grenze wie beim Nachzeichnen.
+   Meldet zurück, ob sich an Lage oder Sichtbarkeit etwas geändert hat, denn
+   dann muss die Höhe des Plans neu gerechnet werden. */
+function reglerLage(){
+  const rg = $('#planRegler'), bu = $('.planBuehne');
+  if(!rg || !bu) return false;
+  const senk = GROSSER_SCHIRM();
+  const zeigen = !planRicht && planListe.length > 1 && Regler.ids.includes(planAktuell);
+  const neu = `${zeigen}|${senk}`;
+  if(bu.dataset.regler === neu) return false;
+  bu.dataset.regler = neu;
+  rg.hidden = !zeigen;
+  bu.classList.toggle('senk', senk);
+  bu.classList.toggle('waag', !senk);
+  bu.classList.toggle('mitRegler', zeigen);
+  rg.setAttribute('aria-orientation', senk ? 'vertical' : 'horizontal');
+  return true;
+}
+/* Punkte neu setzen, wenn sich die Pläne geändert haben; sonst nur nachsehen,
+   ob einer inzwischen ausgerichtet ist. */
+function reglerAufbauen(){
+  const spur = $('#planRegler .spur'); if(!spur) return;
+  const ids = planListe.map(p => p.id), n = ids.length;
+  if(ids.join('\n') !== Regler.ids.join('\n')){
+    Regler.ids = ids;
+    spur.querySelectorAll('.pkt').forEach(d => d.remove());
+    const kurz = planListe.map((p, i) => etagenKurz(p.name, i + 1));
+    const zahl = {}, lauf = {};
+    kurz.forEach(k => { zahl[k] = (zahl[k] || 0) + 1; });
+    const knauf = spur.querySelector('.knauf');
+    planListe.forEach((p, i) => {
+      /* Zwei Pläne derselben Etage (etwa zwei Seiten einer PDF) bekommen eine
+         Zählung dahinter, sonst stünde zweimal dasselbe am Regler. */
+      const k = zahl[kurz[i]] > 1 ? `${kurz[i]} ${lauf[kurz[i]] = (lauf[kurz[i]] || 0) + 1}` : kurz[i];
+      const d = document.createElement('div');
+      d.className = 'pkt';
+      d.dataset.i = i;
+      d.style.setProperty('--f', n > 1 ? i / (n - 1) : 0);
+      d.innerHTML = `<i></i><span>${esc(k)}</span>`;
+      spur.insertBefore(d, knauf);
+    });
+  }
+  spur.querySelectorAll('.pkt').forEach(d => d.classList.toggle('hohl', !bezugVon(Regler.ids[+d.dataset.i])));
+}
+function reglerStellen(p, fahrt){
+  const rg = $('#planRegler'), kn = rg && rg.querySelector('.knauf');
+  const n = Regler.ids.length;
+  if(!kn || n < 2) return;
+  Regler.p = Math.max(0, Math.min(n - 1, p));
+  kn.classList.toggle('fahrt', !!fahrt);
+  kn.style.setProperty('--f', Regler.p / (n - 1));
+  const jetzt = Math.round(Regler.p);
+  rg.querySelectorAll('.pkt').forEach(d => d.classList.toggle('jetzt', +d.dataset.i === jetzt));
+  const pl = planListe[jetzt];
+  rg.setAttribute('aria-valuemax', n - 1);
+  rg.setAttribute('aria-valuenow', jetzt);
+  rg.setAttribute('aria-valuetext', pl ? pl.name : '');
+}
+/* Stehen die Punkte zu dicht für ihre Beschriftungen, bleibt nur die des
+   gezeigten Plans. Gerechnet nach dem Abstand auf dem Schirm. */
+function reglerAbstand(){
+  const spur = $('#planRegler .spur'), n = Regler.ids.length;
+  if(!spur || n < 2) return 0;
+  return (reglerSenk() ? spur.clientHeight : spur.clientWidth) / (n - 1);
+}
+function reglerDichte(){
+  const spur = $('#planRegler .spur'); if(!spur) return;
+  const a = reglerAbstand();
+  spur.classList.toggle('eng', a > 0 && a < (reglerSenk() ? 26 : 44));
+}
+function reglerFangen(p){
+  const a = reglerAbstand(); if(!a) return p;
+  const zone = Math.min(0.25, REGLER_FANG / a), r = Math.round(p);
+  return Math.abs(p - r) < zone ? r : p;
+}
+function reglerAusEreignis(e){
+  const spur = $('#planRegler .spur'), n = Regler.ids.length;
+  const r = spur.getBoundingClientRect();
+  const f = reglerSenk() ? 1 - (e.clientY - r.top) / (r.height || 1)
+                         : (e.clientX - r.left) / (r.width || 1);
+  return Math.max(0, Math.min(1, f)) * (n - 1);
+}
+/* Den näheren Plan zeigen, falls es nicht schon der offene ist. Das Verorten
+   bleibt dabei, was es war: planZiel reist mit. */
+function reglerFolgen(){
+  const id = Regler.ids[Math.round(Regler.p)];
+  if(!id || id === planAktuell) return;
+  Regler.eigen = true;
+  planZeigen(id, planZiel);
+}
+(function reglerBinden(){
+  const rg = $('#planRegler'); if(!rg) return;
+  rg.addEventListener('pointerdown', e => {
+    if(Regler.ids.length < 2 || e.button > 0) return;
+    e.preventDefault();
+    try{ rg.setPointerCapture(e.pointerId); }catch(_){}
+    Regler.zieht = true; Regler.bewegt = false;
+    Regler.start = {x:e.clientX, y:e.clientY};
+  });
+  rg.addEventListener('pointermove', e => {
+    if(!Regler.zieht) return;
+    /* Erst ab ein paar Pixeln ist es ein Schieben – ein zittriger Tipp bleibt
+       ein Tipp. */
+    if(!Regler.bewegt && Math.hypot(e.clientX - Regler.start.x, e.clientY - Regler.start.y) < 6) return;
+    Regler.bewegt = true;
+    reglerStellen(reglerFangen(reglerAusEreignis(e)), false);
+    reglerFolgen();
+  });
+  const ende = e => {
+    if(!Regler.zieht) return;
+    Regler.zieht = false;
+    if(e.type === 'pointercancel') return;
+    if(!Regler.bewegt) reglerStellen(Math.round(reglerAusEreignis(e)), true);
+    reglerFolgen();
+  };
+  rg.addEventListener('pointerup', ende);
+  rg.addEventListener('pointercancel', ende);
+  /* Mit der Tastatur (PC, iPad mit Tastatur): von Punkt zu Punkt. Hoch und
+     rechts heißt beides eine Etage höher. */
+  rg.addEventListener('keydown', e => {
+    const n = Regler.ids.length; if(n < 2) return;
+    const i = Math.round(Regler.p);
+    const ziel = {ArrowRight:i + 1, ArrowUp:i + 1, ArrowLeft:i - 1, ArrowDown:i - 1, Home:0, End:n - 1}[e.key];
+    if(ziel == null) return;
+    e.preventDefault();
+    reglerStellen(ziel, true); reglerFolgen();
+  });
+  rg.oncontextmenu = e => e.preventDefault();
+})();
+let planLauf = 0;             // nur der jüngste Aufruf von planZeigen() baut auf
 async function planZeigen(id, ziel){
+  /* Beim Schieben folgen die Aufrufe dicht aufeinander: ein älterer, dessen
+     Bild erst später kommt, darf den neueren nicht überschreiben. */
+  const lauf = ++planLauf;
+  const vomRegler = Regler.eigen; Regler.eigen = false;
   planZiel = ziel || null;
   planZiehen = false;
   planRicht = planRichtStart && !ziel ? (bezugVon(id) ? 3 : 1) : 0;
@@ -6207,6 +6439,7 @@ async function planZeigen(id, ziel){
   planZoom = 1;                                // jeder Plan beginnt ganz
   scharfWeg(); scharfPlan = null; tippWeg();
   const pl = await planBild(id);
+  if(lauf !== planLauf) return;
   if(!pl){ toast('Plan nicht gefunden'); return; }
   /* Erst die Ansicht, dann das Bild: planHoehe() rechnet nur, wenn die
      Grundrissansicht schon die aktuelle ist. Gemalt wird ohnehin erst am Ende
@@ -6216,7 +6449,14 @@ async function planZeigen(id, ziel){
      trägt die linke Seite den Plannamen, sonst bliebe er ungenannt. */
   $('#planName').textContent    = planZiel ? planZiel.titel : pl.name;
   $('#planWelcher').textContent = planZiel ? pl.name : '';
-  $('#btnPlanWahl').classList.toggle('unsichtbar', planListe.length < 2);
+  $('#btnPlanWahl').classList.add('unsichtbar');
+  /* Der Regler steht auf dem gezeigten Plan – außer er kommt selbst vom Regler
+     und steht schon zwischen den Punkten auf dessen Seite. */
+  reglerAufbauen();
+  const reglerI = Regler.ids.indexOf(id);
+  if(reglerI >= 0 && !Regler.zieht && !(vomRegler && Math.round(Regler.p) === reglerI))
+    reglerStellen(reglerI, false);
+  reglerLage();
   scharfPlan = pl.quelle ? pl : null;
   const box = $('#planBox');
   box.classList.remove('bereit');             // verdeckt aufbauen
@@ -6236,6 +6476,9 @@ async function planZeigen(id, ziel){
   if(bild.complete && bild.naturalWidth) fertig();
   const gesetzt = () => ortPlaene(planZiel.key).includes(id);
   const hinweis = () => {
+    /* Beginnt oder endet das Ausrichten, erscheint oder verschwindet der Regler
+       – dann ändert sich die Höhe, die dem Plan bleibt. */
+    if(reglerLage()) planHoehe();
     const kn = $('#btnPlanZieh'), ob = $('#btnPlanObjekte'), au = $('#btnPlanBlatt');
     const deck = $('#btnPlanDeck'), richt = $('#btnPlanRicht'), neu = $('#btnPlanRichtNeu');
     deck.hidden = richt.hidden = neu.hidden = true;
@@ -6443,8 +6686,6 @@ $('#btnNeuLaden').onclick = () => {
      unberührt; replace statt Zuweisung, damit der Zurück-Weg nicht zuwächst. */
   location.replace(location.pathname + '?v=' + Date.now());
 };
-$('#btnPlanWahl').innerHTML = PLAN_SVG;
-$('#btnPlanWahl').onclick = planWechseln;
 $('#btnPlanNeu').onclick = () => $('#planFile').click();
 $('#planFile').onchange = async e => {
   const f = e.target.files && e.target.files[0];
