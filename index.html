@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.49 16.09.2026  Regler schärft ohne Wartezeit nach (von Jean gewünscht). Die
+                    250 ms Ruhe bleiben fürs Zoomen und Wischen – dort ändert
+                    sich der Ausschnitt ständig. Am Regler ändert er sich nicht,
+                    nur die Deckkraft: gezeichnet wird deshalb sofort, sobald
+                    ein anderer Plan dazukommt oder wegfällt, und nicht bei
+                    jeder Bewegung. Eine noch laufende Zeichnung wird dabei
+                    abgebrochen statt zu Ende gerechnet (pdf.js kann das), ihr
+                    Canvas gleich freigegeben. Das gilt jetzt auch für Zoomen
+                    und Wischen: ein neuer Durchgang bricht den alten ab.
   v1.48 16.09.2026  Regler auf dem iPad hochkant waagerecht unter dem Plan, wie
                     auf dem iPhone (von Jean gewünscht). Senkrecht rechts steht
                     er nur noch auf dem großen Schirm im Querformat. Beim Drehen
@@ -1818,7 +1827,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.48';
+const VERSION = 'v1.49';
 const BUILD   = VERSION + ' · 16.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6017,6 +6026,8 @@ const SCHARF_LUFT = 0.25;     // Zugabe ringsum, in Anteilen des Ausschnitts
 const SCHARF_MAX  = 16e6;     // Sicherheitsgrenze, weit unter Safaris Canvas-Grenze
 let scharfPlan = null;        // der gezeigte (überwiegende) Plan, wenn er eine PDF hat
 let scharfUhr = null, scharfLauf = 0;
+let scharfTask = null;        // die gerade laufende Zeichnung – zum Abbrechen
+let scharfSicht = '';         // welche Pläne beim letzten Anstoß vom Regler sichtbar waren
 /* Geöffnete PDF-Dateien, höchstens zwei: in der Überblendung können die beiden
    Pläne aus verschiedenen Dateien stammen, und eine einzige gemerkte Datei
    würde dann bei jedem Durchgang neu geladen. Die zuletzt gebrauchte steht vorn. */
@@ -6044,6 +6055,19 @@ function scharfSpaeter(){
   if(!scharfPlaene().length) return;
   scharfUhr = setTimeout(scharfZeichnen, 250);
 }
+/* Vom Regler aus ohne Wartezeit (v1.49) – aber nur, wenn sich geändert hat,
+   welche Pläne zu sehen sind. Beim bloßen Weiterschieben innerhalb derselben
+   zwei Pläne ändert sich nur die Deckkraft, die Auflagen passen weiter. */
+function scharfVomRegler(){
+  const sicht = sichtbarePlaene().map(p => p.id).join('\n');
+  if(sicht === scharfSicht) return;
+  scharfSicht = sicht;
+  clearTimeout(scharfUhr);
+  if(scharfPlaene().length) scharfZeichnen();
+}
+function scharfAbbrechen(){
+  if(scharfTask){ try{ scharfTask.cancel(); }catch(e){} scharfTask = null; }
+}
 async function scharfDocHolen(qid, lib){
   const da = scharfDocs.find(d => d.id === qid);
   if(da){ scharfDocs = [da].concat(scharfDocs.filter(d => d !== da)); return da.doc; }
@@ -6067,8 +6091,9 @@ async function scharfZeichnen(){
   const plaene = scharfPlaene();
   if(!plaene.length) return;
   const gross = GROSSER_SCHIRM();
-  if(!gross && planZoom < SCHARF_AB){ scharfWeg(); return; }
+  scharfAbbrechen();                           // ein neuer Durchgang ersetzt den alten
   const lauf = ++scharfLauf;
+  if(!gross && planZoom < SCHARF_AB){ scharfWeg(); return; }
   const grenze = SCHARF_MAX / plaene.length;
   for(const pl of plaene){
     if(lauf !== scharfLauf) return;
@@ -6105,6 +6130,7 @@ async function scharfPlanZeichnen(pl, grenze, gross, lauf){
   try{ doc = await scharfDocHolen(pl.quelle, lib); }catch(e){ return; }
   if(!doc || lauf !== scharfLauf) return;
 
+  let c = null;
   try{
     const seite = await doc.getPage(pl.seite || 1);
     if(lauf !== scharfLauf) return;
@@ -6131,13 +6157,17 @@ async function scharfPlanZeichnen(pl, grenze, gross, lauf){
     const alt = lage.querySelector('canvas.scharf');
     if(alt && alt.dataset.merk === merk) return;
 
-    const c = document.createElement('canvas');
+    if(lauf !== scharfLauf) return;
+    c = document.createElement('canvas');
     c.width = cw; c.height = ch;
     const ctx = c.getContext('2d');
     if(!ctx){ canvasFrei(c); return; }                 // Speicherkonto voll
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cw, ch);
-    await seite.render({canvasContext:ctx,
-      viewport:seite.getViewport({scale:s, offsetX:-rx * s, offsetY:-ry * s})}).promise;
+    const task = seite.render({canvasContext:ctx,
+      viewport:seite.getViewport({scale:s, offsetX:-rx * s, offsetY:-ry * s})});
+    scharfTask = task;
+    try{ await task.promise; }
+    finally{ if(scharfTask === task) scharfTask = null; }
     if(lauf !== scharfLauf || current !== 'plan' || !lage.isConnected){ canvasFrei(c); return; }
 
     c.className = 'scharf';
@@ -6146,7 +6176,11 @@ async function scharfPlanZeichnen(pl, grenze, gross, lauf){
     c.style.width = (w * 100) + '%'; c.style.height = (h * 100) + '%';
     scharfWeg(pl.id);
     lage.appendChild(c);
-  }catch(e){ /* ein misslungener Ausschnitt lässt einfach das Grundbild stehen */ }
+  }catch(e){
+    /* Abgebrochen oder misslungen: das Grundbild bleibt stehen, das angefangene
+       Canvas wird gleich freigegeben – Safari rechnet es sonst weiter an. */
+    if(c && !c.isConnected) canvasFrei(c);
+  }
 }
 
 /* Alle Marken neu zeichnen: die eigene pulsend, die übrigen der Kategorie
@@ -6702,7 +6736,7 @@ function reglerFolgen(){
     return;
   }
   if(id !== planAktuell) planImRahmen(id);
-  ebenenStellen(); markenAuffrischen(); scharfSpaeter();
+  ebenenStellen(); markenAuffrischen(); scharfVomRegler();
 }
 (function reglerBinden(){
   const rg = $('#planRegler'); if(!rg) return;
@@ -6847,7 +6881,9 @@ async function planZeigen(id, ziel){
   markenZeichnen(id, false);
   planZurStelle();
   box.classList.add('bereit');
-  scharfSpaeter();
+  /* Vom Regler aus sofort; beim Öffnen genügt die gewohnte kurze Ruhe. */
+  scharfSicht = '';
+  if(vomRegler) scharfVomRegler(); else scharfSpaeter();
   /* Die Verweise der übrigen Pläne im Rahmen gleich anlegen: das kostet nur den
      Verweis, entpackt wird ein Bild erst, wenn es gezeigt wird. */
   Rahmen.ids.forEach(planUrlVon);
