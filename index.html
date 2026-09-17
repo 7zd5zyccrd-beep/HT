@@ -10,6 +10,23 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.50 17.09.2026  Wetter, Etappe 1 (von Jean angestoßen): Standort, Abruf und
+                    Wetterseite. Unter Einstellungen › Wetter wird der Standort
+                    festgelegt – Ort oder PLZ suchen oder den des Geräts
+                    übernehmen; gespeichert werden Bezeichnung und Koordinaten,
+                    sie reisen mit der Sicherung. Für ihn holt die App beim
+                    Öffnen und beim Zurückkehren in den Vordergrund stündliche
+                    Werte bei Open-Meteo (7 Tage zurück, heute, 10 voraus),
+                    höchstens einmal je Stunde; nach einem gescheiterten Versuch
+                    frühestens zehn Minuten später wieder. Nur der letzte Stand
+                    wird gespeichert, nicht in der Sicherung. Die Wetterseite
+                    (Startseite › Übersicht › Wetter) zeigt je Tag Tiefst- und
+                    Höchstwert, Niederschlag, stärkste Böe und ein Wort zur Lage,
+                    ein Tipp klappt die Stunden auf; ab dem 4. Tag steht
+                    „Tendenz“, ab dem 8. „grobe Tendenz“. Dazu Stand, ein
+                    fehlgeschlagener Abruf und „Jetzt abrufen“. Die
+                    Bodentemperatur wird schon mitgeholt, gezeigt wird sie nicht –
+                    sie ist für die Glätteregel in v1.53.
   v1.49 16.09.2026  Regler schärft ohne Wartezeit nach (von Jean gewünscht). Die
                     250 ms Ruhe bleiben fürs Zoomen und Wischen – dort ändert
                     sich der Ausschnitt ständig. Am Regler ändert er sich nicht,
@@ -1625,6 +1642,35 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
    zusätzlich abschwächt. */
 input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 #sucheListe[hidden],#homeListe[hidden]{display:none}
+/* Wetter (v1.50): je Gruppe eine Karte, darin eine Zeile je Tag. Die Zeile ist
+   ein Knopf, der die Stunden darunter auf- und zuklappt – sie öffnet keine Seite
+   und trägt deshalb kein ›. Vergangene Tage stehen grau, heute mit kräftigem
+   Rand (2 statt 1 px, das Pixel kommt aus dem Polster). */
+.wetterGruppe{padding:2px 14px}
+.wetterGruppe.wetterHeute{border:2px solid var(--ink);padding:1px 13px}
+.wtag + .wtag{border-top:1px solid var(--line)}
+.wzeile{-webkit-appearance:none;appearance:none;display:block;width:100%;margin:0;padding:10px 0;
+  border:0;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.wkopf{display:flex;align-items:baseline;gap:8px}
+.wdat{font-weight:600;font-size:15px;white-space:nowrap}
+.wtend{font-size:13px;color:var(--ink-soft);white-space:nowrap}
+.wlage{margin-left:auto;font-size:15px;text-align:right}
+.wwerte{display:block;margin-top:2px;font-size:14px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.wetterVorbei .wdat,.wetterVorbei .wlage{color:var(--ink-soft);font-weight:500}
+.wstunden{overflow-x:auto;margin:0 0 10px}
+.wstunden[hidden]{display:none}
+.wstunden table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+.wstunden th{font-family:var(--f-label);font-weight:600;text-transform:uppercase;letter-spacing:.04em;
+  font-size:12px;color:var(--ink-soft);text-align:right;padding:4px 6px;white-space:nowrap}
+.wstunden td{text-align:right;padding:3px 6px;white-space:nowrap;border-top:1px solid var(--line)}
+.wstunden th:first-child,.wstunden td:first-child{text-align:left;padding-left:0}
+.wstunden th:last-child,.wstunden td:last-child{text-align:left;padding-right:0}
+.wstunden tr.jetzt td{font-weight:700}
+.wetterFuss{margin-top:18px}
+.wetterFuss a{color:inherit}
+/* Treffer der Ortssuche: eine Wahl, keine Seite – linksbündig, ohne ›. */
+.btn.ortTreffer{text-align:left}
+.btn.ortTreffer small{display:block;margin-top:3px;font-size:14px;font-weight:400;color:var(--ink-soft)}
 /* Die gesuchte Karte wird kurz umrandet, damit das Auge sie gleich findet. */
 .pos.gesucht{outline:3px solid var(--ink);outline-offset:2px}
 .auffKnopf{
@@ -1672,6 +1718,11 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
     <!-- Eine Aufgabe: Mangel oder eigene -->
     <section class="view" id="view-aufgabe">
       <div id="aufgBox"></div>
+    </section>
+
+    <!-- Wetter am Standort (v1.50) -->
+    <section class="view" id="view-wetter">
+      <div id="wetterBox"></div>
     </section>
 
     <!-- Erledigte Aufgaben -->
@@ -1827,8 +1878,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.49';
-const BUILD   = VERSION + ' · 16.09.2026';
+const VERSION = 'v1.50';
+const BUILD   = VERSION + ' · 17.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -2821,7 +2872,7 @@ function ring(n, takt){
 const TITEL = {home:'Betriebsnachweise', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigte Aufgaben', nachweis:'Nachweis', blatt:'Blatt',
                historie:'Historie', histnw:'Historie', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
-               plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus'};
+               plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
    nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
@@ -2867,6 +2918,7 @@ function go(name, push = true){
   if(name === 'aufgabe')  renderAufgabe();
   if(name === 'rundgang') renderRundgang();
   if(name === 'erledigt') renderErledigt();
+  if(name === 'wetter')   renderWetter();
   if(name === 'historie') renderHistorie();
   if(name === 'histnw')   renderHistNw();
   if(name === 'verlauf')  renderVerlauf();
@@ -2889,7 +2941,7 @@ $('#btnBack').onclick = zurueck;
 /* Kommt die App aus dem Hintergrund zurück, kann ein neuer Tag begonnen haben –
    Fristen und Gruppen der Liste rechnen dann neu. */
 document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'visible') listeNachziehen();
+  if(document.visibilityState === 'visible'){ listeNachziehen(); wetterAbrufen(); }
 });
 
 /* Rückfrage im eigenen Fenster. Der Aufruf übergibt, was bei Zustimmung
@@ -3417,7 +3469,8 @@ function renderHome(){
      der Bilderspeicher geantwortet hat. */
   const erledigt = AUFG.filter(a => a.erledigt).length;
   const mehr = (gibt ? `<button class="btn eintrag" data-alle="1"><span>Alle Nachweise</span></button>` : '')
-    + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigte Aufgaben</span><span class="zahl">${erledigt}</span></button>` : '');
+    + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigte Aufgaben</span><span class="zahl">${erledigt}</span></button>` : '')
+    + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span><span class="zahl" id="homeWetterStand"></span></button>` : '');
   $('#homeListe').innerHTML = `<button class="btn ghost klein" data-neuaufg="1" style="margin:0 0 12px">+ Aufgabe hinzufügen</button>`
     + sicherungsKarte(gibt) + inhalt
     + '<div id="homeMehr">' + (mehr ? `<div class="eyebrow">Übersicht</div>${mehr}` : '') + '</div>';
@@ -3426,6 +3479,8 @@ function renderHome(){
   if(alle) alle.onclick = () => go('alle');
   const erl = $('#homeListe [data-erledigt]');
   if(erl) erl.onclick = () => go('erledigt');
+  const wet = $('#homeListe [data-wetter]');
+  if(wet){ wet.onclick = () => { go('wetter'); wetterAbrufen(); }; wetterStandZeigen(); }
   $('#homeListe [data-neuaufg]').onclick = aufgabeNeu;
   const sich = $('#homeListe [data-sichern]');
   if(sich) sich.onclick = alsDateiSichern;
@@ -4870,6 +4925,340 @@ document.addEventListener('click', e => {
   b.setAttribute('aria-expanded', String(!t.hidden));
 }, true);
 
+/* ---------- Wetter (v1.50) --------------------------------------------------
+   Für den Standort aus Einstellungen › Wetter holt die App stündliche Werte bei
+   Open-Meteo: 7 Tage zurück, heute und 10 Tage voraus. Abgerufen wird beim
+   Öffnen und beim Zurückkehren in den Vordergrund, höchstens einmal je Stunde.
+   Ist ein Versuch gescheitert (kein Netz), wird frühestens zehn Minuten später
+   wieder gefragt – sonst kostete ohne Netz jedes Öffnen einen neuen Versuch.
+   Übertragen werden nur die Koordinaten.
+
+   Gespeichert wird allein der letzte Stand unter nwWetter (rund 30 KB). Er geht
+   nicht in die Sicherungsdatei, er lässt sich jederzeit neu holen; der Standort
+   selbst steht in CFG.wetter und reist mit. Gehört der Stand zu einem anderen
+   Ort als dem eingestellten, gilt er als nicht vorhanden.
+
+   Die Bodentemperatur wird schon mitgeholt, aber noch nicht angezeigt: sie ist
+   für die Glätteregel in v1.53 gedacht.
+
+   Die Werte sind Modellwerte fürs Gebiet, keine Messung am Haus. Die Stufen
+   „Tendenz“ (ab dem 4. Tag) und „grobe Tendenz“ (ab dem 8.) sagen, wie weit
+   man einem Tag trauen kann. */
+const WETTER_ZURUECK = 7, WETTER_VORAUS = 10;
+const WETTER_TAKT = 60 * 60 * 1000, WETTER_WIEDER = 10 * 60 * 1000;
+const WETTER_WERTE = ['temperature_2m', 'apparent_temperature', 'precipitation', 'snowfall',
+  'weather_code', 'wind_speed_10m', 'wind_gusts_10m', 'soil_temperature_0cm'];
+let WETTER = Store.get('nwWetter', null);
+let wetterLaeuft = false;
+const wetterOrtKey = o => o ? `${(+o.lat).toFixed(3)},${(+o.lon).toFixed(3)}` : '';
+/* Der gültige Stand – nur, wenn er zum eingestellten Ort gehört und Werte hat. */
+function wetterDaten(){
+  const o = CFG.wetter;
+  return o && WETTER && WETTER.ort === wetterOrtKey(o) && Array.isArray(WETTER.zeit) && WETTER.zeit.length
+    ? WETTER : null;
+}
+const uhrText = ms => { const t = new Date(ms), z = n => String(n).padStart(2, '0');
+  return `${z(t.getHours())}:${z(t.getMinutes())}`; };
+/* „14:10“, „gestern 18:02“ oder „15.09. 07:40“. */
+function wetterWann(ms){
+  if(!ms) return '';
+  const tage = Math.round((tagAnfang(new Date()) - tagAnfang(new Date(ms))) / TAG_MS);
+  return (tage === 0 ? 'heute ' : tage === 1 ? 'gestern ' : ttmm(new Date(ms)) + ' ') + uhrText(ms);
+}
+/* Der Stand neben „Wetter“ auf der Startseite. */
+function wetterStandZeigen(){
+  const el = $('#homeWetterStand');
+  if(!el) return;
+  const d = wetterDaten();
+  el.textContent = wetterLaeuft && !d ? '…' : d ? 'Stand ' + wetterWann(d.abgerufen).replace(/^heute /, '') : '–';
+}
+/* sofort = true übergeht die Stundensperre („Jetzt abrufen“, neuer Standort). */
+async function wetterAbrufen(sofort = false){
+  const o = CFG.wetter;
+  /* Vor dem Entsperren entsteht hinter dem Schloss nichts – auch kein Abruf. */
+  if(!o || wetterLaeuft || !listeGebaut) return;
+  const jetzt = Date.now(), d = wetterDaten();
+  const hier = WETTER && WETTER.ort === wetterOrtKey(o) ? WETTER : null;
+  if(!sofort){
+    if(d && jetzt - d.abgerufen < WETTER_TAKT) return;
+    if(hier && hier.fehler && hier.versuch && jetzt - hier.versuch < WETTER_WIEDER) return;
+  }
+  wetterLaeuft = true;
+  wetterStandZeigen();
+  if(current === 'wetter') renderWetter();
+  const url = 'https://api.open-meteo.com/v1/forecast'
+    + `?latitude=${(+o.lat).toFixed(4)}&longitude=${(+o.lon).toFixed(4)}`
+    + `&hourly=${WETTER_WERTE.join(',')}`
+    + `&past_days=${WETTER_ZURUECK}&forecast_days=${WETTER_VORAUS + 1}&timezone=auto`;
+  const halt = new AbortController(), uhr = setTimeout(() => halt.abort(), 20000);
+  try{
+    const r = await fetch(url, {signal:halt.signal, cache:'no-store'});
+    const j = await r.json().catch(() => null);
+    if(!r.ok || !j || !j.hourly || !Array.isArray(j.hourly.time))
+      throw new Error(j && j.reason ? j.reason : 'Antwort ' + r.status);
+    const w = {};
+    WETTER_WERTE.forEach(k => { w[k] = Array.isArray(j.hourly[k]) ? j.hourly[k] : []; });
+    WETTER = {ort:wetterOrtKey(o), abgerufen:Date.now(), versuch:Date.now(), fehler:'', zeit:j.hourly.time, w};
+  }catch(e){
+    /* Der alte Stand bleibt stehen und wird weiter gezeigt – vermerkt wird nur
+       der gescheiterte Versuch. */
+    const grund = e.name === 'AbortError' ? 'keine Antwort'
+                : navigator.onLine === false || e instanceof TypeError ? 'keine Verbindung'
+                : String(e.message || e);
+    WETTER = Object.assign({}, hier || {ort:wetterOrtKey(o)}, {versuch:Date.now(), fehler:grund});
+  }finally{
+    clearTimeout(uhr);
+    wetterLaeuft = false;
+  }
+  Store.set('nwWetter', WETTER);
+  wetterStandZeigen();
+  if(current === 'wetter') renderWetter();
+}
+
+/* Wetterlage nach WMO-Schlüssel, so wie Open-Meteo ihn liefert. */
+const WMO_TEXT = {0:'klar', 1:'überwiegend klar', 2:'teils bewölkt', 3:'bedeckt', 45:'Nebel', 48:'Nebel mit Reif',
+  51:'leichter Niesel', 53:'Niesel', 55:'starker Niesel', 56:'gefrierender Niesel', 57:'gefrierender Niesel',
+  61:'leichter Regen', 63:'Regen', 65:'starker Regen', 66:'Eisregen', 67:'starker Eisregen',
+  71:'leichter Schneefall', 73:'Schneefall', 75:'starker Schneefall', 77:'Schneegriesel',
+  80:'leichte Schauer', 81:'Schauer', 82:'heftige Schauer', 85:'Schneeschauer', 86:'starke Schneeschauer',
+  95:'Gewitter', 96:'Gewitter mit Hagel', 99:'Gewitter mit Hagel'};
+/* Ein Wort für den ganzen Tag. Gewitter und Eisregen zählen schon mit einer
+   Stunde – sie sind das, worauf es ankommt. Regen, Niesel und Schnee erst ab
+   einem halben Millimeter bzw. Zentimeter am Tag, sonst hieße ein Tag mit einer
+   einzigen nassen Stunde „Regen“. Bleibt es trocken, entscheidet die Bewölkung
+   zwischen 8 und 18 Uhr. */
+function tagesLage(codes, tagCodes, mm, cm){
+  const hat = l => codes.some(c => l.includes(c));
+  if(hat([96, 99])) return 'Gewitter, Hagel';
+  if(hat([95]))     return 'Gewitter';
+  if(hat([56, 57, 66, 67])) return 'Eisregen';
+  if(cm >= 0.5 && hat([71, 73, 75, 77, 85, 86])) return 'Schnee';
+  if(mm >= 0.5){
+    if(hat([61, 63, 65])) return 'Regen';
+    if(hat([80, 81, 82])) return 'Schauer';
+    if(hat([51, 53, 55])) return 'Niesel';
+    if(hat([71, 73, 75, 77, 85, 86])) return 'Schnee';
+    return 'Regen';
+  }
+  if(tagCodes.filter(c => c === 45 || c === 48).length >= 4) return 'Nebel';
+  const wolken = tagCodes.map(c => c <= 3 ? c : 3);
+  const mittel = wolken.length ? wolken.reduce((a, b) => a + b, 0) / wolken.length : 3;
+  return mittel < 0.5 ? 'sonnig' : mittel < 1.5 ? 'heiter' : mittel < 2.5 ? 'wolkig' : 'bedeckt';
+}
+const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+const gradText = x => { const r = Math.round(x); return (r < 0 ? '−' : '') + Math.abs(r); };
+const mmText = x => String(Math.round(x * 10) / 10).replace('.', ',');
+const zahlen = l => l.filter(v => typeof v === 'number' && isFinite(v));
+/* Aus den Stunden die Tage: je Datum Tiefst- und Höchstwert, Summe von Regen
+   und Schnee, stärkste Böe, das Wort zur Lage und die Stunden selbst. */
+function wetterTage(d){
+  const heute0 = new Date(heute() + 'T12:00');
+  const tage = [], nach = {};
+  d.zeit.forEach((t, i) => {
+    const datum = String(t).slice(0, 10);
+    if(!nach[datum]){ nach[datum] = {datum, idx:[]}; tage.push(nach[datum]); }
+    nach[datum].idx.push(i);
+  });
+  const w = d.w, reihe = (k, idx) => idx.map(i => (w[k] || [])[i]);
+  return tage.map(tg => {
+    const temp = zahlen(reihe('temperature_2m', tg.idx));
+    const mm = zahlen(reihe('precipitation', tg.idx)).reduce((a, b) => a + b, 0);
+    const cm = zahlen(reihe('snowfall', tg.idx)).reduce((a, b) => a + b, 0);
+    const boe = zahlen(reihe('wind_gusts_10m', tg.idx));
+    const codes = zahlen(reihe('weather_code', tg.idx));
+    const tagIdx = tg.idx.filter(i => { const h = +String(d.zeit[i]).slice(11, 13); return h >= 8 && h <= 18; });
+    const tagCodes = zahlen(reihe('weather_code', tagIdx));
+    const datum = new Date(tg.datum + 'T12:00');
+    return Object.assign(tg, {
+      versatz: Math.round((datum - heute0) / TAG_MS),
+      wtag: WOCHENTAG[datum.getDay()],
+      tmin: temp.length ? Math.min(...temp) : null,
+      tmax: temp.length ? Math.max(...temp) : null,
+      mm, cm, boe: boe.length ? Math.max(...boe) : null,
+      lage: codes.length ? tagesLage(codes, tagCodes, mm, cm) : ''
+    });
+  });
+}
+/* Wie weit man einem Tag trauen kann. */
+const tendenzText = v => v >= 8 ? 'grobe Tendenz' : v >= 4 ? 'Tendenz' : '';
+
+/* Aufgeklappte Tage – gemerkt für die Sitzung, damit ein neuer Abruf während
+   des Lesens die Stunden nicht wieder zuklappt. */
+const wetterOffen = new Set();
+function wetterStundenTabelle(d, tg){
+  const w = d.w, jetzt = new Date(), z = n => String(n).padStart(2, '0');
+  const jetztKey = `${heute()}T${z(jetzt.getHours())}`;
+  const wert = (k, i, f) => { const v = (w[k] || [])[i]; return typeof v === 'number' && isFinite(v) ? f(v) : ''; };
+  return `<table><thead><tr><th>Uhr</th><th>°C</th><th>gef.</th><th>mm</th><th>Wind</th><th>Böen</th><th>Wetter</th></tr></thead><tbody>${
+    tg.idx.map(i => {
+      const t = String(d.zeit[i]);
+      return `<tr${t.slice(0, 13) === jetztKey ? ' class="jetzt"' : ''}><td>${esc(t.slice(11, 16))}</td>`
+        + `<td>${wert('temperature_2m', i, gradText)}</td>`
+        + `<td>${wert('apparent_temperature', i, gradText)}</td>`
+        + `<td>${wert('precipitation', i, v => v >= 0.05 ? mmText(v) : '')}</td>`
+        + `<td>${wert('wind_speed_10m', i, v => Math.round(v))}</td>`
+        + `<td>${wert('wind_gusts_10m', i, v => Math.round(v))}</td>`
+        + `<td>${esc(wert('weather_code', i, v => WMO_TEXT[v] || ''))}</td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+function renderWetter(){
+  const box = $('#wetterBox');
+  if(!box) return;
+  const o = CFG.wetter;
+  if(!o){
+    box.innerHTML = `<p class="muted small">Noch kein Standort festgelegt.</p>
+      <button class="btn primary" id="wetterZuOrt">Standort festlegen</button>`;
+    $('#wetterZuOrt').onclick = () => setOeffnen('wetter');
+    return;
+  }
+  const d = wetterDaten();
+  const hier = WETTER && WETTER.ort === wetterOrtKey(o) ? WETTER : null;
+  const i = info('Stündliche Modellwerte für den Standort, keine Messung am Haus. Ein Tipp auf einen Tag zeigt die Stunden. Bis zum 3. Tag ist die Vorhersage verlässlich, ab dem 4. eine Tendenz, ab dem 8. nur eine grobe. Abgerufen wird beim Öffnen, höchstens einmal pro Stunde.', 'margin:-2px 0 10px');
+  let inhalt = '';
+  if(d){
+    const tage = wetterTage(d).filter(tg => tg.versatz <= WETTER_VORAUS && tg.idx.length);
+    const zeile = tg => {
+      const offen = wetterOffen.has(tg.datum), tend = tendenzText(tg.versatz);
+      const werte = [
+        tg.tmin != null ? `${gradText(tg.tmin)} / ${gradText(tg.tmax)} °C` : '',
+        tg.cm >= 0.5 ? `${mmText(tg.cm)} cm Schnee` : tg.mm >= 0.05 ? `${mmText(tg.mm)} mm` : 'trocken',
+        tg.boe != null ? `Böen ${Math.round(tg.boe)} km/h` : ''
+      ].filter(Boolean).join(' · ');
+      return `<div class="wtag">
+        <button type="button" class="wzeile" data-tag="${esc(tg.datum)}" aria-expanded="${offen}">
+          <span class="wkopf"><span class="wdat">${esc(tg.wtag)} ${esc(dText(tg.datum).slice(0, 6))}</span>${
+            tend ? `<span class="wtend">${esc(tend)}</span>` : ''}<span class="wlage">${esc(tg.lage)}</span></span>
+          <span class="wwerte">${esc(werte)}</span>
+        </button>
+        <div class="wstunden"${offen ? '' : ' hidden'}>${offen ? wetterStundenTabelle(d, tg) : ''}</div>
+      </div>`;
+    };
+    const gruppe = (titel, liste, klasse) => liste.length
+      ? `<div class="eyebrow">${esc(titel)}</div><div class="card wetterGruppe${klasse ? ' ' + klasse : ''}">${liste.map(zeile).join('')}</div>`
+      : '';
+    inhalt = gruppe('Rückblick', tage.filter(tg => tg.versatz < 0), 'wetterVorbei')
+      + gruppe('Heute', tage.filter(tg => tg.versatz === 0), 'wetterHeute')
+      + gruppe('Vorhersage', tage.filter(tg => tg.versatz > 0), '');
+  }else{
+    inhalt = `<p class="muted small">${wetterLaeuft ? 'Wird abgerufen …'
+      : hier && hier.fehler ? `Noch keine Daten – der Abruf ist fehlgeschlagen (${esc(hier.fehler)}).`
+      : 'Noch keine Daten.'}</p>`;
+  }
+  const stand = [
+    d ? 'Stand ' + wetterWann(d.abgerufen) : '',
+    hier && hier.fehler && d ? `letzter Abruf fehlgeschlagen (${wetterWann(hier.versuch)}, ${hier.fehler})` : ''
+  ].filter(Boolean).join(' · ');
+  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">${esc(o.name || 'Standort')} ${i.knopf}</div>${i.text}
+    ${inhalt}
+    <div class="wetterFuss">
+      ${stand ? `<p class="muted small" style="margin:0 0 10px">${esc(stand)}</p>` : ''}
+      <button class="btn ghost klein" id="wetterJetzt"${wetterLaeuft ? ' disabled' : ''}>${wetterLaeuft ? 'Wird abgerufen …' : 'Jetzt abrufen'}</button>
+      <p class="muted small" style="margin:14px 0 0">Wetterdaten: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>, Lizenz CC BY 4.0</p>
+    </div>`;
+  $('#wetterJetzt').onclick = () => wetterAbrufen(true);
+  /* Aufklappen an Ort und Stelle: nur dieser Tag, die Seite bleibt stehen. */
+  box.querySelectorAll('.wzeile').forEach(b => b.onclick = () => {
+    const datum = b.dataset.tag, t = b.nextElementSibling, auf = !wetterOffen.has(datum);
+    if(auf) wetterOffen.add(datum); else wetterOffen.delete(datum);
+    b.setAttribute('aria-expanded', String(auf));
+    const dd = wetterDaten(), tg = dd && wetterTage(dd).find(x => x.datum === datum);
+    t.innerHTML = auf && tg ? wetterStundenTabelle(dd, tg) : '';
+    t.hidden = !auf;
+  });
+}
+
+/* Einstellungen › Wetter: der Standort. Gesucht wird bei Open-Meteo nach Ort
+   oder Postleitzahl, während getippt wird (kurz verzögert, damit nicht jeder
+   Buchstabe eine Anfrage wird); ein Tipp auf einen Treffer übernimmt ihn und
+   holt das Wetter sofort. Alternativ der Standort des Geräts – dafür fragt
+   Safari einmal um Erlaubnis. Einen Ortsnamen gibt es dafür nicht, die
+   Bezeichnung lässt sich deshalb ändern. */
+function koordinaten(o){
+  const f = (v, pos, neg) => `${Math.abs(+v).toFixed(3).replace('.', ',')}° ${+v < 0 ? neg : pos}`;
+  return `${f(o.lat, 'N', 'S')}, ${f(o.lon, 'O', 'W')}`;
+}
+let ortSucheUhr = null, ortSucheNr = 0;
+function setWetter(box){
+  const o = CFG.wetter;
+  const i = info('Für diesen Ort ruft die App beim Öffnen höchstens einmal pro Stunde das Wetter ab – 7 Tage zurück, 10 Tage voraus. Übertragen werden nur die Koordinaten.', 'margin:-2px 0 10px');
+  box.innerHTML = `
+    <div class="eyebrow mitInfo" style="margin-top:0">Standort ${i.knopf}</div>${i.text}
+    ${o ? `<div class="card">
+        <label class="field" style="margin-bottom:8px"><span>Bezeichnung</span><input id="wOrtName" value="${esc(o.name || '')}" placeholder="z. B. Musterhaus"></label>
+        <p class="muted small" style="margin:0">${esc([o.zusatz, koordinaten(o)].filter(Boolean).join(' · '))}</p>
+        <div class="knopfzeile" style="margin-top:10px"><button class="btn danger klein" id="wOrtWeg">Löschen</button></div>
+      </div>` : `<p class="muted small" style="margin:0 0 10px">Noch kein Standort festgelegt.</p>`}
+    <div class="suchfeld"><svg class="lupe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><input type="search" id="wOrtSuche" placeholder="${o ? 'Anderen Ort oder PLZ suchen' : 'Ort oder PLZ suchen'}"
+      enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+    <div id="wOrtTreffer"></div>
+    <button class="btn ghost klein" id="wOrtHier">Aktuellen Standort übernehmen</button>`;
+
+  const uebernehmen = neu => {
+    CFG.wetter = neu; saveCfg();
+    wetterOffen.clear();
+    toast('Standort übernommen');
+    setWetter(box);
+    wetterAbrufen(true);
+  };
+  if($('#wOrtName')) $('#wOrtName').onchange = e => {
+    CFG.wetter.name = e.target.value.trim(); saveCfg();
+  };
+  if($('#wOrtWeg')) $('#wOrtWeg').onclick = () =>
+    frage('Standort löschen', `${o.name || 'Der Standort'} wird gelöscht. Ohne Standort ruft die App kein Wetter ab.`, 'Löschen', () => {
+      delete CFG.wetter; saveCfg();
+      WETTER = null; Store.set('nwWetter', null);
+      setWetter(box);
+    });
+
+  const feld = $('#wOrtSuche'), treffer = $('#wOrtTreffer');
+  const suchen = async () => {
+    const q = feld.value.trim(), nr = ++ortSucheNr;
+    if(q.length < 2){ treffer.innerHTML = ''; return; }
+    treffer.innerHTML = `<p class="muted small">Suche …</p>`;
+    let liste;
+    try{
+      const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q)
+        + '&count=8&language=de&format=json', {cache:'no-store'});
+      const j = await r.json();
+      if(!r.ok) throw new Error(j && j.reason || 'Antwort ' + r.status);
+      liste = Array.isArray(j.results) ? j.results : [];
+    }catch(e){
+      if(nr === ortSucheNr) treffer.innerHTML = `<p class="muted small">Suche nicht möglich – keine Verbindung.</p>`;
+      return;
+    }
+    if(nr !== ortSucheNr) return;             // inzwischen weitergetippt
+    if(!liste.length){ treffer.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
+    const plz = /^\d+$/.test(q);
+    const eintraege = liste.map(r => {
+      const pc = plz && Array.isArray(r.postcodes) ? (r.postcodes.find(p => String(p).startsWith(q)) || '') : '';
+      const zusatz = [...new Set([r.admin2, r.admin1].filter(x => x && x !== r.name))]
+        .concat(r.country_code && r.country_code !== 'DE' && r.country ? [r.country] : []).join(', ');
+      return {name: r.name, titel: (pc ? pc + ' ' : '') + r.name, zusatz, lat: r.latitude, lon: r.longitude};
+    });
+    treffer.innerHTML = `<div style="margin:0 0 12px">${eintraege.map((e, n) =>
+      `<button class="btn ortTreffer" data-n="${n}">${esc(e.titel)}${e.zusatz ? `<small>${esc(e.zusatz)}</small>` : ''}</button>`).join('')}</div>`;
+    treffer.querySelectorAll('[data-n]').forEach(b => b.onclick = () => {
+      const e = eintraege[+b.dataset.n];
+      uebernehmen({name:e.name, zusatz:e.zusatz, lat:e.lat, lon:e.lon});
+    });
+  };
+  feld.oninput = () => { clearTimeout(ortSucheUhr); ortSucheUhr = setTimeout(suchen, 400); };
+  feld.onkeydown = e => { if(e.key === 'Enter'){ clearTimeout(ortSucheUhr); suchen(); e.target.blur(); } };
+
+  $('#wOrtHier').onclick = () => {
+    const b = $('#wOrtHier');
+    if(!navigator.geolocation){ toast('Standort ist hier nicht verfügbar'); return; }
+    b.disabled = true; b.textContent = 'Standort wird bestimmt …';
+    navigator.geolocation.getCurrentPosition(p => {
+      uebernehmen({name:'Eigener Standort', zusatz:'',
+                   lat:p.coords.latitude, lon:p.coords.longitude});
+    }, err => {
+      toast(err && err.code === 1 ? 'Standortfreigabe abgelehnt' : 'Standort nicht bestimmbar');
+      b.disabled = false; b.textContent = 'Aktuellen Standort übernehmen';
+    }, {enableHighAccuracy:false, timeout:15000, maximumAge:10 * 60 * 1000});
+  };
+}
+
 /* ---------- Einstellungen ----------------------------------------------------
    Die Einstellungen sind nur noch ein Menü: jeder Eintrag öffnet eine eigene
    Ansicht, die der Zurück-Pfeil wieder verlässt. Gesichert wird dort sofort –
@@ -4888,6 +5277,7 @@ function renderSettings(){
   $('#setMenue').innerHTML =
       knopf('obj', '', 'Objekt und Prüfer')
     + knopf('abwesend', '', 'Abwesenheit und Feiertage')
+    + knopf('wetter', '', 'Wetter')
     + '<div class="eyebrow">Anlagen und Prüfumfang</div>'
     + NACHWEISE.filter(n => !n.spaeter).map(n => knopf('nw', n.k, n.label, anzahl(n))).join('')
     + '<div class="eyebrow">Gerät</div>'
@@ -4914,6 +5304,7 @@ function setOeffnen(art, k){
   setTitel = art === 'nw'     ? NW(k).label
            : art === 'obj'    ? 'Objekt und Prüfer'
            : art === 'abwesend' ? 'Abwesenheit'
+           : art === 'wetter' ? 'Wetter'
            : art === 'check'  ? 'Checkliste'
            : art === 'akkus'  ? 'Akkutypen'
            : art === 'tausch' ? 'Zählertausch'
@@ -4933,6 +5324,7 @@ function renderSetSub(){
   if(a === 'zugang') return;
   if(a === 'obj')   { setObjekt(dyn);   return; }
   if(a === 'abwesend'){ setAbwesend(dyn); return; }
+  if(a === 'wetter'){ setWetter(dyn); return; }
   if(a === 'check') { setCheck(dyn, k); return; }
   if(a === 'tausch'){ setTausch(dyn);   return; }
   if(a === 'akkus') { setAkkus(dyn);     return; }
@@ -8673,7 +9065,7 @@ async function ableiten(pw, salzHex){
 
 (function zugang(){
   const schloss = $('#schloss'), feld = $('#schlossFeld'), ok = $('#schlossOk');
-  const auf = () => { schloss.remove(); histMedLaden(); renderHome(); go('home', false); };
+  const auf = () => { schloss.remove(); histMedLaden(); renderHome(); go('home', false); wetterAbrufen(); };
 
   if(!window.crypto || !crypto.subtle){
     $('#schlossText').textContent = 'Dieser Browser kann die Prüfung nicht ausführen.';
