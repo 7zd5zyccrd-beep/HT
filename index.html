@@ -10,6 +10,73 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.54 17.09.2026  Wetter, Etappe 5: Ereignisvorschläge (Entwurf von Jean
+                    gebilligt). Sieben Regeln ab Werk – Starkregen, Sturm
+                    (vorbei und angekündigt), Glätte, Schnee, Hagel, erster
+                    Frost – prüfen Vorhersage, Messwerte der DWD-Station und
+                    amtliche Warnungen; wo beides vorliegt, zählt der höhere
+                    Wert. Was auslöst, erscheint als Vorschlag in der Karte
+                    „Wetter-Hinweise“ auf der Startseite, mit Grund und den
+                    Knöpfen „Übernehmen“ und „Verwerfen“. Übernehmen legt eine
+                    eigene Aufgabe an, mit Wichtigkeit, Termin, Wetterprofil und
+                    dem Grund als Notiz. Ein Ereignis ergibt einen Vorschlag
+                    (Auslöser unter 24 Stunden Abstand gehören zusammen,
+                    Warnungen tragen ihre Kennung); beantwortet wird er einmal,
+                    unbeantwortet verschwindet er nach drei Tagen bzw. wenn das
+                    angekündigte Wetter vorbei ist. Ist aus derselben Regel noch
+                    eine Aufgabe offen, schweigt die Regel. Schwellen, Text,
+                    Wichtigkeit, Termin und Profil je Regel unter Einstellungen ›
+                    Wetter › Ereignisregeln, jede Regel einzeln abschaltbar.
+  v1.53 17.09.2026  Wetter, Etappe 4: amtliche Warnungen und Messwerte des DWD
+                    über Bright Sky (Entwurf von Jean gebilligt). Zusammen mit
+                    dem Open-Meteo-Abruf holt die App die Warnungen für die
+                    Gemeinde des Standorts und die Messwerte der nächsten
+                    DWD-Station der letzten drei Tage. Eine gültige Warnung steht
+                    als Karte ganz oben auf der Startseite (Überschrift, Stufe,
+                    Gültigkeit, Zahl weiterer); ein Tipp führt zur Wetterseite,
+                    wo alle Warnungen mit Beschreibung und Verhaltenshinweis des
+                    DWD aufklappen. Im Rückblick steht unter den Modellwerten,
+                    was die Station gemessen hat. Gezeigt werden Warnungen aller
+                    vier Stufen, aber nur ungelaufene aus einem Stand der letzten
+                    24 Stunden. Fällt Bright Sky aus, arbeitet alles übrige
+                    unverändert weiter; gespeichert wird nur der letzte Stand,
+                    nicht in der Sicherung.
+  v1.52 17.09.2026  Wetter, Etappe 3: Wetterprofile und Tagesvorschläge (Entwurf
+                    von Jean gebilligt). Eigene Aufgaben tragen wahlweise ein
+                    Profil „Dach“ oder „Außenbereich“. Bewertet wird jeder
+                    Arbeitstag vom Beginn bis zum Ende halbtags (ab Werk 7–12 und
+                    12–16 Uhr), soweit die Vorhersage reicht; bei Überfälligem
+                    bis zum Ende der Vorhersage. Gewitter, Glätte, Schnee, Regen,
+                    Nässe von vorher, gefühlte Temperatur und Böen ergeben je gut,
+                    geht oder ungünstig, der schlechteste Wert zählt. Die
+                    Aufgabenseite zeigt eine Karte mit einer Zeile je Tag, die
+                    Liste den ersten guten Halbtag („Wetter gut: morgen vorm.“),
+                    bei knappem Termin ohne guten Halbtag den besten, sonst „kein
+                    gutes Wetter in Sicht“. Kommt ein guter Halbtag in den
+                    nächsten drei Tagen, steht die Aufgabe in der neuen Gruppe
+                    „Wetter passt“ zwischen Überfällig und Diese Woche; Ringe und
+                    Fristen bleiben unberührt. Ab 12 Stunden steht das Alter des
+                    Stands dabei, ab 3 Tagen gibt es keine Vorschläge. Halbtage
+                    und Grenzwerte unter Einstellungen › Wetter, je Profil mit
+                    „Werkseinstellung“; sie reisen mit der Sicherung. Nach einem
+                    Abruf baut sich die Liste neu auf, auf der Aufgabenseite nur
+                    die Wetterkarte.
+  v1.51 17.09.2026  Wetter, Etappe 2: Zeitraum für eigene Aufgaben (Entwurf von
+                    Jean gebilligt). Auf der Aufgabenseite schaltet „Termin |
+                    Zeitraum“ zwischen einem Tag und „von – bis“ um; „bis“ bleibt
+                    intern der Termin, neu ist nur der Beginn (a.von). Beim
+                    Umschalten wird der Termin zu „von“, „bis“ einen Monat
+                    später; zurück gilt „bis“ als Termin. In der Liste erscheint
+                    die Aufgabe erst mit Beginn, mit Vorbereitung um deren
+                    Vorlauf früher; die Zeile sagt „Zeitraum bis 31.08. · 45
+                    Tage“ bzw. vorher „Zeitraum ab 01.06.“. Gruppe und Ring
+                    richten sich nach dem Ende. Die Arbeitstagsregel schiebt das
+                    Ende höchstens bis zum Beginn zurück, sonst „Vertretung
+                    klären“. Der Vorlauf der Vorbereitung zählt bis zum Beginn.
+                    Wiederholt wird beim Zeitraum nur im festen Rhythmus: Beginn
+                    und Ende rücken je um den Abstand weiter (je mit eigenem
+                    Ankertag), bis das Ende nach der Erledigung liegt; „ab
+                    Erledigung“ ist dann ausgeblendet.
   v1.50 17.09.2026  Wetter, Etappe 1 (von Jean angestoßen): Standort, Abruf und
                     Wetterseite. Unter Einstellungen › Wetter wird der Standort
                     festgelegt – Ort oder PLZ suchen oder den des Geräts
@@ -1195,6 +1262,11 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .abwZeile{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
 .abwZeile > span{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;
   font-size:13px;color:var(--ink-soft)}
+/* Termin oder Zeitraum einer eigenen Aufgabe (v1.51): die Zeilen „von“ und
+   „bis“ wie bei der Abwesenheit, aber ohne Karte – das Datum steht links unter
+   seiner Beschriftung, nicht rechts am Rand, wie beim einzelnen Termin. */
+.terminFeld .abwZeile{justify-content:flex-start}
+.terminFeld .abwZeile > span{flex:0 0 2.6em}
 /* Etagen eines Aufzugs: die Grundrisse als Umschaltknöpfe unter seiner Zeile. */
 .etagen{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0 0 10px}
 .etagen .etw{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;
@@ -1666,10 +1738,40 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 .wstunden th:first-child,.wstunden td:first-child{text-align:left;padding-left:0}
 .wstunden th:last-child,.wstunden td:last-child{text-align:left;padding-right:0}
 .wstunden tr.jetzt td{font-weight:700}
+/* Warnkarte auf der Startseite und der Text einer aufgeklappten Warnung. */
+.warnKarte{cursor:pointer}
+/* Wetter-Hinweise: je Vorschlag Titel, Grund und die beiden Knöpfe. */
+.hzeile + .hzeile{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.hknoepfe{display:flex;gap:8px}
+.hknoepfe .btn{width:auto;flex:1 1 0;margin:0}
+.warnText{padding:0 0 10px;font-size:15px;white-space:pre-line}
+.wwarnkopf{flex:1 1 auto;white-space:normal}
+.wmess{display:block;margin-top:2px;font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
 .wetterFuss{margin-top:18px}
 .wetterFuss a{color:inherit}
 /* Treffer der Ortssuche: eine Wahl, keine Seite – linksbündig, ohne ›. */
 .btn.ortTreffer{text-align:left}
+/* Wetterkarte der Aufgabe (v1.52): je Arbeitstag eine Zeile, die Halbtage
+   dahinter. Gut fett, geht normal, ungünstig grau – ohne Farbe, die bleibt den
+   Ringen vorbehalten. */
+.wbzeile{display:flex;align-items:baseline;gap:12px;padding:6px 0;font-size:15px}
+.wbzeile + .wbzeile{border-top:1px solid var(--line)}
+.wbdat{flex:0 0 6.2em;font-weight:600}
+.wbdat small{display:block;font-size:13px;font-weight:400;color:var(--ink-soft)}
+.wbteile{flex:1;min-width:0}
+.wb{display:block}
+.wb.st2{font-weight:700;color:var(--ink)}
+.wb.st1{color:var(--ink)}
+.wb.st0{color:var(--ink-soft)}
+/* Grenzwerte in den Einstellungen: Beschriftung links, Felder rechts. */
+.wgKarte{padding:4px 14px}
+.wgZeile{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0}
+.wgZeile + .wgZeile{border-top:1px solid var(--line)}
+.wgZeile > span:first-child{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;
+  font-size:13px;color:var(--ink-soft)}
+.wgWerte{flex:0 0 auto;white-space:nowrap;font-size:15px}
+.wgWerte input{width:4.2em;padding:8px;text-align:right;font-size:16px}
+.wgKarte .knopfzeile{margin:6px 0 10px}
 .btn.ortTreffer small{display:block;margin-top:3px;font-size:14px;font-weight:400;color:var(--ink-soft)}
 /* Die gesuchte Karte wird kurz umrandet, damit das Auge sie gleich findet. */
 .pos.gesucht{outline:3px solid var(--ink);outline-offset:2px}
@@ -1878,7 +1980,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.50';
+const VERSION = 'v1.54';
 const BUILD   = VERSION + ' · 17.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3188,7 +3290,7 @@ const wichtigVon = k => {
   const w = (CFG.teile[k] || {}).wichtig;
   return WICHTIG.some(x => x[0] === w) ? w : (WICHTIG_STD[k] || 'normal');
 };
-const GRUPPEN = [['ueber', 'Überfällig'], ['woche', 'Diese Woche'],
+const GRUPPEN = [['ueber', 'Überfällig'], ['wetter', 'Wetter passt'], ['woche', 'Diese Woche'],
                  ['monat', 'Diesen Monat'], ['bald', 'Demnächst']];
 const ttmm = d => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
 /* Gibt es überhaupt einen Nachweis mit Einträgen? Sonst hilft nur der Hinweis
@@ -3316,17 +3418,29 @@ function aufgaben(){
      Termin weiter weg ist als die Vorwarnzeit – eine offene Sache soll nicht
      aus dem Blick geraten. */
   AUFG.filter(a => !a.erledigt).forEach(a => {
-    /* Wiederkehrende erst ab acht Wochen vorher, bei längerem Vorlauf früher –
-       eine jährliche Aufgabe soll nicht das ganze Jahr in der Liste stehen. */
-    if(a.wdh && a.frist){
+    const vorlauf = a.vorb && String(a.vorb.text || '').trim() ? (+a.vorb.wochen || 0) * 7 : 0;
+    const von = zeitraumVon(a);
+    if(von){
+      /* Zeitraum, einmalig oder wiederkehrend: erst ab Beginn, mit Vorbereitung
+         um deren Vorlauf früher. */
+      if(Math.round((alsDatum(von) - heute0) / TAG_MS) > vorlauf) return;
+    }else if(a.wdh && a.frist){
+      /* Wiederkehrende erst ab acht Wochen vorher, bei längerem Vorlauf früher –
+         eine jährliche Aufgabe soll nicht das ganze Jahr in der Liste stehen. */
       const tage = Math.round((alsDatum(a.frist) - heute0) / TAG_MS);
-      const vorlauf = a.vorb && String(a.vorb.text || '').trim() ? (+a.vorb.wochen || 0) * 7 : 0;
       if(tage > Math.max(VORWARN, vorlauf)) return;
     }
+    const ww = aufgWetter(a);
     liste.push({
+      /* Wetter (v1.52): der erste gute Halbtag in den nächsten drei Tagen holt
+         die Aufgabe in „Wetter passt“ – außer, sie ist überfällig. */
+      wetterGut: !!(ww && ww.erstGut && ww.erstGut.versatz <= 3),
+      /* Beim Zeitraum schiebt die Arbeitstagsregel das Ende höchstens bis zum
+         Beginn zurück; reicht das nicht, heißt es „Vertretung klären“. */
+      fenster: von ? {von:alsDatum(von)} : null, frueh: von ? alsDatum(von) : null,
       k:a.k || '', aufg:a.id, ziel:'', akku:false, begonnen:true,
       wichtig: WICHTIG.some(x => x[0] === a.wichtig) ? a.wichtig : 'normal', pos:1000,
-      titel:aufgTitel(a), stand:aufgStand(a), ring:'',
+      titel:aufgTitel(a), stand:[aufgStand(a), wetterListenText(ww, a)].filter(Boolean).join(' · '), ring:'',
       vorbAus: vorbText(a).startsWith('Vorbereitung'),
       faellig: a.frist ? alsDatum(a.frist) : null});
   });
@@ -3351,6 +3465,7 @@ function aufgaben(){
     a.gruppe = !a.faellig || a.tage < 0   ? 'ueber'
              : a.faellig <= sonntag       ? 'woche'
              : a.faellig <= monatLetzter  ? 'monat' : 'bald';
+    if(a.wetterGut && a.gruppe !== 'ueber') a.gruppe = 'wetter';
   });
   /* Weiter als die Vorwarnzeit entfernt steht nur, was schon angefangen ist –
      etwa eine Ablesung zu Beginn des Quartals. */
@@ -3366,6 +3481,15 @@ function aufgaben(){
 const fristZeile = a => fristText0(a).replace(/ /g, '\u00a0');
 function fristText0(a){
   if(!a.faellig) return '';
+  /* Zeitraum: vor dem Beginn dessen Tag, danach das Ende und die Tage bis
+     dahin. Ist das Ende vorbei, gilt der gewöhnliche Text („… überfällig“). */
+  if(a.fenster && a.tage >= 0){
+    const heute0 = tagAnfang(new Date()), jahrVon = d => d.getFullYear() !== heute0.getFullYear() ? d.getFullYear() : '';
+    if(a.fenster.von > heute0) return `Zeitraum ab ${ttmm(a.fenster.von)}${jahrVon(a.fenster.von)}`;
+    if(a.tage === 0) return 'Zeitraum endet heute';
+    if(a.tage === 1) return 'Zeitraum endet morgen';
+    return `Zeitraum bis ${ttmm(a.faellig)}${jahrVon(a.faellig)} · ${a.tage} Tage`;
+  }
   if(a.tage < -60) return `fällig seit ${monatKurz(`${a.faellig.getFullYear()}-${String(a.faellig.getMonth() + 1).padStart(2, '0')}`)}`;
   if(a.tage < 0)   return `${-a.tage} ${a.tage === -1 ? 'Tag' : 'Tage'} überfällig`;
   if(a.tage === 0) return 'fällig heute';
@@ -3455,7 +3579,7 @@ function renderHome(){
      Lage für die Rückkehr, die auf der Startseite niemand braucht – sie darf
      nicht in der nächsten Liste landen, die sich aufbaut. */
   listenLage = null;
-  const liste = aufgaben(), gibt = irgendeinNachweis();
+  const liste = aufgaben(), gibt = irgendeinNachweis(), hinweise = wetterHinweise();
   let inhalt = abwesenheitsKarte(liste) + GRUPPEN.map(([g, titel]) => {
     const teil = liste.filter(a => a.gruppe === g);
     return teil.length
@@ -3472,7 +3596,7 @@ function renderHome(){
     + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigte Aufgaben</span><span class="zahl">${erledigt}</span></button>` : '')
     + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span><span class="zahl" id="homeWetterStand"></span></button>` : '');
   $('#homeListe').innerHTML = `<button class="btn ghost klein" data-neuaufg="1" style="margin:0 0 12px">+ Aufgabe hinzufügen</button>`
-    + sicherungsKarte(gibt) + inhalt
+    + warnKarte() + hinweisKarte(hinweise) + sicherungsKarte(gibt) + inhalt
     + '<div id="homeMehr">' + (mehr ? `<div class="eyebrow">Übersicht</div>${mehr}` : '') + '</div>';
   knoepfeVerdrahten($('#homeListe'));
   const alle = $('#homeListe [data-alle]');
@@ -3484,6 +3608,14 @@ function renderHome(){
   $('#homeListe [data-neuaufg]').onclick = aufgabeNeu;
   const sich = $('#homeListe [data-sichern]');
   if(sich) sich.onclick = alsDateiSichern;
+  const wk = $('#homeListe [data-warn]');
+  if(wk) wk.onclick = () => { go('wetter'); wetterAbrufen(); };
+  $('#homeListe').querySelectorAll('[data-hja]').forEach(b => b.onclick = () => {
+    const h = hinweise.find(x => x.schluessel === b.dataset.hja);
+    if(h) hinweisUebernehmen(h);
+  });
+  $('#homeListe').querySelectorAll('[data-hnein]').forEach(b => b.onclick = () =>
+    hinweisBeantwortet(b.dataset.hnein, false));
   $('#buildTag').textContent = BUILD;
   hausKnopf();
   renderSuche();
@@ -3890,6 +4022,9 @@ function renderAufgabe(){
   /* Wiederholung und Vorbereitung gibt es nur bei eigenen Aufgaben. */
   const w = a.wdh || null, v = a.vorb || {text:'', wochen:4};
   const planung = mangel ? '' : `
+    <label class="field"><span>Wetter</span>
+      <select id="aufgWetter"><option value="">– nicht wetterabhängig –</option>${
+        WETTER_PROFILE.map(([k, t]) => `<option value="${k}"${a.wetter === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
     <label class="field"><span>Wiederholen</span>
       <div class="row wdhZeile">
         <span class="wdhAlle"${w ? '' : ' hidden'}>alle</span>
@@ -3899,13 +4034,13 @@ function renderAufgabe(){
           ${Object.entries(WDH_TEXT).map(([e, t]) => `<option value="${e}"${w && w.einheit === e ? ' selected' : ''}>${t[1]}</option>`).join('')}
         </select>
       </div></label>
-    ${w ? `<div class="field segfeld"><span>Nächster Termin zählt ab</span><div class="seg">
+    ${w && !a.von ? `<div class="field segfeld"><span>Nächster Termin zählt ab</span><div class="seg">
         <button type="button" data-basis="termin" aria-pressed="${w.basis !== 'erledigt'}">altem Termin</button>
         <button type="button" data-basis="erledigt" aria-pressed="${w.basis === 'erledigt'}">Erledigung</button>
       </div></div>` : ''}
     <label class="field"><span>Vorbereitung</span>
       <input id="vorbText" value="${esc(v.text)}" placeholder="z. B. Firma beauftragen"></label>
-    <label class="field" id="vorbWochenFeld"${String(v.text || '').trim() ? '' : ' hidden'}><span>Vorlauf in Wochen</span>
+    <label class="field" id="vorbWochenFeld"${String(v.text || '').trim() ? '' : ' hidden'}><span>Vorlauf in Wochen${a.von && !mangel ? ' vor Beginn' : ''}</span>
       <input id="vorbWochen" type="number" inputmode="numeric" min="0" value="${esc(v.wochen ?? 4)}"></label>`;
   /* Der Stand der Vorbereitung, sobald es eine gibt und die Aufgabe steht. */
   const vorbStandKarte = mangel || neu || a.erledigt || !String(v.text || '').trim() ? ''
@@ -3929,13 +4064,26 @@ function renderAufgabe(){
            <input type="date" id="erlDatum" class="schmal" value="${heute()}" aria-label="Erledigt am">
            <input id="erlVermerk" placeholder="Vermerk, z. B. Firma" style="margin-top:10px">
            <button class="btn primary" id="erlSetzen" style="margin-top:10px">Als erledigt vermerken</button></div>`;
+  /* Termin oder Zeitraum (v1.51). Die Umschaltung steht nur bei eigenen
+     Aufgaben; ein Mangel hat seinen Termin. */
+  const zr = !mangel && !!a.von;
+  const terminFeld = mangel
+    ? `<label class="field"><span>Termin</span><input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}"></label>`
+    : `<div class="field segfeld terminFeld"><div class="seg">
+         <button type="button" data-tart="termin" aria-pressed="${!zr}">Termin</button>
+         <button type="button" data-tart="zeitraum" aria-pressed="${zr}">Zeitraum</button>
+       </div>${zr
+         ? `<label class="abwZeile"><span>von</span><input type="date" class="dat" id="aufgVon" value="${esc(a.von)}"></label>
+            <label class="abwZeile"><span>bis</span><input type="date" class="dat" id="aufgFrist" value="${esc(a.frist)}"></label>`
+         : `<input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}" aria-label="Termin" style="margin-top:10px">`}</div>`;
   box.innerHTML = kopf
-    + `<label class="field"><span>Termin</span><input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}"></label>
+    + `${terminFeld}
        <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
          WICHTIG.map(([w, t]) => `<button type="button" data-w="${w}" aria-pressed="${a.wichtig === w}">${t}</button>`).join('')}</div></div>
        ${planung}
        <label class="field"><span>Notiz</span><textarea id="aufgNotiz" style="min-height:90px">${esc(a.notiz)}</textarea></label>`
-    + wege + vorbStandKarte + erledigung
+    + wege + (!mangel && !a.erledigt && a.wetter ? `<div id="aufgWetterKarte">${aufgWetterKarteHtml(a)}</div>` : '')
+    + vorbStandKarte + erledigung
     + (!neu && !mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '');
 
   if(!mangel){
@@ -3953,14 +4101,55 @@ function renderAufgabe(){
     if(frist.value && frist.value !== a.frist){
       a.frist = frist.value;
       if(a.wdh) a.wdh.anker = alsDatum(a.frist).getDate();   // der feste Rhythmus folgt dem neuen Tag
+      /* Ein Ende vor dem Beginn wird angeglichen, wie bei der Abwesenheit. */
+      if(zr && a.von > a.frist){
+        a.von = a.frist; $('#aufgVon').value = a.von;
+        if(a.wdh) a.wdh.ankerVon = alsDatum(a.von).getDate();
+      }
       sichern();
     }
   };
+  const vonFeld = $('#aufgVon');
+  if(vonFeld) vonFeld.oninput = vonFeld.onchange = () => {
+    if(vonFeld.value && vonFeld.value !== a.von){
+      a.von = vonFeld.value;
+      if(a.wdh) a.wdh.ankerVon = alsDatum(a.von).getDate();
+      if(!a.frist || a.frist < a.von){
+        a.frist = a.von; frist.value = a.frist;
+        if(a.wdh) a.wdh.anker = alsDatum(a.frist).getDate();
+      }
+      sichern();
+    }
+  };
+  /* Umschalten: der Termin wird zu „von“, „bis“ einen Monat später; zurück gilt
+     „bis“ als Termin. Beim Zeitraum zählt die Wiederholung immer ab dem alten
+     Termin – ab der Erledigung wanderte der Zeitraum mit jeder Erledigung. */
+  box.querySelectorAll('[data-tart]').forEach(b => b.onclick = () => {
+    const zum = b.dataset.tart === 'zeitraum';
+    if(zum === zr) return;
+    if(zum){
+      a.von = a.frist || heute();
+      a.frist = terminPlus(a.von, 1, 'monat');
+      if(a.wdh){ a.wdh.basis = 'termin'; a.wdh.ankerVon = alsDatum(a.von).getDate(); a.wdh.anker = alsDatum(a.frist).getDate(); }
+    }else{
+      delete a.von;
+      if(a.wdh){ delete a.wdh.ankerVon; if(a.frist) a.wdh.anker = alsDatum(a.frist).getDate(); }
+    }
+    sichern(); renderAufgabe();
+  });
+  if($('#aufgWetterKarte')) aufgWetterKarteBinden($('#aufgWetterKarte'));
   if(!mangel){
+    $('#aufgWetter').onchange = e => {
+      if(e.target.value) a.wetter = e.target.value; else delete a.wetter;
+      sichern(); renderAufgabe();
+    };
     $('#wdhEinheit').onchange = e => {
       const einheit = e.target.value;
       if(!einheit) delete a.wdh;
-      else a.wdh = Object.assign({n:1, basis:'termin'}, a.wdh || {}, {einheit, anker:alsDatum(a.frist || heute()).getDate()});
+      else{
+        a.wdh = Object.assign({n:1, basis:'termin'}, a.wdh || {}, {einheit, anker:alsDatum(a.frist || heute()).getDate()});
+        if(a.von) Object.assign(a.wdh, {basis:'termin', ankerVon:alsDatum(a.von).getDate()});
+      }
       sichern(); renderAufgabe();
     };
     $('#wdhN').oninput = e => {
@@ -4011,13 +4200,18 @@ function renderAufgabe(){
     /* Wiederkehrend: die nächste steht sofort bereit. Die Notiz beginnt leer, die
        Vorbereitung wieder offen – beides gehört zum einzelnen Termin. */
     if(a.wdh && !mangel){
+      const fz = a.von ? naechsterZeitraum(a) : null;
       const folge = {id:neueId(), art:'eigen', quelle:'', k:a.k, anlage:a.anlage, anlageText:a.anlageText || '',
         punkt:'', titel:a.titel, text:'', notiz:'', zeitraum:'', festgestellt:'', angelegt:heute(),
-        frist:naechsterTermin(a), wichtig:a.wichtig, erneut:[], erledigt:'', vermerk:'',
+        frist:fz ? fz.bis : naechsterTermin(a), wichtig:a.wichtig, erneut:[], erledigt:'', vermerk:'',
         wdh:Object.assign({}, a.wdh), vorb:a.vorb ? Object.assign({}, a.vorb) : undefined,
         vorbErledigt:'', vorbVermerk:''};
+      if(fz) folge.von = fz.von;
+      if(a.wetter) folge.wetter = a.wetter;
       AUFG.push(folge); a.folge = folge.id;
-      saveAufg(); toast(`Erledigt · nächster Termin ${dText(folge.frist)}`); zurueck();
+      saveAufg();
+      toast(fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · nächster Termin ${dText(folge.frist)}`);
+      zurueck();
       return;
     }
     saveAufg(); toast('Als erledigt vermerkt'); zurueck();
@@ -4412,12 +4606,31 @@ function naechsterTermin(a){
   return t;
 }
 const WDH_TEXT = {woche:['Woche', 'Wochen'], monat:['Monat', 'Monate'], jahr:['Jahr', 'Jahre']};
+/* Zeitraum (v1.51): nur eigene Aufgaben. Der Beginn steht in a.von, das Ende
+   bleibt a.frist – so rechnen Gruppen, Ringe und Arbeitstage unverändert. */
+const zeitraumVon = a => a && a.art !== 'mangel' && a.von ? a.von : '';
+/* Der nächste Zeitraum: Beginn und Ende rücken je um den Abstand weiter, jedes
+   mit seinem Ankertag, bis das Ende nach der Erledigung liegt. Wie beim festen
+   Rhythmus werden keine Zeiträume nachgeholt. */
+function naechsterZeitraum(a){
+  const w = a.wdh, n = Math.max(1, Math.round(+w.n) || 1), erl = a.erledigt || heute();
+  let von = a.von, bis = a.frist || a.von;
+  for(let i = 0; i < 1000; i++){
+    von = terminPlus(von, n, w.einheit, w.ankerVon);
+    bis = terminPlus(bis, n, w.einheit, w.anker);
+    if(bis > erl) break;
+  }
+  return {von: von > bis ? bis : von, bis};
+}
 /* Stand der Vorbereitung einer eigenen Aufgabe, leer wenn es keine gibt oder
    ihr Vorlauf noch nicht erreicht ist. */
 function vorbText(a){
   if(!a.vorb || !String(a.vorb.text || '').trim()) return '';
   if(a.vorbErledigt) return 'vorbereitet' + (a.vorbVermerk ? ': ' + kurz(a.vorbVermerk, 36) : '');
-  const tage = a.frist ? Math.round((alsDatum(a.frist) - tagAnfang(new Date())) / TAG_MS) : 0;
+  /* Beim Zeitraum zählt der Vorlauf bis zum Beginn: vorbereitet sein soll, was
+     aufgeht – nicht erst, was endet. */
+  const bezug = zeitraumVon(a) || a.frist;
+  const tage = bezug ? Math.round((alsDatum(bezug) - tagAnfang(new Date())) / TAG_MS) : 0;
   return tage <= (+a.vorb.wochen || 0) * 7 ? 'Vorbereitung: ' + kurz(a.vorb.text, 36) : '';
 }
 
@@ -4984,6 +5197,7 @@ async function wetterAbrufen(sofort = false){
     if(hier && hier.fehler && hier.versuch && jetzt - hier.versuch < WETTER_WIEDER) return;
   }
   wetterLaeuft = true;
+  dwdAbrufen(sofort);                      // Warnungen und Messwerte, v1.53
   wetterStandZeigen();
   if(current === 'wetter') renderWetter();
   const url = 'https://api.open-meteo.com/v1/forecast'
@@ -5013,6 +5227,10 @@ async function wetterAbrufen(sofort = false){
   Store.set('nwWetter', WETTER);
   wetterStandZeigen();
   if(current === 'wetter') renderWetter();
+  /* Neue Werte ändern die Vorschläge: Liste neu, auf der Aufgabenseite nur die
+     Wetterkarte (v1.52). */
+  listeNachziehen();
+  aufgWetterKarteAuffrischen();
 }
 
 /* Wetterlage nach WMO-Schlüssel, so wie Open-Meteo ihn liefert. */
@@ -5084,7 +5302,9 @@ const tendenzText = v => v >= 8 ? 'grobe Tendenz' : v >= 4 ? 'Tendenz' : '';
 
 /* Aufgeklappte Tage – gemerkt für die Sitzung, damit ein neuer Abruf während
    des Lesens die Stunden nicht wieder zuklappt. */
-const wetterOffen = new Set();
+const wetterOffen = new Set(), warnOffen = new Set();
+const warnTextHtml = w => `${w.text ? `<p style="margin:0 0 8px">${esc(w.text)}</p>` : ''}${
+  w.hinweis ? `<p class="muted small" style="margin:0 0 8px">${esc(w.hinweis)}</p>` : ''}`;
 function wetterStundenTabelle(d, tg){
   const w = d.w, jetzt = new Date(), z = n => String(n).padStart(2, '0');
   const jetztKey = `${heute()}T${z(jetzt.getHours())}`;
@@ -5114,6 +5334,7 @@ function renderWetter(){
   const d = wetterDaten();
   const hier = WETTER && WETTER.ort === wetterOrtKey(o) ? WETTER : null;
   const i = info('Stündliche Modellwerte für den Standort, keine Messung am Haus. Ein Tipp auf einen Tag zeigt die Stunden. Bis zum 3. Tag ist die Vorhersage verlässlich, ab dem 4. eine Tendenz, ab dem 8. nur eine grobe. Abgerufen wird beim Öffnen, höchstens einmal pro Stunde.', 'margin:-2px 0 10px');
+  const gemessen = dwdTagWerte();
   let inhalt = '';
   if(d){
     const tage = wetterTage(d).filter(tg => tg.versatz <= WETTER_VORAUS && tg.idx.length);
@@ -5124,11 +5345,16 @@ function renderWetter(){
         tg.cm >= 0.5 ? `${mmText(tg.cm)} cm Schnee` : tg.mm >= 0.05 ? `${mmText(tg.mm)} mm` : 'trocken',
         tg.boe != null ? `Böen ${Math.round(tg.boe)} km/h` : ''
       ].filter(Boolean).join(' · ');
+      /* Was die DWD-Station am selben Tag gemessen hat (v1.53). */
+      const m = gemessen[tg.datum];
+      const messText = m ? [m.mm >= 0.05 ? `${mmText(m.mm)} mm` : 'trocken',
+        m.boe != null ? `Böen ${Math.round(m.boe)} km/h` : ''].filter(Boolean).join(' · ') : '';
       return `<div class="wtag">
         <button type="button" class="wzeile" data-tag="${esc(tg.datum)}" aria-expanded="${offen}">
           <span class="wkopf"><span class="wdat">${esc(tg.wtag)} ${esc(dText(tg.datum).slice(0, 6))}</span>${
             tend ? `<span class="wtend">${esc(tend)}</span>` : ''}<span class="wlage">${esc(tg.lage)}</span></span>
-          <span class="wwerte">${esc(werte)}</span>
+          <span class="wwerte">${esc(werte)}</span>${
+            messText ? `<span class="wmess">gemessen ${esc(messText)}</span>` : ''}
         </button>
         <div class="wstunden"${offen ? '' : ' hidden'}>${offen ? wetterStundenTabelle(d, tg) : ''}</div>
       </div>`;
@@ -5148,16 +5374,46 @@ function renderWetter(){
     d ? 'Stand ' + wetterWann(d.abgerufen) : '',
     hier && hier.fehler && d ? `letzter Abruf fehlgeschlagen (${wetterWann(hier.versuch)}, ${hier.fehler})` : ''
   ].filter(Boolean).join(' · ');
+  /* Amtliche Warnungen zuoberst (v1.53): eine Zeile je Warnung, ein Tipp
+     klappt Beschreibung und Verhaltenshinweis des DWD auf. */
+  const warnungen = dwdWarnungen();
+  const dd = dwdDaten();
+  const warnHtml = warnungen.length
+    ? `<div class="eyebrow" style="margin-top:0">Amtliche Warnungen${dd && dd.gemeinde ? ' · ' + esc(dd.gemeinde) : ''}</div>
+       <div class="card wetterGruppe">${warnungen.map(w => {
+         const offen = warnOffen.has(w.id);
+         return `<div class="wtag">
+           <button type="button" class="wzeile" data-warnid="${esc(w.id)}" aria-expanded="${offen}">
+             <span class="wkopf"><span class="wdat wwarnkopf">${esc(w.kopf || w.ereignis || 'Warnung')}</span></span>
+             <span class="wwerte">${esc([DWD_STUFE_TEXT[w.stufe] || '', warnZeitraum(w)].filter(Boolean).join(' · '))}</span>
+           </button>
+           <div class="wstunden warnText"${offen ? '' : ' hidden'}>${offen ? warnTextHtml(w) : ''}</div>
+         </div>`;
+       }).join('')}</div>`
+    : '';
+  const dwdFuss = [
+    dd && dd.station && dd.station.name ? `Messwerte: Station ${dd.station.name}, ${dd.station.km} km` : '',
+    dd && dd.fehler ? `DWD nicht erreichbar (${dd.fehler})` : ''
+  ].filter(Boolean).join(' · ');
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">${esc(o.name || 'Standort')} ${i.knopf}</div>${i.text}
-    ${inhalt}
+    ${warnHtml}${inhalt}
     <div class="wetterFuss">
-      ${stand ? `<p class="muted small" style="margin:0 0 10px">${esc(stand)}</p>` : ''}
+      ${stand ? `<p class="muted small" style="margin:0 0 4px">${esc(stand)}</p>` : ''}
+      ${dwdFuss ? `<p class="muted small" style="margin:0 0 10px">${esc(dwdFuss)}</p>` : ''}
       <button class="btn ghost klein" id="wetterJetzt"${wetterLaeuft ? ' disabled' : ''}>${wetterLaeuft ? 'Wird abgerufen …' : 'Jetzt abrufen'}</button>
-      <p class="muted small" style="margin:14px 0 0">Wetterdaten: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>, Lizenz CC BY 4.0</p>
+      <p class="muted small" style="margin:14px 0 0">Vorhersage: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>, Lizenz CC BY 4.0 · Warnungen und Messwerte: <a href="https://brightsky.dev/" target="_blank" rel="noopener">Bright Sky</a> aus Daten des DWD</p>
     </div>`;
   $('#wetterJetzt').onclick = () => wetterAbrufen(true);
   /* Aufklappen an Ort und Stelle: nur dieser Tag, die Seite bleibt stehen. */
-  box.querySelectorAll('.wzeile').forEach(b => b.onclick = () => {
+  box.querySelectorAll('.wzeile[data-warnid]').forEach(b => b.onclick = () => {
+    const id = b.dataset.warnid, t = b.nextElementSibling, auf = !warnOffen.has(id);
+    if(auf) warnOffen.add(id); else warnOffen.delete(id);
+    b.setAttribute('aria-expanded', String(auf));
+    const w = dwdWarnungen().find(x => x.id === id);
+    t.innerHTML = auf && w ? warnTextHtml(w) : '';
+    t.hidden = !auf;
+  });
+  box.querySelectorAll('.wzeile[data-tag]').forEach(b => b.onclick = () => {
     const datum = b.dataset.tag, t = b.nextElementSibling, auf = !wetterOffen.has(datum);
     if(auf) wetterOffen.add(datum); else wetterOffen.delete(datum);
     b.setAttribute('aria-expanded', String(auf));
@@ -5257,6 +5513,749 @@ function setWetter(box){
       b.disabled = false; b.textContent = 'Aktuellen Standort übernehmen';
     }, {enableHighAccuracy:false, timeout:15000, maximumAge:10 * 60 * 1000});
   };
+  wetterEinstAnhaengen(box);
+  hinweisRegelnAnhaengen(box);
+}
+
+/* ---------- DWD über Bright Sky (v1.53) -------------------------------------
+   Zwei Anfragen, die zusammen mit dem Open-Meteo-Abruf laufen (beim Öffnen,
+   höchstens stündlich, nach einem Fehlschlag frühestens nach zehn Minuten):
+
+     /alerts   die amtlichen Warnungen des DWD für die Gemeinde des Standorts
+     /weather  die Messwerte der nächstgelegenen DWD-Station der letzten Tage
+
+   Bright Sky ist ein freier Dienst eines Einzelnen. Fällt er aus, bleibt alles
+   übrige unberührt: die Vorhersage kommt von Open-Meteo, die Vorschläge aus
+   v1.52 rechnen weiter. Gespeichert wird unter nwWetterDwd nur der letzte
+   Stand, nicht in der Sicherungsdatei.
+
+   Warnungen zeigt die App in allen vier Stufen, weil gerade Glätte und Frost
+   beim DWD meist Stufe 1 sind. Gezeigt wird nur, was noch nicht abgelaufen ist
+   und aus einem Stand der letzten 24 Stunden stammt – eine Warnung von
+   vorgestern ist keine Warnung mehr. */
+const DWD_TAGE = 3;
+const DWD_STUFE_NR = {minor:1, moderate:2, severe:3, extreme:4};
+const DWD_STUFE_TEXT = {minor:'Stufe 1', moderate:'Stufe 2 · markantes Wetter',
+  severe:'Stufe 3 · Unwetter', extreme:'Stufe 4 · extremes Unwetter'};
+let DWD = Store.get('nwWetterDwd', null);
+let dwdLaeuft = false;
+function dwdDaten(){
+  const o = CFG.wetter;
+  return o && DWD && DWD.ort === wetterOrtKey(o) && DWD.abgerufen ? DWD : null;
+}
+async function dwdAbrufen(sofort = false){
+  const o = CFG.wetter;
+  if(!o || dwdLaeuft || !listeGebaut) return;
+  const jetzt = Date.now(), d = dwdDaten();
+  const hier = DWD && DWD.ort === wetterOrtKey(o) ? DWD : null;
+  if(!sofort){
+    if(d && jetzt - d.abgerufen < WETTER_TAKT) return;
+    if(hier && hier.fehler && hier.versuch && jetzt - hier.versuch < WETTER_WIEDER) return;
+  }
+  dwdLaeuft = true;
+  if(current === 'wetter') renderWetter();
+  const lat = (+o.lat).toFixed(4), lon = (+o.lon).toFixed(4);
+  const ab = new Date(); ab.setDate(ab.getDate() - DWD_TAGE);
+  const halt = new AbortController(), uhr = setTimeout(() => halt.abort(), 20000);
+  const hol = async url => {
+    const r = await fetch(url, {signal:halt.signal, cache:'no-store'});
+    const j = await r.json().catch(() => null);
+    if(!r.ok || !j) throw new Error(j && j.detail ? j.detail : 'Antwort ' + r.status);
+    return j;
+  };
+  try{
+    const [wa, me] = await Promise.all([
+      hol(`https://api.brightsky.dev/alerts?lat=${lat}&lon=${lon}`),
+      hol(`https://api.brightsky.dev/weather?lat=${lat}&lon=${lon}&date=${isoTag(ab)}`
+        + `&last_date=${encodeURIComponent(new Date().toISOString())}`)
+    ]);
+    /* Nur wirkliche Warnungen, keine Testmeldungen. */
+    const warn = (Array.isArray(wa.alerts) ? wa.alerts : [])
+      .filter(a => !a.status || a.status === 'actual')
+      .map(a => ({id:a.alert_id || String(a.id), ereignis:a.event_de || a.event_en || '',
+        kopf:a.headline_de || a.headline_en || '', text:a.description_de || '',
+        hinweis:a.instruction_de || '', stufe:a.severity || '',
+        beginn:Date.parse(a.onset) || 0, ende:Date.parse(a.expires) || 0}));
+    /* Aus den Stunden nur, was die Regeln und die Wetterseite brauchen – und
+       nur Gemessenes: wo die Station nichts geliefert hat, füllt Bright Sky mit
+       der Vorhersage auf, und die steht schon von Open-Meteo in der App. */
+    const quellen = {};
+    (Array.isArray(me.sources) ? me.sources : []).forEach(s => { quellen[s.id] = s; });
+    const stunden = (Array.isArray(me.weather) ? me.weather : []).filter(r => {
+      const q = quellen[r.source_id];
+      return q && q.observation_type !== 'forecast';
+    }).map(r => ({t:Date.parse(r.timestamp), mm:r.precipitation, boe:r.wind_gust_speed,
+      temp:r.temperature, lage:r.condition || ''}));
+    const nah = Object.values(quellen).filter(s => s.observation_type !== 'forecast')
+      .sort((a, b) => (a.distance || 0) - (b.distance || 0))[0];
+    DWD = {ort:wetterOrtKey(o), abgerufen:Date.now(), versuch:Date.now(), fehler:'',
+      gemeinde:(wa.location && (wa.location.name_short || wa.location.name)) || '',
+      station:nah ? {name:nah.station_name || '', km:Math.round((nah.distance || 0) / 1000)} : null,
+      warn, stunden};
+  }catch(e){
+    const grund = e.name === 'AbortError' ? 'keine Antwort'
+                : navigator.onLine === false || e instanceof TypeError ? 'keine Verbindung'
+                : String(e.message || e);
+    DWD = Object.assign({}, hier || {ort:wetterOrtKey(o)}, {versuch:Date.now(), fehler:grund});
+  }finally{
+    clearTimeout(uhr);
+    dwdLaeuft = false;
+  }
+  Store.set('nwWetterDwd', DWD);
+  listeNachziehen();
+  if(current === 'wetter') renderWetter();
+}
+/* Was jetzt gilt: noch nicht abgelaufen, aus einem frischen Stand, das
+   Schwerste zuerst. */
+function dwdWarnungen(){
+  const d = dwdDaten();
+  if(!d || !Array.isArray(d.warn) || Date.now() - d.abgerufen > TAG_MS) return [];
+  const jetzt = Date.now();
+  return d.warn.filter(w => !w.ende || w.ende > jetzt)
+    .sort((a, b) => (DWD_STUFE_NR[b.stufe] || 0) - (DWD_STUFE_NR[a.stufe] || 0)
+                 || (a.beginn || 0) - (b.beginn || 0));
+}
+/* „heute 19:00“, „morgen 07:00“, „Fr 07:00“. */
+function warnZeitpunkt(ms){
+  const t = new Date(ms), tage = Math.round((tagAnfang(t) - tagAnfang(new Date())) / TAG_MS);
+  const tag = tage === 0 ? 'heute' : tage === 1 ? 'morgen' : `${WOCHENTAG[t.getDay()]} ${ttmm(t)}`;
+  return `${tag} ${uhrText(ms)}`;
+}
+function warnZeitraum(w){
+  const jetzt = Date.now();
+  if(w.beginn && w.beginn > jetzt) return `ab ${warnZeitpunkt(w.beginn)}`;
+  return w.ende ? `bis ${warnZeitpunkt(w.ende)}` : 'bis auf Weiteres';
+}
+/* Die Karte ganz oben auf der Startseite, wie die Sicherungserinnerung. */
+function warnKarte(){
+  const l = dwdWarnungen();
+  if(!l.length) return '';
+  const w = l[0];
+  return `<div class="card warnKarte" data-warn="1">
+    <div class="eyebrow" style="margin:0 0 6px">Amtliche Warnung · DWD</div>
+    <p style="margin:0 0 4px"><b>${esc(w.kopf || w.ereignis || 'Warnung')}</b></p>
+    <p class="muted small" style="margin:0">${esc([DWD_STUFE_TEXT[w.stufe] || '', warnZeitraum(w),
+      l.length > 1 ? `${l.length - 1} weitere` : ''].filter(Boolean).join(' · '))}</p>
+  </div>`;
+}
+/* Die Messwerte je Tag: Summe des Niederschlags und stärkste Böe. */
+function dwdTagWerte(){
+  const d = dwdDaten(), nach = {};
+  if(!d || !Array.isArray(d.stunden)) return nach;
+  d.stunden.forEach(s => {
+    const datum = isoTag(new Date(s.t));
+    const e = nach[datum] || (nach[datum] = {mm:0, boe:null, stunden:0});
+    if(endlich(s.mm)) e.mm += s.mm;
+    if(endlich(s.boe)) e.boe = Math.max(e.boe == null ? -1 : e.boe, s.boe);
+    e.stunden++;
+  });
+  return nach;
+}
+
+/* ---------- Wetterprofile und Tagesvorschläge (v1.52) -----------------------
+   Eine eigene Aufgabe kann ein Wetterprofil tragen (a.wetter: 'dach' oder
+   'aussen'). Dann bewertet die App jeden Arbeitstag vom Beginn (heute oder dem
+   Beginn des Zeitraums) bis zum Ende halbtagsweise – soweit die Vorhersage
+   reicht. Ist das Ende schon vorbei, bis zum Ende der Vorhersage: auch für
+   Überfälliges ist ein guter Tag eine Hilfe.
+
+   Jedes Merkmal ergibt gut (2), geht (1) oder ungünstig (0); der schlechteste
+   Wert zählt, genannt werden die Gründe dieser Stufe. Geprüft wird in der
+   Reihenfolge ihres Gewichts, damit der erste Grund der wichtigste ist:
+   Gewitter, Glätte, Schnee, Regen, Nässe von vorher, Temperatur, Wind.
+
+   Halbtage und Grenzwerte stehen in CFG.wetterEinst und reisen mit der
+   Sicherung; fehlt ein Wert, gilt der ab Werk. Nicht bei CFG.wetter, weil das
+   mit dem Standort gelöscht wird.
+
+   Bewertet wird nur mit einem Stand, der höchstens drei Tage alt ist; ab zwölf
+   Stunden steht sein Alter dabei. */
+const WETTER_PROFILE = [['dach', 'Dach'], ['aussen', 'Außenbereich']];
+const WETTER_EINST_STD = {vormVon:7, vormBis:12, nachmBis:16, profile:{
+  dach:  {tGutMin:15, tGutMax:25, tGehtMin:8, tGehtMax:28, boeGut:30, boeGeht:45, regenGeht:0,   trockenGut:6, trockenGeht:3},
+  aussen:{tGutMin:10, tGutMax:27, tGehtMin:0, tGehtMax:32, boeGut:45, boeGeht:60, regenGeht:0.5, trockenGut:0, trockenGeht:0}}};
+const WETTER_NASS = 0.1;                 // mm je Stunde: darunter gilt eine Stunde als trocken
+const WETTER_ALT_HINWEIS = 12 * 60 * 60 * 1000, WETTER_ALT_AUS = 3 * TAG_MS;
+const profilName = k => (WETTER_PROFILE.find(p => p[0] === k) || [k, k])[1];
+const endlich = v => typeof v === 'number' && isFinite(v);
+function wetterEinst(){
+  const e = CFG.wetterEinst || {}, s = WETTER_EINST_STD;
+  return {vormVon: endlich(e.vormVon) ? e.vormVon : s.vormVon,
+          vormBis: endlich(e.vormBis) ? e.vormBis : s.vormBis,
+          nachmBis: endlich(e.nachmBis) ? e.nachmBis : s.nachmBis};
+}
+function wetterProfil(k){
+  const eigen = ((CFG.wetterEinst || {}).profile || {})[k] || {}, p = Object.assign({}, WETTER_EINST_STD.profile[k]);
+  Object.keys(p).forEach(f => { if(endlich(eigen[f])) p[f] = eigen[f]; });
+  return p;
+}
+/* Stunde → Stelle in den Reihen; einmal je Stand gebaut. */
+let wetterIdxFuer = null, wetterIdx = null;
+function wetterIndex(d){
+  if(wetterIdxFuer !== d){
+    wetterIdx = new Map();
+    d.zeit.forEach((t, i) => wetterIdx.set(String(t).slice(0, 13), i));
+    wetterIdxFuer = d;
+  }
+  return wetterIdx;
+}
+const WMO_GEWITTER = [95, 96, 99], WMO_EIS = [56, 57, 66, 67], WMO_SCHNEE = [71, 73, 75, 77, 85, 86];
+/* Ein Halbtag: Stunden [von, bis) eines Datums, am heutigen Tag erst ab der
+   nächsten vollen Stunde. Unter zwei Stunden oder mit Lücken in den Daten gibt
+   es keine Bewertung. */
+function halbtagBewerten(d, datum, von, bis, p){
+  const map = wetterIndex(d), idx = [];
+  for(let h = von; h < bis; h++){
+    const i = map.get(`${datum}T${String(h).padStart(2, '0')}`);
+    if(i == null) return null;
+    idx.push(i);
+  }
+  if(idx.length < 2) return null;
+  const wert = (k, i) => { const v = (d.w[k] || [])[i]; return endlich(v) ? v : null; };
+  const reihe = k => idx.map(i => wert(k, i)).filter(v => v !== null);
+  let stufe = 2, gruende = [];
+  const setze = (s, g) => {
+    if(s < stufe){ stufe = s; gruende = [g]; }
+    else if(s === stufe && s < 2 && !gruende.includes(g)) gruende.push(g);
+  };
+  const codes = reihe('weather_code');
+  if(codes.some(c => WMO_GEWITTER.includes(c))) setze(0, 'Gewitter');
+  /* Glätte: gefrierender Regen laut Wetterlage, oder Nässe der letzten drei
+     Stunden bei Luft um den Gefrierpunkt und gefrorenem Boden. */
+  const glatt = codes.some(c => WMO_EIS.includes(c)) || idx.some(i => {
+    const t = wert('temperature_2m', i), b = wert('soil_temperature_0cm', i);
+    if(t === null || b === null || t > 1 || b > 0) return false;
+    for(let k = Math.max(0, i - 3); k <= i; k++) if((wert('precipitation', k) || 0) >= WETTER_NASS) return true;
+    return false;
+  });
+  if(glatt) setze(0, 'Glätte');
+  /* Schnee steckt auch in der Niederschlagsmenge – dann nicht noch „Regen“. */
+  const schnee = reihe('snowfall').some(v => v > 0) || codes.some(c => WMO_SCHNEE.includes(c));
+  if(schnee) setze(0, 'Schnee');
+  const regen = reihe('precipitation'), maxRegen = regen.length ? Math.max(...regen) : 0;
+  if(schnee){ /* schon bewertet */ }
+  else if(maxRegen >= WETTER_NASS){
+    if(p.regenGeht > 0 && maxRegen <= p.regenGeht) setze(1, 'leichter Regen');
+    else setze(0, 'Regen');
+  }else if(p.trockenGut > 0){
+    /* Wie lange es vor dem Halbtag schon trocken ist – bis 24 Stunden zurück. */
+    let trocken = 0;
+    for(let k = idx[0] - 1; k >= 0 && trocken < 24; k--){
+      if((wert('precipitation', k) || 0) >= WETTER_NASS) break;
+      trocken++;
+    }
+    if(trocken < p.trockenGut) setze(trocken >= p.trockenGeht ? 1 : 0, trocken >= p.trockenGeht ? 'noch feucht' : 'nass');
+  }
+  const gef = reihe('apparent_temperature').length ? reihe('apparent_temperature') : reihe('temperature_2m');
+  if(gef.length){
+    const hoch = Math.max(...gef), tief = Math.min(...gef);
+    if(hoch > p.tGehtMax) setze(0, 'zu heiß'); else if(hoch > p.tGutMax) setze(1, 'warm');
+    if(tief < p.tGehtMin) setze(0, 'zu kalt'); else if(tief < p.tGutMin) setze(1, 'kühl');
+  }
+  const boe = reihe('wind_gusts_10m');
+  if(boe.length){
+    const m = Math.max(...boe);
+    if(m > p.boeGeht) setze(0, 'windig'); else if(m > p.boeGut) setze(1, 'etwas windig');
+  }
+  return {stufe, gruende};
+}
+/* Die Bewertung einer Aufgabe. fehlt: 'ort' | 'daten' | 'alt', sonst die Tage
+   mit ihren Halbtagen, der erste gute und der beste Halbtag. */
+function aufgWetter(a){
+  if(!a || !a.wetter || a.art === 'mangel' || a.erledigt || !WETTER_EINST_STD.profile[a.wetter]) return null;
+  if(!CFG.wetter) return {fehlt:'ort'};
+  const d = wetterDaten();
+  if(!d) return {fehlt:'daten'};
+  if(Date.now() - d.abgerufen > WETTER_ALT_AUS) return {fehlt:'alt', stand:d.abgerufen};
+  const p = wetterProfil(a.wetter), e = wetterEinst();
+  const jetzt = new Date(), heute0 = tagAnfang(jetzt);
+  const letzter = alsDatum(String(d.zeit[d.zeit.length - 1]).slice(0, 10));
+  const von = zeitraumVon(a);
+  const start = von && alsDatum(von) > heute0 ? alsDatum(von) : heute0;
+  let ende = a.frist ? alsDatum(a.frist) : letzter;
+  if(ende < heute0 || ende > letzter) ende = letzter;
+  const abJetzt = jetzt.getHours() + (jetzt.getMinutes() || jetzt.getSeconds() ? 1 : 0);
+  const tage = [];
+  for(let t = new Date(start); t <= ende; t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)){
+    if(freiGrund(t)) continue;
+    const datum = isoTag(t), versatz = Math.round((t - heute0) / TAG_MS);
+    const teile = [['vorm', e.vormVon, e.vormBis], ['nachm', e.vormBis, e.nachmBis]].map(([teil, v, b]) => {
+      const ab = versatz === 0 ? Math.max(v, abJetzt) : v;
+      if(b - ab < 2) return null;
+      const r = halbtagBewerten(d, datum, ab, b, p);
+      return r && Object.assign(r, {teil, datum, t:new Date(t), versatz});
+    }).filter(Boolean);
+    if(teile.length) tage.push({datum, t:new Date(t), versatz, teile});
+  }
+  const alle = tage.flatMap(tg => tg.teile);
+  const bestesStufe = alle.length ? Math.max(...alle.map(h => h.stufe)) : -1;
+  return {tage, stand:d.abgerufen, beginntSpaeter: start > letzter,
+          erstGut: alle.find(h => h.stufe === 2) || null,
+          bestes: alle.find(h => h.stufe === bestesStufe) || null};
+}
+const TEIL_KURZ = {vorm:'vorm.', nachm:'nachm.'};
+function halbtagText(h){
+  const tag = h.versatz === 0 ? 'heute' : h.versatz === 1 ? 'morgen' : h.versatz === 2 ? 'übermorgen'
+            : `${WOCHENTAG[h.t.getDay()]} ${ttmm(h.t)}`;
+  return `${tag} ${TEIL_KURZ[h.teil]}`;
+}
+/* Die Angabe in der kleinen Zeile der Liste. Knapp ist ein Termin in höchstens
+   14 Tagen oder ein schon verstrichener. Was sonst noch dazugehört – Stufe,
+   Tendenz, Alter des Stands – steht gesammelt in einer Klammer. */
+function wetterListenText(r, a){
+  if(!r || r.fehlt || !r.tage.length) return '';
+  const alt = Date.now() - r.stand > WETTER_ALT_HINWEIS ? 'Stand ' + wetterWann(r.stand) : '';
+  const klammer = l => { l = l.filter(Boolean); return l.length ? ` (${l.join(', ')})` : ''; };
+  const tend = h => tendenzText(h.versatz);
+  if(r.erstGut) return `Wetter gut: ${halbtagText(r.erstGut)}${klammer([tend(r.erstGut), alt])}`;
+  const knapp = a.frist && Math.round((alsDatum(a.frist) - tagAnfang(new Date())) / TAG_MS) <= 14;
+  if(knapp && r.bestes)
+    return `bestes Wetter: ${halbtagText(r.bestes)}${klammer([r.bestes.stufe === 1 ? 'geht' : 'ungünstig', tend(r.bestes), alt])}`;
+  return 'kein gutes Wetter in Sicht' + klammer([alt]);
+}
+/* Die Karte auf der Aufgabenseite. */
+function aufgWetterKarteHtml(a){
+  const r = aufgWetter(a);
+  if(!r) return '';
+  const i = info('Bewertet wird jeder Arbeitstag vormittags und nachmittags bis zum Ende des Termins, soweit die Vorhersage reicht. Fett: gut. Die Grenzwerte und die Halbtage stehen unter Einstellungen › Wetter.', 'margin:-2px 0 8px');
+  let inhalt, knoepfe = '';
+  if(r.fehlt === 'ort'){
+    inhalt = `<p class="muted small" style="margin:0">Noch kein Standort festgelegt.</p>`;
+    knoepfe = `<button class="btn ghost klein" data-wort="1" style="margin-top:10px">Standort festlegen</button>`;
+  }else if(r.fehlt === 'daten'){
+    inhalt = `<p class="muted small" style="margin:0">${wetterLaeuft ? 'Wetterdaten werden abgerufen …' : 'Noch keine Wetterdaten.'}</p>`;
+  }else if(r.fehlt === 'alt'){
+    inhalt = `<p class="muted small" style="margin:0">Der letzte Wetterstand ist von ${esc(wetterWann(r.stand))} – für Vorschläge zu alt.</p>`;
+  }else if(!r.tage.length){
+    inhalt = `<p class="muted small" style="margin:0">${r.beginntSpaeter
+      ? 'Der Zeitraum beginnt erst nach dem Ende der Vorhersage.'
+      : 'Bis zum Termin gibt es keinen Arbeitstag mit Vorhersage.'}</p>`;
+  }else{
+    inhalt = r.tage.map(tg => `<div class="wbzeile"><span class="wbdat">${esc(WOCHENTAG[tg.t.getDay()])} ${esc(ttmm(tg.t))}${
+      tendenzText(tg.versatz) ? `<small>${esc(tendenzText(tg.versatz))}</small>` : ''}</span><span class="wbteile">${
+      tg.teile.map(h => `<span class="wb st${h.stufe}">${esc(TEIL_KURZ[h.teil])} ${esc(
+        h.stufe === 2 ? 'gut' : h.stufe === 1 ? 'geht (' + h.gruende.slice(0, 2).join(', ') + ')' : h.gruende.slice(0, 2).join(', '))}</span>`).join('')}</span></div>`).join('')
+      + `<p class="muted small" style="margin:8px 0 0">Stand ${esc(wetterWann(r.stand))}</p>`;
+  }
+  if(r.fehlt !== 'ort') knoepfe = `<button class="btn ghost klein" data-wseite="1" style="margin-top:10px">Wetterseite</button>`;
+  return `<div class="card"><div class="eyebrow mitInfo" style="margin:0 0 6px">Wetter · ${esc(profilName(a.wetter))} ${i.knopf}</div>${i.text}${inhalt}${knoepfe}</div>`;
+}
+function aufgWetterKarteBinden(box){
+  const s = box.querySelector('[data-wseite]');
+  if(s) s.onclick = () => { go('wetter'); wetterAbrufen(); };
+  const o = box.querySelector('[data-wort]');
+  if(o) o.onclick = () => setOeffnen('wetter');
+}
+/* Nach einem Abruf nur die Karte erneuern – die übrige Aufgabenseite bleibt
+   stehen, sonst risse ein Neuaufbau eine offene Tastatur weg. */
+function aufgWetterKarteAuffrischen(){
+  const k = $('#aufgWetterKarte');
+  if(current !== 'aufgabe' || !k || !aufgAktiv) return;
+  k.innerHTML = aufgWetterKarteHtml(aufgAktiv);
+  aufgWetterKarteBinden(k);
+}
+
+/* Einstellungen › Wetter, unter dem Standort: Halbtage und die Grenzwerte der
+   Profile. Gesichert wird beim Verlassen eines Feldes; was sich nicht lesen
+   lässt, springt auf den gespeicherten Wert zurück. */
+const WG_FELDER = [
+  ['gefühlt gut',   ['tGutMin', 'tGutMax'], '°C'],
+  ['gefühlt geht',  ['tGehtMin', 'tGehtMax'], '°C'],
+  ['Böen gut bis',  ['boeGut'], 'km/h'],
+  ['Böen geht bis', ['boeGeht'], 'km/h'],
+  ['Regen geht bis', ['regenGeht'], 'mm/h'],
+  ['trocken vorher gut ab', ['trockenGut'], 'h'],
+  ['trocken vorher geht ab', ['trockenGeht'], 'h']];
+const wgZahl = v => { const x = parseFloat(String(v).trim().replace(',', '.')); return isFinite(x) ? x : null; };
+const wgText = v => String(v).replace('.', ',');
+function wetterEinstAnhaengen(box){
+  const e = wetterEinst();
+  const iHalb = info('Jeder Arbeitstag wird vormittags und nachmittags bewertet; der Nachmittag beginnt, wo der Vormittag endet. Von einem heutigen Halbtag müssen noch mindestens zwei volle Stunden übrig sein.', 'margin:-2px 0 10px');
+  /* Temperaturen als Zahlenfeld: dessen Tastatur hat auf dem iPhone ein Minus,
+     die Dezimaltastatur nicht. Die übrigen Werte sind nie negativ und dürfen ein
+     Komma tragen. */
+  const feld = (attr, wert) => /data-p="t/.test(attr)
+    ? `<input type="number" step="any" ${attr} value="${esc(wert)}" autocomplete="off">`
+    : `<input type="text" inputmode="decimal" ${attr} value="${esc(wgText(wert))}" autocomplete="off">`;
+  let html = `<div class="eyebrow mitInfo">Halbtage ${iHalb.knopf}</div>${iHalb.text}
+    <div class="card wgKarte">
+      <div class="wgZeile"><span>Vormittag</span><span class="wgWerte">${feld('data-e="vormVon"', e.vormVon)} bis ${feld('data-e="vormBis"', e.vormBis)} Uhr</span></div>
+      <div class="wgZeile"><span>Nachmittag</span><span class="wgWerte">bis ${feld('data-e="nachmBis"', e.nachmBis)} Uhr</span></div>
+    </div>`;
+  WETTER_PROFILE.forEach(([k, name]) => {
+    const p = wetterProfil(k);
+    const iP = info('Temperatur ist die gefühlte. Außerhalb von „gut“, aber innerhalb von „geht“ gilt ein Halbtag als „geht“, darüber hinaus als ungünstig. „Regen geht bis 0“ heißt: jeder Regen ist ungünstig. „Trocken vorher 0“ heißt: egal. Gewitter, Schnee und Glätte sind immer ungünstig.', 'margin:-2px 0 10px');
+    html += `<div class="eyebrow mitInfo">Profil ${esc(name)} ${iP.knopf}</div>${iP.text}
+      <div class="card wgKarte" data-prof="${k}">${
+        WG_FELDER.map(([titel, felder, einheit]) => `<div class="wgZeile"><span>${esc(titel)}</span><span class="wgWerte">${
+          felder.map(f => feld(`data-p="${f}"`, p[f])).join(' bis ')} ${esc(einheit)}</span></div>`).join('')}
+        <div class="knopfzeile" style="margin-top:10px"><button class="btn ghost klein" data-std="${k}">Werkseinstellung</button></div>
+      </div>`;
+  });
+  box.insertAdjacentHTML('beforeend', html);
+  const einst = () => (CFG.wetterEinst = CFG.wetterEinst || {});
+  box.querySelectorAll('[data-e]').forEach(f => f.onchange = () => {
+    const neu = Object.assign(wetterEinst(), {[f.dataset.e]: wgZahl(f.value)});
+    const ganz = ['vormVon', 'vormBis', 'nachmBis'].every(x => Number.isInteger(neu[x]) && neu[x] >= 0 && neu[x] <= 24);
+    if(!ganz || !(neu.vormVon < neu.vormBis && neu.vormBis < neu.nachmBis)){
+      toast('Halbtage passen so nicht zusammen');
+      f.value = wgText(wetterEinst()[f.dataset.e]);
+      return;
+    }
+    Object.assign(einst(), {vormVon:neu.vormVon, vormBis:neu.vormBis, nachmBis:neu.nachmBis});
+    saveCfg();
+  });
+  box.querySelectorAll('[data-prof]').forEach(karte => {
+    const k = karte.dataset.prof;
+    karte.querySelectorAll('[data-p]').forEach(f => f.onchange = () => {
+      const x = wgZahl(f.value);
+      if(x === null || (f.dataset.p !== 'tGutMin' && f.dataset.p !== 'tGutMax'
+         && f.dataset.p !== 'tGehtMin' && f.dataset.p !== 'tGehtMax' && x < 0)){
+        toast('Bitte eine Zahl eintragen');
+        const alt = wetterProfil(k)[f.dataset.p];
+        f.value = f.type === 'number' ? String(alt) : wgText(alt);
+        return;
+      }
+      const e0 = einst(); e0.profile = e0.profile || {};
+      e0.profile[k] = Object.assign({}, e0.profile[k], {[f.dataset.p]: x});
+      f.value = f.type === 'number' ? String(x) : wgText(x);
+      saveCfg();
+    });
+    karte.querySelector('[data-std]').onclick = () =>
+      frage('Werkseinstellung', `Die Grenzwerte für ${profilName(k)} werden auf die Werte ab Werk zurückgesetzt.`, 'Zurücksetzen', () => {
+        const e0 = einst();
+        if(e0.profile) delete e0.profile[k];
+        saveCfg(); setWetter(box);
+      });
+  });
+}
+
+/* ---------- Wetter-Hinweise (v1.54) -----------------------------------------
+   Regeln, die aus dem Wetter einen Vorschlag machen. Ein Vorschlag ist noch
+   keine Aufgabe: er steht auf der Startseite unter „Wetter-Hinweise“ und wird
+   erst durch „Übernehmen“ zu einer eigenen Aufgabe – mit Wichtigkeit, Termin,
+   Wetterprofil und dem Grund als Notiz.
+
+   Geprüft wird gegen die Vorhersage von Open-Meteo, die Messwerte der
+   DWD-Station und die amtlichen Warnungen. Wo beides vorliegt, zählt der höhere
+   Wert: eine Station 15 km entfernt verpasst einen Guss ebenso leicht wie das
+   Modell.
+
+   Ein Ereignis ergibt einen Vorschlag. Auslöser, die weniger als 24 Stunden
+   auseinanderliegen, gehören zu einem Ereignis; sein erster Tag benennt es.
+   Vorschläge aus einer Warnung tragen deren Kennung, sie bleiben also derselbe
+   Vorschlag, solange die Warnung gilt. Beantwortet wird jeder Vorschlag genau
+   einmal; unbeantwortete zu vergangenem Wetter verschwinden nach drei Tagen,
+   solche zu angekündigtem, sobald es vorbei ist. Ist aus derselben Regel noch
+   eine Aufgabe offen, schweigt die Regel.
+
+   Gemerkt wird unter nwHinweise nur, was beantwortet oder zuerst gesehen wurde;
+   der Rest rechnet sich jedes Mal neu aus den Wetterdaten. */
+const HINWEIS_STD = [
+  {k:'regen', name:'Starkregen', art:'war', titel:'Dachentwässerung und Abläufe kontrollieren',
+   wichtig:'normal', fristArt:'tage', tage:3, profil:'dach',
+   werte:[['mm24', 'mm in 24 Stunden', 25], ['mm1', 'mm in einer Stunde', 15]]},
+  {k:'sturmWar', name:'Sturm (vorbei)', art:'war', titel:'Dach, Dachlüfter und Außenanlagen auf Schäden prüfen',
+   wichtig:'hoch', fristArt:'tage', tage:2, profil:'dach',
+   werte:[['boe', 'km/h Böen', 75]]},
+  {k:'sturmKommt', name:'Sturm (angekündigt)', art:'kommt', titel:'Lose Teile im Außenbereich sichern',
+   wichtig:'hoch', fristArt:'vorher', tage:0, profil:'',
+   werte:[['boe', 'km/h Böen', 75]]},
+  {k:'glaette', name:'Glätte', art:'kommt', titel:'Verkehrsflächen kontrollieren, ggf. streuen',
+   wichtig:'hoch', fristArt:'heute', tage:0, profil:'', werte:[]},
+  {k:'schnee', name:'Schnee', art:'kommt', titel:'Räumen und streuen',
+   wichtig:'hoch', fristArt:'heute', tage:0, profil:'',
+   werte:[['cm', 'cm Neuschnee in 24 Stunden', 3]]},
+  {k:'hagel', name:'Hagel', art:'war', titel:'Lichtkuppeln und Dach auf Hagelschäden prüfen',
+   wichtig:'normal', fristArt:'tage', tage:3, profil:'dach', werte:[]},
+  {k:'frost', name:'Erster Frost', art:'kommt', titel:'Außenwasserhähne und frostgefährdete Leitungen prüfen',
+   wichtig:'normal', fristArt:'vorher', tage:0, profil:'',
+   werte:[['grad', '°C Tiefstwert', 0]]}
+];
+const HINWEIS_WEG = 3 * TAG_MS;              // unbeantwortet zu vergangenem Wetter
+const FROST_RUHE = 30 * TAG_MS;              // so lange frostfrei, dann gilt Frost als „erster“
+let HINWEISE = Store.get('nwHinweise', {});
+const hinweisStd = k => HINWEIS_STD.find(r => r.k === k);
+function hinweisRegel(k){
+  const std = hinweisStd(k), eigen = (CFG.wetterRegeln || {})[k] || {};
+  const r = Object.assign({}, std, {werte:std.werte.map(w => w.slice())});
+  if(typeof eigen.aus === 'boolean') r.aus = eigen.aus;
+  ['titel', 'wichtig', 'profil'].forEach(f => { if(typeof eigen[f] === 'string') r[f] = eigen[f]; });
+  if(endlich(eigen.tage)) r.tage = eigen.tage;
+  r.werte.forEach(w => { if(eigen[w[0]] != null && endlich(+eigen[w[0]])) w[2] = +eigen[w[0]]; });
+  r.wert = f => (r.werte.find(w => w[0] === f) || [0, '', 0])[2];
+  return r;
+}
+/* Die Stundenreihen, gegen die geprüft wird. */
+function hinweisReihen(){
+  const d = wetterDaten(), dwd = dwdDaten();
+  const modell = d ? d.zeit.map((z, i) => ({
+    t: alsDatum(String(z).slice(0, 10)).getTime() + (+String(z).slice(11, 13)) * 3600000,
+    mm: (d.w.precipitation || [])[i], cm: (d.w.snowfall || [])[i], boe: (d.w.wind_gusts_10m || [])[i],
+    code: (d.w.weather_code || [])[i], temp: (d.w.temperature_2m || [])[i]})) : [];
+  const mess = dwd && Array.isArray(dwd.stunden) ? dwd.stunden.slice() : [];
+  return {modell, mess, warn: dwdWarnungen()};
+}
+/* Größte Summe über 24 Stunden und deren Ende. */
+function summe24(reihe, feld, bis){
+  let best = 0, wann = 0;
+  reihe.forEach((s, i) => {
+    if(s.t > bis) return;
+    let sum = 0;
+    for(let k = i; k >= 0 && s.t - reihe[k].t < TAG_MS; k--) if(endlich(reihe[k][feld])) sum += reihe[k][feld];
+    if(sum > best){ best = sum; wann = s.t; }
+  });
+  return {wert:best, t:wann};
+}
+const tagWort = ms => {
+  const t = new Date(ms), v = Math.round((tagAnfang(t) - tagAnfang(new Date())) / TAG_MS);
+  return v === 0 ? 'heute' : v === 1 ? 'morgen' : v === 2 ? 'übermorgen' : v === -1 ? 'gestern'
+       : v === -2 ? 'vorgestern' : `${WOCHENTAG[t.getDay()]} ${ttmm(t)}`;
+};
+/* Aus den Zeitpunkten der Auslöser das jüngste Ereignis: rückwärts, bis eine
+   Lücke von 24 Stunden kommt. Zurück kommt sein erster Zeitpunkt. */
+function ereignisBeginn(zeiten){
+  const l = zeiten.filter(Boolean).sort((a, b) => a - b);
+  if(!l.length) return 0;
+  let start = l[l.length - 1];
+  for(let i = l.length - 1; i > 0; i--){
+    if(start - l[i - 1] >= TAG_MS) break;
+    start = l[i - 1];
+  }
+  return start;
+}
+const warnPasst = (w, muster) => muster.test(`${w.ereignis || ''} ${w.kopf || ''}`.toUpperCase());
+/* Jede Regel liefert entweder nichts oder {schluessel, zeit, grund}. */
+function hinweisPruefen(r, reihen){
+  const {modell, mess, warn} = reihen, jetzt = Date.now();
+  const vorbei = s => s.t <= jetzt, kommend = (s, h) => s.t > jetzt && s.t <= jetzt + h * 3600000;
+  const warnTreffer = muster => warn.find(w => warnPasst(w, muster));
+  if(r.k === 'regen'){
+    const grenz24 = r.wert('mm24'), grenz1 = r.wert('mm1');
+    const zeiten = [], teile = [];
+    [['Modell', modell], ['Station', mess]].forEach(([name, reihe]) => {
+      const s24 = summe24(reihe.filter(vorbei), 'mm', jetzt);
+      const s1 = reihe.filter(vorbei).reduce((a, s) => endlich(s.mm) && s.mm > a.mm ? {mm:s.mm, t:s.t} : a, {mm:0, t:0});
+      if(s24.wert >= grenz24){ zeiten.push(s24.t); teile.push(`${name} ${mmText(s24.wert)} mm in 24 h`); }
+      else if(s1.mm >= grenz1){ zeiten.push(s1.t); teile.push(`${name} ${mmText(s1.mm)} mm in einer Stunde`); }
+    });
+    const beginn = ereignisBeginn(zeiten);
+    if(!beginn) return null;
+    return {schluessel:`regen@${isoTag(new Date(beginn))}`, zeit:beginn,
+            grund:`${tagWort(beginn)}: ${teile.join(' · ')}`};
+  }
+  if(r.k === 'sturmWar'){
+    const grenz = r.wert('boe'), zeiten = [], teile = [];
+    [['Modell', modell], ['Station', mess]].forEach(([name, reihe]) => {
+      const m = reihe.filter(vorbei).reduce((a, s) => endlich(s.boe) && s.boe > a.boe ? {boe:s.boe, t:s.t} : a, {boe:0, t:0});
+      if(m.boe >= grenz){ zeiten.push(m.t); teile.push(`${name} ${Math.round(m.boe)} km/h`); }
+    });
+    const beginn = ereignisBeginn(zeiten);
+    if(!beginn) return null;
+    return {schluessel:`sturmWar@${isoTag(new Date(beginn))}`, zeit:beginn,
+            grund:`${tagWort(beginn)}: Böen ${teile.join(' · ')}`};
+  }
+  if(r.k === 'sturmKommt'){
+    const w = warnTreffer(/STURM|ORKAN|WINDB/);
+    if(w) return {schluessel:`sturmKommt@${w.id}`, zeit:w.beginn || jetzt,
+                  grund:`DWD: ${w.kopf || w.ereignis}, ${warnZeitraum(w)}`};
+    const grenz = r.wert('boe');
+    const m = modell.filter(s => kommend(s, 48)).reduce((a, s) => endlich(s.boe) && s.boe > a.boe ? {boe:s.boe, t:s.t} : a, {boe:0, t:0});
+    if(m.boe < grenz) return null;
+    return {schluessel:`sturmKommt@${isoTag(new Date(m.t))}`, zeit:m.t,
+            grund:`${tagWort(m.t)}: Böen bis ${Math.round(m.boe)} km/h vorhergesagt`};
+  }
+  if(r.k === 'glaette'){
+    const w = warnTreffer(/GLÄTTE|GLATTEIS|EISREGEN/);
+    if(w) return {schluessel:`glaette@${w.id}`, zeit:w.beginn || jetzt,
+                  grund:`DWD: ${w.kopf || w.ereignis}, ${warnZeitraum(w)}`};
+    const treffer = modell.filter(s => (kommend(s, 48) || jetzt - s.t < 12 * 3600000)
+      && WMO_EIS.includes(s.code));
+    if(!treffer.length) return null;
+    const t = treffer[0].t;
+    return {schluessel:`glaette@${isoTag(new Date(t))}`, zeit:t,
+            grund:`${tagWort(t)}: gefrierender Regen im Modell`};
+  }
+  if(r.k === 'schnee'){
+    const grenz = r.wert('cm');
+    const w = warnTreffer(/SCHNEE/);
+    if(w) return {schluessel:`schnee@${w.id}`, zeit:w.beginn || jetzt,
+                  grund:`DWD: ${w.kopf || w.ereignis}, ${warnZeitraum(w)}`};
+    const s = summe24(modell.filter(x => x.t > jetzt - TAG_MS && x.t < jetzt + 48 * 3600000), 'cm', jetzt + 48 * 3600000);
+    if(s.wert < grenz) return null;
+    return {schluessel:`schnee@${isoTag(new Date(s.t))}`, zeit:s.t,
+            grund:`${tagWort(s.t)}: ${mmText(s.wert)} cm Neuschnee in 24 h`};
+  }
+  if(r.k === 'hagel'){
+    const w = warnTreffer(/HAGEL/);
+    if(w) return {schluessel:`hagel@${w.id}`, zeit:w.beginn || jetzt,
+                  grund:`DWD: ${w.kopf || w.ereignis}, ${warnZeitraum(w)}`};
+    const treffer = modell.filter(s => s.t <= jetzt && jetzt - s.t < 2 * TAG_MS && (s.code === 96 || s.code === 99));
+    if(!treffer.length) return null;
+    const beginn = ereignisBeginn(treffer.map(s => s.t));
+    return {schluessel:`hagel@${isoTag(new Date(beginn))}`, zeit:beginn,
+            grund:`${tagWort(beginn)}: Gewitter mit Hagel im Modell`};
+  }
+  if(r.k === 'frost'){
+    const grenz = r.wert('grad');
+    /* Der letzte Frost wird fortgeschrieben, damit „erster Frost“ auch dann
+       stimmt, wenn die Vorhersage nur sieben Tage zurückreicht. */
+    const frueher = modell.filter(s => s.t <= jetzt && endlich(s.temp) && s.temp <= grenz);
+    let letzter = +Store.get('nwFrost', 0) || 0;
+    if(frueher.length){
+      const neu = Math.max(...frueher.map(s => s.t));
+      if(neu > letzter){ letzter = neu; Store.set('nwFrost', letzter); }
+    }
+    if(letzter && jetzt - letzter < FROST_RUHE) return null;
+    const kalt = modell.filter(s => kommend(s, 72) && endlich(s.temp) && s.temp <= grenz);
+    if(!kalt.length) return null;
+    const t = Math.min(...kalt.map(s => s.t));
+    return {schluessel:`frost@${isoTag(new Date(t))}`, zeit:t,
+            grund:`${tagWort(t)}: bis ${gradText(Math.min(...kalt.map(s => s.temp)))} °C, erster Frost seit Langem`};
+  }
+  return null;
+}
+/* Alle offenen Vorschläge. */
+function wetterHinweise(){
+  if(!CFG.wetter || !wetterDaten()) return [];
+  const reihen = hinweisReihen(), jetzt = Date.now(), raus = [];
+  HINWEIS_STD.forEach(std => {
+    const r = hinweisRegel(std.k);
+    if(r.aus) return;
+    if(AUFG.some(a => !a.erledigt && a.regel === r.k)) return;   // noch offen aus derselben Regel
+    const tr = hinweisPruefen(r, reihen);
+    if(!tr) return;
+    const stand = HINWEISE[tr.schluessel];
+    if(stand && stand.weg) return;
+    const gesehen = stand && stand.gesehen ? stand.gesehen : jetzt;
+    if(!stand || !stand.gesehen){
+      HINWEISE[tr.schluessel] = {gesehen};
+      Store.set('nwHinweise', HINWEISE);
+    }
+    if(r.art === 'war' && jetzt - gesehen > HINWEIS_WEG) return;
+    raus.push(Object.assign({}, tr, {regel:r}));
+  });
+  return raus;
+}
+function hinweisFrist(r, zeit){
+  if(r.fristArt === 'heute') return heute();
+  if(r.fristArt === 'vorher'){
+    const vor = isoTag(new Date(tagAnfang(new Date(zeit)).getTime() - TAG_MS));
+    return vor > heute() ? vor : heute();
+  }
+  return tagPlus(heute(), Math.max(0, Math.round(r.tage) || 0));
+}
+/* Die Karte auf der Startseite. */
+function hinweisKarte(liste){
+  if(!liste.length) return '';
+  return `<div class="card">
+    <div class="eyebrow" style="margin:0 0 6px">Wetter-Hinweise</div>
+    ${liste.map(h => `<div class="hzeile">
+      <p style="margin:0 0 2px"><b>${esc(h.regel.titel)}</b></p>
+      <p class="muted small" style="margin:0 0 8px">${esc(h.grund)}</p>
+      <div class="hknoepfe">
+        <button class="btn ghost klein" data-hja="${esc(h.schluessel)}">Übernehmen</button>
+        <button class="btn ghost klein" data-hnein="${esc(h.schluessel)}">Verwerfen</button>
+      </div></div>`).join('')}
+  </div>`;
+}
+function hinweisBeantwortet(schluessel, uebernommen){
+  HINWEISE[schluessel] = Object.assign({}, HINWEISE[schluessel], {weg:Date.now()});
+  /* Alte Einträge nicht ewig mitschleppen. */
+  const alt = Date.now() - 60 * TAG_MS;
+  Object.keys(HINWEISE).forEach(k => {
+    const e = HINWEISE[k];
+    if((e.weg || e.gesehen || 0) < alt) delete HINWEISE[k];
+  });
+  Store.set('nwHinweise', HINWEISE);
+  toast(uebernommen ? 'Aufgabe angelegt' : 'Hinweis verworfen');
+  renderHome();
+}
+function hinweisUebernehmen(h){
+  const r = h.regel;
+  const a = {id:neueId(), art:'eigen', quelle:'', k:'', anlage:'', punkt:'', titel:r.titel, text:'',
+    notiz:`Wetter-Hinweis: ${h.grund}`, zeitraum:'', festgestellt:'', angelegt:heute(),
+    frist:hinweisFrist(r, h.zeit), wichtig:r.wichtig, erneut:[], erledigt:'', vermerk:'',
+    regel:r.k, ereignis:h.schluessel};
+  if(r.profil) a.wetter = r.profil;
+  AUFG.push(a);
+  saveAufg();
+  hinweisBeantwortet(h.schluessel, true);
+}
+
+/* Einstellungen › Wetter › Ereignisregeln. Je Regel eine Unterseite mit
+   Schwellen, Text, Wichtigkeit, Termin und Profil. */
+function hinweisRegelnAnhaengen(box){
+  const i = info('Aus dem Wetter entstehen Vorschläge, keine Aufgaben: sie stehen auf der Startseite und werden erst mit „Übernehmen“ zu einer Aufgabe. Eine abgeschaltete Regel schlägt nichts mehr vor.', 'margin:-2px 0 10px');
+  box.insertAdjacentHTML('beforeend', `<div class="eyebrow mitInfo">Ereignisregeln ${i.knopf}</div>${i.text}`
+    + HINWEIS_STD.map(std => {
+        const r = hinweisRegel(std.k);
+        return `<button class="btn eintrag" data-regel="${std.k}"><span>${esc(r.name)}</span>${
+          r.aus ? '<span class="zahl">aus</span>' : ''}</button>`;
+      }).join(''));
+  box.querySelectorAll('[data-regel]').forEach(b => b.onclick = () => setOeffnen('wregel-' + b.dataset.regel));
+}
+function setRegel(box, k){
+  const r = hinweisRegel(k), std = hinweisStd(k);
+  const eigen = () => {
+    CFG.wetterRegeln = CFG.wetterRegeln || {};
+    CFG.wetterRegeln[k] = CFG.wetterRegeln[k] || {};
+    return CFG.wetterRegeln[k];
+  };
+  const fristText = r.fristArt === 'heute' ? 'Der Vorschlag wird für heute fällig.'
+    : r.fristArt === 'vorher' ? 'Der Vorschlag wird am Tag vor dem Ereignis fällig.' : '';
+  box.innerHTML = `
+    <div class="field segfeld"><span>Regel</span><div class="seg">
+      <button type="button" data-an="1" aria-pressed="${!r.aus}">Ein</button>
+      <button type="button" data-an="0" aria-pressed="${!!r.aus}">Aus</button></div></div>
+    <label class="field"><span>Aufgabe</span><input id="regTitel" value="${esc(r.titel)}"></label>
+    ${r.werte.length ? `<div class="eyebrow">Auslöser</div><div class="card wgKarte">${
+      r.werte.map(([f, text, wert]) => `<div class="wgZeile"><span>${esc(text)}</span><span class="wgWerte">
+        <input type="number" step="any" data-w="${f}" value="${esc(wert)}"></span></div>`).join('')}</div>`
+      : `<p class="muted small">Diese Regel hat keine Schwelle: sie folgt der amtlichen Warnung und der Wetterlage im Modell.</p>`}
+    <div class="field segfeld"><span>Wichtigkeit</span><div class="seg">${
+      [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']].map(([w, t]) =>
+        `<button type="button" data-wicht="${w}" aria-pressed="${r.wichtig === w}">${t}</button>`).join('')}</div></div>
+    ${r.fristArt === 'tage'
+      ? `<label class="field"><span>Termin in Tagen</span><input type="number" step="1" id="regTage" class="schmal" value="${esc(r.tage)}"></label>`
+      : `<p class="muted small">${esc(fristText)}</p>`}
+    <label class="field"><span>Wetterprofil</span>
+      <select id="regProfil"><option value="">– keines –</option>${
+        WETTER_PROFILE.map(([p, t]) => `<option value="${p}"${r.profil === p ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+    <div class="knopfzeile"><button class="btn ghost klein" id="regStd">Werkseinstellung</button></div>`;
+  box.querySelectorAll('[data-an]').forEach(b => b.onclick = () => {
+    eigen().aus = b.dataset.an === '0';
+    saveCfg(); setRegel(box, k);
+  });
+  $('#regTitel').onchange = e => {
+    const t = e.target.value.trim();
+    eigen().titel = t || std.titel;
+    e.target.value = t || std.titel;
+    saveCfg();
+  };
+  box.querySelectorAll('[data-w]').forEach(f => f.onchange = () => {
+    const x = parseFloat(String(f.value).replace(',', '.'));
+    if(!isFinite(x)){ toast('Bitte eine Zahl eintragen'); f.value = String(r.wert(f.dataset.w)); return; }
+    eigen()[f.dataset.w] = x;
+    f.value = String(x);
+    saveCfg();
+  });
+  box.querySelectorAll('[data-wicht]').forEach(b => b.onclick = () => {
+    eigen().wichtig = b.dataset.wicht;
+    saveCfg(); setRegel(box, k);
+  });
+  if($('#regTage')) $('#regTage').onchange = e => {
+    const x = Math.round(parseFloat(e.target.value));
+    if(!isFinite(x) || x < 0){ toast('Bitte eine Zahl ab 0 eintragen'); e.target.value = String(r.tage); return; }
+    eigen().tage = x;
+    e.target.value = String(x);
+    saveCfg();
+  };
+  $('#regProfil').onchange = e => { eigen().profil = e.target.value; saveCfg(); };
+  $('#regStd').onclick = () => frage('Werkseinstellung', `Die Regel ${r.name} wird auf die Werte ab Werk zurückgesetzt.`, 'Zurücksetzen', () => {
+    if(CFG.wetterRegeln) delete CFG.wetterRegeln[k];
+    saveCfg(); setRegel(box, k);
+  });
 }
 
 /* ---------- Einstellungen ----------------------------------------------------
@@ -5305,6 +6304,7 @@ function setOeffnen(art, k){
            : art === 'obj'    ? 'Objekt und Prüfer'
            : art === 'abwesend' ? 'Abwesenheit'
            : art === 'wetter' ? 'Wetter'
+           : art.startsWith('wregel-') ? (hinweisStd(art.slice(7)) || {name:'Regel'}).name
            : art === 'check'  ? 'Checkliste'
            : art === 'akkus'  ? 'Akkutypen'
            : art === 'tausch' ? 'Zählertausch'
@@ -5325,6 +6325,7 @@ function renderSetSub(){
   if(a === 'obj')   { setObjekt(dyn);   return; }
   if(a === 'abwesend'){ setAbwesend(dyn); return; }
   if(a === 'wetter'){ setWetter(dyn); return; }
+  if(a.startsWith('wregel-')){ setRegel(dyn, a.slice(7)); return; }
   if(a === 'check') { setCheck(dyn, k); return; }
   if(a === 'tausch'){ setTausch(dyn);   return; }
   if(a === 'akkus') { setAkkus(dyn);     return; }
@@ -8824,8 +9825,10 @@ function suchAufgaben(frage){
 }
 function suchAufgStand(a){
   const h = heute();
+  const von = zeitraumVon(a);
   const termin = !a.frist ? 'ohne Termin'
     : a.frist < h ? `überfällig seit ${dText(a.frist)}`
+    : von ? `Zeitraum ${ttmm(alsDatum(von))}–${dText(a.frist)}`
     : a.frist === h ? 'fällig heute' : `bis ${dText(a.frist)}`;
   return [aufgStand(a), termin].filter(Boolean).join(' · ');
 }
