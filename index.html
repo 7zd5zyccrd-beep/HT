@@ -10,6 +10,21 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.57 18.09.2026  Auch die Regeln ab Werk haben jetzt eine Auslösung: auf ihrer
+                    Seite steht dieselbe Karte wie bei den eigenen Regeln –
+                    Jahreszeit, „je Saison höchstens x mal“ und Ruhezeit in
+                    Tagen. Ab Werk ändert sich dadurch nichts (ganzjährig, ohne
+                    Begrenzung, ohne Ruhezeit); nur „Erster Frost“ steht auf
+                    September bis Februar, höchstens einmal je Saison, Ruhezeit
+                    30 Tage – vorher konnte die Regel nach jedem frostfreien
+                    Monat erneut anschlagen. Der gemerkte Frosttag sperrt jetzt
+                    nicht mehr pauschal 30 Tage, sondern sagt, ob in dieser
+                    Saison schon Frost war (falls die App ein paar Tage zu war).
+                    Gezählt wird, sobald ein Vorschlag erscheint – auch wenn er
+                    verworfen wird. „Werkseinstellung“ räumt neben den Werten
+                    auch den gemerkten Stand der Regel weg. Der Stand aller
+                    Regeln reist ab jetzt in der Sicherungsdatei mit, sonst
+                    begänne er nach einem Gerätewechsel wieder bei null.
   v1.56 17.09.2026  Wetter, Etappe 7: eigene Regeln aus Bausteinen. „+ Aufgabe
                     hinzufügen“ schaltet jetzt zwischen Termin, Zeitraum und
                     Wetter um; hinter „Wetter“ stehen drei Karten: Bedingung
@@ -2024,7 +2039,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.56';
+const VERSION = 'v1.57';
 const BUILD   = VERSION + ' · 17.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6035,10 +6050,14 @@ const HINWEIS_STD = [
    wichtig:'normal', fristArt:'tage', tage:3, profil:'dach', werte:[]},
   {k:'frost', name:'Erster Frost', art:'kommt', titel:'Außenwasserhähne und frostgefährdete Leitungen prüfen',
    wichtig:'normal', fristArt:'vorher', tage:0, profil:'',
+   saisonVon:9, saisonBis:2, proSaison:1, ruhe:30,
    werte:[['grad', '°C Tiefstwert', 0]]}
 ];
 const HINWEIS_WEG = 3 * TAG_MS;              // unbeantwortet zu vergangenem Wetter
-const FROST_RUHE = 30 * TAG_MS;              // so lange frostfrei, dann gilt Frost als „erster“
+/* Auslösung ab Werk (v1.57): ganzjährig, ohne Begrenzung, ohne Ruhezeit. Wer
+   davon abweicht, trägt die Werte oben in HINWEIS_STD ein – bisher nur der
+   erste Frost, der von Natur aus einmal je Winter gemeint ist. */
+const AUSLOES_STD = [['saisonVon', 1], ['saisonBis', 12], ['proSaison', 0], ['ruhe', 0]];
 let HINWEISE = Store.get('nwHinweise', {});
 const hinweisStd = k => HINWEIS_STD.find(r => r.k === k);
 function hinweisRegel(k){
@@ -6049,6 +6068,12 @@ function hinweisRegel(k){
   r.modus = eigen.modus === 'sofort' ? 'sofort' : 'vorschlag';
   ['titel', 'wichtig', 'profil'].forEach(f => { if(typeof eigen[f] === 'string') r[f] = eigen[f]; });
   if(endlich(eigen.tage)) r.tage = eigen.tage;
+  /* Saison, Häufigkeit und Ruhezeit (v1.57) – dieselben vier Felder wie bei den
+     eigenen Regeln: erst die Einstellung, dann der Wert ab Werk, dann der
+     allgemeine Vorgabewert. */
+  AUSLOES_STD.forEach(([f, vorgabe]) => {
+    r[f] = endlich(+eigen[f]) ? +eigen[f] : endlich(+std[f]) ? +std[f] : vorgabe;
+  });
   r.werte.forEach(w => { if(eigen[w[0]] != null && endlich(+eigen[w[0]])) w[2] = +eigen[w[0]]; });
   r.wert = f => (r.werte.find(w => w[0] === f) || [0, '', 0])[2];
   return r;
@@ -6167,20 +6192,24 @@ function hinweisPruefen(r, reihen){
   }
   if(r.k === 'frost'){
     const grenz = r.wert('grad');
-    /* Der letzte Frost wird fortgeschrieben, damit „erster Frost“ auch dann
-       stimmt, wenn die Vorhersage nur sieben Tage zurückreicht. */
+    /* Der letzte Frosttag wird fortgeschrieben, damit „erster Frost“ auch dann
+       stimmt, wenn die App ein paar Tage zu war oder die Daten nicht weit genug
+       zurückreichen. Lag er schon in der laufenden Saison, war der erste Frost
+       also bereits da, und die Regel schweigt (v1.57). Die frühere feste Sperre
+       von 30 Tagen ist durch die Ruhezeit der Regel ersetzt. */
     const frueher = modell.filter(s => s.t <= jetzt && endlich(s.temp) && s.temp <= grenz);
     let letzter = +Store.get('nwFrost', 0) || 0;
     if(frueher.length){
       const neu = Math.max(...frueher.map(s => s.t));
       if(neu > letzter){ letzter = neu; Store.set('nwFrost', letzter); }
     }
-    if(letzter && jetzt - letzter < FROST_RUHE) return null;
+    if(letzter && inSaison(r, new Date(letzter))
+       && saisonName(r, new Date(letzter)) === saisonName(r, new Date(jetzt))) return null;
     const kalt = modell.filter(s => kommend(s, 72) && endlich(s.temp) && s.temp <= grenz);
     if(!kalt.length) return null;
     const t = Math.min(...kalt.map(s => s.t));
     return {schluessel:`frost@${isoTag(new Date(t))}`, zeit:t,
-            grund:`${tagWort(t)}: bis ${gradText(Math.min(...kalt.map(s => s.temp)))} °C, erster Frost seit Langem`};
+            grund:`${tagWort(t)}: bis ${gradText(Math.min(...kalt.map(s => s.temp)))} °C, erster Frost der Saison`};
   }
   return null;
 }
@@ -6199,7 +6228,9 @@ function wetterHinweise(){
     if(!stand || !stand.gesehen){
       HINWEISE[tr.schluessel] = {gesehen};
       Store.set('nwHinweise', HINWEISE);
-      if(r.eigen) regelStandSetzen(r);
+      /* Gezählt wird, sobald der Vorschlag zum ersten Mal erscheint – auch wenn
+         er verworfen wird (seit v1.57 auch bei den Regeln ab Werk). */
+      regelStandSetzen(r);
     }
     if(r.art === 'war' && jetzt - gesehen > HINWEIS_WEG) return;
     raus.push(Object.assign({}, tr, {regel:r}));
@@ -6269,7 +6300,7 @@ function wetterRegelnAnwenden(){
     if(stand && stand.weg) return;
     AUFG.push(hinweisAufgabe(r, tr));
     HINWEISE[tr.schluessel] = Object.assign({}, stand, {weg:Date.now(), auto:true});
-    if(r.eigen) regelStandSetzen(r);
+    regelStandSetzen(r);
     neu++;
   });
   if(!neu) return;
@@ -6331,6 +6362,17 @@ function setRegel(box, k){
       r.werte.map(([f, text, wert]) => `<div class="wgZeile"><span>${esc(text)}</span><span class="wgWerte">
         <input type="number" step="any" data-w="${f}" value="${esc(wert)}"></span></div>`).join('')}</div>`
       : `<p class="muted small">Diese Regel hat keine Schwelle: sie folgt der amtlichen Warnung und der Wetterlage im Modell.</p>`}
+    <div class="eyebrow">Auslösung</div>
+    <div class="card wgKarte">
+      <div class="wgZeile"><span>Jahreszeit</span><span class="wgWerte">
+        <select data-a="saisonVon" class="mon">${MONATS_WAHL(r.saisonVon)}</select> bis
+        <select data-a="saisonBis" class="mon">${MONATS_WAHL(r.saisonBis)}</select></span></div>
+      <div class="wgZeile"><span>Je Saison höchstens</span><span class="wgWerte">
+        <input type="number" step="1" data-a="proSaison" value="${esc(r.proSaison)}"> mal (0 = immer)</span></div>
+      <div class="wgZeile"><span>Ruhezeit</span><span class="wgWerte">
+        <input type="number" step="1" data-a="ruhe" value="${esc(r.ruhe)}"> Tage</span></div>
+    </div>
+    <p class="muted small">Häufigkeit und Ruhezeit verhindern, dass ein langer Wetterabschnitt dieselbe Aufgabe mehrfach erzeugt. Gezählt wird, sobald der Vorschlag erscheint – auch wenn er verworfen wird.</p>
     <div class="field segfeld"><span>Wichtigkeit</span><div class="seg">${
       [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']].map(([w, t]) =>
         `<button type="button" data-wicht="${w}" aria-pressed="${r.wichtig === w}">${t}</button>`).join('')}</div></div>
@@ -6366,6 +6408,20 @@ function setRegel(box, k){
     eigen().wichtig = b.dataset.wicht;
     saveCfg(); setRegel(box, k);
   });
+  /* Auslösung: die Monate kommen aus Menüs, Häufigkeit und Ruhezeit aus Zahlen-
+     feldern. Neu aufgebaut wird hier nichts – ein Menü, das sich unter dem
+     Finger neu aufbaut, verliert unter iOS seine Wahl (Lehre aus v1.04). */
+  box.querySelectorAll('select[data-a]').forEach(f => f.onchange = () => {
+    eigen()[f.dataset.a] = +f.value;
+    saveCfg();
+  });
+  box.querySelectorAll('input[data-a]').forEach(f => f.onchange = () => {
+    const feld = f.dataset.a, x = Math.round(parseFloat(String(f.value).replace(',', '.')));
+    if(!isFinite(x) || x < 0){ toast('Bitte eine Zahl ab 0 eintragen'); f.value = String(r[feld]); return; }
+    eigen()[feld] = x;
+    f.value = String(x);
+    saveCfg();
+  });
   if($('#regTage')) $('#regTage').onchange = e => {
     const x = Math.round(parseFloat(e.target.value));
     if(!isFinite(x) || x < 0){ toast('Bitte eine Zahl ab 0 eintragen'); e.target.value = String(r.tage); return; }
@@ -6374,10 +6430,15 @@ function setRegel(box, k){
     saveCfg();
   };
   $('#regProfil').onchange = e => { eigen().profil = e.target.value; saveCfg(); };
-  $('#regStd').onclick = () => frage('Werkseinstellung', `Die Regel ${r.name} wird auf die Werte ab Werk zurückgesetzt.`, 'Zurücksetzen', () => {
-    if(CFG.wetterRegeln) delete CFG.wetterRegeln[k];
-    saveCfg(); setRegel(box, k);
-  });
+  $('#regStd').onclick = () => frage('Werkseinstellung',
+    `Die Regel ${r.name} wird auf die Werte ab Werk zurückgesetzt; auch der gemerkte Stand (letzte Auslösung, Zahl in dieser Saison) fällt weg.`,
+    'Zurücksetzen', () => {
+      if(CFG.wetterRegeln) delete CFG.wetterRegeln[k];
+      delete REGELSTAND[k];
+      Store.set('nwRegelStand', REGELSTAND);
+      if(k === 'frost') Store.set('nwFrost', 0);      // auch der gemerkte Frosttag
+      saveCfg(); setRegel(box, k);
+    });
 }
 
 /* ---------- Eigene Wetterregeln aus Bausteinen (v1.56) ----------------------
@@ -6552,16 +6613,24 @@ function saisonName(r, d){
   const m = d.getMonth() + 1, von = +r.saisonVon || 1, bis = +r.saisonBis || 12;
   return String(von <= bis || m >= von ? d.getFullYear() : d.getFullYear() - 1);
 }
+/* Der Stand einer Regel liegt unter ihrer Kennung: eigene Regeln tragen eine
+   Id, die Regeln ab Werk ihren Kurznamen („frost“, „regen“ …). */
+const standSchluessel = r => r.id || r.k;
+/* Saison, Ruhezeit und Häufigkeit – seit v1.57 für eigene Regeln und für die ab
+   Werk dasselbe. Zurück kommt false, solange die Regel schweigen muss. */
+function ausloesungOffen(r){
+  const jetzt = new Date();
+  if(!inSaison(r, jetzt)) return false;
+  const stand = REGELSTAND[standSchluessel(r)] || {};
+  const ruhe = Math.max(0, Math.round(r.ruhe) || 0);
+  if(stand.letzte && Date.now() - stand.letzte < ruhe * TAG_MS) return false;
+  const pro = Math.max(0, Math.round(r.proSaison) || 0);
+  if(pro && stand.saison === saisonName(r, jetzt) && (stand.zahl || 0) >= pro) return false;
+  return true;
+}
 /* Die ganze Regel. Zurück kommt nichts oder {schluessel, zeit, grund}. */
 function eigenPruefen(r, reihen){
   if(!Array.isArray(r.bed) || !r.bed.length) return null;
-  const jetzt = new Date();
-  if(!inSaison(r, jetzt)) return null;
-  const stand = REGELSTAND[r.id] || {};
-  const ruhe = Math.max(0, Math.round(r.ruhe) || 0);
-  if(stand.letzte && Date.now() - stand.letzte < ruhe * TAG_MS) return null;
-  const pro = Math.max(0, Math.round(r.proSaison) || 0);
-  if(pro && stand.saison === saisonName(r, jetzt) && (stand.zahl || 0) >= pro) return null;
   const ergebnisse = r.bed.map(b => bedPruefen(b, reihen));
   const ok = r.verkn === 'eine' ? ergebnisse.some(e => e.ok) : ergebnisse.every(e => e.ok);
   if(!ok) return null;
@@ -6573,8 +6642,8 @@ function eigenPruefen(r, reihen){
 }
 /* Nach dem Auslösen: Zeitpunkt und Zähler der Saison fortschreiben. */
 function regelStandSetzen(r){
-  const jetzt = new Date(), saison = saisonName(r, jetzt), alt = REGELSTAND[r.id] || {};
-  REGELSTAND[r.id] = {letzte:Date.now(), saison,
+  const jetzt = new Date(), saison = saisonName(r, jetzt), s = standSchluessel(r), alt = REGELSTAND[s] || {};
+  REGELSTAND[s] = {letzte:Date.now(), saison,
     zahl:(alt.saison === saison ? alt.zahl || 0 : 0) + 1};
   Store.set('nwRegelStand', REGELSTAND);
 }
@@ -6588,6 +6657,7 @@ function alleRegeln(){
   return eigeneRegeln().map(eigenAlsRegel).concat(HINWEIS_STD.map(std => hinweisRegel(std.k)));
 }
 function regelPruefen(r, reihen){
+  if(!ausloesungOffen(r)) return null;
   return r.eigen ? eigenPruefen(r, reihen) : hinweisPruefen(r, reihen);
 }
 
@@ -6759,7 +6829,7 @@ function setEigenRegel(box, r, neu){
     frage('Regel löschen', `„${r.titel || 'Die Regel'}“ wird gelöscht. Schon angelegte Aufgaben bleiben.`, 'Löschen', () => {
       CFG.wetterEigen = eigeneRegeln().filter(x => x.id !== r.id);
       saveCfg();
-      delete REGELSTAND[r.id];
+      delete REGELSTAND[standSchluessel(r)];
       Store.set('nwRegelStand', REGELSTAND);
       zurueck();
     });
@@ -9116,8 +9186,14 @@ async function dateiSichernLauf(){
   }catch(e){ /* ohne Bilderspeicher eben ohne Pläne */ }
   let historie = [];
   try{ historie = await Historie.alle(); }catch(e){ /* ohne Speicher ohne Historie */ }
+  /* Der Stand der Wetterregeln reist seit v1.57 mit: ohne ihn stünde auf dem
+     neuen Gerät der Saisonzähler wieder bei 0 und eine Regel wie „Erster Frost“
+     schlüge ein zweites Mal an. Die Wetterdaten selbst bleiben draußen, die holt
+     das neue Gerät beim ersten Öffnen. */
   const paket = {format:CFG_FORMAT, stand:heute(),
-                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB, plaene, quellen, historie};
+                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB,
+                 regelstand:REGELSTAND, hinweise:HINWEISE, frost:+Store.get('nwFrost', 0) || 0,
+                 plaene, quellen, historie};
   const name = `Nachweise ${heute().slice(2)}.json`;
   void plaene;
   const datei = new File([new Blob([JSON.stringify(paket, null, 1)], {type:'application/json'})],
@@ -9153,6 +9229,15 @@ async function paketUebernehmen(paket){
   if(Array.isArray(paket.buch)){ BUCH = paket.buch; saveBuch(); }
   if(Array.isArray(paket.aufg)){ AUFG = paket.aufg; saveAufg(); }
   if(paket.vorb && typeof paket.vorb === 'object'){ VORB = paket.vorb; saveVorb(); }
+  /* Stand der Wetterregeln (v1.57). Ältere Sicherungen kennen ihn nicht – dann
+     bleibt der vorhandene stehen, statt geleert zu werden. */
+  if(paket.regelstand && typeof paket.regelstand === 'object'){
+    REGELSTAND = paket.regelstand; Store.set('nwRegelStand', REGELSTAND);
+  }
+  if(paket.hinweise && typeof paket.hinweise === 'object'){
+    HINWEISE = paket.hinweise; Store.set('nwHinweise', HINWEISE);
+  }
+  if(endlich(+paket.frost) && +paket.frost > 0) Store.set('nwFrost', +paket.frost);
   /* Die Historie ersetzt die vorhandene ganz, wie die übrigen Daten. Ältere
      Sicherungen kennen sie nicht – dann bleibt die vorhandene stehen. */
   if(Array.isArray(paket.historie)){
