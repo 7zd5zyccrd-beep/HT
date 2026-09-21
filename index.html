@@ -10,6 +10,14 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.58 21.09.2026  Fehler von Jean gemeldet: unter iOS 27 sprang die Seite beim
+                    Eintippen ans Ende – in Einstellungen › Medienverbräuche
+                    beim Umbenennen und ebenso beim Eintragen der Stände. Im Code
+                    bewegt dort nichts die Seite; neu ist, dass Safari 27 die
+                    Lage selbst nachführt (Scroll-Anker). Das stritt mit der
+                    Tastatur und mit dem eigenen Lagehalten der App. Der Anker
+                    ist jetzt überall abgeschaltet (overflow-anchor:none), die
+                    Seite verhält sich wieder wie unter iOS 26.
   v1.57 18.09.2026  Auch die Regeln ab Werk haben jetzt eine Auslösung: auf ihrer
                     Seite steht dieselbe Karte wie bei den eigenen Regeln –
                     Jahreszeit, „je Saison höchstens x mal“ und Ruhezeit in
@@ -1089,6 +1097,14 @@
    Zwei Ausnahmen mit eigener, spaeterer Regel: der Grundriss (er zoomt selbst)
    und die Blattvorschau (dort steht der 1024 px breite Bogen). */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:pan-x pan-y}
+/* Kein Scroll-Anker (v1.58). Safari kann ihn seit iOS 27: aendert sich etwas
+   oberhalb des Bildschirms, verschiebt der Browser die Seite selbst, damit das
+   Gelesene stehen bleibt. Die App haelt ihre Lage aber schon selbst (lageHalten,
+   listenSprung), und zusammen mit der Tastatur sprang die Seite unter iOS 27
+   beim Eintippen ans Ende – beim Umbenennen der Zaehlstellen wie beim Ablesen.
+   Abgeschaltet fuer alle Elemente und damit fuer jeden Bildlauf, auch in den
+   Grundrissen; das Verhalten ist dann wieder das von iOS 26. */
+*{overflow-anchor:none}
 html,body{margin:0;padding:0}
 body{
   font-family:var(--f-body);color:var(--ink);background:var(--enclosure);
@@ -2039,8 +2055,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.57';
-const BUILD   = VERSION + ' · 17.09.2026';
+const VERSION = 'v1.58';
+const BUILD   = VERSION + ' · 21.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
