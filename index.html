@@ -10,6 +10,22 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.61 21.09.2026  Aufgaben, Etappe A (von Jean angestoßen): nach einer
+                    wiederkehrenden Tätigkeit fragt ein Fenster, wie lange sie
+                    ungefähr gedauert hat und welche Utensilien gebraucht wurden.
+                    Gefragt wird nach „Nachweis ausgeben“, beim Sprinkler je
+                    Kontrollgang beim Abschließen, bei wiederkehrenden eigenen
+                    Aufgaben und Aufgaben aus Wetterregeln beim Erledigen.
+                    Dauer in 15-Minuten-Schritten bis 4 Stunden, dann ½ Tag,
+                    1 Tag und Tage; ein Tag sind die beiden Halbtage aus
+                    Einstellungen › Wetter. Bei Nachweisen ist die gemessene
+                    Zeit aus dem Tätigkeitsbuch vorbelegt, sonst der Durchschnitt
+                    der letzten zehn Angaben. Utensilien als Kacheln aus einer
+                    gemeinsamen Werkzeugliste, beim nächsten Mal vorbelegt.
+                    „Beim nächsten Mal wieder fragen“ ist ab Werk angehakt,
+                    „Später“ speichert nichts. Mängel und einmalige Aufgaben
+                    haben beim Erledigen ein freiwilliges Dauerfeld. Alles reist
+                    in der Sicherungsdatei mit (taet).
   v1.60 21.09.2026  Grundrisse flackerten beim ersten Aufruf jedes Plans: Safari
                     entpackt ein Bild erst beim Zeigen, bis dahin stand kurz eine
                     leere Fläche da. Jetzt wird der gezeigte Plan entpackt, bevor
@@ -1288,15 +1304,34 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .pos .kopf input{flex:0 0 auto;width:165px;padding:8px 10px;font-size:16px}
 /* Dieselbe Segmentwahl in beiden Kartenarten: .pos traegt sie im Nachweis,
    .stelle in den Einstellungen (Objektkarten). */
-.pos .seg,.stelle .seg,.wichtig .seg,.segfeld .seg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
-.pos .seg button,.stelle .seg button,.wichtig .seg button,.segfeld .seg button{
+.pos .seg,.stelle .seg,.wichtig .seg,.segfeld .seg,.dauerWahl .seg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
+.pos .seg button,.stelle .seg button,.wichtig .seg button,.segfeld .seg button,.dauerWahl .seg button{
   flex:1;padding:11px 6px;border:0;background:var(--surface);color:var(--ink);
   font:inherit;font-size:14px;cursor:pointer;border-left:1px solid var(--line);
 }
-.pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child,.segfeld .seg button:first-child{border-left:0}
-.pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"],.segfeld .seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
+.pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child,.segfeld .seg button:first-child,.dauerWahl .seg button:first-child{border-left:0}
+.pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"],.segfeld .seg button[aria-pressed="true"],.dauerWahl .seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
 .pos .bem{margin-top:8px}
 .pos .seg.vorschlag{margin-top:8px}       /* Kacheln unter der Bemerkung (v1.59) */
+/* Dauer und Utensilien einer Tätigkeit (v1.61): ein Wähler mit Minus und Plus
+   über alle Stufen, darunter Sprungkacheln; Utensilien als Kacheln, mehrere
+   wählbar – gewählt heißt wie überall: dunkel hinterlegt. */
+.dauerWahl .stufe{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.dauerWahl .stufe button{
+  flex:0 0 44px;width:44px;height:44px;border:1px solid var(--field-border);border-radius:12px;padding:0;
+  background:var(--surface);color:var(--ink);font:inherit;font-size:20px;line-height:1;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+}
+.dauerWahl .stufe button[disabled]{opacity:.4}
+.dauerWahl .wert{flex:1;text-align:center;font-weight:600;font-size:18px;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{
+  border:1px solid var(--field-border);border-radius:10px;background:var(--surface);color:var(--ink);
+  padding:9px 12px;font:inherit;font-size:14px;cursor:pointer;-webkit-appearance:none;appearance:none;
+}
+.chips button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong);border-color:var(--strong)}
+.utNeu{margin-top:8px;align-items:center}
+.utNeu .btn{flex:0 0 auto;width:auto;margin-top:0}
 .pos .punkt{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 .pos .punkt .ptext{font-size:14px;margin-bottom:6px}
 .pos .punkt input.bar{width:120px}
@@ -2078,7 +2113,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.60';
+const VERSION = 'v1.61';
 const BUILD   = VERSION + ' · 21.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -2689,6 +2724,28 @@ const zeitMerken = (o, s) => { o.zt = o.zt || {}; if(!o.zt[s]) o.zt[s] = Date.no
 let AUFG = Store.get('nwAufg', []);
 if(!Array.isArray(AUFG)) AUFG = [];
 const saveAufg = () => { Store.set('nwAufg', AUFG); listeNachziehen(); };
+/* --- Erfahrungswerte je Tätigkeit (v1.61, Etappe A) -------------------------
+   Nach einer wiederkehrenden Tätigkeit fragt die App, wie lange sie ungefähr
+   gedauert hat und was dafür gebraucht wurde. Eine Tätigkeit ist
+     nw:<Nachweis>          ein Nachweis – gefragt nach der Ausgabe
+     nw:sprinkler:woch|mon  ein Kontrollgang – gefragt beim Abschließen
+     regel:<Regel>          eine Aufgabe aus einer Wetterregel
+     reihe:<Kennung>        eine wiederkehrende eigene Aufgabe; die Kennung ist
+                            die der ersten erledigten und reist mit jeder
+                            Folgeaufgabe weiter
+   Gefragt wird mindestens einmal und danach, solange „Beim nächsten Mal
+   wieder fragen“ angehakt bleibt. TAET.t[Schlüssel] = {name, dauern,
+   utensilien, fragen}; eine Dauer ist {m:Minuten} oder {t:Tage}. Die
+   Werkzeugliste TAET.werkzeug gilt für alle Tätigkeiten. Anzeige und
+   Bearbeitung folgen in Etappe B, Einplanung und Arbeitsnachweis danach. */
+let TAET = Store.get('nwTaet', {});
+function taetOrdnen(){
+  if(!TAET || typeof TAET !== 'object' || Array.isArray(TAET)) TAET = {};
+  if(!TAET.t || typeof TAET.t !== 'object' || Array.isArray(TAET.t)) TAET.t = {};
+  if(!Array.isArray(TAET.werkzeug)) TAET.werkzeug = [];
+}
+taetOrdnen();
+const saveTaet = () => Store.set('nwTaet', TAET);
 const FRIST_TAGE = {hoch:7, normal:30, niedrig:90};
 /* --- Vorbereitung bei Fremdprüfungen und Akkutausch -------------------------
    "Firma beauftragt" bzw. "Akkus vorhanden": je Nachweis ein Vermerk, der
@@ -4233,15 +4290,20 @@ function renderAufgabe(){
   const wege = !neu && a.k && n ? `<div class="row" style="margin-bottom:14px">
       ${aufgOrt(a) ? `<button class="btn" data-weg="plan">⌖ Grundriss</button>` : ''}
       <button class="btn" data-weg="nw">Zum Nachweis</button></div>` : '';
+  /* Wiederkehrendes fragt nach dem Erledigen im eigenen Fenster nach Dauer und
+     Utensilien (v1.61); alles andere bekommt hier ein freiwilliges Dauerfeld. */
+  const fragtNachher = !neu && !a.erledigt && !a.taetVermerkt && taetFragenOffen(taetSchluessel(a, false));
+  let erlDauer = null;
   const erledigung = neu ? `<button class="btn primary" id="aufgAnlegen">Aufgabe anlegen</button>`
     : a.erledigt
       ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erledigt</div>
-           <p style="margin:0">am ${esc(dText(a.erledigt))}</p>
+           <p style="margin:0">am ${esc(dText(a.erledigt))}${a.dauer ? ' · ' + esc(dauerText(a.dauer)) : ''}</p>
            ${a.vermerk ? `<p class="aufgText">${esc(a.vermerk)}</p>` : ''}
            <button class="btn ghost klein" id="aufgWieder" style="margin-top:10px">Wieder öffnen</button></div>`
       : `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erledigen</div>
            <input type="date" id="erlDatum" class="schmal" value="${heute()}" aria-label="Erledigt am">
            <input id="erlVermerk" placeholder="Vermerk, z. B. Firma" style="margin-top:10px">
+           ${fragtNachher ? '' : `<div class="field" style="margin:12px 0 0"><span>Dauer (freiwillig)</span><div id="erlDauer"></div></div>`}
            <button class="btn primary" id="erlSetzen" style="margin-top:10px">Als erledigt vermerken</button></div>`;
   /* Termin oder Zeitraum (v1.51). Die Umschaltung steht nur bei eigenen
      Aufgaben; ein Mangel hat seinen Termin. */
@@ -4377,9 +4439,16 @@ function renderAufgabe(){
     delete a.entwurf; AUFG.push(a); saveAufg();
     toast('Aufgabe angelegt'); zurueck();
   };
+  if($('#erlDauer')) dauerWahl($('#erlDauer'), null, true, w => { erlDauer = w; });
   if($('#erlSetzen')) $('#erlSetzen').onclick = () => {
     a.erledigt = $('#erlDatum').value || heute();
     a.vermerk = $('#erlVermerk').value.trim();
+    if(erlDauer) a.dauer = erlDauer;
+    /* Die Tätigkeit steht fest, bevor die Folgeaufgabe entsteht – sie erbt die
+       Reihenkennung. Gefragt wird, wenn die Liste wieder steht. */
+    const tKey = taetSchluessel(a, true);
+    const tFragen = fragtNachher && taetFragenOffen(tKey)
+      ? () => taetFragen({key:tKey, name:a.titel || 'Aufgabe', aufgabe:a, datum:a.erledigt}) : () => {};
     /* Wiederkehrend: die nächste steht sofort bereit. Die Notiz beginnt leer, die
        Vorbereitung wieder offen – beides gehört zum einzelnen Termin. */
     if(a.wdh && !mangel){
@@ -4391,13 +4460,14 @@ function renderAufgabe(){
         vorbErledigt:'', vorbVermerk:''};
       if(fz) folge.von = fz.von;
       if(a.wetter) folge.wetter = a.wetter;
+      if(a.reihe) folge.reihe = a.reihe;
       AUFG.push(folge); a.folge = folge.id;
       saveAufg();
       toast(fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · nächster Termin ${dText(folge.frist)}`);
-      zurueck();
+      zurueck(); tFragen();
       return;
     }
-    saveAufg(); toast('Als erledigt vermerkt'); zurueck();
+    saveAufg(); toast('Als erledigt vermerkt'); zurueck(); tFragen();
   };
   if($('#aufgWieder')) $('#aufgWieder').onclick = () => {
     /* Eine noch unberührte Folgeaufgabe geht mit zurück, sonst stünde der
@@ -4413,6 +4483,168 @@ function renderAufgabe(){
     frage('Aufgabe löschen', `„${a.titel || 'Ohne Titel'}“ wird gelöscht.`, 'Löschen', () => {
       AUFG = AUFG.filter(x => x !== a); saveAufg(); zurueck();
     });
+}
+/* --- Dauer und Utensilien: Rechnen, Wählen, Fragen (v1.61) ------------------
+   Stufen der Dauer: 15-Minuten-Schritte bis 4 Stunden, dann ½ Tag, 1 Tag und
+   ganze Tage bis 20. Ein Tag sind die beiden Halbtage aus Einstellungen ›
+   Wetter (ab Werk 7–16 Uhr, also 9 Stunden) – danach rechnet später die
+   Einplanung. Der Durchschnitt nimmt die letzten zehn Angaben, damit er einer
+   geänderten Arbeitsweise folgt. */
+const DAUER_STUFEN = [
+  ...Array.from({length:16}, (_, i) => ({m:(i + 1) * 15})),
+  {t:0.5}, {t:1}, ...Array.from({length:19}, (_, i) => ({t:i + 2}))];
+const STUFE_HALB = DAUER_STUFEN.findIndex(x => x.t === 0.5),
+      STUFE_TAG  = DAUER_STUFEN.findIndex(x => x.t === 1),
+      STUFE_TAGE = DAUER_STUFEN.findIndex(x => x.t === 2);
+const tagMinuten = () => { const e = wetterEinst(); return Math.max(60, Math.round((e.nachmBis - e.vormVon) * 60)); };
+const dauerMin = w => !w ? 0 : w.t ? w.t * tagMinuten() : (+w.m || 0);
+const gleicheDauer = (a, b) => !!a && !!b && (a.t || b.t ? a.t === b.t : a.m === b.m);
+const nurDauer = w => !w ? null : w.t ? {t:w.t} : {m:w.m};
+function dauerText(w){
+  if(!w) return '';
+  if(w.t) return w.t === 0.5 ? '½ Tag' : w.t === 1 ? '1 Tag' : `${String(w.t).replace('.', ',')} Tage`;
+  const m = Math.round(+w.m || 0);
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')} h`;
+}
+/* Minuten auf die nächste Stufe: bis 4 Stunden auf 15 Minuten, darüber auf
+   halbe und ganze Tage. */
+function alsStufe(min){
+  if(!(min > 0)) return null;
+  if(min <= 247) return {m:Math.min(240, Math.max(15, Math.round(min / 15) * 15))};
+  const tag = tagMinuten(), halb = Math.round(min / tag * 2) / 2;
+  if(halb <= 0.5) return {t:0.5};
+  return {t:Math.min(20, Math.max(1, Math.round(min / tag)))};
+}
+function taetSchnitt(key){
+  const e = TAET.t[key];
+  const l = ((e && e.dauern) || []).slice(-10).map(dauerMin).filter(x => x > 0);
+  return l.length ? alsStufe(l.reduce((s, x) => s + x, 0) / l.length) : null;
+}
+/* Gemessene Arbeitszeit aus den Uhrzeiten der Eingaben – dieselbe Rechnung
+   wie im Tätigkeitsbuch: Abstände über 30 Minuten gelten als Pause. */
+function gemesseneMinuten(zeiten){
+  const z = (zeiten || []).filter(x => x > 0).sort((a, b) => a - b);
+  let ms = 0;
+  for(let i = 1; i < z.length; i++){ const d = z[i] - z[i - 1]; if(d <= PAUSE_MS) ms += d; }
+  return ms / 60000;
+}
+/* Welche Tätigkeit eine Aufgabe ist; leer bei Mängeln und einmaligen Aufgaben.
+   merken:true gibt einer wiederkehrenden Aufgabe ihre Reihenkennung. */
+function taetSchluessel(a, merken){
+  if(!a || a.art === 'mangel') return '';
+  /* Wiederkehrend geht vor: auch eine wiederholte Aufgabe aus einer Wetterregel
+     bleibt so über alle Folgeaufgaben dieselbe Tätigkeit. */
+  if(a.wdh){
+    if(!a.reihe && merken) a.reihe = a.id;
+    return 'reihe:' + (a.reihe || a.id);
+  }
+  if(a.regel) return 'regel:' + a.regel;
+  return '';
+}
+const taetFragenOffen = key => { const e = TAET.t[key]; return !!key && (!e || e.fragen !== false); };
+/* Der Wähler der Dauer. leer:true erlaubt „keine Angabe“ (freiwilliges Feld
+   beim Erledigen). Minus und Plus gehen durch alle Stufen, die Kacheln
+   springen auf ½ Tag, 1 Tag und 2 Tage. Neu gebaut wird nur der Wähler selbst. */
+function dauerWahl(box, start, leer, bei){
+  const unten = leer ? -1 : 0;
+  let i = start ? DAUER_STUFEN.findIndex(x => gleicheDauer(x, start)) : -1;
+  if(i < 0 && start) i = DAUER_STUFEN.findIndex(x => gleicheDauer(x, alsStufe(dauerMin(start))));
+  if(i < unten) i = unten;
+  const setzen = j => { i = Math.max(unten, Math.min(DAUER_STUFEN.length - 1, j)); zeichnen(); bei(i >= 0 ? nurDauer(DAUER_STUFEN[i]) : null); };
+  const zeichnen = () => {
+    const w = i >= 0 ? DAUER_STUFEN[i] : null;
+    box.innerHTML = `<div class="dauerWahl">
+      <div class="stufe">
+        <button type="button" data-d="-1" aria-label="kürzer"${i <= unten ? ' disabled' : ''}>−</button>
+        <span class="wert">${w ? esc(dauerText(w)) : 'keine Angabe'}</span>
+        <button type="button" data-d="1" aria-label="länger"${i >= DAUER_STUFEN.length - 1 ? ' disabled' : ''}>+</button>
+      </div>
+      <div class="seg">
+        <button type="button" data-j="${STUFE_HALB}" aria-pressed="${i === STUFE_HALB}">½ Tag</button>
+        <button type="button" data-j="${STUFE_TAG}" aria-pressed="${i === STUFE_TAG}">1 Tag</button>
+        <button type="button" data-j="${STUFE_TAGE}" aria-pressed="${i >= STUFE_TAGE}">Tage</button>
+      </div></div>`;
+    box.querySelectorAll('[data-d]').forEach(b => b.onclick = () => setzen(i + +b.dataset.d));
+    box.querySelectorAll('[data-j]').forEach(b => b.onclick = () => {
+      const j = +b.dataset.j;
+      if(j === STUFE_TAGE && i >= STUFE_TAGE) return;       // mehr Tage über das Plus
+      setzen(j);
+    });
+  };
+  zeichnen();
+  return i >= 0 ? nurDauer(DAUER_STUFEN[i]) : null;
+}
+/* Utensilien als Kacheln aus der gemeinsamen Werkzeugliste, mehrere wählbar,
+   dazu ein Feld für ein neues. Ein neues ist gleich gewählt; in die
+   Werkzeugliste wandert es erst mit dem Speichern. */
+function utensilWahl(box, gewaehlt){
+  const liste = TAET.werkzeug.slice(), sel = new Set();
+  const finden = t => liste.find(x => x.toLocaleLowerCase('de') === t.toLocaleLowerCase('de'));
+  (gewaehlt || []).forEach(u => { const da = finden(u); if(da) sel.add(da); else { liste.push(u); sel.add(u); } });
+  box.innerHTML = `<div class="chips"></div>
+    <div class="row utNeu"><input placeholder="Neues Utensil, z. B. Leiter" aria-label="Neues Utensil">
+      <button type="button" class="btn ghost klein">Hinzufügen</button></div>`;
+  const chips = box.querySelector('.chips'), feld = box.querySelector('input'), plus = box.querySelector('button');
+  const zeichnen = () => {
+    chips.innerHTML = liste.length
+      ? liste.map((u, j) => `<button type="button" data-u="${j}" aria-pressed="${sel.has(u)}">${esc(u)}</button>`).join('')
+      : '<span class="muted small">Noch keine – unten eintragen.</span>';
+    chips.querySelectorAll('[data-u]').forEach(b => b.onclick = () => {
+      const u = liste[+b.dataset.u];
+      if(sel.has(u)) sel.delete(u); else sel.add(u);
+      b.setAttribute('aria-pressed', String(sel.has(u)));
+    });
+  };
+  const dazu = () => {
+    const t = feld.value.replace(/\s+/g, ' ').trim();
+    if(!t) return;
+    const da = finden(t);
+    if(da) sel.add(da); else { liste.push(t); sel.add(t); }
+    feld.value = ''; zeichnen();
+  };
+  plus.onclick = dazu;
+  feld.onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); dazu(); } };
+  zeichnen();
+  return {liste:() => liste.slice(), gewaehlt:() => liste.filter(u => sel.has(u)), offen:() => feld.value.trim()};
+}
+/* Das Fenster nach einer erledigten Tätigkeit. o = {key, name, gemessen
+   (Minuten), aufgabe, datum, zr, fertig}. Vorbelegt mit der gemessenen Zeit,
+   sonst mit dem Durchschnitt, sonst 30 Minuten. „Später“ speichert nichts –
+   dann wird beim nächsten Mal wieder gefragt. Ein Nachweis wird je Zeitraum
+   nur einmal erfasst, auch nach Zurückholen und erneuter Ausgabe. */
+function taetFragen(o){
+  const e = TAET.t[o.key];
+  if(!taetFragenOffen(o.key)) return false;
+  if(o.zr && e && (e.dauern || []).some(x => x.zr === o.zr)) return false;
+  let wert = (o.gemessen > 0 && alsStufe(o.gemessen)) || taetSchnitt(o.key) || {m:30};
+  const gem = o.gemessen > 0 ? `\nGemessen wurden rund ${dauerText({m:Math.max(1, Math.round(o.gemessen))})} – als Vorschlag eingestellt.` : '';
+  frage('Wie lange hat es gedauert?', o.name + gem, 'Speichern', () => {
+    const ein = TAET.t[o.key] = TAET.t[o.key] || {name:o.name, dauern:[], utensilien:[], fragen:true};
+    ein.name = o.name;
+    ein.dauern = Array.isArray(ein.dauern) ? ein.dauern : [];
+    ein.dauern.push(Object.assign({datum:o.datum || heute()}, o.zr ? {zr:o.zr} : {}, nurDauer(wert)));
+    if(ein.dauern.length > 50) ein.dauern = ein.dauern.slice(-50);
+    /* Ein getipptes, aber nicht mehr hinzugefügtes Utensil zählt mit. */
+    const rest = ut.offen();
+    const gewaehlt = ut.gewaehlt().concat(rest && !ut.liste().some(u => u.toLocaleLowerCase('de') === rest.toLocaleLowerCase('de')) ? [rest] : []);
+    gewaehlt.forEach(u => { if(!TAET.werkzeug.some(x => x.toLocaleLowerCase('de') === u.toLocaleLowerCase('de'))) TAET.werkzeug.push(u); });
+    ein.utensilien = gewaehlt;
+    ein.fragen = $('#taetWieder').checked;
+    saveTaet();
+    if(o.aufgabe){ o.aufgabe.dauer = nurDauer(wert); o.aufgabe.taetVermerkt = true; saveAufg(); }
+    if(o.fertig) o.fertig();
+    toast('Vermerkt');
+  });
+  $('#dlgNein').textContent = 'Später';
+  const box = $('#dlgListe');
+  box.hidden = false;
+  box.innerHTML = `<div class="eyebrow" style="margin:14px 0 8px">Dauer</div><div id="taetDauer"></div>
+    <div class="eyebrow" style="margin:16px 0 8px">Utensilien</div><div id="taetUt"></div>
+    <label class="haken" style="margin:16px 0 0"><input type="checkbox" id="taetWieder" checked>
+      <span>Beim nächsten Mal wieder fragen</span></label>`;
+  wert = dauerWahl($('#taetDauer'), wert, false, w => { wert = w; }) || wert;
+  const ut = utensilWahl($('#taetUt'), e ? e.utensilien : []);
+  return true;
 }
 function renderErledigt(){
   const liste = AUFG.filter(a => a.erledigt)
@@ -5213,6 +5445,12 @@ function renderSprinkler(){
       if(!gangVoll(g, punkte)) return;
       g.zu = true; spAuf.delete(schluessel); saveDat(); karteUmbauen(box);
       toast('Abgeschlossen');
+      /* Je Kontrollgang einmal nach Dauer und Utensilien fragen (v1.61); ein
+         wieder geöffneter und neu abgeschlossener Gang fragt nicht noch mal. */
+      if(!g.gefragt) taetFragen({key:'nw:sprinkler:' + art,
+        name: art === 'woch' ? 'Sprinkler, wöchentlicher Kontrollgang' : 'Sprinkler, monatliche Kontrolle',
+        datum:g.datum || heute(), gemessen:gemesseneMinuten(Object.values(g.zt || {})),
+        fertig:() => { g.gefragt = true; saveDat(); }});
     };
     box.querySelector('[data-weg]').onclick = () => {
       const titel = art === 'woch' ? 'Kontrollgang ' + (+box.dataset.g + 1) : 'Monatliche Kontrolle';
@@ -9357,6 +9595,7 @@ async function dateiSichernLauf(){
   const paket = {format:CFG_FORMAT, stand:heute(),
                  cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB,
                  regelstand:REGELSTAND, hinweise:HINWEISE, frost:+Store.get('nwFrost', 0) || 0,
+                 taet:TAET,
                  plaene, quellen, historie};
   const name = `Nachweise ${heute().slice(2)}.json`;
   void plaene;
@@ -9403,6 +9642,9 @@ async function paketUebernehmen(paket){
     HINWEISE = paket.hinweise; Store.set('nwHinweise', HINWEISE);
   }
   if(endlich(+paket.frost) && +paket.frost > 0) Store.set('nwFrost', +paket.frost);
+  /* Erfahrungswerte der Tätigkeiten (v1.61); ältere Sicherungen kennen sie
+     nicht – dann bleibt der vorhandene Stand stehen. */
+  if(paket.taet && typeof paket.taet === 'object'){ TAET = paket.taet; taetOrdnen(); saveTaet(); }
   /* Die Historie ersetzt die vorhandene ganz, wie die übrigen Daten. Ältere
      Sicherungen kennen sie nicht – dann bleibt die vorhandene stehen. */
   if(Array.isArray(paket.historie)){
@@ -10760,7 +11002,7 @@ async function dateiTeilen(name, inhalt){
   }catch(e){ toast('Übergabe nicht möglich'); return false; }
 }
 async function ausgeben(){
-  const n = NW(offen);
+  const n = NW(offen), kAus = offen;
   if(n.art === 'medien' && unbestaetigtZahl(DAT.medien)){ toast('Erst die auffälligen Stände bestätigen'); return; }
   /* Der Dateiname ist fertig, wie er ist: Prüfmonat und der Kurzname des
      Nachweises, z.B. "26-08 Kontrolle Sprinkler". Der Kurzbefehl muss ihn nur
@@ -10803,6 +11045,12 @@ async function ausgeben(){
   delete DAT[offen]; saveDat();
   stack = []; go('home', false);
   toast(histOk ? 'Nachweis ausgegeben' : 'Ausgegeben – Historie nicht gespeichert');
+  /* Nach Dauer und Utensilien fragen (v1.61), vorbelegt mit der gemessenen Zeit
+     aus dem Tätigkeitsbuch. Der Sprinkler fragt schon je Kontrollgang. */
+  if(n.art !== 'sprinkler'){
+    const b = BUCH.slice().reverse().find(x => x.k === kAus && x.zeitraum === zeitraum);
+    taetFragen({key:'nw:' + kAus, name:n.label, zr:zeitraum, gemessen:b ? +b.minuten || 0 : 0});
+  }
 }
 
 /* --- Zugang -----------------------------------------------------------------
