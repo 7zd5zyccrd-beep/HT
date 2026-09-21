@@ -10,6 +10,33 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.66 21.09.2026  Aufgaben, Etappe D2 – der Arbeitsnachweis als Blatt: „Blatt
+                    ansehen“ in der Ansicht, geteilt über die Leiste an den
+                    Kurzbefehl wie die Nachweise. Kopf mit Zeitraum, Objekt und
+                    Name, Tabelle Datum · Tätigkeit · Dauer mit Tagessummen, am
+                    Ende die Gesamtsumme und die Hinweise (* Durchschnittswert,
+                    was ein Tag bedeutet). Mehrere Bögen nach gemessenen
+                    Zeilenhöhen, die Summe nie allein. Dateiname „26-09
+                    Arbeitsnachweis“ bzw. „26-KW39 Arbeitsnachweis“.
+  v1.65 21.09.2026  Aufgaben, Etappe D1 – Arbeitsnachweis (Startseite › Übersicht):
+                    blätterbar nach Monat oder Woche, Tag für Tag Tätigkeit und
+                    Dauer mit Tages- und Gesamtsumme, ohne Uhrzeiten. Die Einträge
+                    kommen von selbst aus den erfassten Dauern, den erledigten
+                    Aufgaben und den ausgegebenen Nachweisen; ohne erfasste Dauer
+                    mit dem Durchschnitt („Schnitt“). Ändern ändert an der Quelle,
+                    Löschen nimmt nur aus dem Arbeitsnachweis, Ergänzen fügt
+                    eigene Einträge hinzu. Das Blatt zum Ausgeben folgt in D2.
+  v1.64 21.09.2026  Medienverbräuche (Wunsch von Jean): die Zählerkarten der
+                    Ablesung bleiben in der Reihenfolge des Laufwegs, Abgelesenes
+                    wandert nicht mehr nach oben. Ein abgelesener, unauffälliger
+                    Zähler klappt an Ort und Stelle auf zwei Zeilen zusammen
+                    (Partei · Medium, Stand und Verbrauch); ein Tipp klappt ihn
+                    mit voller Funktion auf, ein Tipp auf die Überschrift wieder
+                    zu. Pfeile an jeder offenen und aufgeklappten Karte
+                    verschieben im Laufweg, auch zwischen zugeklappte hindurch.
+                    Beim Betreten ist alles Abgelesene zu, die Ansicht springt
+                    zur ersten offenen Karte; die Suche klappt den gefundenen
+                    Zähler auf. Im Rundgang klappen Zähler jetzt ebenso zusammen.
   v1.63 21.09.2026  Aufgaben, Etappe C – Einplanung: neue Einstellung „Zeit je
                     Arbeitstag“ unter Einstellungen › Arbeitszeit und Abwesenheit
                     (ab Werk 8 Stunden, von Jean so gewählt). Die Gruppen der
@@ -1327,13 +1354,13 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .pos .kopf input{flex:0 0 auto;width:165px;padding:8px 10px;font-size:16px}
 /* Dieselbe Segmentwahl in beiden Kartenarten: .pos traegt sie im Nachweis,
    .stelle in den Einstellungen (Objektkarten). */
-.pos .seg,.stelle .seg,.wichtig .seg,.segfeld .seg,.dauerWahl .seg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
-.pos .seg button,.stelle .seg button,.wichtig .seg button,.segfeld .seg button,.dauerWahl .seg button{
+.pos .seg,.stelle .seg,.wichtig .seg,.segfeld .seg,.dauerWahl .seg,.seg.arbArt{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
+.pos .seg button,.stelle .seg button,.wichtig .seg button,.segfeld .seg button,.dauerWahl .seg button,.seg.arbArt button{
   flex:1;padding:11px 6px;border:0;background:var(--surface);color:var(--ink);
   font:inherit;font-size:14px;cursor:pointer;border-left:1px solid var(--line);
 }
-.pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child,.segfeld .seg button:first-child,.dauerWahl .seg button:first-child{border-left:0}
-.pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"],.segfeld .seg button[aria-pressed="true"],.dauerWahl .seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
+.pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child,.segfeld .seg button:first-child,.dauerWahl .seg button:first-child,.seg.arbArt button:first-child{border-left:0}
+.pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"],.segfeld .seg button[aria-pressed="true"],.dauerWahl .seg button[aria-pressed="true"],.seg.arbArt button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
 .pos .bem{margin-top:8px}
 .pos .seg.vorschlag{margin-top:8px}       /* Kacheln unter der Bemerkung (v1.59) */
 /* Dauer und Utensilien einer Tätigkeit (v1.61): ein Wähler mit Minus und Plus
@@ -1363,6 +1390,11 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .eyebrow .summe{text-transform:none;letter-spacing:0}
 .planBalken{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:-2px 0 10px}
 .planBalken span{display:block;height:100%;background:var(--strong)}
+/* Arbeitsnachweis (v1.65): Umschalter Monat/Woche und Blätterzeile. */
+.seg.arbArt{margin:0 0 10px}
+.arbKopf{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+.arbKopf b{flex:1;text-align:center}
+.arbKopf .btn{flex:0 0 44px;width:44px;margin:0;padding:0;font-size:20px}
 .zeile.taetDauer .etext{flex:1;min-width:0}
 .pos .punkt{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 .pos .punkt .ptext{font-size:14px;margin-bottom:6px}
@@ -1774,6 +1806,12 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
    ausdrücklich verlangt werden – deshalb print-color-adjust. Zur Sicherheit
    trägt die Kopfzeile zusätzlich einen kräftigen Strich nach unten. */
 .paper,.paper *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+/* Arbeitsnachweis (v1.66): Dauer rechtsbündig, Tagessumme fett, Summe und
+   Hinweise unter der Tabelle. */
+.paper table.arb .re{text-align:right}
+.paper table.arb tr.summe td{font-weight:600}
+.paper .arbSumme{font-size:13pt;margin:0 0 8px}
+.paper .arbHinweis{font-size:9.5pt;color:#333;margin:0 0 4px}
 .paper th{background:#eee;font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;font-size:11pt;
   border-bottom:2px solid #000}
 .paper .check{font-size:11pt;line-height:1.4;border:1px solid #000;padding:10px 12px;margin-bottom:14px}
@@ -1987,6 +2025,11 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       <div id="wregelBox"></div>
     </section>
 
+    <!-- Arbeitsnachweis (v1.65) -->
+    <section class="view" id="view-arbeit">
+      <div id="arbeitBox"></div>
+    </section>
+
     <!-- Wochenplan (v1.63) -->
     <section class="view" id="view-wplan">
       <div id="wplanBox"></div>
@@ -2158,7 +2201,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.63';
+const VERSION = 'v1.66';
 const BUILD   = VERSION + ' · 21.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -2788,6 +2831,10 @@ function taetOrdnen(){
   if(!TAET || typeof TAET !== 'object' || Array.isArray(TAET)) TAET = {};
   if(!TAET.t || typeof TAET.t !== 'object' || Array.isArray(TAET.t)) TAET.t = {};
   if(!Array.isArray(TAET.werkzeug)) TAET.werkzeug = [];
+  /* Arbeitsnachweis (v1.65): ergänzte Einträge und aus dem Nachweis genommene. */
+  if(!TAET.arb || typeof TAET.arb !== 'object') TAET.arb = {};
+  if(!Array.isArray(TAET.arb.eigen)) TAET.arb.eigen = [];
+  if(!Array.isArray(TAET.arb.weg)) TAET.arb.weg = [];
 }
 taetOrdnen();
 const saveTaet = () => Store.set('nwTaet', TAET);
@@ -3194,7 +3241,7 @@ const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufg
                historie:'Historie', histnw:'Historie', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregeln:'Wetterregeln', wregel:'Regel',
-               taeten:'Tätigkeiten', taet:'Tätigkeit', wplan:'Wochenplan'};
+               taeten:'Tätigkeiten', taet:'Tätigkeit', wplan:'Wochenplan', arbeit:'Arbeitsnachweis'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
    nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
@@ -3251,6 +3298,7 @@ function go(name, push = true){
   if(name === 'wregeln')  renderWetterregeln();
   if(name === 'taeten')   renderTaeten();
   if(name === 'wplan')    renderWochenplan();
+  if(name === 'arbeit')   renderArbeit();
   if(name === 'taet')     renderTaet();
   if(name === 'wregel')   renderWetterregel();
   if(name === 'historie') renderHistorie();
@@ -3884,6 +3932,7 @@ function renderHome(){
     + (liste.length ? `<button class="btn eintrag" data-wplan="1"><span>Wochenplan</span></button>` : '')
     + (CFG.wetter ? `<button class="btn eintrag" data-wregeln="1"><span>Wetterregeln</span><span class="zahl">${regelnAn}</span></button>` : '')
     + (taetL.length ? `<button class="btn eintrag" data-taeten="1"><span>Tätigkeiten</span><span class="zahl">${taetMit}</span></button>` : '')
+    + `<button class="btn eintrag" data-arbeit="1"><span>Arbeitsnachweis</span></button>`
     + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigte Aufgaben</span><span class="zahl">${erledigt}</span></button>` : '')
     + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span><span class="zahl" id="homeWetterStand"></span></button>` : '');
   $('#homeListe').innerHTML = `<button class="btn ghost klein" data-neuaufg="1" style="margin:0 0 12px">+ Aufgabe hinzufügen</button>`
@@ -3904,6 +3953,8 @@ function renderHome(){
   const ta = $('#homeListe [data-taeten]');
   if(ta) ta.onclick = () => go('taeten');
   $('#homeListe').querySelectorAll('[data-wplan]').forEach(b => b.onclick = () => go('wplan'));
+  const arb = $('#homeListe [data-arbeit]');
+  if(arb) arb.onclick = () => { arbZeit = null; go('arbeit'); };
   const wk = $('#homeListe [data-warn]');
   if(wk) wk.onclick = () => { go('wetter'); wetterAbrufen(); };
   $('#homeListe').querySelectorAll('[data-hja]').forEach(b => b.onclick = () => {
@@ -4071,8 +4122,18 @@ function renderRundgang(){
       const z = stellenListe.find(x => x.key === o.id) || {}, d = DAT.medien, alt = MED_ALT[o.id];
       const v = zahl(d.stand[o.id]) != null && alt && zahl(alt.stand) != null
         ? zahlText(zahl(d.stand[o.id]) - zahl(alt.stand)) : '';
+      /* Abgelesen: zugeklappt wie in der Ablesung (v1.64) – Partei und Medium,
+         darunter Stand und Verbrauch. Ein Tipp klappt auf. */
+      if(steht(o) && !rgOffen.has(w)){
+        const best = quittiert(d, o.id) && standGruende(d, o.id).length;
+        return `<div class="pos fertig kompakt" data-w="${esc(w)}">${typ}
+          <div class="name">${esc(z.partei)} · ${esc(namen[o.id] || z.medium)}</div>
+          <div class="muted small">Stand ${esc(d.stand[o.id])} ${esc(z.einheit)}${
+            v ? ` · Verbrauch ${esc(v)} ${esc(z.einheit)}` : ''}${best ? ' · bestätigt' : ''}</div>
+        </div>`;
+      }
       return `<div class="pos${standKlasse(d, o.id)}" data-w="${esc(w)}">${typ}
-        ${nameMitVerlauf(`${esc(z.partei)} · ${esc(namen[o.id] || z.medium)}`)}
+        ${nameMitVerlauf(`${esc(z.partei)} · ${esc(namen[o.id] || z.medium)}`, steht(o) ? ' zu' : '')}
         <div class="muted small">Nr. ${esc(z.nr)}${z.ort ? ' · ' + esc(z.ort) : ''}</div>
         <div class="row" style="margin-top:8px;align-items:center">
           <input inputmode="decimal" data-stand="1" value="${esc(d.stand[o.id] || '')}" placeholder="Zählerstand">
@@ -4169,6 +4230,12 @@ function renderRundgang(){
     if(runter) runter.onclick = () => schieben(1);
 
     if(o.k === 'medien'){
+      if(box.classList.contains('kompakt')){
+        box.onclick = () => { const top = box.getBoundingClientRect().top; rgOffen.add(w); neuUndHalten(top, w); };
+        return;
+      }
+      const kopfZu = box.querySelector('.name.zu');
+      if(kopfZu) kopfZu.onclick = () => { const top = box.getBoundingClientRect().top; rgOffen.delete(w); neuUndHalten(top, w); };
       const feld = box.querySelector('[data-stand]');
       feld.oninput = e => {
         d.stand[o.id] = e.target.value.trim();
@@ -4180,12 +4247,21 @@ function renderRundgang(){
          oben, als Umhängen der einen Karte – ein Neuaufbau risse Feld und
          Tastatur mit weg, wenn der Daumen schon im nächsten steht. */
       const umhaengen = () => {
-        if(!steht(o) || (d.n || {})[o.id]) return;
-        d.n = d.n || {}; d.n[o.id] = laufNr(d); saveDat();
+        if(!steht(o) || !box.isConnected) return;
+        const schonOben = !!(d.n || {})[o.id];
+        d.n = d.n || {}; if(!schonOben) d.n[o.id] = laufNr(d);
+        rgOffen.delete(w); saveDat();
         const top = box.getBoundingClientRect().top, nach = box.nextElementSibling;
+        /* Zuklappen durch Austausch der einen Karte (v1.64); ein Tipp klappt
+           wieder auf. */
+        const hilfe = document.createElement('div');
+        hilfe.innerHTML = karte(w);
+        const kl = hilfe.firstElementChild;
+        box.replaceWith(kl);
+        kl.onclick = () => { const t = kl.getBoundingClientRect().top; rgOffen.add(w); neuUndHalten(t, w); };
+        if(schonOben){ if(nach) lageHalten(top, () => nach); return; }
         const erste = $('#rgListe .pos');
-        if(erste && erste !== box) $('#rgListe').insertBefore(box, erste);
-        box.querySelectorAll('[data-hoch],[data-runter]').forEach(b => b.remove());
+        if(erste && erste !== kl) $('#rgListe').insertBefore(kl, erste);
         const i = offene.indexOf(w); if(i >= 0) offene.splice(i, 1);
         $$('#rgListe .pos').forEach(el => {
           const k = offene.indexOf(el.dataset.w);
@@ -4824,13 +4900,19 @@ function renderTaeten(){
     nachher:() => saveTaet()});
 }
 /* Datum und Dauer in einem Fenster – zum Nachtragen und Ändern. */
-function dauerFenster(titel, start, datum, beiJa){
+function dauerFenster(titel, start, datum, beiJa, text){
   let wert = start;
-  frage(titel, '', 'Speichern', () => beiJa(wert, $('#dfDatum').value || heute()));
+  frage(titel, '', 'Speichern', () => {
+    const t = $('#dfText') ? $('#dfText').value.replace(/\s+/g, ' ').trim() : undefined;
+    if(t === '') return;                       // ein ergänzter Eintrag braucht eine Tätigkeit
+    beiJa(wert, $('#dfDatum').value || heute(), t);
+  });
   $('#dlgText').hidden = true;
   const box = $('#dlgListe');
   box.hidden = false;
-  box.innerHTML = `<label class="field" style="margin:0 0 12px"><span>Datum</span>
+  box.innerHTML = (text !== undefined ? `<label class="field" style="margin:0 0 12px"><span>Tätigkeit</span>
+      <input id="dfText" value="${esc(text)}" placeholder="Was wurde gemacht?"></label>` : '')
+    + `<label class="field" style="margin:0 0 12px"><span>Datum</span>
       <input type="date" id="dfDatum" class="dat" value="${esc(datum || heute())}"></label>
     <div id="dfDauer"></div>`;
   wert = dauerWahl($('#dfDauer'), start, false, w => { wert = w; }) || wert;
@@ -4869,7 +4951,7 @@ function renderTaet(){
   box.querySelectorAll('.taetDauer').forEach(r => {
     const i = +r.dataset.i, d = TAET.t[key].dauern[i];
     r.querySelector('[data-aendern]').onclick = () => dauerFenster('Dauer ändern', d, d.datum, (w, datum) => {
-      TAET.t[key].dauern[i] = Object.assign({datum}, d.zr ? {zr:d.zr} : {}, w);
+      TAET.t[key].dauern[i] = Object.assign({datum}, d.id ? {id:d.id} : {}, d.zr ? {zr:d.zr} : {}, w);
       saveTaet(); renderTaet(); toast('Geändert');
     });
     r.querySelector('[data-weg]').onclick = () => frage('Dauer löschen',
@@ -5050,6 +5132,234 @@ function renderWochenplan(){
     }).join('')
     + (uebrig.length ? `<div class="eyebrow">Passt nicht mehr hinein</div>` + uebrig.map(planKnopf).join('') : '');
   knoepfeVerdrahten(box);
+}
+/* --- Arbeitsnachweis (v1.65, Etappe D1) ------------------------------------------
+   Vorerst für Jean selbst, ohne Uhrzeiten; aber so gebaut, dass er einem
+   Arbeitgeber vorgelegt werden könnte. Blätterbar nach Monat oder Woche, Tag
+   für Tag Tätigkeit und Dauer, mit Tages- und Gesamtsumme. Die Einträge kommen
+   von selbst:
+     – die erfassten Dauern der Tätigkeiten (Abfrage, Nachtragen),
+     – erledigte Aufgaben, die nicht schon als Tätigkeit erfasst sind, mit ihrer
+       Dauer – sonst mit dem Durchschnitt ihrer Tätigkeit („Schnitt“) oder ohne,
+     – ausgegebene Nachweise ohne erfasste Dauer (Tätigkeitsbuch) mit dem
+       Durchschnitt („Schnitt“),
+   dazu die von Hand ergänzten. „Ändern“ ändert den Wert an der Quelle – ein
+   „Schnitt“ wird so zu einer erfassten Dauer und zählt in den Durchschnitt.
+   „Löschen“ nimmt einen Eintrag nur aus dem Arbeitsnachweis; die
+   Erfahrungswerte bleiben. Ein Tag als Dauer zählt die Arbeitszeit je Tag.
+   Das Blatt zum Ausgeben folgt in D2. */
+let arbZeit = null;                            // {art:'monat'|'woche', ab:Date}
+const kennung = () => 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+function arbEintraege(){
+  const raus = [];
+  let neueKennung = false;
+  Object.entries(TAET.t).forEach(([key, e]) => (e.dauern || []).forEach(d => {
+    if(!d.id){ d.id = kennung(); neueKennung = true; }
+    raus.push({id:'t:' + d.id, quelle:'taet', key, d, datum:d.datum, name:e.name || key, w:nurDauer(d)});
+  }));
+  if(neueKennung) saveTaet();
+  AUFG.filter(a => a.erledigt && !a.taetVermerkt).forEach(a => {
+    const key = taetSchluessel(a, false), s = !a.dauer && key ? taetSchnitt(key) : null;
+    raus.push({id:'a:' + a.id, quelle:'aufg', a, datum:a.erledigt, name:aufgTitel(a),
+               w:a.dauer ? nurDauer(a.dauer) : s, schnitt:!a.dauer && !!s});
+  });
+  const erfasst = new Set();
+  Object.entries(TAET.t).forEach(([key, e]) => (e.dauern || []).forEach(d => { if(d.zr) erfasst.add(key + '@' + d.zr); }));
+  (BUCH || []).forEach(b => {
+    const n = NW(b.k);
+    if(!n || n.art === 'sprinkler' || n.art === 'fremd' || !b.aus) return;
+    const key = 'nw:' + b.k;
+    if(erfasst.has(key + '@' + b.zeitraum)) return;
+    raus.push({id:`b:${b.k}:${b.zeitraum}`, quelle:'buch', key, b, datum:b.aus,
+               name:n.label + ' · ' + zeitraumText(b.zeitraum), w:taetSchnitt(key), schnitt:true});
+  });
+  TAET.arb.eigen.forEach(x => raus.push({id:'e:' + x.id, quelle:'eigen', x, datum:x.datum, name:x.text, w:nurDauer(x), eigen:true}));
+  const weg = new Set(TAET.arb.weg);
+  return raus.filter(r => r.datum && !weg.has(r.id));
+}
+function arbZeitraum(){
+  if(!arbZeit){
+    const h = tagAnfang(new Date());
+    arbZeit = {art:'monat', ab:new Date(h.getFullYear(), h.getMonth(), 1)};
+  }
+  const ab = arbZeit.ab;
+  const bis = arbZeit.art === 'monat' ? new Date(ab.getFullYear(), ab.getMonth() + 1, 0)
+                                      : new Date(ab.getFullYear(), ab.getMonth(), ab.getDate() + 6);
+  const titel = arbZeit.art === 'monat' ? `${MONATE[ab.getMonth()]} ${ab.getFullYear()}`
+    : `KW ${kalenderwoche(ab)} · ${ttmm(ab)}–${ttmm(bis)}${bis.getFullYear()}`;
+  return {ab, bis, von:isoTag(ab), bisIso:isoTag(bis), titel};
+}
+function arbBlaettern(schritt){
+  const a = arbZeit.ab;
+  arbZeit.ab = arbZeit.art === 'monat' ? new Date(a.getFullYear(), a.getMonth() + schritt, 1)
+                                       : new Date(a.getFullYear(), a.getMonth(), a.getDate() + 7 * schritt);
+  renderArbeit();
+}
+function arbArt(art){
+  if(arbZeit.art === art) return;
+  const a = arbZeit.ab, h = tagAnfang(new Date());
+  /* Beim Umschalten dort bleiben, wo man ist: der Monat der Woche, die Woche
+     des Monats (heute, wenn er gerade läuft, sonst seine erste). */
+  if(art === 'monat') arbZeit = {art, ab:new Date(a.getFullYear(), a.getMonth(), 1)};
+  else{
+    const imMonat = h.getFullYear() === a.getFullYear() && h.getMonth() === a.getMonth();
+    arbZeit = {art, ab:wochenBeginn(imMonat ? h : a)};
+  }
+  renderArbeit();
+}
+function renderArbeit(){
+  const box = $('#arbeitBox');
+  if(!box) return;
+  const z = arbZeitraum();
+  const liste = arbEintraege().filter(r => r.datum >= z.von && r.datum <= z.bisIso)
+    .sort((x, y) => x.datum.localeCompare(y.datum) || x.name.localeCompare(y.name, 'de'));
+  const min = r => planMin(r.w);
+  const tage = [];
+  liste.forEach(r => { const t = tage[tage.length - 1]; if(t && t.datum === r.datum) t.l.push(r); else tage.push({datum:r.datum, l:[r]}); });
+  const gesamt = liste.reduce((sum, r) => sum + min(r), 0), ohne = liste.filter(r => !r.w).length;
+  const i = info('Die Einträge kommen von selbst: erfasste Dauern der Tätigkeiten, erledigte Aufgaben und ausgegebene Nachweise. Wo keine Dauer erfasst ist, steht der Durchschnitt der Tätigkeit („Schnitt“). „Ändern“ ändert den Wert an der Quelle, ein Schnitt wird so zur erfassten Dauer. „Löschen“ nimmt einen Eintrag nur aus dem Arbeitsnachweis – die Erfahrungswerte bleiben. Ein Tag zählt die Arbeitszeit je Tag.', 'margin:-2px 0 10px');
+  const zeile = r => `<div class="zeile taetDauer" data-id="${esc(r.id)}">
+      <span class="etext">${esc(r.name)}<br><span class="muted small">${
+        r.w ? esc(dauerText(r.w)) : 'ohne Dauer'}${r.schnitt ? ' · Schnitt' : ''}${r.eigen ? ' · ergänzt' : ''}</span></span>
+      <button class="btn ghost klein" data-aendern="1">Ändern</button>
+      <button class="btn danger klein" data-weg="1">Löschen</button></div>`;
+  box.innerHTML = `<div class="seg arbArt" role="group" aria-label="Zeitraum">
+      <button type="button" data-art="monat" aria-pressed="${arbZeit.art === 'monat'}">Monat</button>
+      <button type="button" data-art="woche" aria-pressed="${arbZeit.art === 'woche'}">Woche</button></div>
+    <div class="arbKopf"><button type="button" class="btn ghost klein" data-blatt="-1" aria-label="zurück">‹</button>
+      <b>${esc(z.titel)}</b>
+      <button type="button" class="btn ghost klein" data-blatt="1" aria-label="weiter">›</button></div>
+    <div class="card"><div class="eyebrow mitInfo" style="margin:0 0 6px">Summe ${i.knopf}</div>${i.text}
+      <p style="margin:0"><b>≈ ${esc(dauerText({m:gesamt}))}</b>${
+        tage.length ? ` <span class="muted small">· an ${tage.length} ${tage.length === 1 ? 'Tag' : 'Tagen'}${
+          ohne ? `, ${ohne} ohne Dauer` : ''}</span>` : ''}</p></div>
+    <button class="btn" id="arbBlatt" style="margin:0 0 10px">Blatt ansehen</button>
+    <button class="btn ghost klein" id="arbPlus" style="margin:0 0 10px">+ Eintrag ergänzen</button>`
+    + (tage.length ? tage.map(t => {
+        const dt = alsDatum(t.datum), sum = t.l.reduce((s2, r) => s2 + min(r), 0);
+        return `<div class="eyebrow">${esc(WOCHENTAG[dt.getDay()] + ' ' + dText(t.datum))} <span class="summe">· ${esc(dauerText({m:sum}))}</span></div>`
+          + t.l.map(zeile).join('');
+      }).join('') : '<p class="muted small">In diesem Zeitraum ist nichts eingetragen.</p>');
+  box.querySelectorAll('[data-art]').forEach(b => b.onclick = () => arbArt(b.dataset.art));
+  box.querySelectorAll('[data-blatt]').forEach(b => b.onclick = () => arbBlaettern(+b.dataset.blatt));
+  $('#arbBlatt').onclick = () => arbBlattZeigen(z, liste);
+  $('#arbPlus').onclick = () => {
+    const vorschlag = heute() >= z.von && heute() <= z.bisIso ? heute() : z.von;
+    dauerFenster('Eintrag ergänzen', {m:60}, vorschlag, (w, datum, text) => {
+      TAET.arb.eigen.push(Object.assign({id:kennung(), datum, text}, w));
+      saveTaet(); renderArbeit(); toast('Ergänzt');
+    }, '');
+  };
+  box.querySelectorAll('.zeile[data-id]').forEach(row => {
+    const r = liste.find(x => x.id === row.dataset.id);
+    row.querySelector('[data-aendern]').onclick = () => {
+      const start = r.w || {m:30};
+      if(r.quelle === 'eigen') return dauerFenster('Eintrag ändern', start, r.datum, (w, datum, text) => {
+        Object.keys(r.x).forEach(k => { if(k === 'm' || k === 't') delete r.x[k]; });
+        Object.assign(r.x, {datum, text}, w); saveTaet(); renderArbeit(); toast('Geändert');
+      }, r.x.text);
+      dauerFenster('Dauer ändern', start, r.datum, (w, datum) => {
+        if(r.quelle === 'taet'){
+          delete r.d.m; delete r.d.t; Object.assign(r.d, {datum}, w); saveTaet();
+        }else if(r.quelle === 'aufg'){
+          r.a.dauer = w; r.a.erledigt = datum; saveAufg();
+        }else if(r.quelle === 'buch'){
+          /* Aus dem Schnitt wird eine erfasste Dauer dieses Zeitraums. */
+          const e = TAET.t[r.key] = TAET.t[r.key] || {name:NW(r.b.k).label, dauern:[], utensilien:[], fragen:true};
+          e.dauern.push(Object.assign({id:kennung(), datum, zr:r.b.zeitraum}, w)); saveTaet();
+        }
+        renderArbeit(); toast('Geändert');
+      });
+    };
+    row.querySelector('[data-weg]').onclick = () => frage('Eintrag löschen',
+      `„${r.name}“ am ${dText(r.datum)} verschwindet aus dem Arbeitsnachweis.` + (r.eigen ? '' : '\n\nDie Erfahrungswerte bleiben, wie sie sind.'),
+      'Löschen', () => {
+        if(r.eigen) TAET.arb.eigen = TAET.arb.eigen.filter(x => x !== r.x);
+        else TAET.arb.weg.push(r.id);
+        saveTaet(); renderArbeit(); toast('Gelöscht');
+      });
+  });
+}
+/* --- Arbeitsnachweis als Blatt (v1.66, Etappe D2) --------------------------------
+   Wie die Nachweise: ein Bogen oder mehrere, als HTML an den Kurzbefehl, der es
+   in PDF wandelt. Kopf mit Zeitraum, Objekt und Name, dann die Tabelle Datum ·
+   Tätigkeit · Dauer – das Datum nur in der ersten Zeile eines Tages, bei mehreren
+   Einträgen darunter die Tagessumme. Am Ende die Gesamtsumme und die Hinweise:
+   * für Durchschnittswerte, und was ein Tag als Dauer bedeutet. Der Schnitt
+   zwischen den Bögen richtet sich nach den gemessenen Zeilenhöhen; die Summe
+   steht nie allein auf einem Bogen. Dateiname „26-09 Arbeitsnachweis“ bzw.
+   „26-KW39 Arbeitsnachweis“. */
+function arbBlattHtml(z, liste){
+  const min = r => planMin(r.w);
+  const tage = [];
+  liste.forEach(r => { const t = tage[tage.length - 1]; if(t && t.datum === r.datum) t.l.push(r); else tage.push({datum:r.datum, l:[r]}); });
+  const gesamt = liste.reduce((sum, r) => sum + min(r), 0), schnitt = liste.some(r => r.schnitt);
+  const tagText = iso => { const d = alsDatum(iso); return `${WOCHENTAG[d.getDay()]} ${dText(iso)}`; };
+  const zeilen = [];
+  tage.forEach(t => {
+    t.l.forEach((r, k) => zeilen.push(`<tr><td>${k === 0 ? esc(tagText(t.datum)) : ''}</td><td>${esc(r.name)}${r.schnitt ? ' *' : ''}</td>
+      <td class="re">${r.w ? esc(dauerText(r.w)) : '–'}</td></tr>`));
+    if(t.l.length > 1)
+      zeilen.push(`<tr class="summe"><td></td><td>Summe ${esc(tagText(t.datum))}</td>
+        <td class="re">${esc(dauerText({m:t.l.reduce((s2, r) => s2 + min(r), 0)}))}</td></tr>`);
+  });
+  const tabelle = l => `<table class="arb"><thead><tr><th style="width:20%">Datum</th><th>Tätigkeit</th>
+      <th class="re" style="width:14%">Dauer</th></tr></thead><tbody>${l.join('')}</tbody></table>`;
+  const kopf = seite => `<h2>Arbeitsnachweis – ${esc(z.titel)}</h2>
+    <div class="meta">${esc([CFG.objekt, CFG.pruefer].filter(Boolean).join(' · '))}${seite}</div>`;
+  const fuss = `<div class="arbFuss"><div class="arbSumme"><b>Gesamt ≈ ${esc(dauerText({m:gesamt}))}</b>${
+      tage.length ? ` an ${tage.length} ${tage.length === 1 ? 'Tag' : 'Tagen'}` : ''}</div>${
+      schnitt ? '<p class="arbHinweis">* Durchschnittswert der Tätigkeit, keine einzeln erfasste Dauer.</p>' : ''}
+    <p class="arbHinweis">Dauern auf 15 Minuten gerundet; ein Tag als Dauer entspricht ${esc(dauerText({m:arbeitsMin()}))}.</p></div>`;
+  if(!zeilen.length)
+    return `<div class="paper">${kopf('')}<p>In diesem Zeitraum ist nichts eingetragen.</p>${fuss}</div>`;
+  /* Messen wie bei den Nachweisen: unsichtbar gesetzt, Zeile für Zeile. */
+  let m = null;
+  try{
+    const probe = document.createElement('div');
+    probe.className = 'paper';
+    probe.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;min-height:0';
+    probe.innerHTML = kopf(' · Blatt 1 von 2') + tabelle(zeilen) + fuss;
+    document.body.appendChild(probe);
+    const tab = probe.querySelector('table');
+    m = {kopf:Math.max(0, tab.offsetTop - 34), thead:tab.tHead.offsetHeight,
+         zeilen:[...tab.tBodies[0].rows].map(r => r.offsetHeight),
+         fuss:probe.querySelector('.arbFuss').offsetHeight + 18};
+    document.body.removeChild(probe);
+  }catch(e){ m = null; }
+  if(!m || !m.zeilen.length || !m.zeilen[0])
+    m = {kopf:H_KOPF, thead:H_TABKOPF, zeilen:zeilen.map(() => H_ZEILE_L), fuss:120};
+  /* 18 für den Abstand unter der Tabelle, 12 Reserve für deren Rahmenlinien. */
+  const platz = BOGEN_HOCH - m.kopf - m.thead - 18 - 12;
+  const boegen = [[]];
+  let h = 0;
+  zeilen.forEach((zl, i) => {
+    if(h + m.zeilen[i] > platz && boegen[boegen.length - 1].length){ boegen.push([]); h = 0; }
+    boegen[boegen.length - 1].push(i); h += m.zeilen[i];
+  });
+  /* Passt die Summe nicht mehr auf den letzten Bogen, wandern dessen letzte
+     Zeilen mit ihr auf einen neuen – sie steht nie allein. */
+  const hoehe = l => l.reduce((sum, i) => sum + m.zeilen[i], 0);
+  const letzter = boegen[boegen.length - 1];
+  if(hoehe(letzter) + m.fuss > platz){
+    const weiter = [];
+    while(letzter.length > 1 && hoehe(letzter) + m.fuss > platz) weiter.unshift(letzter.pop());
+    if(hoehe(letzter) + m.fuss > platz && letzter.length === 1) weiter.unshift(letzter.pop());
+    if(!letzter.length) boegen.pop();
+    boegen.push(weiter);
+  }
+  const n = boegen.length;
+  return boegen.map((l, k) => `<div class="paper">${kopf(n > 1 ? ` · Blatt ${k + 1} von ${n}` : '')}${
+    tabelle(l.map(i => zeilen[i]))}${k === n - 1 ? fuss : ''}</div>`).join('');
+}
+function arbBlattZeigen(z, liste){
+  const seiten = arbBlattHtml(z, liste);
+  const teil = arbZeit.art === 'monat'
+    ? `${String(z.ab.getFullYear()).slice(2)}-${String(z.ab.getMonth() + 1).padStart(2, '0')}`
+    : `${String(z.ab.getFullYear()).slice(2)}-KW${String(kalenderwoche(z.ab)).padStart(2, '0')}`;
+  blattDatei = {name:`${teil} Arbeitsnachweis.html`, html:blattDokument('Arbeitsnachweis', seiten)};
+  $('#blattWrap').innerHTML = seiten;
+  go('blatt');
 }
 function renderErledigt(){
   const liste = AUFG.filter(a => a.erledigt)
@@ -5619,54 +5929,53 @@ function renderNachweis(){
 
 /* ---------- Medienverbräuche -----------------------------------------------
    Abgelesen wird in der Reihenfolge des Weges durch den Gebäudekomplex, nicht
-   parteiweise – wer im Keller steht, liest dort alles ab. Die Reihenfolge lässt
-   sich mit den Pfeilen an jeder Karte verschieben und gilt dann auch beim
-   nächsten Quartal. Ausgegeben wird später parteiweise, das liest sich besser.
+   parteiweise – wer im Keller steht, liest dort alles ab. Ausgegeben wird
+   später parteiweise, das liest sich besser.
+
+   Seit v1.64 (Jeans Wunsch) bleibt jede Karte an ihrem Platz im Laufweg. Ein
+   abgelesener Zähler klappt dort zusammen, sobald das Feld verlassen und der
+   Wert unauffällig ist: „Partei · Medium“, darunter Stand und Verbrauch. Ein
+   Tipp holt die Karte in voller Größe zurück, ein Tipp auf die Überschrift
+   klappt sie wieder zu. Die Pfeile stehen an jeder offenen und aufgeklappten
+   Karte und verschieben sie im Laufweg – auch zwischen zugeklappte, die dabei
+   je als ein Schritt zählen. Die Reihenfolge gilt sofort und fürs nächste
+   Quartal. Bis v1.63 wanderte Abgelesenes nach oben, und offene Karten ließen
+   sich nur zwischen offenen verschieben – für die Pflege des Laufwegs zu wenig.
 
    Ein Datum für die ganze Runde: 26 Ablesungen an einem Tag brauchen nicht 26
-   Datumsfelder. */
+   Datumsfelder. Welche Karten aufgeklappt sind, merkt offenKarten (beim
+   Öffnen des Nachweises geleert – dann ist alles Abgelesene zu). */
 function renderMedien(){
   const d = datenFuer('medien'), liste = stellenSortiert(), namen = medienNamen();
   /* Abgelesen heißt: ein Stand steht da und ist nicht unbestätigt auffällig.
-     Ein auffälliger Wert bleibt bis zur Bestätigung unter den offenen Karten –
-     dort, wo korrigiert wird. */
+     Ein auffälliger Wert bleibt offen – dort wird korrigiert. */
   const steht = z => String(d.stand[z.key] ?? '').trim() !== '' && !unbestaetigt(d, z.key);
-  /* Wie in den Anlagenlisten: Abgelesenes wandert an den Anfang, zuletzt
-     Abgelesenes zuoberst, die offenen Zähler behalten unter sich den Weg. Ein
-     wieder geleertes Feld gibt die Nummer zurück und die Karte damit ihren
-     Platz im Weg. */
-  d.n = d.n || {};
-  let neueNr = false;
-  liste.forEach(z => {
-    if(steht(z)){ if(!d.n[z.key]){ d.n[z.key] = laufNr(d); neueNr = true; } }
-    else if(d.n[z.key]){ delete d.n[z.key]; neueNr = true; }
-  });
-  if(neueNr) saveDat();
-  const reihe = liste.map((z, i) => i).sort((x, y) =>
-    ((d.n[liste[y].key] || 0) - (d.n[liste[x].key] || 0)) || (x - y));
-  const nachbarOffen = (i, richtung) => {
-    for(let j = i + richtung; j >= 0 && j < liste.length; j += richtung)
-      if(!d.n[liste[j].key]) return j;
-    return -1;
-  };
-  const kopf = `<label class="field"><span>Ablesedatum</span>
-      <input type="date" id="medDatum" class="schmal" value="${esc(d.datum)}"></label>
-    <div class="eyebrow">Ablesereihenfolge</div>`;
-  $('#nwListe').innerHTML = kopf + reihe.map(i => {
-    const z = liste[i];
+  const titel = z => `${z.partei} · ${namen[z.key] || z.medium}`;
+  const verbrauch = z => {
     const alt = MED_ALT[z.key];
-    const v = zahl(d.stand[z.key]) != null && alt && zahl(alt.stand) != null
+    return zahl(d.stand[z.key]) != null && alt && zahl(alt.stand) != null
       ? zahlText(zahl(d.stand[z.key]) - zahl(alt.stand)) : '';
+  };
+  const kompaktHtml = (z, i) => {
+    const v = verbrauch(z), best = quittiert(d, z.key) && standGruende(d, z.key).length;
+    return `<div class="pos fertig kompakt" data-i="${i}">
+      <div class="name">${esc(titel(z))}</div>
+      <div class="muted small">Stand ${esc(d.stand[z.key])} ${esc(z.einheit)}${
+        v ? ` · Verbrauch ${esc(v)} ${esc(z.einheit)}` : ''}${best ? ' · bestätigt' : ''}</div>
+    </div>`;
+  };
+  const vollHtml = (z, i) => {
+    const alt = MED_ALT[z.key], v = verbrauch(z);
     return `<div class="pos${standKlasse(d, z.key)}" data-i="${i}">
-      ${nameMitVerlauf(`${esc(z.partei)} · ${esc(namen[z.key] || z.medium)}`)}
+      ${nameMitVerlauf(esc(titel(z)), steht(z) ? ' zu' : '')}
       <div class="muted small">Nr. ${esc(z.nr)}${z.ort ? ' · ' + esc(z.ort) : ''}</div>
       <div class="row" style="margin-top:8px;align-items:center">
         <input inputmode="decimal" data-stand="1" value="${esc(d.stand[z.key] || '')}" placeholder="Zählerstand">
         <span class="muted small" style="flex:0 0 auto">${esc(z.einheit)}</span>
         <span class="pfeile">
-          <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>${d.n[z.key] ? '' : `
-          <button type="button" data-hoch="1" aria-label="nach oben"${nachbarOffen(i, -1) < 0 ? ' disabled' : ''}>↑</button>
-          <button type="button" data-runter="1" aria-label="nach unten"${nachbarOffen(i, 1) < 0 ? ' disabled' : ''}>↓</button>`}
+          <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>
+          <button type="button" data-hoch="1" aria-label="nach oben"${i === 0 ? ' disabled' : ''}>↑</button>
+          <button type="button" data-runter="1" aria-label="nach unten"${i === liste.length - 1 ? ' disabled' : ''}>↓</button>
         </span>
       </div>
       <div class="muted small" style="margin-top:6px">${
@@ -5675,21 +5984,26 @@ function renderMedien(){
             : 'Keine Ablesung aus dem Vorquartal'}</div>
       <div class="pruefZeile" data-pz="${esc(z.key)}">${pruefZeileHtml(d, z.key)}</div>
     </div>`;
-  }).join('');
-
-  /* Die Pfeile stehen nur an den offenen Karten; ihre Sperren richten sich nach
-     dem, was nach einem Umhängen noch offen darüber oder darunter liegt. */
-  const pfeileFrisch = () => {
-    const offene = $$('#nwListe .pos').filter(el => !d.n[liste[+el.dataset.i].key]);
-    offene.forEach((el, k) => {
-      const h = el.querySelector('[data-hoch]'), r = el.querySelector('[data-runter]');
-      if(h) h.disabled = k === 0;
-      if(r) r.disabled = k === offene.length - 1;
-    });
   };
+  const kopf = `<label class="field"><span>Ablesedatum</span>
+      <input type="date" id="medDatum" class="schmal" value="${esc(d.datum)}"></label>
+    <div class="eyebrow">Ablesereihenfolge</div>`;
+  $('#nwListe').innerHTML = kopf + liste.map((z, i) =>
+    steht(z) && !offenKarten.has(z.key) ? kompaktHtml(z, i) : vollHtml(z, i)).join('');
 
-  $$('#nwListe .pos').forEach(box => {
+  /* Auf- und Zuklappen per Neuaufbau; die Karte bleibt an ihrem Platz auf dem
+     Schirm. */
+  const umschalten = (box, i, auf) => {
+    const top = box.getBoundingClientRect().top;
+    if(auf) offenKarten.add(liste[i].key); else offenKarten.delete(liste[i].key);
+    renderMedien();
+    lageHalten(top, () => $(`#nwListe .pos[data-i="${i}"]`));
+  };
+  const verdrahten = box => {
     const i = +box.dataset.i, z = liste[i];
+    if(box.classList.contains('kompakt')){ box.onclick = () => umschalten(box, i, true); return; }
+    const kopfZu = box.querySelector('.name.zu');
+    if(kopfZu) kopfZu.onclick = () => umschalten(box, i, false);
     const feld = box.querySelector('[data-stand]');
     feld.oninput = e => {
       d.stand[z.key] = e.target.value.trim();
@@ -5697,25 +6011,26 @@ function renderMedien(){
       saveDat(); renderBar();
       box.classList.toggle('fertig', !!d.stand[z.key]);
     };
-    /* Beim Verlassen des Feldes wandert der abgelesene Zähler an den Anfang –
-       aber als Umhängen der einen Karte, nicht als Neuaufbau der Liste: steht
-       der Daumen schon im nächsten Feld, risse ein Neuaufbau Feld und Tastatur
-       mit weg. Ein geleertes Feld ordnet sich erst beim nächsten Aufbau zurück,
-       das kommt selten vor und darf warten. */
-    const umhaengen = () => {
-      if(!steht(z) || d.n[z.key]) return;
-      d.n[z.key] = laufNr(d); saveDat();
-      const top = box.getBoundingClientRect().top, nach = box.nextElementSibling;
-      const erste = $('#nwListe .pos');
-      if(erste && erste !== box) $('#nwListe').insertBefore(box, erste);
-      box.querySelectorAll('[data-hoch],[data-runter]').forEach(b => b.remove());
-      pfeileFrisch();
+    /* Beim Verlassen des Feldes klappt der abgelesene Zähler zusammen – als
+       Austausch der einen Karte, nicht als Neuaufbau der Liste: steht der
+       Daumen schon im nächsten Feld, risse ein Neuaufbau Feld und Tastatur mit
+       weg. Die nächste Karte bleibt dabei, wo sie auf dem Schirm war. */
+    const zuklappen = () => {
+      if(!steht(z) || !box.isConnected) return;
+      offenKarten.delete(z.key);
+      const nach = box.nextElementSibling, top = nach ? nach.getBoundingClientRect().top : 0;
+      const hilfe = document.createElement('div');
+      hilfe.innerHTML = kompaktHtml(z, i);
+      const kl = hilfe.firstElementChild;
+      box.replaceWith(kl);
+      verdrahten(kl);
       if(nach) lageHalten(top, () => nach);
     };
-    /* Erst prüfen, dann umhängen: ein auffälliger Wert bleibt stehen, bis er
+    /* Erst prüfen, dann zuklappen: ein auffälliger Wert bleibt offen, bis er
        bestätigt ist. */
-    feld.onblur = () => standPruefen(d, z.key, box, umhaengen);
-    pruefVerdrahten(d, z.key, box, umhaengen);
+    feld.onblur = () => standPruefen(d, z.key, box, zuklappen);
+    pruefVerdrahten(d, z.key, box, zuklappen);
+    /* Ein Schritt im Laufweg, gleich ob die Nachbarkarte offen oder zu ist. */
     const tausch = j => {
       if(j < 0 || j >= liste.length) return;
       const top = box.getBoundingClientRect().top;
@@ -5724,16 +6039,18 @@ function renderMedien(){
       folgeSpeichern(neu); renderMedien();
       lageHalten(top, () => $(`#nwListe .pos[data-i="${j}"]`));
     };
-    const hoch = box.querySelector('[data-hoch]'), runter = box.querySelector('[data-runter]');
-    if(hoch)   hoch.onclick   = () => tausch(nachbarOffen(i, -1));
-    if(runter) runter.onclick = () => tausch(nachbarOffen(i, 1));
-    box.querySelector('[data-ort]').onclick = () =>
-      verorten(z.key, `${z.partei} · ${namen[z.key] || z.medium}`);
-    box.querySelector('[data-verlauf]').onclick = () =>
-      verlaufOeffnen('medien', z.key, `${z.partei} · ${namen[z.key] || z.medium}`);
-  });
+    box.querySelector('[data-hoch]').onclick   = () => tausch(i - 1);
+    box.querySelector('[data-runter]').onclick = () => tausch(i + 1);
+    box.querySelector('[data-ort]').onclick = () => verorten(z.key, titel(z));
+    box.querySelector('[data-verlauf]').onclick = e => {
+      e.stopPropagation();
+      verlaufOeffnen('medien', z.key, titel(z));
+    };
+  };
+  $$('#nwListe .pos').forEach(verdrahten);
   $('#medDatum').onchange = e => { d.datum = e.target.value; saveDat(); renderBar(); };
-  listenSprung(p => String(d.stand[liste[reihe[p]].key] ?? '').trim() === '');
+  /* Beim Betreten zur ersten offenen Karte; das Abgelesene davor ist zu. */
+  listenSprung(p => String(d.stand[liste[p].key] ?? '').trim() === '');
 }
 const medienVoll = d => {
   const l = stellen();
@@ -11375,8 +11692,12 @@ function zurKarte(o){
   const n = NW(o.k);
   nachweisOeffnen(o.k);
   let i;
-  if(n.art === 'medien') i = stellenSortiert().findIndex(z => z.key === o.id);
-  else{
+  if(n.art === 'medien'){
+    i = stellenSortiert().findIndex(z => z.key === o.id);
+    /* Ein abgelesener Zähler ist zugeklappt (v1.64) – gesucht hat man ihn, um
+       etwas nachzusehen oder zu ändern. */
+    if(String(((DAT.medien || {}).stand || {})[o.id] ?? '').trim()){ offenKarten.add(o.id); renderNachweis(); }
+  }else{
     i = teilCfg(o.k).anlagen.indexOf(o.id);
     if(n.kompakt && zeileVon(o.k, o.id).status){ offenKarten.add(o.id); renderNachweis(); }
   }
