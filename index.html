@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.59 21.09.2026  Rollbandfilter (von Jean gewünscht): als Zustand stehen nur
+                    noch „In Ordnung“ und „Mangel“ zur Wahl. „Weitergedreht“
+                    und „Rolle getauscht“ sind Kacheln unter dem Bemerkungsfeld,
+                    in der Prüfansicht wie im Rundgang; höchstens eine gilt. Die
+                    Kachel schreibt ihren Text vorn in die Bemerkung, eigener
+                    Text bleibt dahinter stehen, ein zweiter Tipp nimmt ihn
+                    heraus. Ist noch kein Zustand gewählt, setzt sie „In
+                    Ordnung“ mit; ein gewählter Mangel bleibt. Ein alter
+                    Zustand „Weitergedreht/ausgetauscht“ der laufenden Runde
+                    wird zu „In Ordnung“ – auch nach dem Zurückholen einer
+                    Runde und beim Einlesen einer älteren Sicherung.
   v1.58 21.09.2026  Fehler von Jean gemeldet: unter iOS 27 sprang die Seite beim
                     Eintippen ans Ende – in Einstellungen › Medienverbräuche
                     beim Umbenennen und ebenso beim Eintragen der Stände. Im Code
@@ -1274,6 +1285,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child,.segfeld .seg button:first-child{border-left:0}
 .pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"],.segfeld .seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
 .pos .bem{margin-top:8px}
+.pos .seg.vorschlag{margin-top:8px}       /* Kacheln unter der Bemerkung (v1.59) */
 .pos .punkt{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 .pos .punkt .ptext{font-size:14px;margin-bottom:6px}
 .pos .punkt input.bar{width:120px}
@@ -2055,7 +2067,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.58';
+const VERSION = 'v1.59';
 const BUILD   = VERSION + ' · 21.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -2364,7 +2376,10 @@ const NACHWEISE = [
   {
     k:'rollband', label:'Rollbandfilter', datei:'Prüfung Rollbandfilter', takt:['monat'],
     titel:'Monatliche Kontrolle Rollbandfilter',
-    status:['Weitergedreht/ausgetauscht','In Ordnung','Mangel'],
+    status:['In Ordnung','Mangel'],
+    /* Was am Filter getan wurde, ist kein Zustand, sondern eine Bemerkung
+       (v1.59): zwei Kacheln unter dem Feld, höchstens eine gilt. */
+    vorschlaege:['Weitergedreht','Rolle getauscht'],
     anlagen:['Anlage 1'],
     checkliste:
 `Checkliste Monatliche Prüfung Rollbandfilter
@@ -2619,6 +2634,22 @@ const saveCfg = () => { Store.set('nwCfg', CFG); listeNachziehen(); };
    über mehrere Tage ziehen. */
 let DAT = Store.get('nwDat', {});
 const saveDat = () => { Store.set('nwDat', DAT); listeNachziehen(); };
+/* Bis v1.58 war „Weitergedreht/ausgetauscht“ ein Zustand der Rollbandfilter.
+   Seit v1.59 gibt es nur „In Ordnung“ und „Mangel“; was getan wurde, steht als
+   Kachel in der Bemerkung. Ein alter Eintrag der laufenden Runde wird zu „In
+   Ordnung“ – welche der beiden Kacheln stimmt, lässt sich daraus nicht lesen,
+   die tippt Jean nach. Ausgegebene Blätter der Historie bleiben, wie sie sind.
+   Gespeichert wird ohne listeNachziehen, das beim Start noch nicht bereitsteht. */
+function zustaendeAngleichen(){
+  const d = DAT.rollband;
+  let n = 0;
+  if(d && d.zeilen) Object.values(d.zeilen).forEach(z => {
+    if(z && z.status === 'Weitergedreht/ausgetauscht'){ z.status = 'In Ordnung'; n++; }
+  });
+  if(n) Store.set('nwDat', DAT);
+  return n;
+}
+zustaendeAngleichen();
 /* Welche RUNDE zuletzt hinausging – nicht, an welchem Tag das geschah. Wer die
    August-Runde am 2. September abschließt, hätte sonst den September als
    erledigt markiert und bekäme dort keine Mahnung mehr. Vermerkt wird deshalb
@@ -3224,6 +3255,51 @@ function lageHalten(vorherTop, wiederfinden){
   if(!el || vorherTop == null) return;
   const imDokument = el.getBoundingClientRect().top + window.scrollY;
   window.scrollTo(0, Math.max(0, Math.round(imDokument - vorherTop)));
+}
+
+/* --- Vorschlagskacheln an der Bemerkung (v1.59) ---------------------------
+   Bisher nur bei den Rollbandfiltern: „Weitergedreht“ oder „Rolle getauscht“.
+   Die Kachel schreibt ihren Text vorn in die Bemerkung, eigener Text bleibt
+   dahinter stehen („Rolle getauscht, Fließ stark verschmutzt“). So kommt er
+   ohne weiteres Zutun ins Blatt, in die Historie und in die Suche. Höchstens
+   eine Kachel gilt: die andere tauscht nur diesen Anfang aus, ein zweiter Tipp
+   auf dieselbe nimmt ihn wieder heraus. Welche gedrückt ist, liest die Karte aus
+   dem Text – wer ihn von Hand löscht, sieht die Kachel wieder frei. */
+const VORSCHLAG_TRENN = ', ';
+function vorschlagIn(bem, liste){
+  const t = String(bem || '');
+  return (liste || []).find(v => t === v || t.startsWith(v + VORSCHLAG_TRENN)) || '';
+}
+function vorschlagSetzen(bem, liste, wahl){
+  const t = String(bem || ''), alt = vorschlagIn(t, liste);
+  const rest = alt ? t.slice(alt.length).replace(/^,\s*/, '') : t.replace(/^\s+/, '');
+  const neu = alt === wahl ? '' : wahl;
+  return neu ? (rest ? neu + VORSCHLAG_TRENN + rest : neu) : rest;
+}
+const vorschlagHtml = (n, bem) => n.vorschlaege
+  ? `<div class="seg vorschlag" role="group" aria-label="Vorschlag für die Bemerkung">${
+      n.vorschlaege.map(v => `<button type="button" data-vorschlag="${esc(v)}" aria-pressed="${vorschlagIn(bem, n.vorschlaege) === v}">${esc(v)}</button>`).join('')
+    }</div>` : '';
+function vorschlagZeigen(box, n, bem){
+  const an = vorschlagIn(bem, n.vorschlaege);
+  box.querySelectorAll('[data-vorschlag]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vorschlag === an)));
+}
+/* Ist noch kein Zustand gewählt, setzt die Kachel „In Ordnung“ gleich mit –
+   weitergedreht oder getauscht ist der Filter danach im Regelfall in Ordnung.
+   Das geschieht über den Knopf selbst, damit Datum, Tätigkeitsbuch und das
+   Umsortieren genau so laufen wie beim Antippen von Hand. Ein gewählter Mangel
+   bleibt stehen. */
+function vorschlagVerdrahten(box, n, z){
+  const feld = box.querySelector('[data-feld="bem"]');
+  box.querySelectorAll('[data-vorschlag]').forEach(b => b.onclick = () => {
+    z.bem = vorschlagSetzen(z.bem, n.vorschlaege, b.dataset.vorschlag);
+    if(feld) feld.value = z.bem;
+    const io = n.status.find(st => !/mangel|defekt/i.test(st));
+    const knopf = io && box.querySelector(`[data-status="${io}"]`);
+    if(!z.status && vorschlagIn(z.bem, n.vorschlaege) && knopf){ knopf.click(); return; }
+    saveDat();
+    vorschlagZeigen(box, n, z.bem);
+  });
 }
 
 /* Laufnummer innerhalb der Runde: sie ordnet das Geprüfte nach der Folge des
@@ -3893,6 +3969,7 @@ function renderRundgang(){
       <div class="seg">${n.status.map(st =>
         `<button type="button" data-status="${esc(st)}" aria-pressed="${z.status === st}">${esc(st)}</button>`).join('')}</div>
       <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem)}">
+      ${vorschlagHtml(n, z.bem)}
     </div>`;
   };
   $('#rgListe').innerHTML = [...fertig, ...offene].map(karte).join('');
@@ -4017,7 +4094,8 @@ function renderRundgang(){
       neuUndHalten(top, z.status && !mangel && nach ? nach : w);
     });
     box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
-    box.querySelector('[data-feld="bem"]').oninput = e => { z.bem = e.target.value; saveDat(); };
+    box.querySelector('[data-feld="bem"]').oninput = e => { z.bem = e.target.value; saveDat(); vorschlagZeigen(box, n, z.bem); };
+    vorschlagVerdrahten(box, n, z);
   });
 
   /* Rückkehr aus dem Grundriss an die alte Stelle, beim Betreten zur ersten
@@ -4819,6 +4897,7 @@ function renderNachweis(){
       <div class="seg">${n.status.map(s =>
         `<button type="button" data-status="${esc(s)}" aria-pressed="${z.status === s}">${esc(s)}</button>`).join('')}</div>
       <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem)}">
+      ${vorschlagHtml(n, z.bem)}
     </div>`;
   }).join('');
   $$('#nwListe .pos').forEach(box => {
@@ -4863,7 +4942,8 @@ function renderNachweis(){
       halten(top, wandert);
     });
     box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
-    box.querySelector('[data-feld="bem"]').oninput    = e => { z.bem   = e.target.value; saveDat(); };
+    box.querySelector('[data-feld="bem"]').oninput    = e => { z.bem   = e.target.value; saveDat(); vorschlagZeigen(box, n, z.bem); };
+    vorschlagVerdrahten(box, n, z);
     if(n.sortierbar && !z.n){
       const tausch = j => {
         if(j < 0 || j >= t.anlagen.length) return;
@@ -9236,6 +9316,7 @@ async function paketUebernehmen(paket){
   CFG.teile = CFG.teile || {};
   CFG.orte  = CFG.orte  || {};
   DAT     = paket.dat    || {};
+  zustaendeAngleichen();                    // Sicherung aus der Zeit vor v1.59
   MED_ALT = paket.alt    || {};
   TAUSCH  = Array.isArray(paket.tausch) ? paket.tausch : [];
   EXP     = paket.exp    || {};
@@ -10055,6 +10136,7 @@ function rundeZurueckholen(e){
     'Zurücknehmen', async () => {
       DAT[e.k] = JSON.parse(JSON.stringify(e.roh));
       DAT[e.k].signatur = null;
+      zustaendeAngleichen();                  // Runde aus der Zeit vor v1.59
       if(e.expVorher) EXP[e.k] = e.expVorher; else delete EXP[e.k];
       if(medien){
         Object.entries(e.altVorher || {}).forEach(([key, v]) => {
