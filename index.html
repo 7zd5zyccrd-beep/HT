@@ -10,6 +10,29 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.63 21.09.2026  Aufgaben, Etappe C – Einplanung: neue Einstellung „Zeit je
+                    Arbeitstag“ unter Einstellungen › Arbeitszeit und Abwesenheit
+                    (ab Werk 8 Stunden, von Jean so gewählt). Die Gruppen der
+                    Liste zeigen, was sie an Zeit brauchen („Diese Woche · ≈ 5:30
+                    h“); reicht die verfügbare Zeit bis zu einer Frist nicht,
+                    steht oben die Karte „Auslastung“. Neu unter Übersicht der
+                    Wochenplan: die nächsten zehn Arbeitstage mit Balken der
+                    Auslastung, die offenen Zeilen nach Frist und Wichtigkeit
+                    verteilt, Wetteraufgaben auf gute Halbtage, Längeres über
+                    mehrere Tage. Ohne Erfahrungswert zählen 30 Minuten
+                    („geschätzt“), Fremdprüfungen zählen nicht, angefangene
+                    Nachweise nur mit dem offenen Anteil.
+  v1.62 21.09.2026  Aufgaben, Etappe B: die Erfahrungswerte werden sichtbar und
+                    bearbeitbar. In der Aufgabenliste steht unter jeder Zeile
+                    „≈ 1:30 h · Leiter, Taschenlampe“ (beim Rundgang die Summe der
+                    beteiligten Nachweise), im Nachweis unter dem Objekt die Dauer
+                    und „Mitnehmen: …“, an der Aufgabe die Karte „Erfahrung“ mit
+                    „Bearbeiten“. Neu unter Startseite › Übersicht › Tätigkeiten:
+                    je Tätigkeit Durchschnitt, „wieder fragen“, Utensilien, die
+                    erfassten Dauern mit Nachtragen, Ändern und Löschen, und
+                    „Erfahrungswerte löschen“; darunter die Werkzeugliste zum
+                    Umbenennen und Löschen. Aufgeführt sind auch Tätigkeiten ohne
+                    Werte, damit sich Utensilien vor dem ersten Mal eintragen lassen.
   v1.61 21.09.2026  Aufgaben, Etappe A (von Jean angestoßen): nach einer
                     wiederkehrenden Tätigkeit fragt ein Fenster, wie lange sie
                     ungefähr gedauert hat und welche Utensilien gebraucht wurden.
@@ -1332,6 +1355,15 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .chips button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong);border-color:var(--strong)}
 .utNeu{margin-top:8px;align-items:center}
 .utNeu .btn{flex:0 0 auto;width:auto;margin-top:0}
+/* Erfasste Dauern einer Tätigkeit (v1.62): Datum und Dauer, daneben Ändern und
+   Löschen – dieselbe Zeile wie in den Einstellungslisten. */
+.zeile.taetDauer{align-items:center}
+/* Einplanung (v1.63): Summe an der Gruppenüberschrift in normaler Schreibung,
+   Balken der Tagesauslastung im Wochenplan. */
+.eyebrow .summe{text-transform:none;letter-spacing:0}
+.planBalken{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:-2px 0 10px}
+.planBalken span{display:block;height:100%;background:var(--strong)}
+.zeile.taetDauer .etext{flex:1;min-width:0}
 .pos .punkt{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 .pos .punkt .ptext{font-size:14px;margin-bottom:6px}
 .pos .punkt input.bar{width:120px}
@@ -1955,6 +1987,19 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       <div id="wregelBox"></div>
     </section>
 
+    <!-- Wochenplan (v1.63) -->
+    <section class="view" id="view-wplan">
+      <div id="wplanBox"></div>
+    </section>
+
+    <!-- Tätigkeiten: Dauer und Utensilien (v1.62) -->
+    <section class="view" id="view-taeten">
+      <div id="taetenBox"></div>
+    </section>
+    <section class="view" id="view-taet">
+      <div id="taetBox"></div>
+    </section>
+
     <!-- Wetter am Standort (v1.50) -->
     <section class="view" id="view-wetter">
       <div id="wetterBox"></div>
@@ -2113,7 +2158,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.61';
+const VERSION = 'v1.63';
 const BUILD   = VERSION + ' · 21.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3148,7 +3193,8 @@ function ring(n, takt){
 const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigte Aufgaben', nachweis:'Nachweis', blatt:'Blatt',
                historie:'Historie', histnw:'Historie', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
-               plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregeln:'Wetterregeln', wregel:'Regel'};
+               plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregeln:'Wetterregeln', wregel:'Regel',
+               taeten:'Tätigkeiten', taet:'Tätigkeit', wplan:'Wochenplan'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
    nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
@@ -3174,6 +3220,7 @@ function go(name, push = true){
   $('#titel').textContent = name === 'nachweis' && offen ? NW(offen).label
                           : name === 'histnw' && histK ? NW(histK).label
                           : name === 'setsub' ? setTitel
+                          : name === 'taet' && taetAktiv ? taetAktiv.name
                           : name === 'wregel' && regelAktiv ? (regelAktiv.startsWith('eigen:')
                               ? ((eigeneRegel(regelAktiv.slice(6)) || regelEntwurf || {}).titel || 'Eigene Regel')
                               : hinweisRegel(regelAktiv).name) : TITEL[name];
@@ -3202,6 +3249,9 @@ function go(name, push = true){
   if(name === 'erledigt') renderErledigt();
   if(name === 'wetter')   renderWetter();
   if(name === 'wregeln')  renderWetterregeln();
+  if(name === 'taeten')   renderTaeten();
+  if(name === 'wplan')    renderWochenplan();
+  if(name === 'taet')     renderTaet();
   if(name === 'wregel')   renderWetterregel();
   if(name === 'historie') renderHistorie();
   if(name === 'histnw')   renderHistNw();
@@ -3590,6 +3640,7 @@ function aufgaben(){
       neu(n, {titel: n.label + (m && m.ueber ? ' · ' + zeitraumText(m.runde) : ''),
               ziel: erster.ziel, faellig: erster.faellig, frueh: erster.frueh,
               ring: teile.map(t => t.ring).sort((x, y) => ringRang(x) - ringRang(y))[0] || '',
+              sprTeile: teile.map(t => t === w ? 'woch' : 'mon'),   // für die Einplanung (v1.63)
               begonnen: begonnen(n), stand: texte.join(' · ')});
       return;
     }
@@ -3634,6 +3685,7 @@ function aufgaben(){
       const wRang = w => WICHTIG.findIndex(x => x[0] === w);
       for(let i = liste.length - 1; i >= 0; i--) if(teil.includes(liste[i])) liste.splice(i, 1);
       liste.push({k:'', rundgang:true, ziel:'', akku:false, begonnen:teil.some(a => a.begonnen), pos:-1,
+        teilK:teil.map(a => a.k),                // für die Erfahrungswerte (v1.62)
         titel:'Kombinierter Rundgang',
         stand:rg.map(t => `${NW(t.k).label} ${t.objekte.filter(o => o.offen).length}`).join(' · ') + ' offen',
         ring:teil.map(a => a.ring).sort((x, y) => ringRang(x) - ringRang(y))[0] || '',
@@ -3743,7 +3795,8 @@ function aufgStand(a){
 const aufgabeKnopf = a =>
   `<button class="btn aufgabe eintrag${a.ring ? ' ring-' + a.ring : ''}" ${a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${a.aufg}"`
     : `data-nw="${a.k}" data-ziel="${a.ziel}"`}${a.akku ? ' data-akku="1"' : ''}>`
-  + `<span class="etext">${esc(a.titel)}<small>${esc([a.stand, a.hinweis, fristZeile(a)].filter(Boolean).join(' · '))}</small></span></button>`;
+  + `<span class="etext">${esc(a.titel)}<small>${esc([a.stand, a.hinweis, fristZeile(a)].filter(Boolean).join(' · '))}</small>${
+      (e => e ? `<small>${esc(e)}</small>` : '')(erfFuerEintrag(a))}</span></button>`;
 
 /* Einen Nachweis öffnen – von der Aufgabenliste wie von „Alle Nachweise“ aus. */
 function nachweisOeffnen(k, ziel){
@@ -3812,8 +3865,11 @@ function renderHome(){
   const liste = aufgaben(), gibt = irgendeinNachweis(), hinweise = wetterHinweise();
   let inhalt = abwesenheitsKarte(liste) + GRUPPEN.map(([g, titel]) => {
     const teil = liste.filter(a => a.gruppe === g);
+    /* Was die Gruppe an Zeit braucht (v1.63), aus den Erfahrungswerten. */
+    const summe = teil.reduce((sum, a) => { const m = eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
     return teil.length
-      ? `<div class="eyebrow">${esc(titel)}</div>` + teil.map(aufgabeKnopf).join('')
+      ? `<div class="eyebrow">${esc(titel)}${summe ? ` <span class="summe">· ≈ ${esc(dauerText({m:summe}))}</span>` : ''}</div>`
+        + teil.map(aufgabeKnopf).join('')
       : '';
   }).join('');
   if(!inhalt.includes('data-')) inhalt += gibt
@@ -3823,12 +3879,15 @@ function renderHome(){
      der Bilderspeicher geantwortet hat. */
   const erledigt = AUFG.filter(a => a.erledigt).length;
   const regelnAn = CFG.wetter ? alleRegeln().filter(r => !r.aus).length : 0;
+  const taetL = taetKandidaten(), taetMit = taetL.filter(t => ((TAET.t[t.key] || {}).dauern || []).length).length;
   const mehr = (gibt ? `<button class="btn eintrag" data-alle="1"><span>Alle Nachweise</span></button>` : '')
+    + (liste.length ? `<button class="btn eintrag" data-wplan="1"><span>Wochenplan</span></button>` : '')
     + (CFG.wetter ? `<button class="btn eintrag" data-wregeln="1"><span>Wetterregeln</span><span class="zahl">${regelnAn}</span></button>` : '')
+    + (taetL.length ? `<button class="btn eintrag" data-taeten="1"><span>Tätigkeiten</span><span class="zahl">${taetMit}</span></button>` : '')
     + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigte Aufgaben</span><span class="zahl">${erledigt}</span></button>` : '')
     + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span><span class="zahl" id="homeWetterStand"></span></button>` : '');
   $('#homeListe').innerHTML = `<button class="btn ghost klein" data-neuaufg="1" style="margin:0 0 12px">+ Aufgabe hinzufügen</button>`
-    + warnKarte() + hinweisKarte(hinweise) + sicherungsKarte(gibt) + inhalt
+    + warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
     + '<div id="homeMehr">' + (mehr ? `<div class="eyebrow">Übersicht</div>${mehr}` : '') + '</div>';
   knoepfeVerdrahten($('#homeListe'));
   const alle = $('#homeListe [data-alle]');
@@ -3842,6 +3901,9 @@ function renderHome(){
   if(sich) sich.onclick = alsDateiSichern;
   const wr = $('#homeListe [data-wregeln]');
   if(wr) wr.onclick = () => go('wregeln');
+  const ta = $('#homeListe [data-taeten]');
+  if(ta) ta.onclick = () => go('taeten');
+  $('#homeListe').querySelectorAll('[data-wplan]').forEach(b => b.onclick = () => go('wplan'));
   const wk = $('#homeListe [data-warn]');
   if(wk) wk.onclick = () => { go('wetter'); wetterAbrufen(); };
   $('#homeListe').querySelectorAll('[data-hja]').forEach(b => b.onclick = () => {
@@ -4293,6 +4355,11 @@ function renderAufgabe(){
   /* Wiederkehrendes fragt nach dem Erledigen im eigenen Fenster nach Dauer und
      Utensilien (v1.61); alles andere bekommt hier ein freiwilliges Dauerfeld. */
   const fragtNachher = !neu && !a.erledigt && !a.taetVermerkt && taetFragenOffen(taetSchluessel(a, false));
+  /* Was die Erfahrung sagt (v1.62) – nur, wenn es schon etwas zu sagen gibt. */
+  const tKeyA = !neu && !mangel && !a.erledigt ? taetSchluessel(a, false) : '';
+  const erfA = tKeyA ? erfDetailHtml(tKeyA) : '';
+  const erfKarte = erfA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erfahrung</div>${erfA}
+      <button class="btn ghost klein" id="aufgTaet" style="margin-top:10px">Bearbeiten</button></div>` : '';
   let erlDauer = null;
   const erledigung = neu ? `<button class="btn primary" id="aufgAnlegen">Aufgabe anlegen</button>`
     : a.erledigt
@@ -4325,7 +4392,7 @@ function renderAufgabe(){
        ${planung}
        <label class="field"><span>Notiz</span><textarea id="aufgNotiz" style="min-height:90px">${esc(a.notiz)}</textarea></label>`
     + wege + (!mangel && !a.erledigt && a.wetter ? `<div id="aufgWetterKarte">${aufgWetterKarteHtml(a)}</div>` : '')
-    + vorbStandKarte + erledigung
+    + erfKarte + vorbStandKarte + erledigung
     + (!neu && !mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '');
 
   if(!mangel){
@@ -4440,6 +4507,7 @@ function renderAufgabe(){
     toast('Aufgabe angelegt'); zurueck();
   };
   if($('#erlDauer')) dauerWahl($('#erlDauer'), null, true, w => { erlDauer = w; });
+  if($('#aufgTaet')) $('#aufgTaet').onclick = () => { taetAktiv = {key:tKeyA, name:a.titel || 'Aufgabe'}; go('taet'); };
   if($('#erlSetzen')) $('#erlSetzen').onclick = () => {
     a.erledigt = $('#erlDatum').value || heute();
     a.vermerk = $('#erlVermerk').value.trim();
@@ -4577,7 +4645,7 @@ function dauerWahl(box, start, leer, bei){
 /* Utensilien als Kacheln aus der gemeinsamen Werkzeugliste, mehrere wählbar,
    dazu ein Feld für ein neues. Ein neues ist gleich gewählt; in die
    Werkzeugliste wandert es erst mit dem Speichern. */
-function utensilWahl(box, gewaehlt){
+function utensilWahl(box, gewaehlt, bei){
   const liste = TAET.werkzeug.slice(), sel = new Set();
   const finden = t => liste.find(x => x.toLocaleLowerCase('de') === t.toLocaleLowerCase('de'));
   (gewaehlt || []).forEach(u => { const da = finden(u); if(da) sel.add(da); else { liste.push(u); sel.add(u); } });
@@ -4593,6 +4661,7 @@ function utensilWahl(box, gewaehlt){
       const u = liste[+b.dataset.u];
       if(sel.has(u)) sel.delete(u); else sel.add(u);
       b.setAttribute('aria-pressed', String(sel.has(u)));
+      if(bei) bei();
     });
   };
   const dazu = () => {
@@ -4601,6 +4670,7 @@ function utensilWahl(box, gewaehlt){
     const da = finden(t);
     if(da) sel.add(da); else { liste.push(t); sel.add(t); }
     feld.value = ''; zeichnen();
+    if(bei) bei();
   };
   plus.onclick = dazu;
   feld.onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); dazu(); } };
@@ -4645,6 +4715,341 @@ function taetFragen(o){
   wert = dauerWahl($('#taetDauer'), wert, false, w => { wert = w; }) || wert;
   const ut = utensilWahl($('#taetUt'), e ? e.utensilien : []);
   return true;
+}
+/* --- Tätigkeiten: Anzeige und Bearbeitung (v1.62, Etappe B) -------------------
+   An der Aufgabe, in der Liste und im Nachweis steht, wie lange es im Schnitt
+   dauert und was mitzunehmen ist. Unter Startseite › Übersicht › Tätigkeiten
+   lässt sich alles von Hand ändern: Dauern nachtragen, ändern, löschen,
+   Utensilien wählen, „wieder fragen“ setzen und die Werkzeugliste pflegen.
+   Aufgeführt sind die Tätigkeiten mit Erfahrungswerten und die, die es gerade
+   gibt (Nachweise mit Anlagen, offene wiederkehrende Aufgaben und Aufgaben aus
+   Wetterregeln) – so lassen sich Utensilien schon vor dem ersten Mal eintragen. */
+const SPR_TAET = {woch:'Sprinkler, wöchentlicher Kontrollgang', mon:'Sprinkler, monatliche Kontrolle'};
+let taetAktiv = null;                          // {key, name} der offenen Tätigkeit
+const klein = t => t.toLocaleLowerCase('de');
+function taetKandidaten(){
+  const m = new Map();
+  const dazu = (key, name) => { if(key && !m.has(key)) m.set(key, name); };
+  NACHWEISE.forEach(n => {
+    if(n.spaeter || n.art === 'fremd') return;
+    if(n.art === 'sprinkler'){
+      if(hatEintraege(n, 'woche')) dazu('nw:sprinkler:woch', SPR_TAET.woch);
+      if(hatEintraege(n, 'monat')) dazu('nw:sprinkler:mon', SPR_TAET.mon);
+    }else if(hatEintraege(n, 'monat')) dazu('nw:' + n.k, n.label);
+  });
+  AUFG.filter(a => !a.erledigt).forEach(a => dazu(taetSchluessel(a, false), a.titel || 'Aufgabe'));
+  Object.entries(TAET.t).forEach(([k, e]) => dazu(k, (e && e.name) || k));
+  return [...m].map(([key, name]) => ({key, name}))
+    .sort((x, y) => x.name.localeCompare(y.name, 'de', {numeric:true}));
+}
+/* Eine Zeile Erfahrung für eine oder mehrere Tätigkeiten: die Dauern werden
+   zusammengezählt (Rundgang), die Utensilien vereinigt. Kurz für die Liste
+   (höchstens drei Utensilien), voll für den Nachweis. */
+function erfText(keys, voll){
+  let min = 0, n = 0;
+  const ut = [];
+  keys.forEach(k => {
+    const s = taetSchnitt(k);
+    if(s){ min += dauerMin(s); n++; }
+    (((TAET.t[k] || {}).utensilien) || []).forEach(u => { if(!ut.includes(u)) ut.push(u); });
+  });
+  const teile = [];
+  if(n) teile.push('≈ ' + dauerText(alsStufe(min)));
+  if(ut.length) teile.push(voll ? 'Mitnehmen: ' + ut.join(', ')
+                                : ut.length > 3 ? ut.slice(0, 3).join(', ') + ` +${ut.length - 3}` : ut.join(', '));
+  return teile.join(' · ');
+}
+function erfFuerEintrag(a){
+  if(a.akku) return '';
+  if(a.rundgang) return erfText((a.teilK || []).map(k => k === 'sprinkler' ? 'nw:sprinkler:woch' : 'nw:' + k));
+  if(a.aufg){
+    const x = AUFG.find(y => y.id === a.aufg), key = x ? taetSchluessel(x, false) : '';
+    return key ? erfText([key]) : '';
+  }
+  const n = a.k && NW(a.k);
+  if(!n || n.art === 'fremd') return '';
+  if(n.art === 'sprinkler') return erfText(['nw:sprinkler:' + (a.ziel === 'mon' ? 'mon' : 'woch')]);
+  return erfText(['nw:' + a.k]);
+}
+function erfNwHtml(k){
+  const n = NW(k);
+  if(!n || n.art === 'fremd') return '';
+  const zeilen = n.art === 'sprinkler'
+    ? [['nw:sprinkler:woch', 'Kontrollgang'], ['nw:sprinkler:mon', 'Monatlich']]
+    : [['nw:' + k, '']];
+  return zeilen.map(([key, was]) => {
+    const t = erfText([key], true);
+    return t ? `<p class="muted small" style="margin:4px 0 0">${was ? esc(was) + ': ' : ''}${esc(t)}</p>` : '';
+  }).join('');
+}
+function erfDetailHtml(key){
+  const e = TAET.t[key];
+  if(!e) return '';
+  const s = taetSchnitt(key), n = Math.min(10, (e.dauern || []).length), ut = e.utensilien || [];
+  return (s ? `<p style="margin:0">≈ ${esc(dauerText(s))}<span class="muted small"> · Durchschnitt aus ${n} ${n === 1 ? 'Angabe' : 'Angaben'}</span></p>` : '')
+    + (ut.length ? `<p style="margin:${s ? '6px' : '0'} 0 0">Mitnehmen: ${esc(ut.join(', '))}</p>` : '');
+}
+function renderTaeten(){
+  const box = $('#taetenBox');
+  if(!box) return;
+  const i = info('Nach jeder wiederkehrenden Tätigkeit fragt die App nach Dauer und Utensilien, solange „Beim nächsten Mal wieder fragen“ angehakt ist. Der Durchschnitt nimmt die letzten zehn Angaben. Die Werkzeugliste gilt für alle Tätigkeiten.', 'margin:-2px 0 10px');
+  const liste = taetKandidaten();
+  const zusatz = t => {
+    const e = TAET.t[t.key], n = ((e && e.dauern) || []).length, s = taetSchnitt(t.key);
+    return [s ? '≈ ' + dauerText(s) : 'noch keine Dauer', n ? `${n} ${n === 1 ? 'Angabe' : 'Angaben'}` : '',
+            e && e.fragen === false ? 'fragt nicht mehr' : ''].filter(Boolean).join(' · ');
+  };
+  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Tätigkeiten ${i.knopf}</div>${i.text}`
+    + (liste.length
+        ? liste.map((t, j) => `<button class="btn eintrag" data-t="${j}"><span class="etext">${esc(t.name)}<small>${esc(zusatz(t))}</small></span></button>`).join('')
+        : '<p class="muted small">Noch keine wiederkehrenden Tätigkeiten.</p>')
+    + `<div class="eyebrow">Werkzeugliste</div><div id="werkzeugListe"></div>`;
+  box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
+    const t = liste[+b.dataset.t];
+    taetAktiv = {key:t.key, name:t.name};
+    go('taet');
+  });
+  /* Dieselbe Liste wie in den Einstellungen. Umbenennen und Löschen wirken auf
+     alle Tätigkeiten, die das Utensil führen. */
+  listeBauen($('#werkzeugListe'), {
+    wort:'Utensil', liste:() => TAET.werkzeug,
+    loeschHinweis:'Es verschwindet damit auch aus allen Tätigkeiten.',
+    beiUmbenennen:(alt, neu) => Object.values(TAET.t).forEach(e => {
+      e.utensilien = [...new Set((e.utensilien || []).map(u => u === alt ? neu : u))];
+    }),
+    beiLoeschen:j => {
+      const u = TAET.werkzeug[j];
+      Object.values(TAET.t).forEach(e => { e.utensilien = (e.utensilien || []).filter(x => x !== u); });
+    },
+    nachher:() => saveTaet()});
+}
+/* Datum und Dauer in einem Fenster – zum Nachtragen und Ändern. */
+function dauerFenster(titel, start, datum, beiJa){
+  let wert = start;
+  frage(titel, '', 'Speichern', () => beiJa(wert, $('#dfDatum').value || heute()));
+  $('#dlgText').hidden = true;
+  const box = $('#dlgListe');
+  box.hidden = false;
+  box.innerHTML = `<label class="field" style="margin:0 0 12px"><span>Datum</span>
+      <input type="date" id="dfDatum" class="dat" value="${esc(datum || heute())}"></label>
+    <div id="dfDauer"></div>`;
+  wert = dauerWahl($('#dfDauer'), start, false, w => { wert = w; }) || wert;
+}
+function renderTaet(){
+  const box = $('#taetBox');
+  if(!box || !taetAktiv) return;
+  const {key, name} = taetAktiv, e = TAET.t[key];
+  const holen = () => (TAET.t[key] = TAET.t[key] || {name, dauern:[], utensilien:[], fragen:true});
+  const dauern = ((e && e.dauern) || []).map((d, i) => ({d, i}))
+    .sort((x, y) => String(y.d.datum).localeCompare(String(x.d.datum)) || y.i - x.i);
+  const s = taetSchnitt(key), n = dauern.length;
+  box.innerHTML = `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Durchschnitt</div>
+      <p style="margin:0">${s ? '≈ ' + esc(dauerText(s)) : 'noch keine Angabe'}${
+        n ? `<span class="muted small"> · aus ${Math.min(n, 10)} ${Math.min(n, 10) === 1 ? 'Angabe' : 'Angaben'}${n > 10 ? `, ${n} erfasst` : ''}</span>` : ''}</p></div>
+    <label class="haken" style="margin:4px 0 6px"><input type="checkbox" id="taetFragenHaken"${!e || e.fragen !== false ? ' checked' : ''}>
+      <span>Beim nächsten Mal wieder fragen</span></label>
+    <div class="eyebrow">Utensilien</div><div id="taetUtSeite"></div>
+    <div class="eyebrow">Erfasste Dauern</div>
+    <button class="btn ghost klein" id="taetPlus" style="margin:0 0 10px">+ Dauer nachtragen</button>
+    ${n ? dauern.map(({d, i}) => `<div class="zeile taetDauer" data-i="${i}">
+        <span class="etext">${esc(dText(d.datum))} · <b>${esc(dauerText(d))}</b></span>
+        <button class="btn ghost klein" data-aendern="1">Ändern</button>
+        <button class="btn danger klein" data-weg="1">Löschen</button></div>`).join('')
+       : '<p class="muted small">Noch keine.</p>'}
+    ${e ? `<div class="knopfzeile"><button class="btn danger klein" id="taetZurueck">Erfahrungswerte löschen</button></div>` : ''}`;
+  $('#taetFragenHaken').onchange = ev => { holen().fragen = ev.target.checked; saveTaet(); };
+  const ut = utensilWahl($('#taetUtSeite'), e ? e.utensilien : [], () => {
+    const ein = holen(), gew = ut.gewaehlt();
+    gew.forEach(u => { if(!TAET.werkzeug.some(x => klein(x) === klein(u))) TAET.werkzeug.push(u); });
+    ein.utensilien = gew; saveTaet();
+  });
+  $('#taetPlus').onclick = () => dauerFenster('Dauer nachtragen', taetSchnitt(key) || {m:30}, heute(), (w, datum) => {
+    holen().dauern.push(Object.assign({datum}, w)); saveTaet(); renderTaet(); toast('Nachgetragen');
+  });
+  box.querySelectorAll('.taetDauer').forEach(r => {
+    const i = +r.dataset.i, d = TAET.t[key].dauern[i];
+    r.querySelector('[data-aendern]').onclick = () => dauerFenster('Dauer ändern', d, d.datum, (w, datum) => {
+      TAET.t[key].dauern[i] = Object.assign({datum}, d.zr ? {zr:d.zr} : {}, w);
+      saveTaet(); renderTaet(); toast('Geändert');
+    });
+    r.querySelector('[data-weg]').onclick = () => frage('Dauer löschen',
+      `${dText(d.datum)} · ${dauerText(d)} wird gelöscht.`, 'Löschen', () => {
+        TAET.t[key].dauern.splice(i, 1); saveTaet(); renderTaet(); toast('Gelöscht');
+      });
+  });
+  if($('#taetZurueck')) $('#taetZurueck').onclick = () => frage('Erfahrungswerte löschen',
+    `Dauern, Utensilien und „wieder fragen“ von „${name}“ werden gelöscht. Beim nächsten Mal fragt die App wieder.`,
+    'Löschen', () => { delete TAET.t[key]; saveTaet(); renderTaet(); toast('Gelöscht'); });
+}
+/* --- Einplanung (v1.63, Etappe C) --------------------------------------------
+   Aus den Erfahrungswerten wird, was jede offene Zeile der Liste an Zeit
+   braucht. Ohne Erfahrungswert zählt sie mit 30 Minuten und heißt „geschätzt“
+   (auch Mängel und der Akkutausch). Fremdprüfungen macht die Firma – sie
+   zählen nicht. Ein angefangener Nachweis zählt nur mit dem offenen Anteil,
+   ein Rundgang mit der Summe seiner Nachweise, der Sprinkler mit seinen
+   offenen Teilen. Eine Dauer in Tagen zählt je Tag die Arbeitszeit.
+   Verfügbar ist die Arbeitszeit je Arbeitstag (Einstellungen › Arbeitszeit
+   und Abwesenheit, ab Werk 8 Stunden); Wochenenden, Feiertage und
+   Abwesenheiten zählen nicht, heute nur der Rest bis zum Ende des zweiten
+   Halbtags. Alles ist Vorschlag und wird bei jedem Aufbau neu gerechnet. */
+const ARBEIT_STD = 480;
+const arbeitsMin = () => { const v = +CFG.arbeitsMin; return v >= 30 && v <= 960 ? v : ARBEIT_STD; };
+const planMin = w => !w ? 0 : w.t ? w.t * arbeitsMin() : (+w.m || 0);
+const auf15 = m => Math.max(15, Math.round(m / 15) * 15);
+function restAnteil(k){
+  const n = NW(k);
+  if(!n) return 1;
+  if(n.art === 'medien'){
+    const l = stellen(), st = (DAT.medien || {}).stand || {};
+    return l.length ? l.filter(z => String(st[z.key] ?? '').trim() === '').length / l.length : 1;
+  }
+  const alle = (teilCfg(k).anlagen || []).length;
+  if(!alle) return 1;
+  return (alle - zeilenJetzt(k).filter(z => z.status).length) / alle;
+}
+function eintragMinuten(a){
+  const teil = (key, anteil) => {
+    const s = key && taetSchnitt(key);
+    return s ? {min:planMin(s) * (anteil ?? 1), g:false} : {min:30, g:true};
+  };
+  let teile;
+  if(a.akku) teile = [teil('', 1)];
+  else if(a.rundgang) teile = (a.teilK || []).map(k => teil('nw:' + k, restAnteil(k)));
+  else if(a.aufg){
+    const x = AUFG.find(y => y.id === a.aufg);
+    teile = [teil(x ? taetSchluessel(x, false) : '', 1)];
+  }else{
+    const n = a.k && NW(a.k);
+    if(!n || n.art === 'fremd') return null;
+    teile = n.art === 'sprinkler'
+      ? (a.sprTeile && a.sprTeile.length ? a.sprTeile : ['woch']).map(t => teil('nw:sprinkler:' + t, 1))
+      : [teil('nw:' + a.k, restAnteil(a.k))];
+  }
+  if(!teile.length) return null;
+  return {min:auf15(teile.reduce((sum, t) => sum + t.min, 0)), geschaetzt:teile.some(t => t.g)};
+}
+/* Was heute noch geht: bis zum Ende des zweiten Halbtags, höchstens die
+   Arbeitszeit. Vor Arbeitsbeginn der ganze Tag. */
+function heuteRest(){
+  const e = wetterEinst(), j = new Date(), nun = j.getHours() * 60 + j.getMinutes();
+  if(nun <= e.vormVon * 60) return arbeitsMin();
+  return Math.max(0, Math.floor(Math.min(arbeitsMin(), e.nachmBis * 60 - nun) / 15) * 15);
+}
+function verfuegbarBis(bis){
+  const h0 = tagAnfang(new Date());
+  let sum = 0;
+  for(let t = new Date(h0); t <= bis; t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1))
+    if(!freiGrund(t)) sum += t.getTime() === h0.getTime() ? heuteRest() : arbeitsMin();
+  return sum;
+}
+/* Reicht die Zeit bis zu den Fristen? Nach Frist geordnet wird aufsummiert;
+   die erste Frist, bis zu der mehr offen ist als verfügbar, wird gemeldet.
+   Überfälliges zählt so, als wäre es heute fällig. */
+function planPruefen(liste){
+  const h0 = tagAnfang(new Date());
+  const posten = liste.map(a => ({a, m:eintragMinuten(a)})).filter(x => x.m && x.m.min > 0)
+    .map(x => Object.assign(x, {bis: x.a.faellig && x.a.faellig > h0 ? x.a.faellig : h0}))
+    .sort((p, q) => p.bis - q.bis);
+  let noetig = 0;
+  for(let i = 0; i < posten.length; i++){
+    noetig += posten[i].m.min;
+    if(i + 1 < posten.length && posten[i + 1].bis.getTime() === posten[i].bis.getTime()) continue;
+    const verf = verfuegbarBis(posten[i].bis);
+    if(noetig > verf) return {bis:posten[i].bis, noetig, verf};
+  }
+  return null;
+}
+const planTagWort = t => {
+  const v = Math.round((tagAnfang(t) - tagAnfang(new Date())) / TAG_MS);
+  return v <= 0 ? 'heute' : v === 1 ? 'morgen' : `${WOCHENTAG[t.getDay()]} ${ttmm(t)}`;
+};
+function planKarte(liste){
+  const p = planPruefen(liste);
+  if(!p) return '';
+  return `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Auslastung</div>
+    <p style="margin:0">Bis ${esc(planTagWort(p.bis))} wird es knapp: ≈ ${esc(dauerText({m:auf15(p.noetig)}))} offen, ${
+      esc(dauerText({m:Math.floor(p.verf / 15) * 15}))} verfügbar.</p>
+    <button class="btn ghost klein" data-wplan="1" style="margin-top:10px">Wochenplan</button></div>`;
+}
+/* Der Wochenplan: die nächsten zehn Arbeitstage, auf die die offenen Zeilen
+   der Liste verteilt werden. Früheste Frist zuerst, bei gleicher Frist die
+   höhere Wichtigkeit. Nicht vor ihrem Beginn (Zeitraum, Monatsanfang).
+   Wetteraufgaben nur auf gute Halbtage, solange es im Plan einen gibt. Bis
+   vier Stunden bleibt eine Sache an einem Tag; Längeres verteilt sich. */
+const PLAN_TAGE = 10;
+function wochenplanRechnen(){
+  const liste = aufgaben(), h0 = tagAnfang(new Date());
+  const rangW = w => WICHTIG.findIndex(x => x[0] === w);
+  const tage = [];
+  for(let t = new Date(h0), i = 0; tage.length < PLAN_TAGE && i < 90; i++, t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)){
+    if(freiGrund(t)) continue;
+    const cap = t.getTime() === h0.getTime() ? heuteRest() : arbeitsMin();
+    tage.push({t:new Date(t), iso:isoTag(t), cap, frei:cap, posten:[]});
+  }
+  const posten = liste.map(a => ({a, m:eintragMinuten(a)})).filter(x => x.m && x.m.min > 0).map(x => {
+    const von = x.a.fenster && x.a.fenster.von ? x.a.fenster.von : x.a.frueh;
+    const aufg = x.a.aufg && AUFG.find(y => y.id === x.a.aufg);
+    return Object.assign(x, {ab: von && von > h0 ? von : h0, bis:x.a.faellig || h0, wett: aufg ? aufgWetter(aufg) : null});
+  }).sort((p, q) => p.bis - q.bis || rangW(p.a.wichtig) - rangW(q.a.wichtig) || p.a.pos - q.a.pos);
+  const uebrig = [];
+  posten.forEach(x => {
+    let kand = tage.filter(tg => tg.t >= x.ab);
+    let wetterNote = '';
+    if(x.wett && x.wett.tage){
+      const gut = new Map();
+      x.wett.tage.forEach(tg => { const h = tg.teile.find(tt => tt.stufe === 2); if(h) gut.set(tg.datum, h.teil); });
+      const gutKand = kand.filter(tg => gut.has(tg.iso));
+      if(gutKand.length){ kand = gutKand; kand.forEach(tg => { tg.gutTeil = tg.gutTeil || {}; tg.gutTeil[x.a.aufg] = gut.get(tg.iso); }); }
+      else wetterNote = 'kein gutes Wetter im Plan';
+    }
+    let rest = x.m.min;
+    const belegt = [];
+    if(rest <= 240){
+      const tg = kand.find(d => d.frei >= rest);
+      if(tg){ tg.frei -= rest; belegt.push({tg, min:rest}); rest = 0; }
+    }
+    for(const tg of kand){
+      if(rest <= 0) break;
+      if(tg.frei <= 0) continue;
+      const nimm = Math.min(rest, tg.frei);
+      tg.frei -= nimm; rest -= nimm; belegt.push({tg, min:nimm});
+    }
+    belegt.forEach((b, i) => {
+      const noten = [];
+      if(x.m.geschaetzt) noten.push('geschätzt');
+      const teil = b.tg.gutTeil && b.tg.gutTeil[x.a.aufg];
+      if(teil) noten.push('Wetter gut ' + TEIL_KURZ[teil]);
+      else if(wetterNote) noten.push(wetterNote);
+      if(belegt.length > 1 || rest > 0) noten.push(`Teil ${i + 1} von ${belegt.length + (rest > 0 ? 1 : 0)}`);
+      if(b.tg.t > x.bis) noten.push('nach der Frist');
+      b.tg.posten.push({a:x.a, min:b.min, noten});
+    });
+    if(rest > 0) uebrig.push({a:x.a, min:rest, noten:[x.m.geschaetzt ? 'geschätzt' : ''].filter(Boolean)});
+  });
+  return {tage, uebrig};
+}
+const planKnopf = p => {
+  const a = p.a;
+  const ziel = a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${esc(a.aufg)}"`
+             : `data-nw="${esc(a.k)}" data-ziel="${esc(a.ziel || '')}"${a.akku ? ' data-akku="1"' : ''}`;
+  return `<button class="btn eintrag" ${ziel}><span class="etext">${esc(a.titel)}<small>${
+    esc(['≈ ' + dauerText({m:p.min})].concat(p.noten).join(' · '))}</small></span></button>`;
+};
+function renderWochenplan(){
+  const box = $('#wplanBox');
+  if(!box) return;
+  const {tage, uebrig} = wochenplanRechnen();
+  const i = info('Ein Vorschlag, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Wetteraufgaben auf gute Halbtage. Die Dauer kommt aus den Erfahrungswerten, ohne sie gelten 30 Minuten („geschätzt“). Die Zeit je Arbeitstag steht unter Einstellungen › Arbeitszeit und Abwesenheit.', 'margin:-2px 0 10px');
+  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Nächste ${tage.length} Arbeitstage ${i.knopf}</div>${i.text}`
+    + tage.map((tg, j) => {
+      const belegt = tg.cap - tg.frei, anteil = tg.cap ? Math.min(100, Math.round(belegt / tg.cap * 100)) : 100;
+      const kopf = j === 0 && planTagWort(tg.t) === 'heute' ? `Heute ${ttmm(tg.t)}` : `${WOCHENTAG[tg.t.getDay()]} ${ttmm(tg.t)}`;
+      return `<div class="eyebrow">${esc(kopf)} <span class="summe">· ${esc(dauerText({m:belegt}))} von ${esc(dauerText({m:tg.cap}))}</span></div>
+        <div class="planBalken"><span style="width:${anteil}%"></span></div>`
+        + (tg.posten.length ? tg.posten.map(planKnopf).join('') : '<p class="muted small" style="margin:0 0 6px">Nichts eingeplant.</p>');
+    }).join('')
+    + (uebrig.length ? `<div class="eyebrow">Passt nicht mehr hinein</div>` + uebrig.map(planKnopf).join('') : '');
+  knoepfeVerdrahten(box);
 }
 function renderErledigt(){
   const liste = AUFG.filter(a => a.erledigt)
@@ -5073,6 +5478,8 @@ function renderNachweis(){
       </div>`;
     $('#nwZuObjekt').onclick = () => setOeffnen('obj');
   }
+  /* Erfahrungswerte (v1.62): wie lange es dauert und was mitzunehmen ist. */
+  ob.insertAdjacentHTML('beforeend', erfNwHtml(offen));
   $('#sigBlock').hidden = n.art === 'medien' || n.art === 'fremd';
   if(n.art === 'fremd'){     renderFremd();     return; }
   if(n.art === 'medien'){    renderMedien();    return; }
@@ -5448,7 +5855,7 @@ function renderSprinkler(){
       /* Je Kontrollgang einmal nach Dauer und Utensilien fragen (v1.61); ein
          wieder geöffneter und neu abgeschlossener Gang fragt nicht noch mal. */
       if(!g.gefragt) taetFragen({key:'nw:sprinkler:' + art,
-        name: art === 'woch' ? 'Sprinkler, wöchentlicher Kontrollgang' : 'Sprinkler, monatliche Kontrolle',
+        name: SPR_TAET[art],
         datum:g.datum || heute(), gemessen:gemesseneMinuten(Object.values(g.zt || {})),
         fertig:() => { g.gefragt = true; saveDat(); }});
     };
@@ -7209,7 +7616,7 @@ function renderSettings(){
                     : (teilCfg(n.k).anlagen || []).length;
   $('#setMenue').innerHTML =
       knopf('obj', '', 'Objekt und Prüfer')
-    + knopf('abwesend', '', 'Abwesenheit und Feiertage')
+    + knopf('abwesend', '', 'Arbeitszeit und Abwesenheit')
     + knopf('wetter', '', 'Wetter')
     + '<div class="eyebrow">Anlagen und Prüfumfang</div>'
     + NACHWEISE.filter(n => !n.spaeter).map(n => knopf('nw', n.k, n.label, anzahl(n))).join('')
@@ -7236,7 +7643,7 @@ function setOeffnen(art, k){
   setSeite = {art, k:k || ''};
   setTitel = art === 'nw'     ? NW(k).label
            : art === 'obj'    ? 'Objekt und Prüfer'
-           : art === 'abwesend' ? 'Abwesenheit'
+           : art === 'abwesend' ? 'Arbeitstage'
            : art === 'wetter' ? 'Wetter'
            : art === 'check'  ? 'Checkliste'
            : art === 'akkus'  ? 'Akkutypen'
@@ -7293,8 +7700,15 @@ function setAbwesend(box){
     </div>`;
   const iFei = info('Gerechnet werden die landesweiten Feiertage. Regionale – etwa Fronleichnam in Teilen Sachsens und Thüringens oder Mariä Himmelfahrt in Teilen Bayerns – trägst du unten als Abwesenheit ein.', 'margin:-2px 0 10px');
   const iAbw = info('Fällt eine Frist aufs Wochenende, einen Feiertag oder in eine Abwesenheit, gilt der Arbeitstag davor. Zwei Wochen vorher zeigt die Startseite, was vorher zu erledigen ist.', 'margin:-2px 0 10px');
+  /* Zeit je Arbeitstag für die Aufgaben der App (v1.63), in halben Stunden. */
+  const iAz = info('So viel Zeit steht an einem Arbeitstag für die Aufgaben der App zur Verfügung. Danach rechnen der Wochenplan und die Auslastung; eine Dauer von einem Tag zählt ebenso viel. Wird es neben anderer Arbeit zu viel, hier herabsetzen.', 'margin:-2px 0 10px');
   box.innerHTML = `
-    <div class="eyebrow mitInfo" style="margin-top:0">Feiertage ${iFei.knopf}</div>${iFei.text}
+    <div class="eyebrow mitInfo" style="margin-top:0">Arbeitszeit ${iAz.knopf}</div>${iAz.text}
+    <div class="field"><span>Zeit je Arbeitstag</span><div class="dauerWahl"><div class="stufe">
+      <button type="button" data-az="-30" aria-label="weniger">−</button>
+      <span class="wert" id="azWert">${esc(dauerText({m:arbeitsMin()}))}</span>
+      <button type="button" data-az="30" aria-label="mehr">+</button></div></div></div>
+    <div class="eyebrow mitInfo">Feiertage ${iFei.knopf}</div>${iFei.text}
     <label class="field"><span>Bundesland</span><select id="abwLand">
       <option value="">– ohne Feiertage –</option>
       ${BUNDESLAENDER.map(([k, t]) => `<option value="${k}"${CFG.bundesland === k ? ' selected' : ''}>${t}</option>`).join('')}
@@ -7304,6 +7718,12 @@ function setAbwesend(box){
     <div id="abwKommend">${kommend.map(karte).join('')}</div>
     ${vorbei.length ? `<div class="eyebrow">Vergangen</div><div id="abwVorbei">${vorbei.map(karte).join('')}</div>` : ''}`;
   $('#abwLand').onchange = e => { CFG.bundesland = e.target.value; saveCfg(); };
+  box.querySelectorAll('[data-az]').forEach(b => b.onclick = () => {
+    CFG.arbeitsMin = Math.max(60, Math.min(720, arbeitsMin() + +b.dataset.az)); saveCfg();
+    $('#azWert').textContent = dauerText({m:arbeitsMin()});
+    box.querySelector('[data-az="-30"]').disabled = arbeitsMin() <= 60;
+    box.querySelector('[data-az="30"]').disabled  = arbeitsMin() >= 720;
+  });
   $('#abwNeu').onclick = () => {
     CFG.abwesend.push({von:'', bis:'', text:''}); saveCfg(); setAbwesend(box);
     const neu = box.querySelector(`.abw[data-i="${CFG.abwesend.length - 1}"] [data-f="text"]`);
