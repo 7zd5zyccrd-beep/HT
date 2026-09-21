@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.60 21.09.2026  Grundrisse flackerten beim ersten Aufruf jedes Plans: Safari
+                    entpackt ein Bild erst beim Zeigen, bis dahin stand kurz eine
+                    leere Fläche da. Jetzt wird der gezeigte Plan entpackt, bevor
+                    er erscheint, und danach im Hintergrund die übrigen, die
+                    Nachbarn am Regler zuerst (Wunsch von Jean). Gezeigt wird
+                    das fertige Bild; freigegeben wird beim Verlassen der
+                    Grundrissansicht. Dazu: der Hinweis in der Fußleiste („x
+                    Anlagen ohne Zustand“) frischt sich nach jedem Zustand gleich
+                    auf statt erst beim nächsten Öffnen, und die Startseite heißt
+                    „Aufgaben“ statt „Betriebsnachweise“ – der Name der App
+                    bleibt.
   v1.59 21.09.2026  Rollbandfilter (von Jean gewünscht): als Zustand stehen nur
                     noch „In Ordnung“ und „Mangel“ zur Wahl. „Weitergedreht“
                     und „Rolle getauscht“ sind Kacheln unter dem Bemerkungsfeld,
@@ -1865,7 +1876,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 <div class="app">
   <header>
     <button class="back" id="btnBack" aria-label="Zurück">←</button>
-    <h1 id="titel">Betriebsnachweise</h1>
+    <h1 id="titel">Aufgaben</h1>
     <button class="kopfKnopf unsichtbar" id="btnPlanWahl" aria-hidden="true" tabindex="-1"></button>
     <button class="kopfKnopf" id="btnNeuLaden" aria-label="Neu vom Server laden" hidden></button>
   </header>
@@ -2067,7 +2078,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.59';
+const VERSION = 'v1.60';
 const BUILD   = VERSION + ' · 21.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3077,7 +3088,7 @@ function ring(n, takt){
 }
 
 /* ---------- Ansichten ---------- */
-const TITEL = {home:'Betriebsnachweise', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigte Aufgaben', nachweis:'Nachweis', blatt:'Blatt',
+const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigte Aufgaben', nachweis:'Nachweis', blatt:'Blatt',
                historie:'Historie', histnw:'Historie', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregeln:'Wetterregeln', wregel:'Regel'};
@@ -3097,6 +3108,9 @@ let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nach
     if(e.cancelable) e.preventDefault();
   }, {passive:false}));
 function go(name, push = true){
+  /* Entpackte Pläne nur so lange halten, wie die Grundrissansicht offen ist; in
+     die Blattvorschau und zurück bleibt der Vorrat (v1.60). */
+  if(current === 'plan' && name !== 'plan' && name !== 'blatt') planVorratFrei();
   if(push && current !== name) stack.push(current);
   current = name;
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
@@ -4938,7 +4952,9 @@ function renderNachweis(){
       const mangel = /mangel|defekt/i.test(z.status || '');
       if(z.status && mangel) offenKarten.add(a); else offenKarten.delete(a);
       const wandert = !!n.kompakt && !!z.status && !mangel && !z.n;
-      saveDat(); renderNachweis();
+      /* Die Leiste zählt mit („x Anlagen ohne Zustand“) – bis v1.59 stand sie
+         bis zum nächsten Öffnen auf dem alten Stand. */
+      saveDat(); renderNachweis(); renderBar();
       halten(top, wandert);
     });
     box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
@@ -7973,8 +7989,56 @@ function planUrlVon(id){
   return u;
 }
 function planUrlsFrei(){
+  planVorratFrei();                           // hängt an denselben Verweisen
   planUrls.forEach(u => URL.revokeObjectURL(u));
   planUrls.clear();
+}
+/* --- Vorrat entpackter Pläne (v1.60) ----------------------------------------
+   Safari entpackt ein Bild erst, wenn es gezeigt wird. Beim ersten Erscheinen
+   eines Plans stand deshalb kurz eine leere Fläche da – am Regler wie beim
+   Öffnen; danach lag das Bild entpackt vor, und es flackerte nicht mehr. Jetzt
+   wird der gezeigte Plan entpackt, BEVOR er eingeblendet wird, und danach im
+   Hintergrund einer nach dem anderen die übrigen, die Nachbarn am Regler
+   zuerst. Gezeigt wird dann genau dieses fertige Bildelement (ebenenStellen),
+   nicht ein neues mit demselben Verweis. Nebenbei steht das Seitenverhältnis
+   fest, planFormat muss nicht mehr warten.
+   Kosten: ein Plan mit 3200 px Kantenlänge braucht entpackt rund 30 MB. Frei-
+   gegeben wird beim Verlassen der Grundrissansicht (außer in die Blattvorschau,
+   von dort geht es zurück in dieselbe Ansicht) und beim Öffnen von außen. */
+const planVorrat = new Map();                 // id → {img, fertig}
+let vorratLauf = 0;
+function planEntpacken(id){
+  const da = planVorrat.get(id);
+  if(da) return da.fertig;
+  const url = planUrlVon(id);
+  if(!url) return Promise.resolve(null);
+  const img = new Image();
+  img.alt = ''; img.draggable = false; img.decoding = 'async';
+  img.src = url;
+  const fertig = (img.decode ? img.decode()
+                   : new Promise((ok, fehl) => { img.onload = ok; img.onerror = fehl; }))
+    .then(() => {
+      if(img.naturalWidth && img.naturalHeight) planFormate.set(id, img.naturalWidth / img.naturalHeight);
+      return img;
+    })
+    .catch(() => null);                       // dann eben ohne Vorrat, wie bisher
+  planVorrat.set(id, {img, fertig});
+  return fertig;
+}
+function planVorratFrei(){
+  vorratLauf++;                               // ein laufendes Vorladen hört auf
+  planVorrat.clear();
+}
+async function planeVorladen(){
+  const lauf = ++vorratLauf;
+  const ids = Regler.ids.length ? Regler.ids : planListe.map(p => p.id);
+  const hier = Math.max(0, ids.indexOf(planAktuell));
+  const folge = ids.map((id, i) => ({id, d:Math.abs(i - hier), i}))
+    .sort((a, b) => a.d - b.d || a.i - b.i).map(x => x.id);
+  for(const id of folge){
+    if(lauf !== vorratLauf || current !== 'plan') return;
+    await planEntpacken(id);
+  }
 }
 /* Seitenverhältnis eines Plans, einmal aus dem Bild gelesen. */
 async function planFormat(id){
@@ -8597,7 +8661,8 @@ function ebenenStellen(){
   sicht.forEach(s => {
     let el = [...ebenen.children].find(c => c.dataset.id === s.id);
     if(!el){
-      const url = planUrlVon(s.id); if(!url) return;
+      planEntpacken(s.id);
+      const v = planVorrat.get(s.id); if(!v) return;
       const L = rahmenLage(s.id);
       el = document.createElement('div');
       el.className = 'ebene'; el.dataset.id = s.id;
@@ -8606,9 +8671,9 @@ function ebenenStellen(){
       /* Eine kaum merkliche Drehung bleibt weg: jede Drehung lässt Safari neu
          abtasten, und unter einem Zehntelgrad sieht man sie ohnehin nicht. */
       if(Math.abs(L.rot) > 0.0017) el.style.transform = `rotate(${L.rot}rad)`;
-      const img = document.createElement('img');
-      img.alt = ''; img.draggable = false; img.src = url;
-      el.appendChild(img);
+      /* Das Bild aus dem Vorrat, schon entpackt (oder gerade dabei) – ein neues
+         Element mit demselben Verweis finge wieder von vorn an. */
+      el.appendChild(v.img);
       ebenen.appendChild(el);
     }
     const haupt = s.id === planAktuell;
@@ -8943,6 +9008,8 @@ async function planZeigen(id, ziel){
   /* Das Seitenverhältnis steht erst fest, wenn das Bild gelesen ist – vorher
      ließe sich der Rahmen nicht rechnen. Sichtbar wird er danach, mit einem
      kurzen Aufblenden statt eines Sprungs. */
+  await planEntpacken(id);                    // erst fertig entpackt, dann gezeigt
+  if(lauf !== planLauf) return;
   const asp = await planFormat(id);
   if(lauf !== planLauf) return;
   rahmenBilden(id, asp);
@@ -8955,9 +9022,10 @@ async function planZeigen(id, ziel){
   /* Vom Regler aus sofort; beim Öffnen genügt die gewohnte kurze Ruhe. */
   scharfSicht = '';
   if(vomRegler) scharfVomRegler(); else scharfSpaeter();
-  /* Die Verweise der übrigen Pläne im Rahmen gleich anlegen: das kostet nur den
-     Verweis, entpackt wird ein Bild erst, wenn es gezeigt wird. */
-  Rahmen.ids.forEach(planUrlVon);
+  /* Die übrigen Pläne im Hintergrund entpacken, Nachbarn zuerst (v1.60). Bis
+     v1.59 wurde hier nur der Verweis angelegt und erst beim Zeigen entpackt –
+     das war das Flackern beim ersten Aufruf jedes Plans. */
+  planeVorladen();
 }
 /* Der Streifen über dem Plan: was gerade gilt und welche Knöpfe dazu passen. */
 const planGesetzt = () => !!planZiel && ortPlaene(planZiel.key).includes(planAktuell);
