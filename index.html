@@ -10,6 +10,57 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.71 22.09.2026  Verbrauchsmaterial auch bei einmaligen Aufgaben und Mängeln
+                    (Wunsch von Jean, der Einheitlichkeit halber). Sie haben
+                    keine Tätigkeit, deshalb liegen Utensilien und Material an
+                    der Aufgabe selbst und die Übersicht der Tätigkeiten bleibt
+                    frei davon. An der offenen Aufgabe die Karte „Utensilien
+                    und Material“, bearbeitet in einem Fenster mit demselben
+                    Wähler; in der Aufgabenliste die Kurzform, in „Material
+                    bereitlegen“ ihre Posten nach Termin. Wird eine Aufgabe
+                    wiederkehrend, ziehen ihre Listen in die Tätigkeit um, im
+                    umgekehrten Fall bekommt sie eine Abschrift. Löschen,
+                    Umbenennen und Verschieben in den Listen wirken auch hier.
+  v1.70 22.09.2026  Verbrauchsmaterial, Etappe 3 – die Akkus der RWA stehen in
+                    derselben Liste „Material bereitlegen“: je Anlage, deren
+                    Tausch bis Ende des nächsten Monats ansteht oder die noch
+                    kein Tauschdatum hat, Typ und Anzahl aus den Einstellungen
+                    (als „Akku <Typ>“). In der Akku-Ansicht ersetzt die Karte
+                    „Akkus bereitlegen“ mit Haken je Typ den Knopf „Akkus
+                    vorhanden“; ein früher gesetzter Vermerk wird einmalig zu
+                    Haken. Die Zeile „RWA-Akkus“ der Aufgabenliste nennt, was
+                    noch fehlt, sonst „Akkus bereit“. Neues Tauschdatum lässt
+                    den Posten von selbst verschwinden; Haken wandern beim
+                    Umbenennen von Anlage und Akkutyp mit. Dazu an jeder
+                    offenen wiederkehrenden Aufgabe die Karte „Erfahrung“ auch
+                    ohne Werte, mit dem Knopf „Utensilien und Material“.
+  v1.69 22.09.2026  Verbrauchsmaterial, Etappe 2 – die Liste „Material
+                    bereitlegen“. Ab dem Vormonat steht darin alles, was bis
+                    Ende des nächsten Monats ansteht, Überfälliges
+                    eingeschlossen: Aufgaben nach Termin bzw. Beginn des
+                    Zeitraums, Nachweise nach dem Monat ihrer Runde, die
+                    Ablesung nach dem letzten Quartalsmonat, beim Sprinkler
+                    jeder Wochengang und die Monatskontrolle. Auf der
+                    Startseite am Ende der Aufgaben, je Material
+                    zusammengezählt, das Dringendste zuerst, darunter klein
+                    wofür; an Aufgabe und Nachweis nur der eigene Anteil. Ein
+                    Haken nimmt den Posten aus beiden Listen, die Meldung
+                    darunter bietet „Rückgängig“. Erledigte Aufgaben,
+                    ausgegebene und vollständig erfasste Runden fallen von
+                    selbst heraus. Die Haken reisen in der Sicherungsdatei mit.
+  v1.68 22.09.2026  Verbrauchsmaterial, Etappe 1 (von Jean angestoßen): die
+                    Utensilien teilen sich in Werkzeug (mitnehmen) und
+                    Verbrauchsmaterial (vorher beschaffen). Material trägt je
+                    Tätigkeit eine Menge, seine Einheit steht in der Liste (ab
+                    Werk „Stück“). Im Wähler – nach dem Erledigen und an der
+                    Tätigkeit – zwei Abschnitte, beim Material je gewählter
+                    Kachel Menge und Einheit. „Liste bearbeiten“ zeigt die
+                    Kacheln mit ✕; ein Tipp markiert, ein zweiter löscht aus der
+                    Liste und aus allen Tätigkeiten. Unter Übersicht ›
+                    Tätigkeiten zwei Listen, Einträge wechseln mit „→ Material“
+                    bzw. „→ Werkzeug“ samt allen Tätigkeiten die Seite. Anzeige
+                    an Aufgabe und Nachweis mit „Material: Filtervlies (2
+                    Rollen)“. Die abhakbare Liste im Vorlauf folgt in Etappe 2.
   v1.67 22.09.2026  Fehler (von Jean gemeldet): bei den Medienverbräuchen
                     erschien auch bei vollständiger Ablesung mit Datum kein
                     Knopf „Nachweis ausgeben“ – die ganze Fußleiste blieb
@@ -1390,6 +1441,29 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .chips button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong);border-color:var(--strong)}
 .utNeu{margin-top:8px;align-items:center}
 .utNeu .btn{flex:0 0 auto;width:auto;margin-top:0}
+/* Werkzeug und Verbrauchsmaterial (v1.68): zwei Abschnitte im Wähler, beim
+   Material je gewählter Kachel eine Zeile mit Menge und Einheit. Im
+   Bearbeiten-Modus tragen die Kacheln ein ✕, die scharfe steht dunkel. */
+.utKopf{margin:4px 0 6px}
+.utKopf ~ .utKopf{margin-top:16px}
+.chips button.weg{border-style:dashed}
+.chips button.scharf{background:var(--strong);color:var(--on-strong);border-color:var(--strong);font-weight:600}
+.utMengen{margin-top:8px}
+.utMengen[hidden]{display:none}
+.utMenge{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+.utMenge .etext{flex:1;min-width:0}
+.utMenge input{flex:0 0 auto;font-size:16px;padding:8px 10px}
+.utMenge [data-menge]{width:64px;text-align:right}
+.utMenge [data-einheit]{width:96px}
+.utHinweis{margin:10px 0 0}
+.utHinweis[hidden]{display:none}
+.utBearb{margin-top:10px}
+.utBearb + .utBearb{margin-top:0}
+.zeile.matZeile{flex-wrap:wrap}
+.zeile.matZeile textarea{flex:1 1 0;min-width:0}
+.matUnter{flex:0 0 100%;display:flex;align-items:center;gap:8px}
+.matUnter input{flex:0 0 auto;width:110px;font-size:16px;padding:8px 10px}
+.matUnter .btn{margin-left:auto}
 /* Erfasste Dauern einer Tätigkeit (v1.62): Datum und Dauer, daneben Ändern und
    Löschen – dieselbe Zeile wie in den Einstellungslisten. */
 .zeile.taetDauer{align-items:center}
@@ -1552,6 +1626,17 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
   opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60;max-width:90vw;text-align:center;
 }
 #toast.on{opacity:1;transform:translateX(-50%)}
+#toast.mitKnopf{pointer-events:auto;width:max-content}   /* links 50 % – sonst bräche sie schon bei halber Breite um */
+#toast .toastKnopf{background:none;border:0;color:inherit;font:inherit;font-weight:600;text-decoration:underline;
+  padding:0 0 0 12px;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}
+/* Material bereitlegen (v1.69): Haken je Posten, darunter klein, wofür. */
+.matKarte{padding-top:6px;padding-bottom:6px}
+#nwMat .matKarte{margin-top:12px}
+.matPosten{align-items:flex-start;padding:10px 0;margin:0;border-top:1px solid var(--line)}
+.matKarte .eyebrow + .matPosten,.matKarte > .matPosten:first-child{border-top:0}
+.matPosten input{margin-top:1px}
+.matPosten .etext{flex:1;min-width:0;line-height:1.35}
+.matPosten small{display:block;color:var(--ink-soft);font-size:13px;margin-top:2px}
 
 /* --- Große Bildschirme ------------------------------------------------------
    Ab Tablet-Querformat: die 720er Spalte gilt weiter für alles mit Text und
@@ -2209,8 +2294,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.67';
-const BUILD   = VERSION + ' · 21.09.2026';
+const VERSION = 'v1.71';
+const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -2833,12 +2918,23 @@ const saveAufg = () => { Store.set('nwAufg', AUFG); listeNachziehen(); };
    wieder fragen“ angehakt bleibt. TAET.t[Schlüssel] = {name, dauern,
    utensilien, fragen}; eine Dauer ist {m:Minuten} oder {t:Tage}. Die
    Werkzeugliste TAET.werkzeug gilt für alle Tätigkeiten. Anzeige und
-   Bearbeitung folgen in Etappe B, Einplanung und Arbeitsnachweis danach. */
+   Bearbeitung folgen in Etappe B, Einplanung und Arbeitsnachweis danach.
+   Seit v1.68 zweigeteilt: TAET.werkzeug (Namen) ist, was man mitnimmt;
+   TAET.material = [{name, einheit}] ist Verbrauchsmaterial, das vorher
+   beschafft werden muss. Die Einheit hängt am Material, die Menge an der
+   Tätigkeit: TAET.t[Schlüssel].material = [{name, menge}]. */
 let TAET = Store.get('nwTaet', {});
 function taetOrdnen(){
   if(!TAET || typeof TAET !== 'object' || Array.isArray(TAET)) TAET = {};
   if(!TAET.t || typeof TAET.t !== 'object' || Array.isArray(TAET.t)) TAET.t = {};
   if(!Array.isArray(TAET.werkzeug)) TAET.werkzeug = [];
+  /* Verbrauchsmaterial (v1.68): Name und Einheit, ab Werk „Stück“. */
+  if(!Array.isArray(TAET.material)) TAET.material = [];
+  TAET.material = TAET.material.filter(m => m && typeof m.name === 'string' && m.name.trim())
+    .map(m => ({name:m.name, einheit:String(m.einheit || '').trim() || 'Stück'}));
+  Object.values(TAET.t).forEach(e => {
+    if(e && e.material && !Array.isArray(e.material)) e.material = [];
+  });
   /* Arbeitsnachweis (v1.65): ergänzte Einträge und aus dem Nachweis genommene. */
   if(!TAET.arb || typeof TAET.arb !== 'object') TAET.arb = {};
   if(!Array.isArray(TAET.arb.eigen)) TAET.arb.eigen = [];
@@ -3524,8 +3620,18 @@ function listenSprung(istOffen){
 
 let toastTimer = null;
 function toast(t){
-  const el = $('#toast'); el.textContent = t; el.classList.add('on');
+  const el = $('#toast'); el.textContent = t; el.classList.remove('mitKnopf'); el.classList.add('on');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), 1800);
+}
+/* Dieselbe Meldung mit „Rückgängig“ (v1.69) – etwas länger stehend und nur
+   dann antippbar; sonst ließe sie keinen Tipp auf die Seite darunter durch. */
+function toastRueck(t, aktion){
+  const el = $('#toast');
+  el.innerHTML = `${esc(t)}<button type="button" class="toastKnopf">Rückgängig</button>`;
+  el.classList.add('on', 'mitKnopf');
+  const weg = () => el.classList.remove('on', 'mitKnopf');
+  el.querySelector('button').onclick = () => { clearTimeout(toastTimer); weg(); aktion(); };
+  clearTimeout(toastTimer); toastTimer = setTimeout(weg, 4500);
 }
 
 /* ---------- Startseite ---------- */
@@ -3945,8 +4051,10 @@ function renderHome(){
     + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span><span class="zahl" id="homeWetterStand"></span></button>` : '');
   $('#homeListe').innerHTML = `<button class="btn ghost klein" data-neuaufg="1" style="margin:0 0 12px">+ Aufgabe hinzufügen</button>`
     + warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
+    + matStartHtml()
     + '<div id="homeMehr">' + (mehr ? `<div class="eyebrow">Übersicht</div>${mehr}` : '') + '</div>';
   knoepfeVerdrahten($('#homeListe'));
+  matStartVerdrahten();
   const alle = $('#homeListe [data-alle]');
   if(alle) alle.onclick = () => go('alle');
   const erl = $('#homeListe [data-erledigt]');
@@ -4442,8 +4550,17 @@ function renderAufgabe(){
   /* Was die Erfahrung sagt (v1.62) – nur, wenn es schon etwas zu sagen gibt. */
   const tKeyA = !neu && !mangel && !a.erledigt ? taetSchluessel(a, false) : '';
   const erfA = tKeyA ? erfDetailHtml(tKeyA) : '';
-  const erfKarte = erfA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erfahrung</div>${erfA}
-      <button class="btn ghost klein" id="aufgTaet" style="margin-top:10px">Bearbeiten</button></div>` : '';
+  /* Seit v1.70 auch ohne Erfahrungswerte: sonst ließe sich Material für eine
+     neue wiederkehrende Aufgabe nur über Übersicht › Tätigkeiten eintragen. */
+  const erfKarte = tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erfahrung</div>${
+      erfA || '<p class="muted small" style="margin:0">Noch nichts eingetragen – weder Dauer noch Utensilien oder Material.</p>'}
+      <button class="btn ghost klein" id="aufgTaet" style="margin-top:10px">${erfA ? 'Bearbeiten' : 'Utensilien und Material'}</button></div>` : '';
+  /* Einmalige Aufgaben und Mängel (v1.71): dieselbe Karte, nur ohne Dauer –
+     die Listen liegen an der Aufgabe, bearbeitet wird im Fenster. */
+  const eigenA = !neu && !a.erledigt && !tKeyA ? eigenText(a, true) : '';
+  const eigenKarte = !neu && !a.erledigt && !tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Utensilien und Material</div>${
+      eigenA || '<p class="muted small" style="margin:0">Noch nichts eingetragen.</p>'}
+      <button class="btn ghost klein" id="aufgEigen" style="margin-top:10px">${eigenA ? 'Bearbeiten' : 'Eintragen'}</button></div>` : '';
   let erlDauer = null;
   const erledigung = neu ? `<button class="btn primary" id="aufgAnlegen">Aufgabe anlegen</button>`
     : a.erledigt
@@ -4476,9 +4593,11 @@ function renderAufgabe(){
        ${planung}
        <label class="field"><span>Notiz</span><textarea id="aufgNotiz" style="min-height:90px">${esc(a.notiz)}</textarea></label>`
     + wege + (!mangel && !a.erledigt && a.wetter ? `<div id="aufgWetterKarte">${aufgWetterKarteHtml(a)}</div>` : '')
-    + erfKarte + vorbStandKarte + erledigung
+    + erfKarte + eigenKarte + '<div id="aufgMat"></div>' + vorbStandKarte + erledigung
     + (!neu && !mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '');
 
+  /* Material bereitlegen (v1.69) – nur die offene, gespeicherte Aufgabe. */
+  if(!neu && !a.erledigt) matKarte($('#aufgMat'), o => o.aufg === a.id, false);
   if(!mangel){
     $('#aufgTitel').oninput = e => { a.titel = e.target.value; sichern(); };
     $('#aufgNw').onchange = e => { a.k = e.target.value; a.anlage = ''; a.anlageText = ''; sichern(); renderAufgabe(); };
@@ -4540,12 +4659,13 @@ function renderAufgabe(){
       sichern(); renderAufgabe();
     };
     $('#wdhEinheit').onchange = e => {
-      const einheit = e.target.value;
+      const einheit = e.target.value, keyVor = taetSchluessel(a, false);
       if(!einheit) delete a.wdh;
       else{
         a.wdh = Object.assign({n:1, basis:'termin'}, a.wdh || {}, {einheit, anker:alsDatum(a.frist || heute()).getDate()});
         if(a.von) Object.assign(a.wdh, {basis:'termin', ankerVon:alsDatum(a.von).getDate()});
       }
+      listenUmziehen(a, keyVor, taetSchluessel(a, false));
       sichern(); renderAufgabe();
     };
     $('#wdhN').oninput = e => {
@@ -4592,6 +4712,19 @@ function renderAufgabe(){
   };
   if($('#erlDauer')) dauerWahl($('#erlDauer'), null, true, w => { erlDauer = w; });
   if($('#aufgTaet')) $('#aufgTaet').onclick = () => { taetAktiv = {key:tKeyA, name:a.titel || 'Aufgabe'}; go('taet'); };
+  if($('#aufgEigen')) $('#aufgEigen').onclick = () => {
+    frage('Utensilien und Material', '', 'Speichern', () => {
+      ut.uebernehmen(a, true);
+      if(!a.utensilien.length) delete a.utensilien;
+      if(!a.material.length) delete a.material;
+      saveTaet(); saveAufg(); renderAufgabe(); toast('Gespeichert');
+    });
+    $('#dlgText').hidden = true;
+    const box = $('#dlgListe');
+    box.hidden = false;
+    box.innerHTML = '<div id="aufgUt"></div>';
+    const ut = utensilWahl($('#aufgUt'), a.utensilien || [], null, a.material || []);
+  };
   if($('#erlSetzen')) $('#erlSetzen').onclick = () => {
     a.erledigt = $('#erlDatum').value || heute();
     a.vermerk = $('#erlVermerk').value.trim();
@@ -4726,40 +4859,182 @@ function dauerWahl(box, start, leer, bei){
   zeichnen();
   return i >= 0 ? nurDauer(DAUER_STUFEN[i]) : null;
 }
-/* Utensilien als Kacheln aus der gemeinsamen Werkzeugliste, mehrere wählbar,
-   dazu ein Feld für ein neues. Ein neues ist gleich gewählt; in die
-   Werkzeugliste wandert es erst mit dem Speichern. */
-function utensilWahl(box, gewaehlt, bei){
-  const liste = TAET.werkzeug.slice(), sel = new Set();
-  const finden = t => liste.find(x => x.toLocaleLowerCase('de') === t.toLocaleLowerCase('de'));
-  (gewaehlt || []).forEach(u => { const da = finden(u); if(da) sel.add(da); else { liste.push(u); sel.add(u); } });
-  box.innerHTML = `<div class="chips"></div>
-    <div class="row utNeu"><input placeholder="Neues Utensil, z. B. Leiter" aria-label="Neues Utensil">
-      <button type="button" class="btn ghost klein">Hinzufügen</button></div>`;
-  const chips = box.querySelector('.chips'), feld = box.querySelector('input'), plus = box.querySelector('button');
+/* Utensilien als Kacheln aus den gemeinsamen Listen (v1.61, zweigeteilt seit
+   v1.68). Werkzeug nimmt man mit; Verbrauchsmaterial wird verbraucht, trägt je
+   Tätigkeit eine Menge und seine Einheit aus der Materialliste. Mehrere
+   wählbar, ein neues ist gleich gewählt; in die Listen wandert es erst mit
+   uebernehmen(). „Liste bearbeiten“ zeigt jede Kachel mit ✕: ein Tipp macht
+   sie scharf, der zweite löscht sofort – aus der Liste und aus allen
+   Tätigkeiten. Zweimal tippen statt Rückfrage, weil der Wähler selbst im
+   Rückfragefenster stehen kann (nach dem Erledigen). */
+const mengeOk = x => { const v = zahl(x); return v != null && v > 0 ? v : 1; };
+const mengeText = v => String(Math.round(v * 1000) / 1000).replace('.', ',');
+const einheitVon = name => ((TAET.material.find(m => klein(m.name) === klein(name)) || {}).einheit) || 'Stück';
+const matText = (name, menge) => `${name} (${mengeText(mengeOk(menge))} ${einheitVon(name)})`;
+/* Wird eine einmalige Aufgabe wiederkehrend, ziehen ihre Utensilien und ihr
+   Material in die Tätigkeit um (sofern die noch keine hat); im umgekehrten Fall
+   bekommt die Aufgabe eine Abschrift – die Tätigkeit bleibt, andere Termine
+   derselben Reihe könnten sie noch brauchen. */
+function listenUmziehen(a, alt, neu){
+  if(alt === neu) return;
+  if(neu && !alt && hatEigeneListen(a)){
+    const e = TAET.t[neu] = TAET.t[neu] || {name:a.titel || 'Aufgabe', dauern:[], utensilien:[], fragen:true};
+    if(!(e.utensilien || []).length && !(e.material || []).length){
+      e.utensilien = (a.utensilien || []).slice();
+      e.material = (a.material || []).map(m => Object.assign({}, m));
+    }
+    delete a.utensilien; delete a.material;
+    saveTaet();
+  }else if(alt && !neu && !hatEigeneListen(a)){
+    const e = TAET.t[alt];
+    if(e && ((e.utensilien || []).length || (e.material || []).length)){
+      a.utensilien = (e.utensilien || []).slice();
+      a.material = (e.material || []).map(m => Object.assign({}, m));
+    }
+  }
+}
+/* Wer Utensilien und Material trägt: die Tätigkeiten und seit v1.71 auch
+   einmalige Aufgaben und Mängel, die sie direkt an sich haben. */
+const utensilTraeger = () => Object.values(TAET.t).concat(AUFG).filter(Boolean);
+const hatEigeneListen = a => (a.utensilien || []).length > 0 || (a.material || []).length > 0;
+/* Löschen und Verschieben wirken auf die Liste UND auf alle Träger. */
+function utensilLoeschen(name, istMat){
+  if(istMat) TAET.material = TAET.material.filter(m => m.name !== name);
+  else TAET.werkzeug = TAET.werkzeug.filter(x => x !== name);
+  utensilTraeger().forEach(e => {
+    if(istMat){ if((e.material || []).some(m => m.name === name)) e.material = e.material.filter(m => m.name !== name); }
+    else if((e.utensilien || []).includes(name)) e.utensilien = e.utensilien.filter(x => x !== name);
+  });
+  saveTaet(); saveAufg();
+}
+function utensilVerschieben(name, zuMat){
+  const gleich = x => klein(x) === klein(name);
+  if(zuMat){
+    TAET.werkzeug = TAET.werkzeug.filter(x => x !== name);
+    if(!TAET.material.some(m => gleich(m.name))) TAET.material.push({name, einheit:'Stück'});
+  }else{
+    TAET.material = TAET.material.filter(m => m.name !== name);
+    if(!TAET.werkzeug.some(gleich)) TAET.werkzeug.push(name);
+  }
+  utensilTraeger().forEach(e => {
+    const u = e.utensilien || [], m = e.material || [];
+    if(zuMat && u.includes(name)){
+      e.utensilien = u.filter(x => x !== name);
+      if(!m.some(x => gleich(x.name))) e.material = m.concat([{name, menge:1}]);
+    }else if(!zuMat && m.some(x => x.name === name)){
+      e.material = m.filter(x => x.name !== name);
+      if(!u.some(gleich)) e.utensilien = u.concat([name]);
+    }
+  });
+  saveTaet(); saveAufg();
+}
+function utensilWahl(box, gewaehlt, bei, material){
+  const gleich = (a, b) => klein(a) === klein(b);
+  const wz = TAET.werkzeug.slice(), sel = new Set();
+  const ml = TAET.material.map(m => ({name:m.name, einheit:m.einheit})), msel = new Map();
+  (gewaehlt || []).forEach(u => { const da = wz.find(x => gleich(x, u)); if(da) sel.add(da); else { wz.push(u); sel.add(u); } });
+  (material || []).forEach(m => {
+    if(!m || !m.name) return;
+    let da = ml.find(x => gleich(x.name, m.name));
+    if(!da){ da = {name:m.name, einheit:'Stück'}; ml.push(da); }
+    msel.set(da.name, mengeOk(m.menge));
+  });
+  let bearbeiten = false, scharf = '';
+  box.innerHTML = `<div class="muted small utKopf">Werkzeug</div><div class="chips" data-teil="wz"></div>
+    <div class="row utNeu"><input data-neu="wz" placeholder="Neues Werkzeug, z. B. Leiter" aria-label="Neues Werkzeug">
+      <button type="button" class="btn ghost klein" data-plus="wz">Hinzufügen</button></div>
+    <div class="muted small utKopf">Verbrauchsmaterial</div><div class="chips" data-teil="mat"></div>
+    <div class="utMengen"></div>
+    <div class="row utNeu"><input data-neu="mat" placeholder="Neues Material, z. B. Filtervlies" aria-label="Neues Verbrauchsmaterial">
+      <button type="button" class="btn ghost klein" data-plus="mat">Hinzufügen</button></div>
+    <p class="muted small utHinweis" hidden>Ein Tipp markiert, ein zweiter löscht – aus der Liste und aus allen Tätigkeiten.</p>
+    <button type="button" class="btn ghost klein utBearb">Liste bearbeiten</button>`;
+  const chipsW = box.querySelector('[data-teil="wz"]'), chipsM = box.querySelector('[data-teil="mat"]');
+  const feldW = box.querySelector('[data-neu="wz"]'), feldM = box.querySelector('[data-neu="mat"]');
+  const mengen = box.querySelector('.utMengen'), knopf = box.querySelector('.utBearb'), hinweisP = box.querySelector('.utHinweis');
+  const kachel = (id, name, an) => {
+    if(!bearbeiten) return `<button type="button" data-id="${esc(id)}" aria-pressed="${an}">${esc(name)}</button>`;
+    return scharf === id
+      ? `<button type="button" data-id="${esc(id)}" class="scharf">${esc(name)} löschen?</button>`
+      : `<button type="button" data-id="${esc(id)}" class="weg">${esc(name)} <span aria-hidden="true">✕</span></button>`;
+  };
+  const leer = '<span class="muted small">Noch keine – unten eintragen.</span>';
   const zeichnen = () => {
-    chips.innerHTML = liste.length
-      ? liste.map((u, j) => `<button type="button" data-u="${j}" aria-pressed="${sel.has(u)}">${esc(u)}</button>`).join('')
-      : '<span class="muted small">Noch keine – unten eintragen.</span>';
-    chips.querySelectorAll('[data-u]').forEach(b => b.onclick = () => {
-      const u = liste[+b.dataset.u];
-      if(sel.has(u)) sel.delete(u); else sel.add(u);
-      b.setAttribute('aria-pressed', String(sel.has(u)));
-      if(bei) bei();
+    chipsW.innerHTML = wz.length ? wz.map((u, j) => kachel('w' + j, u, sel.has(u))).join('') : leer;
+    chipsM.innerHTML = ml.length ? ml.map((m, j) => kachel('m' + j, m.name, msel.has(m.name))).join('') : leer;
+    const gew = ml.filter(m => msel.has(m.name));
+    mengen.innerHTML = gew.map(m => `<div class="utMenge" data-m="${esc(m.name)}">
+        <span class="etext">${esc(m.name)}</span>
+        <input inputmode="decimal" data-menge="1" value="${esc(mengeText(msel.get(m.name)))}" aria-label="Menge">
+        <input data-einheit="1" value="${esc(m.einheit)}" placeholder="Stück" aria-label="Einheit"></div>`).join('');
+    mengen.hidden = !gew.length;
+    knopf.textContent = bearbeiten ? 'Fertig' : 'Liste bearbeiten';
+    hinweisP.hidden = !bearbeiten;
+    box.querySelectorAll('.chips [data-id]').forEach(b => b.onclick = () => tippen(b.dataset.id));
+    mengen.querySelectorAll('.utMenge').forEach(r => {
+      const m = ml.find(x => x.name === r.dataset.m);
+      const fM = r.querySelector('[data-menge]'), fE = r.querySelector('[data-einheit]');
+      fM.oninput = () => { const v = zahl(fM.value); if(v != null && v > 0){ msel.set(m.name, v); if(bei) bei(); } };
+      fM.onblur  = () => { fM.value = mengeText(msel.get(m.name)); };
+      fE.oninput = () => { m.einheit = fE.value.replace(/\s+/g, ' ').trim() || 'Stück'; if(bei) bei(); };
+      fE.onblur  = () => { fE.value = m.einheit; };
     });
   };
-  const dazu = () => {
-    const t = feld.value.replace(/\s+/g, ' ').trim();
+  const tippen = id => {
+    const mat = id[0] === 'm', j = +id.slice(1);
+    if(!bearbeiten){
+      if(mat){ const n = ml[j].name; if(msel.has(n)) msel.delete(n); else msel.set(n, 1); }
+      else{ const u = wz[j]; if(sel.has(u)) sel.delete(u); else sel.add(u); }
+      zeichnen(); if(bei) bei(); return;
+    }
+    if(scharf !== id){ scharf = id; zeichnen(); return; }
+    scharf = '';
+    if(mat){
+      const n = ml[j].name; ml.splice(j, 1); msel.delete(n);
+      if(TAET.material.some(m => m.name === n)) utensilLoeschen(n, true);
+    }else{
+      const u = wz[j]; wz.splice(j, 1); sel.delete(u);
+      if(TAET.werkzeug.includes(u)) utensilLoeschen(u, false);
+    }
+    zeichnen(); toast('Gelöscht'); if(bei) bei();
+  };
+  const dazu = mat => {
+    const feld = mat ? feldM : feldW, t = feld.value.replace(/\s+/g, ' ').trim();
     if(!t) return;
-    const da = finden(t);
-    if(da) sel.add(da); else { liste.push(t); sel.add(t); }
+    if(mat){
+      let da = ml.find(x => gleich(x.name, t));
+      if(!da){ da = {name:t, einheit:'Stück'}; ml.push(da); }
+      if(!msel.has(da.name)) msel.set(da.name, 1);
+    }else{
+      const da = wz.find(x => gleich(x, t));
+      if(da) sel.add(da); else { wz.push(t); sel.add(t); }
+    }
     feld.value = ''; zeichnen();
     if(bei) bei();
   };
-  plus.onclick = dazu;
-  feld.onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); dazu(); } };
+  box.querySelector('[data-plus="wz"]').onclick = () => dazu(false);
+  box.querySelector('[data-plus="mat"]').onclick = () => dazu(true);
+  feldW.onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); dazu(false); } };
+  feldM.onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); dazu(true); } };
+  knopf.onclick = () => { bearbeiten = !bearbeiten; scharf = ''; zeichnen(); };
   zeichnen();
-  return {liste:() => liste.slice(), gewaehlt:() => liste.filter(u => sel.has(u)), offen:() => feld.value.trim()};
+  return {
+    gewaehlt:() => wz.filter(u => sel.has(u)),
+    material:() => ml.filter(m => msel.has(m.name)).map(m => ({name:m.name, menge:msel.get(m.name)})),
+    /* Schreibt die Wahl in die Tätigkeit und Neues in die Listen. Mit
+       mitOffenem zählt auch ein getipptes, nicht mehr hinzugefügtes Utensil. */
+    uebernehmen(ein, mitOffenem){
+      if(mitOffenem){ dazu(false); dazu(true); }
+      const gw = wz.filter(u => sel.has(u));
+      gw.forEach(u => { if(!TAET.werkzeug.some(x => gleich(x, u))) TAET.werkzeug.push(u); });
+      ml.filter(m => msel.has(m.name)).forEach(m => {
+        const da = TAET.material.find(x => gleich(x.name, m.name));
+        if(da) da.einheit = m.einheit || 'Stück'; else TAET.material.push({name:m.name, einheit:m.einheit || 'Stück'});
+      });
+      ein.utensilien = gw;
+      ein.material = ml.filter(m => msel.has(m.name)).map(m => ({name:m.name, menge:msel.get(m.name)}));
+    }
+  };
 }
 /* Das Fenster nach einer erledigten Tätigkeit. o = {key, name, gemessen
    (Minuten), aufgabe, datum, zr, fertig}. Vorbelegt mit der gemessenen Zeit,
@@ -4779,10 +5054,7 @@ function taetFragen(o){
     ein.dauern.push(Object.assign({datum:o.datum || heute()}, o.zr ? {zr:o.zr} : {}, nurDauer(wert)));
     if(ein.dauern.length > 50) ein.dauern = ein.dauern.slice(-50);
     /* Ein getipptes, aber nicht mehr hinzugefügtes Utensil zählt mit. */
-    const rest = ut.offen();
-    const gewaehlt = ut.gewaehlt().concat(rest && !ut.liste().some(u => u.toLocaleLowerCase('de') === rest.toLocaleLowerCase('de')) ? [rest] : []);
-    gewaehlt.forEach(u => { if(!TAET.werkzeug.some(x => x.toLocaleLowerCase('de') === u.toLocaleLowerCase('de'))) TAET.werkzeug.push(u); });
-    ein.utensilien = gewaehlt;
+    ut.uebernehmen(ein, true);
     ein.fragen = $('#taetWieder').checked;
     saveTaet();
     if(o.aufgabe){ o.aufgabe.dauer = nurDauer(wert); o.aufgabe.taetVermerkt = true; saveAufg(); }
@@ -4797,7 +5069,7 @@ function taetFragen(o){
     <label class="haken" style="margin:16px 0 0"><input type="checkbox" id="taetWieder" checked>
       <span>Beim nächsten Mal wieder fragen</span></label>`;
   wert = dauerWahl($('#taetDauer'), wert, false, w => { wert = w; }) || wert;
-  const ut = utensilWahl($('#taetUt'), e ? e.utensilien : []);
+  const ut = utensilWahl($('#taetUt'), e ? e.utensilien : [], null, e ? e.material : []);
   return true;
 }
 /* --- Tätigkeiten: Anzeige und Bearbeitung (v1.62, Etappe B) -------------------
@@ -4831,24 +5103,42 @@ function taetKandidaten(){
    (höchstens drei Utensilien), voll für den Nachweis. */
 function erfText(keys, voll){
   let min = 0, n = 0;
-  const ut = [];
+  const ut = [], mat = new Map();
   keys.forEach(k => {
-    const s = taetSchnitt(k);
+    const s = taetSchnitt(k), e = TAET.t[k] || {};
     if(s){ min += dauerMin(s); n++; }
-    (((TAET.t[k] || {}).utensilien) || []).forEach(u => { if(!ut.includes(u)) ut.push(u); });
+    (e.utensilien || []).forEach(u => { if(!ut.includes(u)) ut.push(u); });
+    /* Material mehrerer Tätigkeiten (Rundgang) wird zusammengezählt. */
+    (e.material || []).forEach(m => { if(m && m.name) mat.set(m.name, (mat.get(m.name) || 0) + mengeOk(m.menge)); });
   });
   const teile = [];
   if(n) teile.push('≈ ' + dauerText(alsStufe(min)));
-  if(ut.length) teile.push(voll ? 'Mitnehmen: ' + ut.join(', ')
-                                : ut.length > 3 ? ut.slice(0, 3).join(', ') + ` +${ut.length - 3}` : ut.join(', '));
+  if(voll){
+    if(ut.length) teile.push('Mitnehmen: ' + ut.join(', '));
+    if(mat.size) teile.push('Material: ' + [...mat].map(([name, x]) => matText(name, x)).join(', '));
+  }else{
+    const alle = ut.concat([...mat.keys()]);
+    if(alle.length) teile.push(alle.length > 3 ? alle.slice(0, 3).join(', ') + ` +${alle.length - 3}` : alle.join(', '));
+  }
   return teile.join(' · ');
+}
+/* Einmalige Aufgaben und Mängel (v1.71): Utensilien und Material direkt an
+   der Aufgabe, ohne Dauer – Kurzform für die Liste, voll für die Karte. */
+function eigenText(a, voll){
+  const ut = a.utensilien || [], mt = (a.material || []).filter(m => m && m.name);
+  if(!voll){
+    const alle = ut.concat(mt.map(m => m.name));
+    return alle.length > 3 ? alle.slice(0, 3).join(', ') + ` +${alle.length - 3}` : alle.join(', ');
+  }
+  return (ut.length ? `<p style="margin:0">Mitnehmen: ${esc(ut.join(', '))}</p>` : '')
+    + (mt.length ? `<p style="margin:${ut.length ? '6px' : '0'} 0 0">Material: ${esc(mt.map(m => matText(m.name, m.menge)).join(', '))}</p>` : '');
 }
 function erfFuerEintrag(a){
   if(a.akku) return '';
   if(a.rundgang) return erfText((a.teilK || []).map(k => k === 'sprinkler' ? 'nw:sprinkler:woch' : 'nw:' + k));
   if(a.aufg){
     const x = AUFG.find(y => y.id === a.aufg), key = x ? taetSchluessel(x, false) : '';
-    return key ? erfText([key]) : '';
+    return key ? erfText([key]) : x ? eigenText(x, false) : '';
   }
   const n = a.k && NW(a.k);
   if(!n || n.art === 'fremd') return '';
@@ -4870,13 +5160,15 @@ function erfDetailHtml(key){
   const e = TAET.t[key];
   if(!e) return '';
   const s = taetSchnitt(key), n = Math.min(10, (e.dauern || []).length), ut = e.utensilien || [];
+  const mt = (e.material || []).filter(m => m && m.name);
   return (s ? `<p style="margin:0">≈ ${esc(dauerText(s))}<span class="muted small"> · Durchschnitt aus ${n} ${n === 1 ? 'Angabe' : 'Angaben'}</span></p>` : '')
-    + (ut.length ? `<p style="margin:${s ? '6px' : '0'} 0 0">Mitnehmen: ${esc(ut.join(', '))}</p>` : '');
+    + (ut.length ? `<p style="margin:${s ? '6px' : '0'} 0 0">Mitnehmen: ${esc(ut.join(', '))}</p>` : '')
+    + (mt.length ? `<p style="margin:${s || ut.length ? '6px' : '0'} 0 0">Material: ${esc(mt.map(m => matText(m.name, m.menge)).join(', '))}</p>` : '');
 }
 function renderTaeten(){
   const box = $('#taetenBox');
   if(!box) return;
-  const i = info('Nach jeder wiederkehrenden Tätigkeit fragt die App nach Dauer und Utensilien, solange „Beim nächsten Mal wieder fragen“ angehakt ist. Der Durchschnitt nimmt die letzten zehn Angaben. Die Werkzeugliste gilt für alle Tätigkeiten.', 'margin:-2px 0 10px');
+  const i = info('Nach jeder wiederkehrenden Tätigkeit fragt die App nach Dauer und Utensilien, solange „Beim nächsten Mal wieder fragen“ angehakt ist. Der Durchschnitt nimmt die letzten zehn Angaben. Werkzeug und Verbrauchsmaterial gelten für alle Tätigkeiten; mit „→ Material“ bzw. „→ Werkzeug“ wechselt ein Eintrag die Liste, auch in allen Tätigkeiten.', 'margin:-2px 0 10px');
   const liste = taetKandidaten();
   const zusatz = t => {
     const e = TAET.t[t.key], n = ((e && e.dauern) || []).length, s = taetSchnitt(t.key);
@@ -4887,7 +5179,8 @@ function renderTaeten(){
     + (liste.length
         ? liste.map((t, j) => `<button class="btn eintrag" data-t="${j}"><span class="etext">${esc(t.name)}<small>${esc(zusatz(t))}</small></span></button>`).join('')
         : '<p class="muted small">Noch keine wiederkehrenden Tätigkeiten.</p>')
-    + `<div class="eyebrow">Werkzeugliste</div><div id="werkzeugListe"></div>`;
+    + `<div class="eyebrow">Werkzeug</div><div id="werkzeugListe"></div>`
+    + `<div class="eyebrow">Verbrauchsmaterial</div><div id="materialListe"></div>`;
   box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
     const t = liste[+b.dataset.t];
     taetAktiv = {key:t.key, name:t.name};
@@ -4896,16 +5189,105 @@ function renderTaeten(){
   /* Dieselbe Liste wie in den Einstellungen. Umbenennen und Löschen wirken auf
      alle Tätigkeiten, die das Utensil führen. */
   listeBauen($('#werkzeugListe'), {
-    wort:'Utensil', liste:() => TAET.werkzeug,
+    wort:'Werkzeug', liste:() => TAET.werkzeug,
     loeschHinweis:'Es verschwindet damit auch aus allen Tätigkeiten.',
-    beiUmbenennen:(alt, neu) => Object.values(TAET.t).forEach(e => {
-      e.utensilien = [...new Set((e.utensilien || []).map(u => u === alt ? neu : u))];
+    /* Wechsel zum Verbrauchsmaterial (v1.68) – nur an gespeicherten Zeilen. */
+    nachZeichnen:b => b.querySelectorAll('.zeile').forEach(r => {
+      const j = +r.dataset.i;
+      if(j < 0) return;
+      r.querySelector('[data-weg]').insertAdjacentHTML('beforebegin',
+        '<button class="btn ghost klein" data-wechsel="1">→ Material</button>');
+      r.querySelector('[data-wechsel]').onclick = () => {
+        const u = TAET.werkzeug[j];
+        utensilVerschieben(u, true); renderTaeten(); toast('Zum Verbrauchsmaterial verschoben');
+      };
     }),
+    beiUmbenennen:(alt, neu) => { utensilTraeger().forEach(e => {
+      if((e.utensilien || []).includes(alt)) e.utensilien = [...new Set(e.utensilien.map(u => u === alt ? neu : u))];
+    }); saveAufg(); },
     beiLoeschen:j => {
       const u = TAET.werkzeug[j];
-      Object.values(TAET.t).forEach(e => { e.utensilien = (e.utensilien || []).filter(x => x !== u); });
+      utensilTraeger().forEach(e => { if((e.utensilien || []).includes(u)) e.utensilien = e.utensilien.filter(x => x !== u); });
+      saveAufg();
     },
     nachher:() => saveTaet()});
+  materialListeBauen($('#materialListe'));
+}
+/* Die Liste des Verbrauchsmaterials (v1.68): je Zeile Name und Löschen,
+   darunter die Einheit und der Wechsel zum Werkzeug. Ein Name ist eine Zeile;
+   Umbenennen wirkt auf alle Tätigkeiten. */
+function materialListeBauen(box){
+  let verworfen = false, basis = TAET.material.length;
+  const zeile = (m, i) => `<div class="zeile matZeile" data-i="${i}">
+      <textarea rows="1" placeholder="Material">${esc(m.name)}</textarea>
+      <button class="btn danger klein" data-weg="1">Löschen</button>
+      <div class="matUnter"><span class="muted small">Einheit</span>
+        <input data-einheit="1" value="${esc(m.einheit)}" placeholder="Stück" aria-label="Einheit">
+        ${i >= 0 ? '<button class="btn ghost klein" data-wechsel="1">→ Werkzeug</button>' : ''}</div>
+    </div>`;
+  const zeichnen = mitNeuer => {
+    verworfen = false;
+    box.innerHTML = `<button class="btn ghost klein" data-plus="1" style="margin:0 0 10px">+ Material hinzufügen</button>`
+      + (mitNeuer ? zeile({name:'', einheit:'Stück'}, -1) : '')
+      + (TAET.material.length || mitNeuer ? anzeigeFolge(TAET.material.length, basis).map(i => zeile(TAET.material[i], i)).join('')
+         : '<p class="muted small">Noch keines. Material lässt sich auch direkt an einer Tätigkeit eintragen.</p>');
+    box.querySelectorAll('.matZeile').forEach(r => {
+      const i = +r.dataset.i, neu = i < 0, ta = r.querySelector('textarea'), fE = r.querySelector('[data-einheit]');
+      feldHoehe(ta);
+      ta.oninput = () => feldHoehe(ta);
+      /* Eine neue Zeile wird beim Verlassen des Namens gespeichert. Geht der
+         Finger dabei zur Einheit, bleibt die Zeile stehen, bis auch die
+         verlassen wird – sonst risse der Neuaufbau das Feld weg. */
+      if(neu) ta.onblur = ev => {
+        if(r.dataset.gesichert) return;
+        const wert = ta.value.replace(/\s+/g, ' ').trim();
+        if(!wert || verworfen){ if(ev.relatedTarget !== fE) setTimeout(() => { if(!verworfen) zeichnen(false); }, 0); return; }
+        if(TAET.material.some(m => klein(m.name) === klein(wert))){ toast('Gibt es schon'); return; }
+        TAET.material.push({name:wert, einheit:fE.value.replace(/\s+/g, ' ').trim() || 'Stück'});
+        saveTaet(); toast('Hinzugefügt');
+        r.dataset.i = String(TAET.material.length - 1);
+        r.dataset.gesichert = '1';
+        if(ev.relatedTarget !== fE) zeichnen(false);
+      };
+      ta.onchange = () => {
+        const wert = ta.value.replace(/\s+/g, ' ').trim();
+        if(neu) return;
+        const m = TAET.material[i];
+        if(!wert){ ta.value = m.name; feldHoehe(ta); return; }
+        if(wert === m.name) return;
+        if(TAET.material.some((x, j) => j !== i && klein(x.name) === klein(wert))){ ta.value = m.name; feldHoehe(ta); toast('Gibt es schon'); return; }
+        utensilTraeger().forEach(e => (e.material || []).forEach(x => { if(x.name === m.name) x.name = wert; }));
+        matUmbenennen(m.name, wert);
+        m.name = wert; saveTaet(); saveAufg();
+      };
+      fE.onchange = () => {
+        const v = fE.value.replace(/\s+/g, ' ').trim() || 'Stück';
+        fE.value = v;
+        const j = +r.dataset.i;
+        if(j >= 0 && TAET.material[j]){ TAET.material[j].einheit = v; saveTaet(); }
+      };
+      fE.onblur = () => { if(r.dataset.gesichert) setTimeout(() => zeichnen(false), 0); };
+      const weg = r.querySelector('[data-weg]');
+      weg.onpointerdown = () => { if(neu && !r.dataset.gesichert) verworfen = true; };
+      weg.onclick = () => {
+        const j = +r.dataset.i;
+        if(j < 0){ zeichnen(false); return; }
+        const name = TAET.material[j].name;
+        frage('Material löschen', `„${name}“ verschwindet aus der Liste.\n\nEs verschwindet damit auch aus allen Tätigkeiten.`,
+          'Löschen', () => { utensilLoeschen(name, true); toast('Gelöscht'); zeichnen(false); });
+      };
+      const wechsel = r.querySelector('[data-wechsel]');
+      if(wechsel) wechsel.onclick = () => {
+        utensilVerschieben(TAET.material[i].name, false); renderTaeten(); toast('Zum Werkzeug verschoben');
+      };
+    });
+    box.querySelector('[data-plus]').onclick = () => {
+      zeichnen(true);
+      const t = box.querySelector('.matZeile[data-i="-1"] textarea');
+      if(t) t.focus();
+    };
+  };
+  zeichnen(false);
 }
 /* Datum und Dauer in einem Fenster – zum Nachtragen und Ändern. */
 function dauerFenster(titel, start, datum, beiJa, text){
@@ -4949,10 +5331,8 @@ function renderTaet(){
     ${e ? `<div class="knopfzeile"><button class="btn danger klein" id="taetZurueck">Erfahrungswerte löschen</button></div>` : ''}`;
   $('#taetFragenHaken').onchange = ev => { holen().fragen = ev.target.checked; saveTaet(); };
   const ut = utensilWahl($('#taetUtSeite'), e ? e.utensilien : [], () => {
-    const ein = holen(), gew = ut.gewaehlt();
-    gew.forEach(u => { if(!TAET.werkzeug.some(x => klein(x) === klein(u))) TAET.werkzeug.push(u); });
-    ein.utensilien = gew; saveTaet();
-  });
+    ut.uebernehmen(holen(), false); saveTaet();
+  }, e ? e.material : []);
   $('#taetPlus').onclick = () => dauerFenster('Dauer nachtragen', taetSchnitt(key) || {m:30}, heute(), (w, datum) => {
     holen().dauern.push(Object.assign({datum}, w)); saveTaet(); renderTaet(); toast('Nachgetragen');
   });
@@ -4970,6 +5350,230 @@ function renderTaet(){
   if($('#taetZurueck')) $('#taetZurueck').onclick = () => frage('Erfahrungswerte löschen',
     `Dauern, Utensilien und „wieder fragen“ von „${name}“ werden gelöscht. Beim nächsten Mal fragt die App wieder.`,
     'Löschen', () => { delete TAET.t[key]; saveTaet(); renderTaet(); toast('Gelöscht'); });
+}
+/* --- Verbrauchsmaterial bereitlegen (v1.69, Etappe 2) ------------------------
+   Von Jean festgelegt: ab dem Vormonat steht in einer Liste, welches Material
+   für das Anstehende gebraucht wird, damit sich gesammelt bestellen oder
+   einkaufen lässt. Was da ist, wird abgehakt (einstufig „bereit“) und
+   verschwindet – auf der Startseite und an der Aufgabe bzw. am Nachweis
+   zugleich. Ein Anlass ist das einzelne Anstehen einer Tätigkeit:
+     a:<Aufgabe>                       eine offene Aufgabe (Termin, beim
+                                       Zeitraum dessen Beginn)
+     nw:<Nachweis>@2026-10 / @2026-Q4  eine Runde; fällig im Monat der Runde,
+                                       die Ablesung im letzten Quartalsmonat,
+                                       weil erst dann abgelesen wird
+     nw:sprinkler:mon@2026-10          die Monatskontrolle des Sprinklers
+     nw:sprinkler:woch@2026-10-05      ein wöchentlicher Kontrollgang (Montag)
+   In der Liste steht, was bis Ende des nächsten Monats fällig ist, Überfälliges
+   eingeschlossen. Erledigte Aufgaben, ausgegebene und vollständig erfasste
+   Runden fallen heraus, abgehakt oder nicht. Gemerkt wird je Anlass und
+   Material: MAT.bereit["<Anlass>|<Material>"] = Tag des Abhakens. */
+let MAT = Store.get('nwMat', {});
+function matOrdnen(){
+  if(!MAT || typeof MAT !== 'object' || Array.isArray(MAT)) MAT = {};
+  if(!MAT.bereit || typeof MAT.bereit !== 'object' || Array.isArray(MAT.bereit)) MAT.bereit = {};
+}
+matOrdnen();
+/* Vermerke vergangener Anlässe braucht niemand mehr: nach 150 Tagen weg. */
+(() => {
+  const alt = tagPlus(heute(), -150);
+  let weg = 0;
+  Object.keys(MAT.bereit).forEach(k => { if(String(MAT.bereit[k]) < alt){ delete MAT.bereit[k]; weg++; } });
+  if(weg) Store.set('nwMat', MAT);
+})();
+const saveMat = () => { Store.set('nwMat', MAT); listeNachziehen(); };
+/* Beim Umbenennen eines Materials wandern die Haken mit. */
+function matUmbenennen(alt, neu){
+  Object.keys(MAT.bereit).forEach(k => {
+    const i = k.lastIndexOf('|');
+    if(k.slice(i + 1) !== alt) return;
+    MAT.bereit[k.slice(0, i + 1) + neu] = MAT.bereit[k];
+    delete MAT.bereit[k];
+  });
+  Store.set('nwMat', MAT);
+}
+const matVon = key => ((TAET.t[key] || {}).material || []).filter(m => m && m.name);
+/* Akkus der RWA (v1.70, Etappe 3): jede Anlage, deren Tausch bis Ende des
+   nächsten Monats ansteht oder die noch kein Tauschdatum hat, ist ein Anlass
+   akku:<Anlage>@<Termin> bzw. @ohne. Typ und Anzahl kommen aus den
+   Einstellungen unter RWA, das Material heißt „Akku <Typ>“. Mit dem neuen
+   Tauschdatum rückt der Termin weit weg – der Anlass fällt heraus. Das ersetzt
+   den früheren Knopf „Akkus vorhanden“. */
+const akkuName = typ => /akku/i.test(typ) ? typ : 'Akku ' + typ;
+function akkuAnlaesse(){
+  if(!akkuAn()) return [];
+  const an = vorbAnstehend('akku'), raus = [];
+  Object.keys(an).forEach(a => {
+    const z = zeileVon('rwa', a);
+    if(!z.akkuTyp) return;
+    const ziel = an[a] || '';
+    raus.push({id:`akku:${a}@${ziel || 'ohne'}`, key:'akku', nw:'akku', name:'RWA-Akkus', anlage:a, ziel,
+      wann:a, faellig:ziel ? alsDatum(ziel) : tagAnfang(new Date()),
+      mat:[{name:akkuName(z.akkuTyp), menge:akkuAnzahl(z)}]});
+  });
+  akkuVermerkUebernehmen(raus);
+  return raus;
+}
+/* Ein bis v1.69 gesetztes „Akkus vorhanden“ wird einmalig zu Haken für die
+   Anlagen, die es damals deckte und die noch mit demselben Termin anstehen. */
+function akkuVermerkUebernehmen(anl){
+  const rec = VORB.akku;
+  if(!rec) return;
+  const ziele = rec.ziele || {};
+  anl.forEach(o => {
+    if(!(o.anlage in ziele) || (ziele[o.anlage] || '') !== o.ziel) return;
+    o.mat.forEach(m => { MAT.bereit[o.id + '|' + m.name] = rec.datum || heute(); });
+  });
+  delete VORB.akku;
+  Store.set('nwVorb', VORB); Store.set('nwMat', MAT);
+}
+/* Umbenannte Anlage: ihre Haken wandern mit. */
+function matAnlassUmbenennen(altVor, neuVor){
+  let n = 0;
+  Object.keys(MAT.bereit).forEach(k => {
+    if(!k.startsWith(altVor)) return;
+    MAT.bereit[neuVor + k.slice(altVor.length)] = MAT.bereit[k];
+    delete MAT.bereit[k]; n++;
+  });
+  if(n) Store.set('nwMat', MAT);
+}
+/* Alle Anlässe mit Material, die bis Ende des nächsten Monats fällig sind. */
+function matAnlaesse(){
+  const raus = [], jetzt = new Date();
+  const grenze = new Date(jetzt.getFullYear(), jetzt.getMonth() + 2, 0);
+  const dazu = o => { if(o.faellig <= grenze && matVon(o.key).length) raus.push(o); };
+  AUFG.filter(a => !a.erledigt).forEach(a => {
+    const key = taetSchluessel(a, false), tag = zeitraumVon(a) || a.frist;
+    if(!tag) return;
+    const f = alsDatum(tag);
+    if(key){
+      if(matVon(key).length) dazu({id:'a:' + a.id, key, aufg:a.id, name:a.titel || 'Aufgabe', wann:ttmm(f), faellig:f});
+      return;
+    }
+    /* Einmalig oder Mangel (v1.71): das Material steht an der Aufgabe selbst. */
+    const mat = (a.material || []).filter(m => m && m.name);
+    if(mat.length && f <= grenze) raus.push({id:'a:' + a.id, key:'', aufg:a.id, name:aufgTitel(a), wann:ttmm(f), faellig:f, mat});
+  });
+  /* Runden eines Nachweises: die laufende (auch eine überzogene), die des
+     aktuellen Zeitraums und die nächste. Ausgegebenes fällt heraus, ebenso die
+     laufende, wenn sie schon vollständig erfasst ist. */
+  const runden = (n, quartal, fertig) => {
+    const aus = quartal ? expQuartal(n.k) : expMonat(n.k), r0 = rundeVon(n);
+    const naechst = quartal ? quartalVon(isoTag(new Date(jetzt.getFullYear(), jetzt.getMonth() + 3, 1)))
+                            : monatVon(isoTag(new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 1)));
+    return [...new Set([r0, jetztZeitraum(quartal), naechst])]
+      .filter(z => !(aus && aus >= z) && !(z === r0 && fertig));
+  };
+  const faelligIm = z => { const e = zeitraumEnde(z); return new Date(e.getFullYear(), e.getMonth(), 1); };
+  NACHWEISE.filter(n => !n.spaeter && n.art !== 'fremd').forEach(n => {
+    if(n.art === 'sprinkler'){
+      const km = 'nw:sprinkler:mon', kw = 'nw:sprinkler:woch';
+      if(hatEintraege(n, 'monat') && matVon(km).length)
+        runden(n, false, monAbgeschlossen(DAT[n.k])).forEach(z => dazu({id:km + '@' + z, key:km, nw:n.k,
+          name:SPR_TAET.mon, wann:zeitraumText(z), faellig:faelligIm(z)}));
+      if(hatEintraege(n, 'woche') && matVon(kw).length){
+        let mo = wochenBeginn(jetzt);
+        if(!sprinklerWoche(n, jetzt)) mo = new Date(mo.getFullYear(), mo.getMonth(), mo.getDate() + 7);
+        for(; mo <= grenze; mo = new Date(mo.getFullYear(), mo.getMonth(), mo.getDate() + 7))
+          raus.push({id:kw + '@' + isoTag(mo), key:kw, nw:n.k, name:SPR_TAET.woch,
+                     wann:'KW ' + kalenderwoche(mo), faellig:mo});
+      }
+      return;
+    }
+    const quartal = n.art === 'medien', key = 'nw:' + n.k;
+    if(!matVon(key).length || !hatEintraege(n, quartal ? 'quartal' : 'monat')) return;
+    const fertig = quartal ? medienVoll(DAT.medien || {stand:{}})
+                 : (() => { const z = zeilenJetzt(n.k); return z.length > 0 && z.length >= teilCfg(n.k).anlagen.length && z.every(x => x.status); })();
+    runden(n, quartal, fertig).forEach(z => dazu({id:key + '@' + z, key, nw:n.k,
+      name:n.label, wann:zeitraumText(z), faellig:faelligIm(z)}));
+  });
+  /* Das Fenster gilt bei den Akkus schon in vorbAnstehend: bis Ende des
+     nächsten Monats oder ohne Tauschdatum. */
+  akkuAnlaesse().forEach(o => raus.push(o));
+  return raus.sort((x, y) => x.faellig - y.faellig);
+}
+/* Die noch nicht abgehakten Posten der Anlässe, je Anlass und Material. */
+function matOffen(anlaesse){
+  const raus = [];
+  anlaesse.forEach(o => (o.mat || matVon(o.key)).forEach(m => {
+    if(!MAT.bereit[o.id + '|' + m.name]) raus.push({o, name:m.name, menge:mengeOk(m.menge)});
+  }));
+  return raus;
+}
+/* Abhaken mit der Möglichkeit, es gleich zurückzunehmen. */
+function matAbhaken(posten, name, nachher){
+  const ids = posten.map(p => p.o.id + '|' + p.name);
+  ids.forEach(id => { MAT.bereit[id] = heute(); });
+  saveMat(); if(nachher) nachher();
+  toastRueck(`${name} bereit`, () => {
+    ids.forEach(id => { delete MAT.bereit[id]; });
+    saveMat(); if(nachher) nachher();
+  });
+}
+const matZeile = (i, name, menge, unten) => `<label class="haken matPosten"><input type="checkbox" data-p="${i}">
+    <span class="etext"><b>${esc(name)}</b> · ${esc(mengeText(menge))} ${esc(einheitVon(name))}${
+      unten ? `<small>${esc(unten)}</small>` : ''}</span></label>`;
+/* Startseite: je Material zusammengezählt, das Dringendste zuerst; darunter
+   klein, wofür. Ein Haken deckt alle Anlässe der Zeile. */
+function matStartHtml(){
+  const je = new Map();
+  matOffen(matAnlaesse()).forEach(p => {
+    const x = je.get(p.name) || {name:p.name, menge:0, posten:[], erst:p.o.faellig};
+    x.menge += p.menge; x.posten.push(p);
+    if(p.o.faellig < x.erst) x.erst = p.o.faellig;
+    je.set(p.name, x);
+  });
+  matStartListe = [...je.values()].sort((x, y) => x.erst - y.erst || x.name.localeCompare(y.name, 'de', {numeric:true}));
+  if(!matStartListe.length) return '';
+  const wofuer = x => {
+    const m = new Map();
+    x.posten.forEach(p => { const l = m.get(p.o.name) || []; if(!l.includes(p.o.wann)) l.push(p.o.wann); m.set(p.o.name, l); });
+    return [...m].map(([n, w]) => w.length > 2 ? `${n} (${w.length}×)` : `${n} ${w.join(', ')}`).join(' · ');
+  };
+  const i = info('Verbrauchsmaterial für alles, was bis Ende des nächsten Monats ansteht – zusammengezählt, damit sich gesammelt bestellen oder einkaufen lässt. Was da ist, abhaken: es verschwindet dann auch an der Aufgabe bzw. am Nachweis. Mengen und Einheiten stehen unter Übersicht › Tätigkeiten.', 'margin:-4px 0 8px');
+  return `<div class="eyebrow mitInfo">Material bereitlegen ${i.knopf}</div>${i.text}
+    <div class="card matKarte" id="homeMat">${matStartListe.map((x, j) => matZeile(j, x.name, x.menge, wofuer(x))).join('')}</div>`;
+}
+let matStartListe = [];
+function matStartVerdrahten(){
+  $$('#homeMat [data-p]').forEach(c => c.onchange = () => {
+    const x = matStartListe[+c.dataset.p];
+    if(!x) return;
+    c.closest('.matPosten').remove();
+    matAbhaken(x.posten, x.name, null);
+  });
+}
+/* Die Akku-Ansicht (v1.70): je Akkutyp zusammengezählt wie auf der
+   Startseite, darunter die Anlagen. Ein Haken deckt alle Anlagen der Zeile. */
+function akkuMatKarte(box){
+  if(!box) return;
+  const je = new Map();
+  matOffen(akkuAnlaesse()).forEach(p => {
+    const x = je.get(p.name) || {name:p.name, menge:0, posten:[]};
+    x.menge += p.menge; x.posten.push(p); je.set(p.name, x);
+  });
+  const liste = [...je.values()].sort((x, y) => x.name.localeCompare(y.name, 'de', {numeric:true}));
+  if(!liste.length){ box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="card matKarte"><div class="eyebrow" style="margin:0 0 4px">Akkus bereitlegen</div>
+    <p class="muted small" style="margin:0 0 2px">Für alles, was bis Ende ${esc(naechsterMonatText())} zu tauschen ist oder noch kein Tauschdatum hat.</p>${
+    liste.map((x, j) => matZeile(j, x.name, x.menge, x.posten.map(p => p.o.anlage).join(', '))).join('')}</div>`;
+  box.querySelectorAll('[data-p]').forEach(c => c.onchange = () => {
+    const x = liste[+c.dataset.p];
+    matAbhaken(x.posten, x.name, () => akkuMatKarte(box));
+  });
+}
+/* Aufgabe und Nachweis: nur die eigenen Anlässe. Beim Nachweis steht unter
+   jedem Posten, für welche Runde bzw. welche Woche er gilt. */
+function matKarte(box, filter, mitWann){
+  if(!box) return;
+  const posten = matOffen(matAnlaesse().filter(filter));
+  if(!posten.length){ box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="card matKarte"><div class="eyebrow" style="margin:0 0 4px">Material bereitlegen</div>${
+    posten.map((p, i) => matZeile(i, p.name, p.menge, mitWann ? p.o.wann : '')).join('')}</div>`;
+  box.querySelectorAll('[data-p]').forEach(c => c.onchange = () => {
+    const p = posten[+c.dataset.p];
+    matAbhaken([p], p.name, () => matKarte(box, filter, mitWann));
+  });
 }
 /* --- Einplanung (v1.63, Etappe C) --------------------------------------------
    Aus den Erfahrungswerten wird, was jede offene Zeile der Liste an Zeit
@@ -5593,7 +6197,7 @@ function renderAkku(){
   const iAlle = info('Setzt das Tauschdatum für alle Anlagen mit gewähltem Akkutyp auf denselben Tag.', 'margin:0 0 10px');
   $('#akkuListe').innerHTML =
     (typen.length ? '' : `<p class="muted small">Noch kein Akkutyp angelegt – das geht in den Einstellungen unter RWA.</p>`)
-    + `<div id="vorbPlatz">${vorbKarte('akku')}</div>`
+    + `<div id="vorbPlatz"></div>`
     + `<div class="card">
        <div class="eyebrow mitInfo" style="margin:0 0 6px">Alle getauscht ${iAlle.knopf}</div>${iAlle.text}
        <div class="row">
@@ -5623,15 +6227,13 @@ function renderAkku(){
       });
   };
   $$('#akkuListe .pos').forEach(akkuVerdrahten);
-  vorbVerdrahten('akku', renderAkku);
+  akkuMatKarte($('#vorbPlatz'));
   lageZurueck();
 }
-/* Nach einem eingetragenen Tauschdatum nur die Vorbereitungskarte auffrischen –
-   die Liste bleibt stehen, wie beim Akkutausch üblich. */
+/* Nach einem eingetragenen Tauschdatum nur die Akku-Karte auffrischen – die
+   Liste bleibt stehen, wie beim Akkutausch üblich. */
 function akkuVorbFrisch(){
-  const platz = $('#vorbPlatz'); if(!platz) return;
-  platz.innerHTML = vorbKarte('akku');
-  vorbVerdrahten('akku', renderAkku);
+  akkuMatKarte($('#vorbPlatz'));
 }
 
 /* ---------- Vorbereitung ---------------------------------------------------
@@ -5679,6 +6281,15 @@ function akkuBedarf(){
 }
 /* Kurzform für die Aufgabenliste. */
 function vorbZusatz(art){
+  /* Akkus (v1.70): was davon noch nicht abgehakt ist, sonst „Akkus bereit“. */
+  if(art === 'akku'){
+    const anl = akkuAnlaesse();
+    if(!anl.length) return '';
+    const je = new Map();
+    matOffen(anl).forEach(p => je.set(p.name, (je.get(p.name) || 0) + p.menge));
+    return je.size ? `bis Ende ${naechsterMonatText()}: ${[...je].map(([n, m]) => `${mengeText(m)}× ${n}`).join(', ')}`
+                   : 'Akkus bereit';
+  }
   const s = vorbStand(art), akku = art === 'akku';
   const teile = [];
   if(akku){ const b = akkuBedarf(); if(b) teile.push(`bis Ende ${naechsterMonatText()}: ${b}`); }
@@ -5798,6 +6409,10 @@ function renderNachweis(){
   }
   /* Erfahrungswerte (v1.62): wie lange es dauert und was mitzunehmen ist. */
   ob.insertAdjacentHTML('beforeend', erfNwHtml(offen));
+  /* Material bereitlegen (v1.69): die Runden dieses Nachweises. */
+  ob.insertAdjacentHTML('beforeend', '<div id="nwMat"></div>');
+  const nwK = offen;
+  matKarte($('#nwMat'), o => o.nw === nwK, true);
   $('#sigBlock').hidden = n.art === 'medien' || n.art === 'fremd';
   if(n.art === 'fremd'){     renderFremd();     return; }
   if(n.art === 'medien'){    renderMedien();    return; }
@@ -8525,6 +9140,7 @@ function akkuTypUmbenennen(alt, neu){
   const d = DAT.rwa; if(!d || !d.zeilen) return;
   let etwas = false;
   Object.values(d.zeilen).forEach(z => { if(z.akkuTyp === alt){ z.akkuTyp = neu; etwas = true; } });
+  matUmbenennen(akkuName(alt), akkuName(neu));        // die Haken wandern mit (v1.70)
   if(etwas) saveDat();
 }
 
@@ -8796,6 +9412,7 @@ function anlageUmbenennen(k, alt, neu){
     const z = VORB[art] && VORB[art].ziele;
     if(z && alt in z){ z[neu] = z[alt]; delete z[alt]; saveVorb(); }
   });
+  if(k === 'rwa') matAnlassUmbenennen(`akku:${alt}@`, `akku:${neu}@`);
   if(d && d.zeilen && d.zeilen[alt]){
     d.zeilen[neu] = d.zeilen[alt]; delete d.zeilen[alt];
     zeitUmhaengen(d, alt, neu); saveDat();
@@ -10340,7 +10957,7 @@ async function dateiSichernLauf(){
   const paket = {format:CFG_FORMAT, stand:heute(),
                  cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB,
                  regelstand:REGELSTAND, hinweise:HINWEISE, frost:+Store.get('nwFrost', 0) || 0,
-                 taet:TAET,
+                 taet:TAET, mat:MAT,
                  plaene, quellen, historie};
   const name = `Nachweise ${heute().slice(2)}.json`;
   void plaene;
@@ -10390,6 +11007,7 @@ async function paketUebernehmen(paket){
   /* Erfahrungswerte der Tätigkeiten (v1.61); ältere Sicherungen kennen sie
      nicht – dann bleibt der vorhandene Stand stehen. */
   if(paket.taet && typeof paket.taet === 'object'){ TAET = paket.taet; taetOrdnen(); saveTaet(); }
+  if(paket.mat && typeof paket.mat === 'object'){ MAT = paket.mat; matOrdnen(); Store.set('nwMat', MAT); }
   /* Die Historie ersetzt die vorhandene ganz, wie die übrigen Daten. Ältere
      Sicherungen kennen sie nicht – dann bleibt die vorhandene stehen. */
   if(Array.isArray(paket.historie)){
