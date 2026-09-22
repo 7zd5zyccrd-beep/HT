@@ -10,6 +10,14 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.67 22.09.2026  Fehler (von Jean gemeldet): bei den Medienverbräuchen
+                    erschien auch bei vollständiger Ablesung mit Datum kein
+                    Knopf „Nachweis ausgeben“ – die ganze Fußleiste blieb
+                    verborgen, sobald man von der Startseite oder aus dem
+                    Rundgang kam. Der Zweig der Ablesung verließ den Aufbau der
+                    Leiste vorzeitig, bevor sie eingeblendet wurde. Jetzt wird
+                    die Sichtbarkeit nach jedem Aufbau gesetzt, gleich welcher
+                    Zweig ihn gebaut hat.
   v1.66 21.09.2026  Aufgaben, Etappe D2 – der Arbeitsnachweis als Blatt: „Blatt
                     ansehen“ in der Ansicht, geteilt über die Leiste an den
                     Kurzbefehl wie die Nachweise. Kopf mit Zeitraum, Objekt und
@@ -2201,7 +2209,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.66';
+const VERSION = 'v1.67';
 const BUILD   = VERSION + ' · 21.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10434,8 +10442,16 @@ $('#cfgFile').onchange = e => {
   leser.readAsText(f);
 };
 
-/* ---------- Fußleiste je Ansicht ---------- */
+/* ---------- Fußleiste je Ansicht ----------
+   Der Inhalt entsteht in barInhalt(), die Sichtbarkeit wird danach IMMER hier
+   gesetzt. Bis v1.66 stand sie am Ende derselben Funktion, und der Zweig der
+   Medienverbräuche stieg vorher mit return aus – kam man von der Startseite
+   (Leiste verborgen), blieb sie verborgen und „Nachweis ausgeben“ unsichtbar. */
 function renderBar(){
+  barInhalt();
+  $('#bar').hidden = !$('#barInner').innerHTML;
+}
+function barInhalt(){
   const b = $('#barInner');
   if(current === 'nachweis' && NW(offen).art === 'fremd'){
     /* Kein Blatt und keine Unterschrift: das Protokoll schreibt die Firma. */
@@ -10492,8 +10508,8 @@ function renderBar(){
   }else b.innerHTML = '';
   /* Ohne Inhalt darf die Leiste nicht bloß leer dastehen: sie klebt am unteren
      Rand und brächte mit Polster und hellem Verlauf einen Streifen über den
-     Grundriss – und ihre Höhe im Aufbau würde den Plan nach oben drücken. */
-  $('#bar').hidden = !b.innerHTML;
+     Grundriss – und ihre Höhe im Aufbau würde den Plan nach oben drücken.
+     Ausgeblendet wird deshalb in renderBar(), nach jedem Aufbau. */
 }
 
 /* ---------- Das Blatt -------------------------------------------------------
