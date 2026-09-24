@@ -10,6 +10,18 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.80 24.09.2026  Feuerlöscher: Kennzeichnung je Objekt in den Einstellungen,
+                    zugeklappt unter dem Namen – Standort, Anzahl gleicher
+                    Löscher, Löschmittel (belegt die Brandklassen vor),
+                    Brandklassen A B C D F, Gewicht (Wasser, Schaum und
+                    Fettbrand als Füllmenge in Litern) mit „anderes …“,
+                    Inventar- oder Seriennummer, Baujahr und Hersteller.
+                    Objekte mit demselben Standort teilen sich eine Marke im
+                    Grundriss: gesetzt für alle, gezeigt und nummeriert
+                    einmal, ein Tipp nennt alle Löscher dort. In der
+                    Prüfansicht stehen sie hintereinander, mit Kennzeichnung
+                    unter dem Namen und oben der Summe („12 Löscher an 8
+                    Standorten“); die Suche findet Standort und Kennzeichnung.
   v1.79 24.09.2026  Werkzeug und Material für Nachweise und den Akkutausch. Auf
                     jeder Seite einer eigenen Runde die Karte „Dauer, Werkzeug
                     und Material“ mit „Eintragen“ bzw. „Bearbeiten“ – bisher
@@ -2149,6 +2161,15 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 .wb.st0{color:var(--ink-soft)}
 /* Grenzwerte in den Einstellungen: Beschriftung links, Felder rechts. */
 .wgKarte{padding:4px 14px}
+/* Kennzeichnung der Feuerlöscher (v1.80) in der Objektkarte der Einstellungen. */
+.loeKenn{margin:10px 0 0}
+.loeKenn > summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:10px;
+  font-size:14px;color:var(--ink-soft);padding:4px 0}
+.loeKenn > summary::-webkit-details-marker{display:none}
+.loeKenn > summary::after{content:'›';font-size:18px;line-height:1;transform:rotate(90deg);transition:transform .15s}
+.loeKenn[open] > summary::after{transform:rotate(-90deg)}
+.loeKenn .field{margin:10px 0 0}
+.loeKenn .seg button{min-width:2.6em}
 /* Bedingungen in Fällen (v1.77): je Bedingung eine Zeile, ein Tipp klappt auf. */
 .fallKarte{padding:6px 14px 10px}
 .fallKopf{display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px}
@@ -2412,7 +2433,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.79';
+const VERSION = 'v1.80';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6397,10 +6418,22 @@ function fristText(f){
   if(f.faellig) return 'überfällig seit ' + dText(f.ziel);
   return 'nächste Prüfung ' + dText(f.ziel);
 }
+/* Reihenfolge der Prüfansicht: wie in der Liste, Feuerlöscher am selben
+   Standort aber hintereinander (v1.80). */
+function fremdFolge(k){
+  const l = teilCfg(k).anlagen, idx = l.map((a, i) => i);
+  if(k !== 'loescher') return idx;
+  const erst = new Map();
+  l.forEach((a, i) => { const st = loeStandort(a); if(st && !erst.has(st)) erst.set(st, i); });
+  const rang = i => { const st = loeStandort(l[i]); return st ? erst.get(st) : i; };
+  return idx.sort((x, y) => rang(x) - rang(y) || x - y);
+}
 function renderFremd(){
   const n = NW(offen), t = teilCfg(offen), d = datenFuer(offen);
   const iFirma = info(`Setzt das Prüfdatum für ${t.anlagen.length === 1 ? 'das Objekt' : 'alle ' + t.anlagen.length + ' Objekte'} auf denselben Tag; einzelne ziehst du danach nach.`, 'margin:0 0 10px');
-  $('#nwListe').innerHTML = '<div id="vorbFremd"></div>' +
+  const summe = offen === 'loescher' ? loeSumme() : null;
+  $('#nwListe').innerHTML = (summe && summe.loescher ? `<p class="muted small" style="margin:0 0 10px">${summe.loescher} ${summe.loescher === 1 ? 'Löscher' : 'Löscher'} an ${summe.orte} ${summe.orte === 1 ? 'Standort' : 'Standorten'}</p>` : '')
+    + '<div id="vorbFremd"></div>' +
     `<div class="card">
        <div class="eyebrow mitInfo" style="margin:0 0 6px">Die Firma war da ${iFirma.knopf}</div>${iFirma.text}
        <div class="row">
@@ -6408,11 +6441,13 @@ function renderFremd(){
          <button class="btn" id="alleSetzen">Übernehmen</button>
        </div>
      </div>`
-    + t.anlagen.map((a, i) => {
+    + fremdFolge(offen).map(i => {
+        const a = t.anlagen[i];
         const z = d.zeilen[a], f = frist(z.datum, t.jahre);
         const klasse = f.offen || f.faellig ? ' mangel' : ' fertig';
+        const kenn = offen === 'loescher' ? [loeStandort(a), loeKennung(a), loeZusatz(a)].filter(Boolean).join(' · ') : '';
         return `<div class="pos${klasse}" data-i="${i}">
-          ${nameMitVerlauf(esc(a))}
+          ${nameMitVerlauf(esc(a))}${kenn ? `<div class="muted small" style="margin:-2px 0 6px">${esc(kenn)}</div>` : ''}
           <div class="kopf">
             <input type="date" data-feld="datum" value="${esc(z.datum || '')}" aria-label="Prüfdatum">
             <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">⌖</button></span>
@@ -9332,6 +9367,73 @@ function setFremd(box, k){
    Die Reihenfolge gilt überall – Prüfansicht, "Akkus je Anlage" und, bei
    gleichem Termin, auch im Akkutausch. Sichern, Umbenennen und Löschen laufen
    wie in listeBauen; der Rest der Einstellungen bleibt dort. */
+/* Die Kennzeichnung eines Feuerlöschers in der Objektkarte (v1.80). Zugeklappt
+   steht die Zusammenfassung; aufgeklappt bleibt sie über einen Neuaufbau. */
+const loeKennAuf = new Set();
+const loeZusammenfassung = name => [loeStandort(name), loeKennung(name)].filter(Boolean).join(' · ')
+  || 'Standort, Löschmittel, Gewicht …';
+function loeFelderZeigen(box, name, zf){
+  const i = loeInfo(name), ein = loeEinheit(i), n = Math.max(1, Math.round(+i.anzahl) || 1);
+  const klassen = i.klassen || [], mengen = LOE_MENGEN[ein], anders = +i.menge > 0 && !mengen.includes(+i.menge);
+  const orte = [...new Set(teilCfg('loescher').anlagen.map(loeStandort).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
+  const hersteller = [...new Set(teilCfg('loescher').anlagen.map(a => String(loeInfo(a).hersteller || '').trim()).filter(Boolean))];
+  const lid = 'loeOrte' + Math.random().toString(36).slice(2, 8), hid = lid + 'h';
+  box.innerHTML = `
+    <label class="field"><span>Standort</span><input data-l="standort" value="${esc(i.standort || '')}" list="${lid}" placeholder="z. B. EG Treppenhaus">
+      <datalist id="${lid}">${orte.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label>
+    <label class="field"><span>Anzahl gleicher Löscher</span><select data-l="anzahl" class="schmal">${
+      Array.from({length:20}, (_, j) => j + 1).map(x => `<option value="${x}"${x === n ? ' selected' : ''}>${x} ×</option>`).join('')}</select></label>
+    <label class="field"><span>Löschmittel</span><select data-l="mittel"><option value="">– offen –</option>${
+      LOE_MITTEL.map(([m, t]) => `<option value="${m}"${i.mittel === m ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+    <div class="field"><span>Brandklassen</span><div class="seg">${LOE_KLASSEN.map(x =>
+      `<button type="button" data-klasse="${x}" aria-pressed="${klassen.includes(x)}">${x}</button>`).join('')}</div></div>
+    <label class="field"><span>${ein === 'l' ? 'Füllmenge' : 'Gewicht'}</span><select data-l="menge" class="schmal"><option value="">– offen –</option>${
+      mengen.map(x => `<option value="${x}"${+i.menge === x ? ' selected' : ''}>${x} ${ein}</option>`).join('')}
+      <option value="anders"${anders ? ' selected' : ''}>anderes …</option></select>
+      ${anders || i.mengeAnders ? `<input data-l="mengeZahl" inputmode="decimal" class="schmal" style="margin-top:8px" value="${esc(i.menge || '')}" placeholder="${ein}">` : ''}</label>
+    <label class="field"><span>Inventar- oder Seriennummer</span><input data-l="nr" value="${esc(i.nr || '')}"></label>
+    <label class="field"><span>Baujahr</span><input data-l="baujahr" type="number" inputmode="numeric" class="schmal" value="${esc(i.baujahr || '')}" placeholder="z. B. 2018"></label>
+    <label class="field"><span>Hersteller</span><input data-l="hersteller" value="${esc(i.hersteller || '')}" list="${hid}">
+      <datalist id="${hid}">${hersteller.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label>`;
+  const setzen = (feld, wert) => { const x = loeInfo(name, true); if(wert === '' || wert == null) delete x[feld]; else x[feld] = wert; saveCfg(); };
+  const nachziehen = () => { if(zf) zf.textContent = loeZusammenfassung(name); };
+  const neu = () => loeFelderZeigen(box, name, zf);
+  box.querySelector('[data-l="standort"]').onchange = e => {
+    const st = e.target.value.replace(/\s+/g, ' ').trim();
+    setzen('standort', st);
+    /* An einen Standort mit Marke: die Marke gilt nun auch für dieses Objekt. */
+    const mit = st && teilCfg('loescher').anlagen.find(a => a !== name && loeStandort(a) === st && CFG.orte['loescher|' + a]);
+    if(mit){ loeMarkeTeilen('loescher|' + mit); saveCfg(); }
+    nachziehen();
+  };
+  box.querySelector('[data-l="anzahl"]').onchange = e => { setzen('anzahl', +e.target.value > 1 ? +e.target.value : ''); nachziehen(); };
+  box.querySelector('[data-l="mittel"]').onchange = e => {
+    const x = loeInfo(name, true), alt = loeMittel(x.mittel), m = e.target.value, neuM = loeMittel(m);
+    /* Die Brandklassen folgen dem Löschmittel, solange sie niemand geändert hat. */
+    if(!(x.klassen || []).length || (alt && (x.klassen || []).join('') === alt[2])) x.klassen = neuM ? neuM[2].split('') : [];
+    if(alt && neuM && alt[3] !== neuM[3]) delete x.menge;     // kg und Liter passen nicht zueinander
+    setzen('mittel', m); neu(); nachziehen();
+  };
+  box.querySelectorAll('[data-klasse]').forEach(b => b.onclick = () => {
+    const x = loeInfo(name, true), l = new Set(x.klassen || []);
+    if(l.has(b.dataset.klasse)) l.delete(b.dataset.klasse); else l.add(b.dataset.klasse);
+    x.klassen = LOE_KLASSEN.filter(k2 => l.has(k2)); saveCfg();
+    b.setAttribute('aria-pressed', l.has(b.dataset.klasse)); nachziehen();
+  });
+  box.querySelector('[data-l="menge"]').onchange = e => {
+    const x = loeInfo(name, true);
+    if(e.target.value === 'anders'){ x.mengeAnders = true; saveCfg(); neu(); const f = box.querySelector('[data-l="mengeZahl"]'); if(f) f.focus(); return; }
+    delete x.mengeAnders; setzen('menge', e.target.value ? +e.target.value : ''); neu(); nachziehen();
+  };
+  const mz = box.querySelector('[data-l="mengeZahl"]');
+  if(mz) mz.onchange = e => { const v = parseFloat(String(e.target.value).replace(',', '.')); setzen('menge', v > 0 ? v : ''); nachziehen(); };
+  ['nr', 'hersteller'].forEach(f => box.querySelector(`[data-l="${f}"]`).onchange = e => setzen(f, e.target.value.trim()));
+  box.querySelector('[data-l="baujahr"]').onchange = e => {
+    const j = Math.round(+e.target.value);
+    setzen('baujahr', j >= 1950 && j <= new Date().getFullYear() ? j : '');
+    if(e.target.value && !loeInfo(name).baujahr){ toast('Bitte ein Jahr ab 1950 eintragen'); e.target.value = ''; }
+  };
+}
 function objektKarten(box, k){
   let verworfen = false, basis = teilCfg(k).anlagen.length;
   /* Der Typ steht in einer eigenen Zeile über die volle Breite, die Anzahl in
@@ -9355,7 +9457,8 @@ function objektKarten(box, k){
   };
   const karte = (text, i, n) => `<div class="stelle" data-i="${i}">
       <textarea rows="1" data-f="name"${i < 0 ? ' placeholder="Objekt"' : ''}>${esc(text)}</textarea>
-      ${akkuWahl(text, i)}
+      ${akkuWahl(text, i)}${k === 'loescher' && i >= 0 ? `<details class="loeKenn"${loeKennAuf.has(text) ? ' open' : ''}><summary><span class="loeZf">${
+        esc(loeZusammenfassung(text))}</span></summary><div class="loeFelder"></div></details>` : ''}
       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
         <button class="btn ghost klein" data-ort="1" aria-label="Grundriss"${i < 0 ? ' disabled' : ''}>⌖</button>
         <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= basis ? ' disabled' : ''}>↑</button>
@@ -9417,6 +9520,12 @@ function objektKarten(box, k){
           z.akkuAnzahl = +b.dataset.anz; saveDat();
           r.querySelectorAll('[data-anz]').forEach(x => x.setAttribute('aria-pressed', x === b));
         });
+      }
+      const kenn = r.querySelector('.loeKenn');
+      if(kenn){
+        const name = teilCfg(k).anlagen[i];
+        kenn.ontoggle = () => { if(kenn.open) loeKennAuf.add(name); else loeKennAuf.delete(name); };
+        loeFelderZeigen(kenn.querySelector('.loeFelder'), name, kenn.querySelector('.loeZf'));
       }
       r.querySelector('[data-hoch]').onclick   = () => tausch(i, i - 1);
       r.querySelector('[data-runter]').onclick = () => tausch(i, i + 1);
@@ -9793,6 +9902,7 @@ function zuruecksetzenAusfuehren(){
    hinfällig: Umbenennen und Hinzufügen im selben Zug gehen jetzt zusammen. */
 function anlageUmbenennen(k, alt, neu){
   if(!alt || alt === neu) return;
+  if(k === 'loescher'){ const t = teilCfg(k); if(t.info && t.info[alt]){ t.info[neu] = t.info[alt]; delete t.info[alt]; } }
   const va = k + '|' + alt, vb = k + '|' + neu, d = DAT[k];
   if(CFG.orte[va]){ CFG.orte[vb] = CFG.orte[va]; delete CFG.orte[va]; }
   if(CFG.etagen && CFG.etagen[va]){ CFG.etagen[vb] = CFG.etagen[va]; delete CFG.etagen[va]; }
@@ -10468,6 +10578,52 @@ const etagenAuswahl = key => {
   const o = CFG.orte[key];
   return [...new Set([...(o && o.x != null && o.plan ? [o.plan] : []), ...etagenVon(key)])];
 };
+/* --- Kennzeichnung der Feuerlöscher (v1.80) ----------------------------------
+   Je Objekt Standort, Anzahl identischer Löscher, Löschmittel, Brandklassen,
+   Gewicht bzw. Füllmenge, Inventarnummer, Baujahr und Hersteller. Liegt in
+   teilCfg('loescher').info[Name] und reist mit der Sicherung; beim Umbenennen
+   wandert sie mit. Objekte mit demselben Standort teilen sich eine Marke im
+   Grundriss: gesetzt wird sie für alle, gezeigt und gezählt einmal. */
+const LOE_MITTEL = [['pulver', 'Pulver', 'ABC', 'kg'], ['schaum', 'Schaum', 'AB', 'l'], ['wasser', 'Wasser', 'A', 'l'],
+  ['co2', 'CO₂', 'B', 'kg'], ['fett', 'Fettbrand', 'AF', 'l'], ['metall', 'Metallbrand', 'D', 'kg']];
+const LOE_KLASSEN = ['A', 'B', 'C', 'D', 'F'];
+const LOE_MENGEN = {kg:[1, 2, 3, 5, 6, 9, 12], l:[2, 3, 6, 9]};
+const loeMittel = m => LOE_MITTEL.find(x => x[0] === m) || null;
+const loeEinheit = i => (loeMittel(i.mittel) || [])[3] || 'kg';
+function loeInfo(name, anlegen){
+  if(!NW('loescher')) return {};
+  const t = teilCfg('loescher');
+  if(!t.info || typeof t.info !== 'object') t.info = {};
+  if(anlegen && !t.info[name]) t.info[name] = {};
+  return t.info[name] || {};
+}
+const loeStandort = name => String(loeInfo(name).standort || '').trim();
+/* „2 × Pulver 6 kg · ABC“ – ohne Standort, der steht je nach Ort davor. */
+function loeKennung(name){
+  const i = loeInfo(name), m = loeMittel(i.mittel), n = Math.max(1, Math.round(+i.anzahl) || 1);
+  const teil = [m ? m[1] : '', +i.menge > 0 ? `${mmText(+i.menge)} ${loeEinheit(i)}` : ''].filter(Boolean).join(' ');
+  return [(n > 1 ? n + ' × ' : '') + teil, (i.klassen || []).join('')].filter(Boolean).join(' · ')
+    || (n > 1 ? n + ' Löscher' : '');
+}
+const loeZusatz = name => { const i = loeInfo(name);
+  return [i.nr ? 'Nr. ' + i.nr : '', i.hersteller || '', +i.baujahr ? `Baujahr ${i.baujahr} (${new Date().getFullYear() - i.baujahr} Jahre)` : ''].filter(Boolean).join(' · '); };
+/* Alle Objekte am selben Standort, in der Reihenfolge der Liste. */
+const loeAmOrt = name => { const st = loeStandort(name);
+  return st ? teilCfg('loescher').anlagen.filter(a => loeStandort(a) === st) : [name]; };
+const loeSumme = () => { const l = NW('loescher') ? teilCfg('loescher').anlagen : [];
+  return {loescher:l.reduce((n, a) => n + Math.max(1, Math.round(+loeInfo(a).anzahl) || 1), 0),
+          orte:new Set(l.map(a => loeStandort(a) || '\u0000' + a)).size}; };
+/* Eine Marke gilt für den ganzen Standort: nach dem Setzen für alle nachziehen. */
+function loeMarkeTeilen(key){
+  const [k, name] = [String(key).split('|')[0], String(key).split('|').slice(1).join('|')];
+  if(k !== 'loescher' || !CFG.orte[key]) return;
+  loeAmOrt(name).forEach(a => {
+    const kb = 'loescher|' + a;
+    if(kb === key) return;
+    CFG.orte[kb] = Object.assign({}, CFG.orte[key]);
+    if(CFG.etagen && CFG.etagen[key]) CFG.etagen[kb] = CFG.etagen[key].slice();
+  });
+}
 /* --- Kategorien der Übersicht ----------------------------------------------
    Objekte mit einer Stelle im Grundriss gibt es in sechs Listen; der Sprinkler
    hat keine. Die Farben liegen abseits von Grün, Gelb und Rot, wo es geht: dort
@@ -10499,7 +10655,15 @@ function katOrte(k, planId){
   if(!ids.includes(planId)) ids.push(planId);   // Plan noch nicht in der Liste
   const raus = [], nummer = {};
   let nr = 0;
-  ids.forEach(id => katSchluessel(k).forEach(key => {
+  const gesehen = new Set();                 // Feuerlöscher: ein Standort, eine Marke
+  const schluessel = katSchluessel(k).filter(key => {
+    if(k !== 'loescher') return true;
+    const st = loeStandort(key.slice(9));
+    if(!st) return true;
+    if(gesehen.has(st)) return false;
+    gesehen.add(st); return true;
+  });
+  ids.forEach(id => schluessel.forEach(key => {
     const o = CFG.orte[key];
     if(!o || o.x == null || !ortPlaene(key).includes(id)) return;
     if(!nummer[key]) nummer[key] = ++nr;
@@ -10516,7 +10680,18 @@ function andereOrte(planId, key){
      Plan aber nichts mehr verloren. */
   const daheim = new Set(istZaehler ? stellen().map(z => z.key)
                                     : katSchluessel(String(key).split('|')[0]));
-  const passt = k => k !== key && ortPlaene(k).includes(planId) && daheim.has(k);
+  /* Feuerlöscher am selben Standort sind dieselbe Marke; andere Standorte
+     erscheinen je einmal (v1.80). */
+  const loe = String(key).startsWith('loescher|'), eigen = loe ? loeStandort(String(key).slice(9)) : '';
+  const orteGesehen = new Set();
+  const einmal = k => {
+    if(!loe) return true;
+    const st = loeStandort(k.slice(9));
+    if(!st) return true;
+    if(st === eigen || orteGesehen.has(st)) return false;
+    orteGesehen.add(st); return true;
+  };
+  const passt = k => k !== key && ortPlaene(k).includes(planId) && daheim.has(k) && einmal(k);
   /* Der Schlüssel reist mit: er wird gebraucht, wenn jemand die Marke antippt
      und wissen will, was dort steht. */
   return Object.keys(CFG.orte).filter(passt).map(k => Object.assign({key:k}, CFG.orte[k], ortAuf(k, planId)));
@@ -10527,6 +10702,13 @@ function andereOrte(planId, key){
 function ortName(key){
   const z = stellen().find(s => s.key === key);
   if(z) return `${z.partei} · ${medienNamen()[z.key] || z.medium}`;
+  /* Feuerlöscher: der Standort mit allen Löschern dort (v1.80). */
+  if(String(key).startsWith('loescher|') && NW('loescher')){
+    const name = String(key).slice(9), st = loeStandort(name);
+    if(st) return `${st}: ${loeAmOrt(name).map(a => loeKennung(a) || a).join('; ')}`;
+    const kenn = loeKennung(name);
+    return kenn ? `${name} · ${kenn}` : name;
+  }
   const t = String(key).split('|');
   return t.length > 1 ? t.slice(1).join('|') : String(key);
 }
@@ -11122,6 +11304,7 @@ function planSetzen(e){
   if(etagenVon(planZiel.key).length && vorher && vorher.plan && vorher.plan !== id)
     CFG.etagen[planZiel.key] = [...new Set([...etagenVon(planZiel.key), vorher.plan, id])];
   CFG.orte[planZiel.key] = {plan:id, x, y};
+  loeMarkeTeilen(planZiel.key);               // gemeinsamer Standort (v1.80)
   saveCfg(); planZiehen = false;
   markenZeichnen(id, false); planHinweisen(); toast('Stelle gesetzt');
 }
@@ -12552,7 +12735,9 @@ function suchObjekte(){
       return;
     }
     (teilCfg(n.k).anlagen || []).forEach(a =>
-      l.push({k:n.k, id:a, ort:`${n.k}|${a}`, titel:a, zusatz:'', text:a,
+      l.push({k:n.k, id:a, ort:`${n.k}|${a}`, titel:a,
+        zusatz:n.k === 'loescher' ? [loeStandort(a), loeKennung(a)].filter(Boolean).join(' · ') : '',
+        text:n.k === 'loescher' ? [a, loeStandort(a), loeKennung(a), loeZusatz(a)].join(' ') : a,
         bem:String(zeileVon(n.k, a).bem || '').trim()}));
   });
   return l;
@@ -12618,7 +12803,7 @@ function suchStand0(o){
     ].filter(Boolean).join(' · ');
   }
   const z = zeileVon(o.k, o.id);
-  if(n.art === 'fremd') return z.datum ? fristText(frist(z.datum, teilCfg(o.k).jahre)) : 'noch nicht geprüft';
+  if(n.art === 'fremd') return [o.zusatz, z.datum ? fristText(frist(z.datum, teilCfg(o.k).jahre)) : 'noch nicht geprüft'].filter(Boolean).join(' · ');
   const m = offenerMangel(o.ort);
   return [z.status ? `${dText(z.datum)} · ${z.status}` : 'in dieser Runde noch offen',
           m ? `Mangel seit ${dText(m.festgestellt)}` : ''].filter(Boolean).join(' · ');
