@@ -10,6 +10,20 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.83 24.09.2026  Grundriss: Liegt der Finger rund 0,3 Sekunden still auf der
+                    eigenen Marke oder einem Bezugspunkt, hebt sie sich an und
+                    die Lupe erscheint schon; beim Ziehen springt die Marke
+                    nicht mehr unter den Finger. Neu „Zuschneiden“ (im
+                    Ausrichten und unter Einstellungen › Grundrisse, ab zwei
+                    ausgerichteten Plänen): ein Rahmen für alle Pläne,
+                    vorbelegt mit der Fläche, die auf allen zu sehen ist, an
+                    acht Griffen zu ziehen; „Gemeinsame Fläche“ und „Ohne
+                    Zuschnitt“. Er gilt für Ansicht, Überblendung und das
+                    Grundrissblatt, die Bilder bleiben unverändert. Beim
+                    Überblenden eine leise Ratsche mit zehn Rasten je
+                    Abschnitt; der Haken heißt „Töne am Regler“. Auf dem
+                    iPhone schwebt der Regler halbtransparent über dem Plan,
+                    der die volle Höhe behält.
   v1.82 24.09.2026  Grundriss: Marken und Bezugspunkte werden gezogen. Die eigene
                     Marke und beim Ausrichten die beiden Punkte greift man
                     direkt (Trefferfläche rund 44 px) und zieht sie an die neue
@@ -1833,6 +1847,8 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
      am oberen Rand muss antippbar bleiben. Nur der Knopf nimmt Tipps an. */
   pointer-events:none}
 #planStreifen[hidden]{display:none}
+#planStreifen.umbruch{flex-wrap:wrap;row-gap:8px}
+#planStreifen.umbruch p{flex-basis:100%}
 #planStreifen.weg{opacity:0}
 #planStreifen p{flex:1;min-width:0;margin:0;font-size:14px;color:var(--ink-soft);
   /* Einzeilig mit Auslassungspunkten: bräche der Text um, schöbe er die Knöpfe
@@ -1964,6 +1980,22 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 /* Ziehen mit Lupe (v1.82). Die gezogene Marke folgt dem Finger, die Lupe sitzt
    darüber und zeigt dreifach, wo sie landen wird. */
 #planBox .marke.gezogen{opacity:.35}
+#planBox .marke.gehoben{transform:scale(1.25);box-shadow:0 3px 10px rgba(0,0,0,.4)}
+/* Zuschnitt (v1.83): das Rechteck über dem Plan, außen abgedunkelt, mit acht
+   Griffen an Ecken und Kanten. */
+#planBox{overflow:hidden}
+#planBox .schnitt{position:absolute;z-index:3;border:2px solid #fff;outline:1px solid rgba(0,0,0,.6);
+  box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none}
+#planBox .griff{position:absolute;z-index:4;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;
+  background:#fff;border:2px solid #111;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+#planBox .griff.kante{width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:3px}
+/* Regler auf dem iPhone (v1.83): bleibt unten, schwebt aber über dem Plan,
+   halbtransparent – der Plan behält die volle Höhe. */
+.planBuehne.schwebt #planRegler{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:6;
+  height:56px;border:1px solid rgba(0,0,0,.08);border-radius:14px;
+  background:rgba(255,255,255,.72);-webkit-backdrop-filter:blur(10px) saturate(1.2);backdrop-filter:blur(10px) saturate(1.2);
+  box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.planBuehne.schwebt #planRegler .spur{left:22px;right:22px}
 #planLupe{position:fixed;z-index:60;width:130px;height:130px;border-radius:50%;overflow:hidden;pointer-events:none;
   border:3px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.45);background:#777}
 #planLupe .lupeInnen{position:absolute;left:0;top:0;transform-origin:0 0}
@@ -2373,6 +2405,10 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
             <button class="btn ghost klein" id="btnPlanObjekte" hidden>Objekte</button>
             <button class="btn ghost klein" id="btnPlanBlatt" hidden>Ausgeben</button>
             <button class="btn ghost klein" id="btnPlanRichtNeu" hidden>Beide neu setzen</button>
+            <button class="btn ghost klein" id="btnPlanSchnitt" hidden>Zuschneiden</button>
+            <button class="btn ghost klein" id="btnSchnittGem" hidden>Gemeinsame Fläche</button>
+            <button class="btn ghost klein" id="btnSchnittOhne" hidden>Ohne Zuschnitt</button>
+            <button class="btn ghost klein" id="btnSchnittFertig" hidden>Fertig</button>
             <button class="btn ghost klein" id="btnPlanRicht" hidden>Abbrechen</button>
             <button class="btn ghost klein" id="btnPlanZieh">Verschieben</button>
           </div>
@@ -2418,7 +2454,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       <div id="blockPlaene" hidden>
         <div class="infozeile"><span class="muted small"></span><button type="button" class="info" aria-label="Erklärung" aria-expanded="false" aria-controls="infPlaene"><span>i</span></button></div>
         <p class="muted small infotext" id="infPlaene" hidden style="margin:-2px 0 12px">Bild oder PDF; eine mehrseitige PDF ergibt einen Plan je Seite, zum Umwandeln ist einmal Netz nötig. Die Reihenfolge folgt der Etage im Namen, mit den Pfeilen legst du sie selbst fest. „Ausrichten“: auf jedem Plan dieselben zwei Stellen antippen, etwa zwei Ecken des Treppenhauses – dann sitzen Aufzugsmarken auf allen Etagen richtig, und am Regler wird zwischen den Plänen überblendet. Die Pläne reisen mit der Sicherung.</p>
-        <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="tonHaken"><span>Ton beim Einrasten</span></label>
+        <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="tonHaken"><span>Töne am Regler</span></label>
         <button class="btn ghost klein" id="btnPlanNeu" style="margin:0 0 10px">+ Grundriss hinzufügen</button>
         <div id="planListe"><p class="muted small">wird geladen …</p></div>
         <input type="file" id="planFile" accept="image/*,application/pdf,.pdf" hidden>
@@ -2477,7 +2513,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.82';
+const VERSION = 'v1.83';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10053,6 +10089,8 @@ async function renderPlaene(){
     </div>`).join('')
     + ((CFG.planOrdnung || []).length && n > 1
       ? `<button class="btn ghost klein" data-auto="1" style="margin-top:2px">Nach Etagen ordnen</button>` : '')
+      + (liste.filter(p => bezugVon(p.id)).length >= 2
+        ? `<button class="btn ghost klein" data-schnitt="1" style="margin-top:8px">${CFG.zuschnitt ? 'Zuschnitt ändern' : 'Zuschneiden'}</button>` : '')
     : `<p class="muted small">Noch kein Grundriss hinterlegt.</p>`;
   /* Verschieben legt die ganze sichtbare Reihenfolge fest. Die bewegte Karte
      bleibt auf dem Schirm stehen, wie überall beim Verschieben (v0.53). */
@@ -10095,6 +10133,11 @@ async function renderPlaene(){
                     if(CFG.bezug && CFG.bezug[id]){ delete CFG.bezug[id]; saveCfg(); }
                     toast('Gelöscht'); renderPlaene(); });
   });
+  const schn = box.querySelector('[data-schnitt]');
+  if(schn) schn.onclick = () => {
+    const anker = CFG.zuschnitt && bezugVon(CFG.zuschnitt.anker) ? CFG.zuschnitt.anker : liste.find(p => bezugVon(p.id)).id;
+    planListe = liste; planSchnittStart = true; planZeigen(anker, null);
+  };
   const auto = box.querySelector('[data-auto]');
   if(auto) auto.onclick = () => frage('Nach Etagen ordnen',
     'Die eigene Reihenfolge wird verworfen; die Pläne ordnen sich wieder nach der Etage in ihrem Namen.',
@@ -10208,7 +10251,7 @@ function planHoehe(){
   /* Der waagerechte Regler steht unter dem Plan und geht von der Höhe ab; der
      senkrechte steht daneben und nimmt sich die Höhe des Plans. */
   const rg = $('#planRegler');
-  const unten = rg && !rg.hidden && !reglerSenk() ? rg.offsetHeight : 0;
+  const unten = rg && !rg.hidden && !reglerSenk() && !$('.planBuehne.schwebt') ? rg.offsetHeight : 0;
   const oben = wrap.getBoundingClientRect().top + window.scrollY;
   const hoch = Math.max(200, Math.floor(window.innerHeight - oben - unten));
   wrap.style.height = hoch + 'px';
@@ -10227,13 +10270,20 @@ let planZoom = 1;
 function planZoomAnwenden(){
   const wrap = $('#planWrap'), box = $('#planBox');
   if(!wrap || !box) return;
-  const hoch = Math.round(wrap.clientHeight * planZoom);
+  /* Beim Zuschneiden liegen Griffe am Rand – der Streifen oben darf sie nicht
+     verdecken, der Plan rückt um seine Höhe nach unten (v1.83). */
+  const st = $('#planStreifen'), oben = planSchnitt && st && !st.hidden ? st.offsetHeight + 6 : 0;
+  box.style.marginTop = oben + 'px';
+  const hoch = Math.round((wrap.clientHeight - oben) * planZoom);
   box.style.height = hoch + 'px';
   box.style.width  = Math.round(hoch * (Rahmen.asp || 1)) + 'px';
   /* Passt der Plan in der Breite ganz ins Bild, steht er in der Mitte statt
      links mit Grau daneben – auf einem breiten Schirm ist das der Regelfall.
      Reicht er über den Rand hinaus, bleibt er linksbündig: sonst wäre sein
      linker Teil nicht mehr zu erreichen. */
+  /* Schwebt der Regler über dem Plan, lässt sich der hineingezoomte Plan um
+     seine Höhe weiter schieben – der unterste Streifen bleibt erreichbar. */
+  box.style.marginBottom = planZoom > 1 && $('.planBuehne.schwebt') ? '76px' : '0';
   const frei = wrap.clientWidth - box.offsetWidth;
   box.style.marginLeft = box.offsetWidth && frei > 0 ? Math.round(frei / 2) + 'px' : '0';
   /* Die vorhandene Nachzeichnung wächst mit, bis die neue steht – sonst
@@ -10466,8 +10516,9 @@ async function scharfPlanZeichnen(pl, grenze, gross, lauf){
 let markenPlaene = '';        // welche Pläne die Marken gerade tragen
 function markenZeichnen(planId, ziehen){
   const box = $('#planBox'); if(!box) return;
-  box.querySelectorAll('.marke').forEach(m => m.remove());
+  box.querySelectorAll('.marke, .schnitt, .griff').forEach(m => m.remove());
   markenPlaene = '';
+  if(planSchnitt){ schnittZeichnen(); return; }
   /* Beim Ausrichten zählen nur die Bezugspunkte: beim Verschieben die beiden
      gesetzten, beim Neusetzen der erste frisch getippte. */
   if(planRicht){
@@ -10818,8 +10869,77 @@ function rahmenBilden(id, asp){
       minY = Math.min(minY, q.y); maxY = Math.max(maxY, q.y);
     });
   });
+  /* Zuschnitt (v1.83): statt der Fläche aller Pläne der gemeinsame Rahmen –
+     beim Zuschneiden selbst die ganze Fläche. */
+  const z = !planSchnitt && schnittAuf(id);
+  if(z && ids.includes(CFG.zuschnitt.anker)){ minX = z.x0; minY = z.y0; maxX = z.x1; maxY = z.y1; }
   const dx = maxX - minX, dy = maxY - minY;
   Rahmen = {ids, ref:id, aspRef:b.asp, minX, minY, dx, dy, asp:dx * b.asp / dy};
+}
+/* --- Zuschnitt (v1.83) --------------------------------------------------------
+   Nach dem Ausrichten weichen die Pläne in Größe und Lage leicht voneinander ab;
+   der Rahmen aller Pläne springt beim Überblenden. Der Zuschnitt legt einen
+   Rahmen fest, den alle ausgerichteten Pläne teilen: CFG.zuschnitt = {anker,
+   x0, y0, x1, y1} in Anteilen des Ankerplans. Die Bilder bleiben unverändert;
+   er gilt für die Ansicht und das Grundrissblatt. */
+let planSchnitt = false, planSchnittStart = false, schnittRechteck = null;
+/* Der Zuschnitt in Anteilen eines Plans (umschließendes Rechteck), sonst null. */
+function schnittAuf(id){
+  const z = CFG.zuschnitt;
+  if(!z || !bezugVon(z.anker) || !bezugVon(id)) return null;
+  if(id === z.anker) return {x0:z.x0, y0:z.y0, x1:z.x1, y1:z.y1};
+  const f = bezugAbb(z.anker, id); if(!f) return null;
+  const q = [[z.x0, z.y0], [z.x1, z.y0], [z.x0, z.y1], [z.x1, z.y1]].map(([x, y]) => f.punkt(x, y));
+  return {x0:Math.min(...q.map(p => p.x)), y0:Math.min(...q.map(p => p.y)),
+          x1:Math.max(...q.map(p => p.x)), y1:Math.max(...q.map(p => p.y))};
+}
+/* Die Fläche, die auf allen ausgerichteten Plänen zu sehen ist – in Anteilen von id. */
+function schnittGemeinsam(id){
+  let r = {x0:0, y0:0, x1:1, y1:1};
+  planListe.forEach(p => {
+    if(p.id === id || !bezugVon(p.id)) return;
+    const f = bezugAbb(p.id, id); if(!f) return;
+    const [a, b, c, d] = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([u, v]) => f.punkt(u, v));
+    r = {x0:Math.max(r.x0, a.x, c.x), x1:Math.min(r.x1, b.x, d.x), y0:Math.max(r.y0, a.y, b.y), y1:Math.min(r.y1, c.y, d.y)};
+  });
+  return r.x1 - r.x0 > 0.05 && r.y1 - r.y0 > 0.05 ? r : {x0:0, y0:0, x1:1, y1:1};
+}
+const alleAusgerichtet = () => planListe.filter(p => bezugVon(p.id));
+/* Wie viele Marken der ausgerichteten Pläne außerhalb des Rechtecks liegen. */
+function schnittAussen(id, r){
+  let n = 0;
+  Object.keys(CFG.orte).forEach(k => {
+    const o = CFG.orte[k];
+    if(!o || o.x == null || !bezugVon(o.plan)) return;
+    const f = o.plan === id ? null : bezugAbb(o.plan, id);
+    if(o.plan !== id && !f) return;
+    const q = f ? f.punkt(o.x, o.y) : o;
+    if(q.x < r.x0 || q.x > r.x1 || q.y < r.y0 || q.y > r.y1) n++;
+  });
+  return n;
+}
+function schnittZeichnen(){
+  const box = $('#planBox'), r = schnittRechteck; if(!box || !r) return;
+  box.querySelectorAll('.schnitt, .griff').forEach(el => el.remove());
+  const a = inRahmen(planAktuell, r.x0, r.y0), e = inRahmen(planAktuell, r.x1, r.y1);
+  const d = document.createElement('div'); d.className = 'schnitt';
+  Object.assign(d.style, {left:a.x * 100 + '%', top:a.y * 100 + '%', width:(e.x - a.x) * 100 + '%', height:(e.y - a.y) * 100 + '%'});
+  box.appendChild(d);
+  const mx = (a.x + e.x) / 2, my = (a.y + e.y) / 2;
+  [['nw', a.x, a.y], ['n', mx, a.y], ['ne', e.x, a.y], ['e', e.x, my], ['se', e.x, e.y], ['s', mx, e.y], ['sw', a.x, e.y], ['w', a.x, my]]
+    .forEach(([g, x, y]) => {
+      const h = document.createElement('div');
+      h.className = 'griff' + (g.length === 1 ? ' kante' : ''); h.dataset.g = g;
+      h.style.left = x * 100 + '%'; h.style.top = y * 100 + '%';
+      box.appendChild(h);
+    });
+}
+function schnittSetzen(g, p){
+  const r = schnittRechteck, min = 0.08;
+  if(g.includes('w')) r.x0 = Math.min(p.x, r.x1 - min);
+  if(g.includes('e')) r.x1 = Math.max(p.x, r.x0 + min);
+  if(g.includes('n')) r.y0 = Math.min(p.y, r.y1 - min);
+  if(g.includes('s')) r.y1 = Math.max(p.y, r.y0 + min);
 }
 /* Lage einer Ebene im Rahmen, in Prozent; Drehung im Bogenmaß um die linke
    obere Ecke. */
@@ -10979,11 +11099,13 @@ function reglerLage(){
   const rg = $('#planRegler'), bu = $('.planBuehne');
   if(!rg || !bu) return false;
   const senk = GROSSER_SCHIRM() && window.innerWidth > window.innerHeight;
-  const zeigen = !planRicht && planListe.length > 1 && Regler.ids.includes(planAktuell);
-  const neu = `${zeigen}|${senk}`;
+  const zeigen = !planRicht && !planSchnitt && planListe.length > 1 && Regler.ids.includes(planAktuell);
+  const schwebt = zeigen && !senk && !GROSSER_SCHIRM();
+  const neu = `${zeigen}|${senk}|${schwebt}`;
   if(bu.dataset.regler === neu) return false;
   bu.dataset.regler = neu;
   rg.hidden = !zeigen;
+  bu.classList.toggle('schwebt', schwebt);
   bu.classList.toggle('senk', senk);
   bu.classList.toggle('waag', !senk);
   bu.classList.toggle('mitRegler', zeigen);
@@ -11031,6 +11153,10 @@ function reglerStellen(p, fahrt){
   kn.classList.toggle('fahrt', !!fahrt);
   kn.style.setProperty('--f', Regler.p / (n - 1));
   const jetzt = Math.round(Regler.p), aufPunkt = punkt(Regler.p);
+  /* Zehn feine Rasten je Abschnitt beim Ziehen (v1.83). */
+  const raste = Math.round(Regler.p * 10);
+  if(Regler.zieht && !aufPunkt && raste !== Regler.raste) tonRatsche();
+  Regler.raste = raste;
   /* naeher: der Plan, der gezeigt wird (dunkle Beschriftung); jetzt: der Regler
      steht genau auf seinem Punkt (fett). */
   rg.querySelectorAll('.pkt').forEach(d => {
@@ -11158,9 +11284,30 @@ function tonBereit(){
         d[i] = (vorher * 0.8 + Math.sin(2 * Math.PI * 2400 * t) * 0.35) * Math.exp(-t / 0.004);
       }
       Ton.puffer = b;
+      /* Die Ratsche beim Überblenden (v1.83): kürzer, dunkler, leiser. */
+      const n2 = Math.round(rate * 0.012), b2 = Ton.ctx.createBuffer(1, n2, rate), d2 = b2.getChannelData(0);
+      let v2 = 0;
+      for(let i = 0; i < n2; i++){
+        const t = i / rate;
+        v2 = v2 * 0.7 + (Math.random() * 2 - 1) * 0.3;
+        d2[i] = (v2 * 0.9 + Math.sin(2 * Math.PI * 1500 * t) * 0.25) * Math.exp(-t / 0.0022);
+      }
+      Ton.ratsche = b2;
     }
     if(Ton.ctx.state === 'suspended') Ton.ctx.resume();
   }catch(e){ Ton.ctx = null; }
+}
+let ratscheZuletzt = 0;
+function tonRatsche(){
+  if(!tonAn() || !Ton.ctx || !Ton.ratsche || Ton.ctx.state !== 'running') return;
+  const jetzt = performance.now();
+  if(jetzt - ratscheZuletzt < 40) return;       // höchstens rund 25 je Sekunde
+  ratscheZuletzt = jetzt;
+  try{
+    const quelle = Ton.ctx.createBufferSource(), laut = Ton.ctx.createGain();
+    quelle.buffer = Ton.ratsche; laut.gain.value = 0.17;
+    quelle.connect(laut); laut.connect(Ton.ctx.destination); quelle.start();
+  }catch(e){}
 }
 function tonTick(){
   if(!tonAn() || !Ton.ctx || !Ton.puffer || Ton.ctx.state !== 'running') return;
@@ -11188,8 +11335,12 @@ async function planZeigen(id, ziel){
   const vomRegler = Regler.eigen; Regler.eigen = false;
   planZiel = ziel || null;
   planZiehen = false;
-  planRicht = planRichtStart && !ziel ? (bezugVon(id) ? 3 : 1) : 0;
-  planRichtStart = false; planRichtP1 = null; planRichtWahl = null;
+  planSchnitt = planSchnittStart && !ziel && !!bezugVon(id);
+  planRicht = planRichtStart && !ziel && !planSchnitt ? (bezugVon(id) ? 3 : 1) : 0;
+  planRichtStart = false; planSchnittStart = false; planRichtP1 = null; planRichtWahl = null;
+  /* Beim Zuschneiden: das Rechteck in Anteilen dieses Plans, vorbelegt mit
+     dem bisherigen Zuschnitt oder der gemeinsamen Fläche. */
+  if(planSchnitt) schnittRechteck = Object.assign({}, schnittAuf(id) || schnittGemeinsam(id));
   planAktuell = id;
   planZoom = 1;                                // ein neuer Rahmen beginnt ganz
   scharfWeg(); scharfPlan = null; tippWeg();
@@ -11253,6 +11404,17 @@ function planHinweisen(ausRegler){
   const kn = $('#btnPlanZieh'), ob = $('#btnPlanObjekte'), au = $('#btnPlanBlatt');
   const richt = $('#btnPlanRicht'), neu = $('#btnPlanRichtNeu');
   richt.hidden = neu.hidden = true;
+  ['#btnPlanSchnitt', '#btnSchnittGem', '#btnSchnittOhne', '#btnSchnittFertig'].forEach(k => { $(k).hidden = true; });
+  $('#planStreifen').classList.toggle('umbruch', planSchnitt && !GROSSER_SCHIRM());
+  if(planSchnitt){
+    const n = schnittAussen(planAktuell, schnittRechteck);
+    $('#planHinweis').textContent = 'Ecken und Kanten ziehen.'
+      + (n ? ` ${n} ${n === 1 ? 'Marke liegt' : 'Marken liegen'} außerhalb.` : '');
+    kn.hidden = ob.hidden = au.hidden = true;
+    $('#btnSchnittGem').hidden = $('#btnSchnittOhne').hidden = $('#btnSchnittFertig').hidden = false;
+    zeigen(true);
+    return;
+  }
   if(planRicht){
     $('#planHinweis').textContent =
         planRicht === 1 ? 'Ersten Bezugspunkt antippen.'
@@ -11261,6 +11423,8 @@ function planHinweisen(ausRegler){
       : 'Zum Verschieben einen Punkt ziehen.';
     kn.hidden = ob.hidden = au.hidden = true; richt.hidden = false;
     neu.hidden = planRicht !== 3;
+    /* Zuschneiden, sobald mindestens zwei Pläne ausgerichtet sind (v1.83). */
+    $('#btnPlanSchnitt').hidden = planRicht !== 3 || alleAusgerichtet().length < 2;
     richt.textContent = planRicht === 3 ? 'Fertig' : 'Abbrechen';
     zeigen(true);
     return;
@@ -11310,6 +11474,14 @@ $('#btnPlanRicht').onclick = () => {
   planRicht = planRicht !== 3 && bezugVon(planAktuell) ? 3 : 0;
   planRichtP1 = null; planRichtWahl = null; markenZeichnen(planAktuell, false); planHinweisen();
 };
+$('#btnPlanSchnitt').onclick = () => { planSchnittStart = true; planZeigen(planAktuell, null); };
+$('#btnSchnittGem').onclick = () => { schnittRechteck = schnittGemeinsam(planAktuell); schnittZeichnen(); planHinweisen(); };
+$('#btnSchnittOhne').onclick = () => { delete CFG.zuschnitt; saveCfg(); toast('Ohne Zuschnitt'); planZeigen(planAktuell, null); };
+$('#btnSchnittFertig').onclick = () => {
+  const r = schnittRechteck;
+  CFG.zuschnitt = {anker:planAktuell, x0:r.x0, y0:r.y0, x1:r.x1, y1:r.y1};
+  saveCfg(); toast('Zugeschnitten'); planZeigen(planAktuell, null);
+};
 $('#btnPlanRichtNeu').onclick = () => {
   planRicht = 1; planRichtP1 = null; planRichtWahl = null; markenZeichnen(planAktuell, false); planHinweisen();
 };
@@ -11349,6 +11521,12 @@ function zugZiel(x, y){
   if(!id || !box || !$('#planBox .ebenen') || sichtbarePlaene().length > 1) return null;
   const r = box.getBoundingClientRect();
   const dist = q => { const f = inRahmen(id, q.x, q.y); return Math.hypot(x - (r.left + f.x * r.width), y - (r.top + f.y * r.height)); };
+  if(planSchnitt){
+    let best = null, bd = ZUG_FANG;
+    box.querySelectorAll('.griff').forEach(h => { const q = h.getBoundingClientRect();
+      const d = Math.hypot(x - (q.left + q.width / 2), y - (q.top + q.height / 2)); if(d < bd){ bd = d; best = h; } });
+    return best ? {art:'schnitt', g:best.dataset.g, el:best} : null;
+  }
   if(planRicht === 3){
     const b = bezugVon(id); if(!b) return null;
     const d = [b.p1, b.p2].map(dist), i = d[0] <= d[1] ? 0 : 1;
@@ -11405,32 +11583,54 @@ async function lupeRef(l){
   img.src = url;
 }
 const lupeWeg = () => { const l = $('#planLupe'); if(l) l.remove(); };
+function markenAuffrischenSicher(){ if(!planSchnitt) markenAuffrischen(); }
 function zugBeginnen(e, x, y){
   const z = zugZiel(x, y);
   if(!z || !z.el) return false;
-  zug = Object.assign(z, {x0:x, y0:y, laeuft:false, id:e.pointerId});
+  /* Der Versatz zwischen Finger und Mitte der Marke bleibt – sie springt nicht
+     unter den Finger, und das Fadenkreuz sitzt auf ihrer Mitte. */
+  const q = z.el.getBoundingClientRect(), mx = q.left + q.width / 2, my = q.top + q.height / 2;
+  zug = Object.assign(z, {x0:x, y0:y, ox:mx - x, oy:my - y, laeuft:false, id:e.pointerId});
+  /* Liegt der Finger rund 0,3 Sekunden still, kommt die Lupe schon (v1.83). */
+  zug.uhr = setTimeout(() => {
+    if(zug !== z || z.laeuft) return;
+    z.halten = true; z.el.classList.add('gehoben'); lupeZeigen(mx, my);
+  }, 300);
   return true;
 }
-function zugFolgen(x, y){
+function zugFolgen(fx, fy){
   if(!zug) return;
   if(!zug.laeuft){
-    if(Math.hypot(x - zug.x0, y - zug.y0) < ZUG_START) return;
-    zug.laeuft = true; zug.el.classList.add('gezogen'); tippWeg();
+    if(Math.hypot(fx - zug.x0, fy - zug.y0) < ZUG_START) return;
+    zug.laeuft = true; clearTimeout(zug.uhr); zug.el.classList.remove('gehoben');
+    if(zug.art !== 'schnitt') zug.el.classList.add('gezogen');
+    tippWeg();
   }
+  const x = fx + zug.ox, y = fy + zug.oy;
   const box = $('#planBox'), r = box.getBoundingClientRect();
-  zug.el.style.left = ((x - r.left) / r.width * 100) + '%';
-  zug.el.style.top  = ((y - r.top) / r.height * 100) + '%';
+  if(zug.art === 'schnitt'){
+    const f = {x:Math.min(1, Math.max(0, (x - r.left) / r.width)), y:Math.min(1, Math.max(0, (y - r.top) / r.height))};
+    schnittSetzen(zug.g, ausRahmen(planAktuell, f.x, f.y));
+    schnittZeichnen();
+    zug.el = box.querySelector(`.griff[data-g="${zug.g}"]`) || zug.el;
+  }else{
+    zug.el.style.left = ((x - r.left) / r.width * 100) + '%';
+    zug.el.style.top  = ((y - r.top) / r.height * 100) + '%';
+  }
   lupeZeigen(x, y);
   /* Am Rand des Ausschnitts wandert der Plan langsam mit. */
   const w = $('#planWrap'), wr = w.getBoundingClientRect(), rand = 36, schritt = 8;
-  if(x < wr.left + rand) w.scrollLeft -= schritt; else if(x > wr.right - rand) w.scrollLeft += schritt;
-  if(y < wr.top + rand) w.scrollTop -= schritt; else if(y > wr.bottom - rand) w.scrollTop += schritt;
+  if(fx < wr.left + rand) w.scrollLeft -= schritt; else if(fx > wr.right - rand) w.scrollLeft += schritt;
+  if(fy < wr.top + rand) w.scrollTop -= schritt; else if(fy > wr.bottom - rand) w.scrollTop += schritt;
 }
 function zugEnden(e){
   const z = zug; zug = null; lupeWeg();
-  if(!z || !z.laeuft) return;
-  planGezogen = true; setTimeout(() => { planGezogen = false; }, 400);
-  const id = planAktuell, p = planPunkt(e);
+  if(!z) return;
+  clearTimeout(z.uhr);
+  if(z.halten || z.laeuft){ planGezogen = true; setTimeout(() => { planGezogen = false; }, 400); }
+  if(!z.laeuft){ z.el.classList.remove('gehoben'); return; }
+  if(z.art === 'schnitt'){ planHinweisen(); return; }
+  const id = planAktuell, p = planPunkt({clientX:e.clientX + z.ox, clientY:e.clientY + z.oy});
   if(z.art === 'marke'){
     const key = planZiel.key, vorher = CFG.orte[key] ? Object.assign({}, CFG.orte[key]) : null;
     const etVorher = CFG.etagen && CFG.etagen[key] ? CFG.etagen[key].slice() : null;
@@ -11463,7 +11663,7 @@ function zugEnden(e){
   /* Setzt ein Finger auf einer ziehbaren Marke auf, darf der Plan nicht
      scrollen – sonst liefen Plan und Marke zugleich. */
   box.addEventListener('touchstart', e => {
-    if(e.touches.length !== 1) { if(zug){ zug = null; lupeWeg(); markenZeichnen(planAktuell, false); } return; }
+    if(e.touches.length !== 1) { if(zug){ clearTimeout(zug.uhr); zug = null; lupeWeg(); markenZeichnen(planAktuell, false); } return; }
     if(zugZiel(e.touches[0].clientX, e.touches[0].clientY)) e.preventDefault();
   }, {passive:false});
   box.addEventListener('pointerdown', e => {
@@ -11472,7 +11672,7 @@ function zugEnden(e){
   });
   box.addEventListener('pointermove', e => { if(zug && e.pointerId === zug.id){ e.preventDefault(); zugFolgen(e.clientX, e.clientY); } });
   box.addEventListener('pointerup', e => { if(zug && e.pointerId === zug.id) zugEnden(e); });
-  box.addEventListener('pointercancel', () => { if(zug){ zug = null; lupeWeg(); markenZeichnen(planAktuell, false); } });
+  box.addEventListener('pointercancel', () => { if(zug){ clearTimeout(zug.uhr); zug = null; lupeWeg(); markenZeichnen(planAktuell, false); } });
 })();
 
 /* Wo auf dem gezeigten Plan getippt wurde, in Anteilen seiner Kanten. Der Tipp
@@ -12217,24 +12417,36 @@ async function planSeite(id){
   const pl = await Bilder.get(id);
   const b = pl && planBlob(pl);
   if(!b || !b.size) return null;
+  /* Zuschnitt (v1.83): das Blatt zeigt den gemeinsamen Rahmen; Marken außerhalb
+     bleiben weg, auch aus der Legende. */
+  const sz = schnittAuf(id), zs = sz ? {x0:Math.max(0, sz.x0), y0:Math.max(0, sz.y0), x1:Math.min(1, sz.x1), y1:Math.min(1, sz.y1)} : null;
+  const imSchnitt = o => !zs || (o.x >= zs.x0 && o.x <= zs.x1 && o.y >= zs.y0 && o.y <= zs.y1);
   const gruppen = katWahl()
-    .map(kat => ({kat, orte:katOrte(kat.k, id)}))
+    .map(kat => ({kat, orte:katOrte(kat.k, id).filter(imSchnitt)
+      .map(o => zs ? Object.assign({}, o, {x:(o.x - zs.x0) / (zs.x1 - zs.x0), y:(o.y - zs.y0) / (zs.y1 - zs.y0)}) : o)}))
     .filter(g => g.orte.length);
   if(!gruppen.length) return null;              // auf diesem Plan steht nichts Eingeblendetes
   const url = URL.createObjectURL(b);
-  const bild = await bildLaden(url);
-  if(!bild){ URL.revokeObjectURL(url); return null; }
-  const quer = bild.naturalWidth > bild.naturalHeight;
+  const bild0 = await bildLaden(url);
+  if(!bild0){ URL.revokeObjectURL(url); return null; }
+  let bild = bild0, qw = bild0.naturalWidth, qh = bild0.naturalHeight;
+  if(zs){
+    const c0 = document.createElement('canvas');
+    c0.width = Math.max(1, Math.round((zs.x1 - zs.x0) * qw)); c0.height = Math.max(1, Math.round((zs.y1 - zs.y0) * qh));
+    c0.getContext('2d').drawImage(bild0, zs.x0 * qw, zs.y0 * qh, c0.width, c0.height, 0, 0, c0.width, c0.height);
+    bild = c0; qw = c0.width; qh = c0.height;
+  }
+  const quer = qw > qh;
   let daten;
   if(quer){
     const c = document.createElement('canvas');
-    c.width = bild.naturalHeight; c.height = bild.naturalWidth;
+    c.width = qh; c.height = qw;
     const g = c.getContext('2d');
     g.translate(c.width, 0); g.rotate(Math.PI / 2);
     g.drawImage(bild, 0, 0);
     daten = c.toDataURL('image/jpeg', 0.9);
   }else{
-    daten = await blobZuText(b);
+    daten = zs ? bild.toDataURL('image/jpeg', 0.9) : await blobZuText(b);
   }
   URL.revokeObjectURL(url);
 
@@ -12244,8 +12456,8 @@ async function planSeite(id){
      zwar in beiden Richtungen: quer wird er von der Breite begrenzt, hochkant
      von der Höhe. Gerechnet in Pixeln des Bogens – Vorschau und Ausgabe sind
      beim Planblatt gleich breit, das Bild sitzt also in beiden gleich. */
-  const bw = quer ? bild.naturalHeight : bild.naturalWidth;
-  const bh = quer ? bild.naturalWidth  : bild.naturalHeight;
+  const bw = quer ? qh : qw;
+  const bh = quer ? qw : qh;
   const breit = Math.round(Math.min(PLAN_PLATZ_B, PLAN_PLATZ_H * (bw / bh)));
   const hoch = breit * bh / bw;
   const punkte = gruppen.reduce((alle, g) => alle.concat(g.orte.map(o => {
