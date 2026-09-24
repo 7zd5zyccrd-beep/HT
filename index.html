@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.91 24.09.2026  Eigenes Nachfedern: zieht man über den Anfang oder das Ende
+                    der Seite hinaus, gibt der Inhalt unter der Kopfleiste
+                    gedämpft nach wie bei iOS und schnellt beim Loslassen
+                    zurück; die Kopfleiste bleibt stehen. Nicht im Grundriss,
+                    in der Blattvorschau, in eigenen Bildlaufbereichen und bei
+                    offenem Fenster.
   v1.90 24.09.2026  Kopfleiste oben festgenagelt: die Seite federt am Anfang
                     und Ende nicht mehr nach, der Spalt über der Leiste kann
                     nicht mehr aufgehen. Der dunkle Hintergrund aus v1.89 half
@@ -1416,6 +1422,9 @@ html,body{margin:0;padding:0}
    Hintergrund dahinter (v1.89, zurückgenommen). Die Kopfleiste bleibt oben
    stehen; innerhalb der Seite scrollt alles wie bisher. */
 html,body{overscroll-behavior-y:none}
+/* Eigenes Nachfedern (v1.91): nur der Inhalt unter der Kopfleiste. */
+main.federt{will-change:transform}
+main.federZurueck{transition:transform .42s cubic-bezier(.2,.9,.25,1)}
 body{
   font-family:var(--f-body);color:var(--ink);background:var(--enclosure);
   font-size:16px;line-height:1.45;
@@ -2540,7 +2549,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.90';
+const VERSION = 'v1.91';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3692,6 +3701,51 @@ function zurueck(){
   if(p) go(p, false);
 }
 $('#btnBack').onclick = zurueck;
+/* --- Nachfedern (v1.91) -----------------------------------------------------
+   Die Seite selbst federt nicht mehr (overscroll-behavior), sonst riss über der
+   Kopfleiste ein Spalt auf. Damit sich das Ende trotzdem gewohnt anfühlt, zieht
+   hier nur der Inhalt unter der Kopfleiste nach – gedämpft wie bei iOS – und
+   schnellt beim Loslassen zurück. Nicht im Grundriss und in der Blattvorschau
+   (sie zoomen und wischen selbst), nicht in eigenen Bildlaufbereichen und nicht,
+   solange ein Fenster offen ist. */
+(function federBinden(){
+  const main = document.querySelector('main'); if(!main) return;
+  let start = null, weg = 0;
+  const daempfen = d => { const h = window.innerHeight; return (1 - 1 / (Math.abs(d) * 0.55 / h + 1)) * h * Math.sign(d); };
+  const eigenerBildlauf = el => {
+    for(let e = el; e && e !== document.body; e = e.parentElement){
+      const o = getComputedStyle(e).overflowY;
+      if((o === 'auto' || o === 'scroll') && e.scrollHeight > e.clientHeight + 1) return true;
+    }
+    return false;
+  };
+  const oben = () => window.scrollY <= 0;
+  const unten = () => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
+  const setzen = y => { weg = y; main.style.transform = y ? `translate3d(0,${y.toFixed(1)}px,0)` : ''; };
+  document.addEventListener('touchstart', e => {
+    start = null;
+    if(e.touches.length !== 1 || current === 'plan' || current === 'blatt' || !$('#dlg').hidden) return;
+    if(eigenerBildlauf(e.target)) return;
+    main.classList.remove('federZurueck');
+    start = {y:e.touches[0].clientY, oben:oben(), unten:unten()};
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if(!start || e.touches.length !== 1) return;
+    const d = e.touches[0].clientY - start.y;
+    /* Nur über das Ende hinaus: oben nach unten gezogen, unten nach oben. */
+    if(d > 0 && start.oben && oben()){ main.classList.add('federt'); setzen(daempfen(d)); }
+    else if(d < 0 && start.unten && unten()){ main.classList.add('federt'); setzen(daempfen(d)); }
+    else if(weg){ setzen(0); }
+  }, {passive:true});
+  const los = () => {
+    start = null;
+    if(!weg) return;
+    main.classList.add('federZurueck'); setzen(0);
+    setTimeout(() => { if(!weg) main.classList.remove('federZurueck', 'federt'); }, 450);
+  };
+  document.addEventListener('touchend', los, {passive:true});
+  document.addEventListener('touchcancel', los, {passive:true});
+})();
 /* Kommt die App aus dem Hintergrund zurück, kann ein neuer Tag begonnen haben –
    Fristen und Gruppen der Liste rechnen dann neu. */
 document.addEventListener('visibilitychange', () => {
