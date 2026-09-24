@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.87 24.09.2026  Weißer Schleier an der Oberkante unter iOS 27 (App vom
+                    Home-Bildschirm): die Statusleiste ist jetzt undurchsichtig
+                    schwarz statt durchsichtig; der Inhalt läuft nicht mehr
+                    darunter, iOS hat nichts mehr zu überblenden. Der Versuch
+                    v1.86 (theme-color, dunkler Hintergrund) ist zurückgenommen.
   v1.85 24.09.2026  Schwebender Regler auf dem iPhone: die Unschärfe dahinter
                     ist schwächer (4 statt 10 Pixel).
   v1.84 24.09.2026  Der schwebende Regler auf dem iPhone ist durchsichtiger:
@@ -1337,7 +1342,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- Statusleiste undurchsichtig schwarz (v1.87): läuft der Inhalt darunter
+     (black-translucent), legt iOS 27 eine helle Blende an die Oberkante. Mit
+     "black" beginnt die App unter der Leiste; env(safe-area-inset-top) ist
+     dann 0, der Abstand in der Kopfleiste fällt von selbst weg. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Nachweise">   <!-- kurz für den Startbildschirm -->
 <!-- Die Datei liegt in einem öffentlichen Repository. Diese Zeile hält sie aus
      Suchmaschinen heraus – der realistische Weg, auf dem jemand hier landet. -->
@@ -2517,7 +2526,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.85';
+const VERSION = 'v1.87';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
