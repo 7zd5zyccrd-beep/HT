@@ -10,6 +10,8 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.84 24.09.2026  Der schwebende Regler auf dem iPhone ist durchsichtiger:
+                    Hintergrund zu 50 % statt 72 % deckend.
   v1.83 24.09.2026  Grundriss: Liegt der Finger rund 0,3 Sekunden still auf der
                     eigenen Marke oder einem Bezugspunkt, hebt sie sich an und
                     die Lupe erscheint schon; beim Ziehen springt die Marke
@@ -1993,7 +1995,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
    halbtransparent – der Plan behält die volle Höhe. */
 .planBuehne.schwebt #planRegler{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:6;
   height:56px;border:1px solid rgba(0,0,0,.08);border-radius:14px;
-  background:rgba(255,255,255,.72);-webkit-backdrop-filter:blur(10px) saturate(1.2);backdrop-filter:blur(10px) saturate(1.2);
+  background:rgba(255,255,255,.5);-webkit-backdrop-filter:blur(10px) saturate(1.2);backdrop-filter:blur(10px) saturate(1.2);
   box-shadow:0 2px 10px rgba(0,0,0,.18)}
 .planBuehne.schwebt #planRegler .spur{left:22px;right:22px}
 #planLupe{position:fixed;z-index:60;width:130px;height:130px;border-radius:50%;overflow:hidden;pointer-events:none;
@@ -2513,7 +2515,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.83';
+const VERSION = 'v1.84';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
