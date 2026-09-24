@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und folgt später.
 
   ÄNDERUNGEN
+  v1.72 24.09.2026  Drei Sicherungen nach einer Durchsicht des Codes, an der
+                    Bedienung ändert sich nichts. pdf.js läuft beim Öffnen von
+                    PDFs ohne eval (isEvalSupported:false) – die Abhilfe gegen
+                    CVE-2024-4367, bei der eine präparierte PDF eigenen Code
+                    ausführen konnte. Die mitgespeicherte Bibliothek wird vor
+                    dem Ablegen und vor jedem Start gegen feste SHA-256-Werte
+                    geprüft; eine abweichende Kopie wird nicht ausgeführt,
+                    sondern neu geholt. Beim Übernehmen einer Sicherung werden
+                    Pläne und Quellen nur noch aus eingebetteten Daten
+                    (data:) gelesen, nie von einer Adresse im Netz.
   v1.71 22.09.2026  Verbrauchsmaterial auch bei einmaligen Aufgaben und Mängeln
                     (Wunsch von Jean, der Einheitlichkeit halber). Sie haben
                     keine Tätigkeit, deshalb liegen Utensilien und Material an
@@ -2294,7 +2304,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.71';
+const VERSION = 'v1.72';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -2404,6 +2414,24 @@ const Historie = {
 const PDF_LIB    = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 const PDF_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const PDF_ID     = 'pdfjs-3.11.174';
+/* SHA-256 der beiden Dateien genau dieser Version (v1.72). Die mitgespeicherte
+   Kopie wird sonst ungeprüft ausgeführt; passt ein Wert nicht, läuft sie nicht.
+   Bei einem Versionswechsel sind beide Werte mitzuändern. */
+const PDF_SHA = {
+  lib:    '5b5799e6f8c680663207ac5b42ee14eed2a406fa7af48f50c154f0c0b1566946',
+  worker: 'feabdf309770ed24bba31a5467836cdc8cf639c705af27d52b585b041bb8527b'
+};
+async function sha256Hex(text){
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+async function pdfEcht(code, worker){
+  try{ return await sha256Hex(code) === PDF_SHA.lib && await sha256Hex(worker) === PDF_SHA.worker; }
+  catch(e){ return false; }
+}
+/* Ohne eval (v1.72): die Abhilfe gegen CVE-2024-4367 in pdf.js bis 4.1 – eine
+   präparierte PDF konnte über die Schriftdarstellung eigenen Code ausführen. */
+const pdfOeffnen = (lib, daten) => lib.getDocument({data:daten, isEvalSupported:false}).promise;
 let pdfHolen = null;
 /* Aus dem gespeicherten Text wieder eine laufende Bibliothek machen. */
 function pdfEinsetzen(code, worker){
@@ -2444,7 +2472,10 @@ function pdfLib(){
   pdfHolen = (async () => {
     let abgelegt = null;
     try{ abgelegt = await Bilder.libGet(PDF_ID); }catch(e){ /* ohne Ablage weiter */ }
-    if(abgelegt && abgelegt.code) return pdfEinsetzen(abgelegt.code, abgelegt.worker);
+    /* Eine veränderte Kopie wird übergangen und unten neu geholt (v1.72). */
+    if(abgelegt && abgelegt.code && await pdfEcht(abgelegt.code, abgelegt.worker)){
+      return pdfEinsetzen(abgelegt.code, abgelegt.worker);
+    }
     let code, worker;
     try{
       [code, worker] = await Promise.all([
@@ -2452,6 +2483,7 @@ function pdfLib(){
         fetch(PDF_WORKER).then(a => a.text())
       ]);
     }catch(e){ return pdfVomNetz(); }
+    if(!await pdfEcht(code, worker)) throw new Error('pdf geprüft');
     try{ await Bilder.libPut({id:PDF_ID, code, worker, stand:heute()}); }catch(e){ /* egal */ }
     return pdfEinsetzen(code, worker);
   })().catch(e => { pdfHolen = null; throw e; });
@@ -2464,7 +2496,7 @@ function canvasFrei(c){ if(c){ c.width = 1; c.height = 1; } }
 
 async function pdfSeiten(datei){
   const lib = await pdfLib();
-  const doc = await lib.getDocument({data:new Uint8Array(await datei.arrayBuffer())}).promise;
+  const doc = await pdfOeffnen(lib, new Uint8Array(await datei.arrayBuffer()));
   const seiten = [];
   for(let i = 1; i <= doc.numPages; i++){
     const seite = await doc.getPage(i);
@@ -9809,7 +9841,7 @@ async function scharfDocHolen(qid, lib){
   const q = await Bilder.quelleGet(qid);
   if(!q || !q.daten) return null;
   /* pdf.js nimmt den Puffer an sich – deshalb eine eigene Kopie übergeben. */
-  const doc = await lib.getDocument({data:new Uint8Array(q.daten).slice(0)}).promise;
+  const doc = await pdfOeffnen(lib, new Uint8Array(q.daten).slice(0));
   const noch = scharfDocs.find(d => d.id === qid);         // inzwischen von anderer Seite geöffnet
   if(noch){ try{ doc.destroy(); }catch(e){} return noch.doc; }
   scharfDocs.unshift({id:qid, doc});
@@ -10896,7 +10928,10 @@ const blobZuText = b => new Promise((ok, fehl) => {
   l.onload = () => ok(l.result); l.onerror = () => fehl(l.error);
   l.readAsDataURL(b);
 });
-const textZuBlob = t => fetch(t).then(r => r.blob());
+/* Nur eingebettete Daten (v1.72): der Text stammt aus einer Sicherungsdatei, und
+   eine Adresse darin soll die App nicht ins Netz schicken. */
+const textZuBlob = t => /^data:/i.test(String(t || ''))
+  ? fetch(t).then(r => r.blob()) : Promise.reject(new Error('keine eingebetteten Daten'));
 /* --- Wann zuletzt gesichert wurde ------------------------------------------
    Das Datum liegt im Speicher des Geräts, nicht in CFG: sonst reiste es in der
    Sicherungsdatei mit und sagte auf einem anderen Gerät etwas Falsches. */
