@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.79 24.09.2026  Werkzeug und Material für Nachweise und den Akkutausch. Auf
+                    jeder Seite einer eigenen Runde die Karte „Dauer, Werkzeug
+                    und Material“ mit „Eintragen“ bzw. „Bearbeiten“ – bisher
+                    nur eine graue Zeile ohne Weg dorthin; beim Sprinkler je
+                    eine für Kontrollgang und Monatskontrolle. Der Akkutausch
+                    bekommt „Werkzeug und Material“ ohne Dauer; zusätzliches
+                    Material steht in „Vorbereiten“ unter den Akkus, einmal je
+                    Tausch, und in der Aufgabenliste das Werkzeug. Die
+                    Fremdprüfungen bleiben ohne.
   v1.78 24.09.2026  Die Seite einer eigenen Wetterregel heißt in der Kopfzeile
                     „Regel“ bzw. „Neue Regel“ – der Titel steht unter „Dann“
                     und brach in der Kopfzeile um.
@@ -2403,7 +2412,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.78';
+const VERSION = 'v1.79';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5326,7 +5335,7 @@ function eigenText(a, voll){
   return ut.length ? `<p style="margin:0">Werkzeug: ${esc(ut.join(', '))}</p>` : '';
 }
 function erfFuerEintrag(a){
-  if(a.akku) return '';
+  if(a.akku) return erfText(['akku']);                 // v1.79
   if(a.rundgang) return erfText((a.teilK || []).map(k => k === 'sprinkler' ? 'nw:sprinkler:woch' : 'nw:' + k));
   if(a.aufg){
     const x = AUFG.find(y => y.id === a.aufg), key = x ? taetSchluessel(x, false) : '';
@@ -5337,16 +5346,39 @@ function erfFuerEintrag(a){
   if(n.art === 'sprinkler') return erfText(['nw:sprinkler:' + (a.ziel === 'mon' ? 'mon' : 'woch')]);
   return erfText(['nw:' + a.k]);
 }
-function erfNwHtml(k){
+/* Tätigkeiten ohne Dauer – der Akkutausch hat nur Werkzeug und Material (v1.79). */
+const OHNE_DAUER = new Set(['akku']);
+/* Die Karte „Dauer, Werkzeug und Material“ für Tätigkeiten ohne Aufgabe (v1.79):
+   am Nachweis und beim Akkutausch. zeilen = [[Schlüssel, Überschrift, Name]];
+   ein Tipp auf „Bearbeiten“ öffnet die Tätigkeit. Das Material steht wie an der
+   Aufgabe darunter unter „Vorbereiten“. */
+function taetKarteZeigen(box, zeilen){
+  if(!box) return;
+  if(!zeilen.length){ box.innerHTML = ''; return; }
+  const ohne = zeilen.every(([key]) => OHNE_DAUER.has(key));
+  const teil = ([key, was], j) => {
+    const e = TAET.t[key] || {}, sch = OHNE_DAUER.has(key) ? null : taetSchnitt(key);
+    const ut = e.utensilien || [], mat = matVon(key).length;
+    const text = [sch ? '≈ ' + dauerText(sch) : '', ut.length ? 'Werkzeug: ' + ut.join(', ') : ''].filter(Boolean).join(' · ');
+    return `${was ? `<p style="margin:${j ? '14px' : '0'} 0 2px"><b>${esc(was)}</b></p>` : ''}
+      <p class="${text ? '' : 'muted small'}" style="margin:0">${text ? esc(text)
+        : mat ? 'Material steht unter „Vorbereiten“.' : 'Noch nichts eingetragen.'}</p>
+      <button class="btn ghost klein" data-taetkey="${j}" style="margin-top:8px">${text || mat ? 'Bearbeiten' : 'Eintragen'}</button>`;
+  };
+  box.innerHTML = `<div class="card" style="margin-top:12px"><div class="eyebrow" style="margin:0 0 6px">${
+    ohne ? 'Werkzeug und Material' : 'Dauer, Werkzeug und Material'}</div>${zeilen.map(teil).join('')}</div>`;
+  box.querySelectorAll('[data-taetkey]').forEach(b => b.onclick = () => {
+    const [key, , name] = zeilen[+b.dataset.taetkey];
+    taetAktiv = {key, name}; go('taet');
+  });
+}
+/* Die Tätigkeiten eines Nachweises; Fremdprüfungen haben keine. */
+function nwTaetZeilen(k){
   const n = NW(k);
-  if(!n || n.art === 'fremd') return '';
-  const zeilen = n.art === 'sprinkler'
-    ? [['nw:sprinkler:woch', 'Kontrollgang'], ['nw:sprinkler:mon', 'Monatlich']]
-    : [['nw:' + k, '']];
-  return zeilen.map(([key, was]) => {
-    const t = erfText([key], true);
-    return t ? `<p class="muted small" style="margin:4px 0 0">${was ? esc(was) + ': ' : ''}${esc(t)}</p>` : '';
-  }).join('');
+  if(!n || n.art === 'fremd') return [];
+  return n.art === 'sprinkler'
+    ? [['nw:sprinkler:woch', 'Kontrollgang', SPR_TAET.woch], ['nw:sprinkler:mon', 'Monatliche Kontrolle', SPR_TAET.mon]]
+    : [['nw:' + k, '', n.label]];
 }
 function erfDetailHtml(key){
   const e = TAET.t[key];
@@ -5364,9 +5396,9 @@ function renderTaeten(){
     const e = TAET.t[t.key], n = ((e && e.dauern) || []).length, s = taetSchnitt(t.key);
     /* Werkzeug und Material in der Kurzform der Aufgabenliste (v1.73). */
     const dinge = ((e && e.utensilien) || []).concat(((e && e.material) || []).filter(m => m && m.name).map(m => m.name));
-    return [s ? '≈ ' + dauerText(s) : 'noch keine Dauer', n ? `${n} ${n === 1 ? 'Angabe' : 'Angaben'}` : '',
+    return [OHNE_DAUER.has(t.key) ? '' : s ? '≈ ' + dauerText(s) : 'noch keine Dauer', n ? `${n} ${n === 1 ? 'Angabe' : 'Angaben'}` : '',
             dinge.length > 3 ? dinge.slice(0, 3).join(', ') + ` +${dinge.length - 3}` : dinge.join(', '),
-            e && e.fragen === false ? 'fragt nicht mehr' : ''].filter(Boolean).join(' · ');
+            e && e.fragen === false && !OHNE_DAUER.has(t.key) ? 'fragt nicht mehr' : ''].filter(Boolean).join(' · ');
   };
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Tätigkeiten ${i.knopf}</div>${i.text}`
     + (liste.length
@@ -5511,11 +5543,21 @@ function dauerFenster(titel, start, datum, beiJa, text){
 function renderTaet(){
   const box = $('#taetBox');
   if(!box || !taetAktiv) return;
-  const {key, name} = taetAktiv, e = TAET.t[key];
-  const holen = () => (TAET.t[key] = TAET.t[key] || {name, dauern:[], utensilien:[], fragen:true});
+  const {key, name} = taetAktiv, e = TAET.t[key], ohne = OHNE_DAUER.has(key);
+  const holen = () => (TAET.t[key] = TAET.t[key] || {name, dauern:[], utensilien:[], fragen:!ohne});
   const dauern = ((e && e.dauern) || []).map((d, i) => ({d, i}))
     .sort((x, y) => String(y.d.datum).localeCompare(String(x.d.datum)) || y.i - x.i);
   const s = taetSchnitt(key), n = dauern.length;
+  /* Ohne Dauer (Akkutausch, v1.79): nur Werkzeug und Material. */
+  if(ohne){
+    box.innerHTML = `<div class="eyebrow" style="margin-top:0">Werkzeug und Material</div><div id="taetUtSeite"></div>
+      ${e ? `<div class="knopfzeile"><button class="btn danger klein" id="taetZurueck">Alles löschen</button></div>` : ''}`;
+    const ut0 = utensilWahl($('#taetUtSeite'), e ? e.utensilien : [], () => { ut0.uebernehmen(holen(), false); saveTaet(); }, e ? e.material : []);
+    if($('#taetZurueck')) $('#taetZurueck').onclick = () => frage('Alles löschen',
+      `Werkzeug und Material von „${name}“ werden gelöscht.`, 'Löschen',
+      () => { delete TAET.t[key]; saveTaet(); renderTaet(); toast('Gelöscht'); });
+    return;
+  }
   box.innerHTML = `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Durchschnitt</div>
       <p style="margin:0">${s ? '≈ ' + esc(dauerText(s)) : 'noch keine Angabe'}${
         n ? `<span class="muted small"> · aus ${Math.min(n, 10)} ${Math.min(n, 10) === 1 ? 'Angabe' : 'Angaben'}${n > 10 ? `, ${n} erfasst` : ''}</span>` : ''}</p></div>
@@ -5613,6 +5655,15 @@ function akkuAnlaesse(){
       mat:[{name:akkuName(z.akkuTyp), menge:akkuAnzahl(z)}]});
   });
   akkuVermerkUebernehmen(raus);
+  /* Zusätzliches Material des Akkutauschs (v1.79), einmal je Tausch und nicht
+     je Anlage. Der Anlass heißt nach dem frühesten Termin: steht ein neues
+     Tauschdatum, beginnt die nächste Runde mit leeren Haken. */
+  const extra = matVon('akku');
+  if(raus.length && extra.length){
+    const ziele = raus.map(o => o.ziel).filter(Boolean).sort();
+    raus.push({id:'akku:zusatz@' + (ziele[0] || 'ohne'), key:'akku', nw:'akku', name:'RWA-Akkus', anlage:'', ziel:ziele[0] || '',
+      wann:'Akkutausch', faellig:raus.reduce((m, o) => o.faellig < m ? o.faellig : m, raus[0].faellig), mat:extra});
+  }
   return raus;
 }
 /* Ein bis v1.69 gesetztes „Akkus vorhanden“ wird einmalig zu Haken für die
@@ -5770,7 +5821,7 @@ function akkuMatKarte(box){
   vorbKarteZeigen(box, liste.map(x => {
     const bereit = x.posten.every(p => p.bereit) ? x.posten.map(p => p.bereit).sort().pop() : '';
     return {an:!!bereit, html:mengeHtml(x.name, x.menge),
-            unten:[x.posten.map(p => p.o.anlage).join(', '), bereit ? 'erledigt ' + dText(bereit) : ''].filter(Boolean).join(' · '),
+            unten:[x.posten.map(p => p.o.anlage).filter(Boolean).join(', '), bereit ? 'erledigt ' + dText(bereit) : ''].filter(Boolean).join(' · '),
             setzen:an => { matSetzen(x.posten, an); akkuMatKarte(box); }};
   }), `<p class="muted small" style="margin:0 0 2px">Für alles, was bis Ende ${esc(naechsterMonatText())} zu tauschen ist oder noch kein Tauschdatum hat.</p>`);
 }
@@ -6470,7 +6521,7 @@ function renderAkku(){
   const iAlle = info('Setzt das Tauschdatum für alle Anlagen mit gewähltem Akkutyp auf denselben Tag.', 'margin:0 0 10px');
   $('#akkuListe').innerHTML =
     (typen.length ? '' : `<p class="muted small">Noch kein Akkutyp angelegt – das geht in den Einstellungen unter RWA.</p>`)
-    + `<div id="vorbPlatz"></div>`
+    + `<div id="akkuWerk"></div><div id="vorbPlatz"></div>`
     + `<div class="card">
        <div class="eyebrow mitInfo" style="margin:0 0 6px">Alle getauscht ${iAlle.knopf}</div>${iAlle.text}
        <div class="row">
@@ -6500,6 +6551,7 @@ function renderAkku(){
       });
   };
   $$('#akkuListe .pos').forEach(akkuVerdrahten);
+  taetKarteZeigen($('#akkuWerk'), [['akku', '', 'RWA-Akkutausch']]);
   akkuMatKarte($('#vorbPlatz'));
   lageZurueck();
 }
@@ -6655,8 +6707,9 @@ function renderNachweis(){
       </div>`;
     $('#nwZuObjekt').onclick = () => setOeffnen('obj');
   }
-  /* Erfahrungswerte (v1.62): wie lange es dauert und was mitzunehmen ist. */
-  ob.insertAdjacentHTML('beforeend', erfNwHtml(offen));
+  /* Dauer, Werkzeug und Material (v1.79 als Karte zum Bearbeiten). */
+  ob.insertAdjacentHTML('beforeend', '<div id="nwWerk"></div>');
+  taetKarteZeigen($('#nwWerk'), nwTaetZeilen(offen));
   /* Material bereitlegen (v1.69): die Runden dieses Nachweises. */
   ob.insertAdjacentHTML('beforeend', '<div id="nwMat"></div>');
   const nwK = offen;
