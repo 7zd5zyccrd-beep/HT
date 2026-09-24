@@ -10,6 +10,10 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.92 24.09.2026  Nachfedern auch mit Schwung: läuft die Seite nach einem
+                    Wischer mit Tempo an den Anfang oder das Ende, federt der
+                    Inhalt je nach Tempo kurz darüber hinaus und zurück.
+                    Erreicht man das Ende erst mitten im Zug, federt es ab dort.
   v1.91 24.09.2026  Eigenes Nachfedern: zieht man über den Anfang oder das Ende
                     der Seite hinaus, gibt der Inhalt unter der Kopfleiste
                     gedämpft nach wie bei iOS und schnellt beim Loslassen
@@ -2549,7 +2553,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.91';
+const VERSION = 'v1.92';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3710,7 +3714,7 @@ $('#btnBack').onclick = zurueck;
    solange ein Fenster offen ist. */
 (function federBinden(){
   const main = document.querySelector('main'); if(!main) return;
-  let start = null, weg = 0;
+  let start = null, weg = 0, finger = false;
   const daempfen = d => { const h = window.innerHeight; return (1 - 1 / (Math.abs(d) * 0.55 / h + 1)) * h * Math.sign(d); };
   const eigenerBildlauf = el => {
     for(let e = el; e && e !== document.body; e = e.parentElement){
@@ -3723,7 +3727,7 @@ $('#btnBack').onclick = zurueck;
   const unten = () => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
   const setzen = y => { weg = y; main.style.transform = y ? `translate3d(0,${y.toFixed(1)}px,0)` : ''; };
   document.addEventListener('touchstart', e => {
-    start = null;
+    start = null; finger = true;
     if(e.touches.length !== 1 || current === 'plan' || current === 'blatt' || !$('#dlg').hidden) return;
     if(eigenerBildlauf(e.target)) return;
     main.classList.remove('federZurueck');
@@ -3731,13 +3735,19 @@ $('#btnBack').onclick = zurueck;
   }, {passive:true});
   document.addEventListener('touchmove', e => {
     if(!start || e.touches.length !== 1) return;
-    const d = e.touches[0].clientY - start.y;
+    /* Erreicht die Seite das Ende erst mitten im Zug, federt es ab dort weiter
+       (v1.92) – der Punkt, an dem das Ende erreicht war, wird zum Anfang. */
+    const yJetzt = e.touches[0].clientY;
+    if(!start.oben && oben() && yJetzt > start.y){ start.oben = true; start.y = yJetzt; }
+    if(!start.unten && unten() && yJetzt < start.y){ start.unten = true; start.y = yJetzt; }
+    const d = yJetzt - start.y;
     /* Nur über das Ende hinaus: oben nach unten gezogen, unten nach oben. */
     if(d > 0 && start.oben && oben()){ main.classList.add('federt'); setzen(daempfen(d)); }
     else if(d < 0 && start.unten && unten()){ main.classList.add('federt'); setzen(daempfen(d)); }
     else if(weg){ setzen(0); }
   }, {passive:true});
-  const los = () => {
+  const los = e => {
+    if(!e || !e.touches || !e.touches.length) finger = false;
     start = null;
     if(!weg) return;
     main.classList.add('federZurueck'); setzen(0);
@@ -3745,6 +3755,27 @@ $('#btnBack').onclick = zurueck;
   };
   document.addEventListener('touchend', los, {passive:true});
   document.addEventListener('touchcancel', los, {passive:true});
+  /* Schwung (v1.92): läuft die Seite nach dem Loslassen mit Tempo an den
+     Anfang oder das Ende, federt der Inhalt je nach Tempo kurz darüber hinaus
+     und zurück – wie bei iOS. Das Tempo kommt aus den letzten Bildlaufschritten. */
+  let proben = [];
+  window.addEventListener('scroll', () => {
+    const t = performance.now(), y = window.scrollY;
+    proben.push({t, y}); proben = proben.filter(p => t - p.t < 90);
+    if(finger || weg || current === 'plan' || current === 'blatt') return;
+    const amEnde = y <= 0 ? 1 : unten() ? -1 : 0;
+    if(!amEnde || proben.length < 2) return;
+    const a = proben[0], v = (y - a.y) / Math.max(1, t - a.t);        // Pixel je ms
+    if(amEnde === 1 ? v > -0.3 : v < 0.3) return;                       // zu langsam oder falsche Richtung
+    proben = [];
+    const weite = Math.min(window.innerHeight * 0.12, Math.abs(v) * 55) * amEnde;
+    if(main.getAnimations) main.getAnimations().forEach(x => x.cancel());
+    main.animate([
+      {transform:'translate3d(0,0,0)', easing:'cubic-bezier(.15,.7,.3,1)'},
+      {transform:`translate3d(0,${weite.toFixed(1)}px,0)`, offset:0.3, easing:'cubic-bezier(.4,0,.2,1)'},
+      {transform:'translate3d(0,0,0)'}
+    ], {duration:Math.round(380 + Math.min(220, Math.abs(v) * 60))});
+  }, {passive:true});
 })();
 /* Kommt die App aus dem Hintergrund zurück, kann ein neuer Tag begonnen haben –
    Fristen und Gruppen der Liste rechnen dann neu. */
