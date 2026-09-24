@@ -10,6 +10,22 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.74 24.09.2026  Vorbereitung und Material zusammengeführt: eine Karte
+                    „Vorbereiten“ mit Haken statt drei Mustern (Vermerkfeld
+                    mit „Vorbereitung erledigt“, Haken beim Material, „Firma
+                    beauftragt“). An der Aufgabe der Vorbereitungstext und ihr
+                    Material, am Nachweis das Material der anstehenden Runden,
+                    bei der Fremdprüfung „Firma beauftragen“, beim Akkutausch
+                    je Akkutyp. Abgehaktes bleibt mit Datum stehen und lässt
+                    sich zurücknehmen; Zeilen mit Text bekommen abgehakt ein
+                    freiwilliges Vermerkfeld, Zurücknehmen lässt den Vermerk
+                    stehen. Die Standzeile heißt überall „Vorbereiten: n offen“
+                    bzw. „vorbereitet“, beim Nachweis nur für diesen Monat; der
+                    gelbe Ring zählt bei Aufgaben und Mängeln auch offenes
+                    Material. Das Material steht an Aufgabe und Nachweis nicht
+                    mehr doppelt – die Karte „Dauer, Werkzeug und Material“
+                    zeigt nur noch Dauer und Werkzeug. Gespeichert wird wie
+                    bisher; Sicherungen bleiben verträglich.
   v1.73 24.09.2026  Begriffe und Beschriftungen vereinheitlicht. Ein Wort
                     je Sache: „Werkzeug“ und „Material“
                     statt Utensilien, Mitnehmen und Erfahrung; die Karte an der
@@ -1664,6 +1680,9 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .matPosten input{margin-top:1px}
 .matPosten .etext{flex:1;min-width:0;line-height:1.35}
 .matPosten small{display:block;color:var(--ink-soft);font-size:13px;margin-top:2px}
+/* Vorbereiten (v1.74): Abgehaktes bleibt stehen und tritt zurück. */
+.matPosten.erledigt .etext{color:var(--ink-soft)}
+.vorbKarte .vorbVermerk{margin:0 0 10px 32px;width:calc(100% - 32px)}
 
 /* --- Große Bildschirme ------------------------------------------------------
    Ab Tablet-Querformat: die 720er Spalte gilt weiter für alles mit Text und
@@ -2321,7 +2340,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.73';
+const VERSION = 'v1.74';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3830,6 +3849,7 @@ function aufgaben(){
       faellig: ohne ? null : alsDatum(mit[0].ziel),
       stand:[grund, vorbZusatz(akku ? 'akku' : n.k)].filter(Boolean).join(' · ')});
   };
+  const anl = matAnlaesse();                 // für „Vorbereiten“ der Nachweise (v1.74)
   NACHWEISE.filter(n => !n.spaeter).forEach(n => {
     const d = DAT[n.k];
     if(n.art === 'fremd'){
@@ -3857,7 +3877,7 @@ function aufgaben(){
               ziel: erster.ziel, faellig: erster.faellig, frueh: erster.frueh,
               ring: teile.map(t => t.ring).sort((x, y) => ringRang(x) - ringRang(y))[0] || '',
               sprTeile: teile.map(t => t === w ? 'woch' : 'mon'),   // für die Einplanung (v1.63)
-              begonnen: begonnen(n), stand: texte.join(' · ')});
+              begonnen: begonnen(n), stand: texte.concat(nwVorbText(n.k, anl) || []).join(' · ')});
       return;
     }
     const quartal = n.art === 'medien';
@@ -3885,7 +3905,7 @@ function aufgaben(){
     neu(n, {titel: n.label + (ueber ? ' · ' + zeitraumText(runde) : ''),
             ziel: '',
             ring: ring(n, quartal ? 'quartal' : 'monat'),
-            faellig: zeitraumEnde(runde), begonnen: los, stand,
+            faellig: zeitraumEnde(runde), begonnen: los, stand: [stand, nwVorbText(n.k, anl)].filter(Boolean).join(' · '),
             frueh: (() => { const e = zeitraumEnde(runde);
                             return new Date(e.getFullYear(), e.getMonth() - (quartal ? 2 : 0), 1); })()});
   });
@@ -3936,7 +3956,7 @@ function aufgaben(){
       k:a.k || '', aufg:a.id, ziel:'', akku:false, begonnen:true,
       wichtig: WICHTIG.some(x => x[0] === a.wichtig) ? a.wichtig : 'normal', pos:1000,
       titel:aufgTitel(a), stand:[aufgStand(a), wetterListenText(ww, a)].filter(Boolean).join(' · '), ring:'',
-      vorbAus: vorbText(a).startsWith('Vorbereitung'),
+      vorbAus: aufgVorbZahl(a).offen > 0,
       faellig: a.frist ? alsDatum(a.frist) : null});
   });
   const sonntag = (() => { const w = wochenBeginn(jetzt);
@@ -4005,7 +4025,7 @@ function aufgStand(a){
     return [kurz(a.text) || 'ohne Bemerkung', (a.erneut || []).length ? 'erneut festgestellt' : '']
       .filter(Boolean).join(' · ');
   const n = a.k && NW(a.k);
-  return [n ? n.label + (a.anlage ? ' · ' + anlageName(a) : '') : '', vorbText(a) || kurz(a.notiz)]
+  return [n ? n.label + (a.anlage ? ' · ' + anlageName(a) : '') : '', aufgVorbText(a) || kurz(a.notiz)]
     .filter(Boolean).join(' · ');
 }
 const aufgabeKnopf = a =>
@@ -4586,15 +4606,6 @@ function renderAufgabe(){
       <input id="vorbText" value="${esc(v.text)}" placeholder="z. B. Firma beauftragen"></label>
     <label class="field" id="vorbWochenFeld"${String(v.text || '').trim() ? '' : ' hidden'}><span>Vorlauf in Wochen${a.von && !mangel ? ' vor Beginn' : ''}</span>
       <input id="vorbWochen" type="number" inputmode="numeric" min="0" value="${esc(v.wochen ?? 4)}"></label>`;
-  /* Der Stand der Vorbereitung, sobald es eine gibt und die Aufgabe steht. */
-  const vorbStandKarte = mangel || neu || a.erledigt || !String(v.text || '').trim() ? ''
-    : a.vorbErledigt
-      ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Vorbereitung · ${esc(v.text)}</div>
-           <p style="margin:0">erledigt am ${esc(dText(a.vorbErledigt))}${a.vorbVermerk ? ' · ' + esc(a.vorbVermerk) : ''}</p>
-           <button class="btn ghost klein" id="vorbZurueck" style="margin-top:10px">Zurücknehmen</button></div>`
-      : `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Vorbereitung · ${esc(v.text)}</div>
-           <input id="vorbVermerkA" placeholder="z. B. Fa. X kommt am 12.10.">
-           <button class="btn" id="vorbSetzen" style="margin-top:10px">Vorbereitung erledigt</button></div>`;
   const wege = !neu && a.k && n ? `<div class="row" style="margin-bottom:14px">
       ${aufgOrt(a) ? `<button class="btn" data-weg="plan">⌖ Grundriss</button>` : ''}
       <button class="btn" data-weg="nw">Zum Nachweis</button></div>` : '';
@@ -4603,18 +4614,21 @@ function renderAufgabe(){
   const fragtNachher = !neu && !a.erledigt && !a.taetVermerkt && taetFragenOffen(taetSchluessel(a, false));
   /* Was die Erfahrung sagt (v1.62) – nur, wenn es schon etwas zu sagen gibt. */
   const tKeyA = !neu && !mangel && !a.erledigt ? taetSchluessel(a, false) : '';
+  /* Das Material steht seit v1.74 unter „Vorbereiten“, hier nur Dauer und Werkzeug. */
   const erfA = tKeyA ? erfDetailHtml(tKeyA) : '';
+  const nurMat = '<p class="muted small" style="margin:0">Material steht unter „Vorbereiten“.</p>';
   /* Seit v1.70 auch ohne Erfahrungswerte: sonst ließe sich Material für eine
      neue wiederkehrende Aufgabe nur über Übersicht › Tätigkeiten eintragen. */
   const erfKarte = tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Dauer, Werkzeug und Material</div>${
-      erfA || '<p class="muted small" style="margin:0">Noch nichts eingetragen.</p>'}
-      <button class="btn ghost klein" id="aufgTaet" style="margin-top:10px">${erfA ? 'Bearbeiten' : 'Eintragen'}</button></div>` : '';
+      erfA || (matVon(tKeyA).length ? nurMat : '<p class="muted small" style="margin:0">Noch nichts eingetragen.</p>')}
+      <button class="btn ghost klein" id="aufgTaet" style="margin-top:10px">${erfA || matVon(tKeyA).length ? 'Bearbeiten' : 'Eintragen'}</button></div>` : '';
   /* Einmalige Aufgaben und Mängel (v1.71): dieselbe Karte, nur ohne Dauer –
      die Listen liegen an der Aufgabe, bearbeitet wird im Fenster. */
   const eigenA = !neu && !a.erledigt && !tKeyA ? eigenText(a, true) : '';
+  const eigenMat = (a.material || []).some(m => m && m.name);
   const eigenKarte = !neu && !a.erledigt && !tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Werkzeug und Material</div>${
-      eigenA || '<p class="muted small" style="margin:0">Noch nichts eingetragen.</p>'}
-      <button class="btn ghost klein" id="aufgEigen" style="margin-top:10px">${eigenA ? 'Bearbeiten' : 'Eintragen'}</button></div>` : '';
+      eigenA || (eigenMat ? nurMat : '<p class="muted small" style="margin:0">Noch nichts eingetragen.</p>')}
+      <button class="btn ghost klein" id="aufgEigen" style="margin-top:10px">${eigenA || eigenMat ? 'Bearbeiten' : 'Eintragen'}</button></div>` : '';
   let erlDauer = null;
   const erledigung = neu ? `<button class="btn primary" id="aufgAnlegen">Aufgabe anlegen</button>`
     : a.erledigt
@@ -4647,11 +4661,11 @@ function renderAufgabe(){
        ${planung}
        <label class="field"><span>Notiz</span><textarea id="aufgNotiz" style="min-height:90px">${esc(a.notiz)}</textarea></label>`
     + wege + (!mangel && !a.erledigt && a.wetter ? `<div id="aufgWetterKarte">${aufgWetterKarteHtml(a)}</div>` : '')
-    + erfKarte + eigenKarte + '<div id="aufgMat"></div>' + vorbStandKarte + erledigung
+    + erfKarte + eigenKarte + '<div id="aufgVorb"></div>' + erledigung
     + (!neu && !mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '');
 
-  /* Material bereitlegen (v1.69) – nur die offene, gespeicherte Aufgabe. */
-  if(!neu && !a.erledigt) matKarte($('#aufgMat'), o => o.aufg === a.id, false);
+  /* Vorbereiten (v1.74) – nur die offene, gespeicherte Aufgabe. */
+  if(!neu && !a.erledigt) aufgVorbKarte($('#aufgVorb'), a);
   if(!mangel){
     $('#aufgTitel').oninput = e => { a.titel = e.target.value; sichern(); };
     $('#aufgNw').onchange = e => { a.k = e.target.value; a.anlage = ''; a.anlageText = ''; sichern(); renderAufgabe(); };
@@ -4735,21 +4749,14 @@ function renderAufgabe(){
       $('#vorbWochenFeld').hidden = !e.target.value.trim();
       sichern();
     };
-    /* Die Vorbereitungskarte erscheint erst, wenn das Feld verlassen wird –
+    /* Die Karte „Vorbereiten“ zieht erst nach, wenn das Feld verlassen wird –
        sonst risse ein Neuaufbau beim Tippen die Tastatur weg. */
-    $('#vorbText').onchange = () => { if(!neu) renderAufgabe(); };
+    $('#vorbText').onchange = () => { if(!neu) aufgVorbKarte($('#aufgVorb'), a); };
     $('#vorbWochen').oninput = e => {
       const wo = Math.round(+e.target.value);
       if(wo >= 0){ a.vorb = Object.assign({text:''}, a.vorb || {}, {wochen:wo}); sichern(); }
     };
   }
-  if($('#vorbSetzen')) $('#vorbSetzen').onclick = () => {
-    a.vorbErledigt = heute(); a.vorbVermerk = $('#vorbVermerkA').value.trim();
-    saveAufg(); toast('Vorbereitung erledigt'); renderAufgabe();
-  };
-  if($('#vorbZurueck')) $('#vorbZurueck').onclick = () => {
-    a.vorbErledigt = ''; a.vorbVermerk = ''; saveAufg(); renderAufgabe();
-  };
   box.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
     a.wichtig = b.dataset.w; sichern();
     box.querySelectorAll('[data-w]').forEach(x => x.setAttribute('aria-pressed', x === b));
@@ -5184,8 +5191,8 @@ function erfText(keys, voll){
   const teile = [];
   if(n) teile.push('≈ ' + dauerText(alsStufe(min)));
   if(voll){
+    /* Das Material steht am Nachweis unter „Vorbereiten“ (v1.74). */
     if(ut.length) teile.push('Werkzeug: ' + ut.join(', '));
-    if(mat.size) teile.push('Material: ' + [...mat].map(([name, x]) => matText(name, x)).join(', '));
   }else{
     const alle = ut.concat([...mat.keys()]);
     if(alle.length) teile.push(alle.length > 3 ? alle.slice(0, 3).join(', ') + ` +${alle.length - 3}` : alle.join(', '));
@@ -5200,8 +5207,8 @@ function eigenText(a, voll){
     const alle = ut.concat(mt.map(m => m.name));
     return alle.length > 3 ? alle.slice(0, 3).join(', ') + ` +${alle.length - 3}` : alle.join(', ');
   }
-  return (ut.length ? `<p style="margin:0">Werkzeug: ${esc(ut.join(', '))}</p>` : '')
-    + (mt.length ? `<p style="margin:${ut.length ? '6px' : '0'} 0 0">Material: ${esc(mt.map(m => matText(m.name, m.menge)).join(', '))}</p>` : '');
+  /* Voll nur an der Aufgabe – das Material steht dort unter „Vorbereiten“. */
+  return ut.length ? `<p style="margin:0">Werkzeug: ${esc(ut.join(', '))}</p>` : '';
 }
 function erfFuerEintrag(a){
   if(a.akku) return '';
@@ -5230,10 +5237,8 @@ function erfDetailHtml(key){
   const e = TAET.t[key];
   if(!e) return '';
   const s = taetSchnitt(key), n = Math.min(10, (e.dauern || []).length), ut = e.utensilien || [];
-  const mt = (e.material || []).filter(m => m && m.name);
   return (s ? `<p style="margin:0">≈ ${esc(dauerText(s))}<span class="muted small"> · Durchschnitt aus ${n} ${n === 1 ? 'Angabe' : 'Angaben'}</span></p>` : '')
-    + (ut.length ? `<p style="margin:${s ? '6px' : '0'} 0 0">Werkzeug: ${esc(ut.join(', '))}</p>` : '')
-    + (mt.length ? `<p style="margin:${s || ut.length ? '6px' : '0'} 0 0">Material: ${esc(mt.map(m => matText(m.name, m.menge)).join(', '))}</p>` : '');
+    + (ut.length ? `<p style="margin:${s ? '6px' : '0'} 0 0">Werkzeug: ${esc(ut.join(', '))}</p>` : '');
 }
 function renderTaeten(){
   const box = $('#taetenBox');
@@ -5565,13 +5570,31 @@ function matAnlaesse(){
   akkuAnlaesse().forEach(o => raus.push(o));
   return raus.sort((x, y) => x.faellig - y.faellig);
 }
-/* Die noch nicht abgehakten Posten der Anlässe, je Anlass und Material. */
-function matOffen(anlaesse){
+/* Die Posten der Anlässe, je Anlass und Material, mit dem Tag ihres Hakens
+   (v1.74 auch die abgehakten); matOffen nur die noch offenen. */
+function matPosten(anlaesse){
   const raus = [];
   anlaesse.forEach(o => (o.mat || matVon(o.key)).forEach(m => {
-    if(!MAT.bereit[o.id + '|' + m.name]) raus.push({o, name:m.name, menge:mengeOk(m.menge)});
+    raus.push({o, name:m.name, menge:mengeOk(m.menge), bereit:MAT.bereit[o.id + '|' + m.name] || ''});
   }));
   return raus;
+}
+const matOffen = anlaesse => matPosten(anlaesse).filter(p => !p.bereit);
+function matSetzen(posten, an){
+  posten.forEach(p => { const id = p.o.id + '|' + p.name; if(an) MAT.bereit[id] = heute(); else delete MAT.bereit[id]; });
+  saveMat();
+}
+/* Das Fenster der Liste „Material bereitlegen“: bis Ende des nächsten Monats. */
+const matGrenze = () => { const j = new Date(); return new Date(j.getFullYear(), j.getMonth() + 2, 0); };
+/* Der Anlass einer Aufgabe, gleich wo ihr Termin liegt – an der Aufgabe selbst
+   steht das Material immer, in den Listen nur im Fenster. */
+function aufgAnlass(a){
+  if(!a || a.erledigt) return null;
+  const key = taetSchluessel(a, false);
+  const mat = key ? matVon(key) : (a.material || []).filter(m => m && m.name);
+  if(!mat.length) return null;
+  const tag = zeitraumVon(a) || a.frist;
+  return {id:'a:' + a.id, key, aufg:a.id, mat, name:aufgTitel(a), faellig:tag ? alsDatum(tag) : null};
 }
 /* Abhaken mit der Möglichkeit, es gleich zurückzunehmen. */
 function matAbhaken(posten, name, nachher){
@@ -5620,33 +5643,73 @@ function matStartVerdrahten(){
    Startseite, darunter die Anlagen. Ein Haken deckt alle Anlagen der Zeile. */
 function akkuMatKarte(box){
   if(!box) return;
+  const liste = akkuVorbListe();
+  vorbKarteZeigen(box, liste.map(x => {
+    const bereit = x.posten.every(p => p.bereit) ? x.posten.map(p => p.bereit).sort().pop() : '';
+    return {an:!!bereit, html:mengeHtml(x.name, x.menge),
+            unten:[x.posten.map(p => p.o.anlage).join(', '), bereit ? 'erledigt ' + dText(bereit) : ''].filter(Boolean).join(' · '),
+            setzen:an => { matSetzen(x.posten, an); akkuMatKarte(box); }};
+  }), `<p class="muted small" style="margin:0 0 2px">Für alles, was bis Ende ${esc(naechsterMonatText())} zu tauschen ist oder noch kein Tauschdatum hat.</p>`);
+}
+/* Je Akkutyp zusammengezählt, abgehakte eingeschlossen. */
+function akkuVorbListe(){
   const je = new Map();
-  matOffen(akkuAnlaesse()).forEach(p => {
+  matPosten(akkuAnlaesse()).forEach(p => {
     const x = je.get(p.name) || {name:p.name, menge:0, posten:[]};
     x.menge += p.menge; x.posten.push(p); je.set(p.name, x);
   });
-  const liste = [...je.values()].sort((x, y) => x.name.localeCompare(y.name, 'de', {numeric:true}));
-  if(!liste.length){ box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="card matKarte"><div class="eyebrow" style="margin:0 0 4px">Akkus bereitlegen</div>
-    <p class="muted small" style="margin:0 0 2px">Für alles, was bis Ende ${esc(naechsterMonatText())} zu tauschen ist oder noch kein Tauschdatum hat.</p>${
-    liste.map((x, j) => matZeile(j, x.name, x.menge, x.posten.map(p => p.o.anlage).join(', '))).join('')}</div>`;
-  box.querySelectorAll('[data-p]').forEach(c => c.onchange = () => {
-    const x = liste[+c.dataset.p];
-    matAbhaken(x.posten, x.name, () => akkuMatKarte(box));
-  });
+  return [...je.values()].sort((x, y) => x.name.localeCompare(y.name, 'de', {numeric:true}));
 }
-/* Aufgabe und Nachweis: nur die eigenen Anlässe. Beim Nachweis steht unter
-   jedem Posten, für welche Runde bzw. welche Woche er gilt. */
-function matKarte(box, filter, mitWann){
+/* --- Vorbereiten (v1.74) ------------------------------------------------------
+   Eine Karte für alles, was vorher zu tun ist: der Vorbereitungstext einer
+   Aufgabe, ihr Material, das Material der Runden eines Nachweises, die Firma
+   einer Fremdprüfung und die Akkus der RWA. Jede Zeile ein Haken, der sich
+   wieder wegnehmen lässt; Abgehaktes bleibt mit Datum stehen. Zeilen mit einem
+   Text bekommen abgehakt ein freiwilliges Vermerkfeld. Gespeichert wird wie
+   bisher – an der Aufgabe, in VORB und in MAT.bereit. Eine Zeile ist
+   {an, html, unten, setzen(an), vermerk:{wert, beispiel, setzen(text)}}. */
+const mengeHtml = (name, menge) =>
+  `<b>${esc(name)}</b> · ${esc(mengeText(menge))} ${esc(einheitFuer(einheitVon(name), menge))}`;
+function vorbKarteZeigen(box, zeilen, kopf){
   if(!box) return;
-  const posten = matOffen(matAnlaesse().filter(filter));
-  if(!posten.length){ box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="card matKarte"><div class="eyebrow" style="margin:0 0 4px">Material bereitlegen</div>${
-    posten.map((p, i) => matZeile(i, p.name, p.menge, mitWann ? p.o.wann : '')).join('')}</div>`;
-  box.querySelectorAll('[data-p]').forEach(c => c.onchange = () => {
-    const p = posten[+c.dataset.p];
-    matAbhaken([p], p.name, () => matKarte(box, filter, mitWann));
-  });
+  if(!zeilen.length){ box.innerHTML = ''; return; }
+  const fertig = zeilen.filter(z => z.an).length;
+  box.innerHTML = `<div class="card matKarte vorbKarte"><div class="eyebrow" style="margin:0 0 4px">Vorbereiten${
+      zeilen.length > 1 ? ` <span class="summe">· ${fertig} von ${zeilen.length} erledigt</span>` : ''}</div>${kopf || ''}${
+    zeilen.map((z, i) => `<label class="haken matPosten${z.an ? ' erledigt' : ''}"><input type="checkbox" data-v="${i}"${z.an ? ' checked' : ''}>
+      <span class="etext">${z.html}${z.unten ? `<small>${esc(z.unten)}</small>` : ''}</span></label>${
+      z.an && z.vermerk ? `<input class="vorbVermerk" data-vm="${i}" value="${esc(z.vermerk.wert || '')}"
+        placeholder="Vermerk, z. B. ${esc(z.vermerk.beispiel)}" aria-label="Vermerk">` : ''}`).join('')}</div>`;
+  box.querySelectorAll('[data-v]').forEach(c => c.onchange = () => zeilen[+c.dataset.v].setzen(c.checked));
+  box.querySelectorAll('[data-vm]').forEach(f => f.onchange = () => zeilen[+f.dataset.vm].vermerk.setzen(f.value.trim()));
+}
+const matVorbZeile = (p, wann, neu) => ({an:!!p.bereit, html:mengeHtml(p.name, p.menge),
+  unten:[wann, p.bereit ? 'erledigt ' + dText(p.bereit) : ''].filter(Boolean).join(' · '),
+  setzen:an => { matSetzen([p], an); neu(); }});
+/* An der Aufgabe: erst der Vorbereitungstext, dann das Material. */
+function aufgVorbKarte(box, a){
+  const neu = () => aufgVorbKarte(box, a), zeilen = [], text = String((a.vorb || {}).text || '').trim();
+  if(text) zeilen.push({an:!!a.vorbErledigt, html:esc(text),
+    unten:a.vorbErledigt ? 'erledigt ' + dText(a.vorbErledigt) : '',
+    /* Zurücknehmen lässt den Vermerk stehen – ein versehentlicher Tipp soll
+       nichts löschen. */
+    setzen:an => { a.vorbErledigt = an ? heute() : ''; saveAufg(); neu(); },
+    vermerk:{wert:a.vorbVermerk, beispiel:'Fa. X kommt am 20.10.', setzen:t => { a.vorbVermerk = t; saveAufg(); }}});
+  const o = aufgAnlass(a);
+  if(o) matPosten([o]).forEach(p => zeilen.push(matVorbZeile(p, '', neu)));
+  vorbKarteZeigen(box, zeilen);
+}
+/* Am Nachweis: die Runden im Fenster; unter jedem Posten, für welche Runde bzw.
+   welche Woche er gilt. */
+function matKarte(box, filter){
+  vorbKarteZeigen(box, matPosten(matAnlaesse().filter(filter)).map(p => matVorbZeile(p, p.o.wann, () => matKarte(box, filter))));
+}
+/* Standzeile eines Nachweises in der Aufgabenliste: nur, was bis Ende dieses
+   Monats ansteht – die Runde des nächsten Monats gehört noch nicht zur Zeile. */
+function nwVorbText(k, anl){
+  const j = new Date(), ende = new Date(j.getFullYear(), j.getMonth() + 1, 0);
+  const posten = matPosten(anl.filter(o => o.nw === k && o.faellig <= ende));
+  return vorbWort(posten.length, posten.filter(p => !p.bereit).length);
 }
 /* --- Einplanung (v1.63, Etappe C) --------------------------------------------
    Aus den Erfahrungswerten wird, was jede offene Zeile der Liste an Zeit
@@ -6163,7 +6226,7 @@ function fristText(f){
 function renderFremd(){
   const n = NW(offen), t = teilCfg(offen), d = datenFuer(offen);
   const iFirma = info(`Setzt das Prüfdatum für ${t.anlagen.length === 1 ? 'das Objekt' : 'alle ' + t.anlagen.length + ' Objekte'} auf denselben Tag; einzelne ziehst du danach nach.`, 'margin:0 0 10px');
-  $('#nwListe').innerHTML = vorbKarte(offen) +
+  $('#nwListe').innerHTML = '<div id="vorbFremd"></div>' +
     `<div class="card">
        <div class="eyebrow mitInfo" style="margin:0 0 6px">Die Firma war da ${iFirma.knopf}</div>${iFirma.text}
        <div class="row">
@@ -6205,7 +6268,7 @@ function renderFremd(){
     };
     box.querySelector('[data-feld="bem"]').oninput = e => { z.bem = e.target.value; saveDat(); };
   });
-  vorbVerdrahten(offen, renderNachweis);
+  fremdVorbKarte($('#vorbFremd'), offen);
   lageZurueck();
 }
 
@@ -6356,68 +6419,35 @@ function vorbStand(art){
   return {jetzt, rec:gedeckt.length ? rec : null, gedeckt,
           offen:Object.keys(jetzt).filter(a => !gedeckt.includes(a))};
 }
-/* Die Akkus, die bis Ende des nächsten Monats gebraucht werden, je Typ gezählt –
-   mit der Anzahl je Anlage. */
-function akkuBedarf(){
-  const summe = {};
-  Object.keys(vorbAnstehend('akku')).forEach(a => {
-    const z = zeileVon('rwa', a);
-    summe[z.akkuTyp] = (summe[z.akkuTyp] || 0) + akkuAnzahl(z);
-  });
-  return akkuTypen().filter(x => summe[x.name]).map(x => `${summe[x.name]}× ${x.name}`).join(', ');
-}
-/* Kurzform für die Aufgabenliste. */
+/* Kurzform für die Aufgabenliste (v1.74): „Vorbereiten: n offen“ bzw.
+   „vorbereitet“ – bei den Akkus je Akkutyp, bei der Fremdprüfung die Firma. */
 function vorbZusatz(art){
-  /* Akkus (v1.70): was davon noch nicht abgehakt ist, sonst „Akkus bereit“. */
   if(art === 'akku'){
-    const anl = akkuAnlaesse();
-    if(!anl.length) return '';
-    const je = new Map();
-    matOffen(anl).forEach(p => je.set(p.name, (je.get(p.name) || 0) + p.menge));
-    return je.size ? `bis Ende ${naechsterMonatText()}: ${[...je].map(([n, m]) => `${mengeText(m)}× ${n}`).join(', ')}`
-                   : 'Akkus bereit';
+    const l = akkuVorbListe();
+    return vorbWort(l.length, l.filter(x => x.posten.some(p => !p.bereit)).length);
   }
-  const s = vorbStand(art), akku = art === 'akku';
-  const teile = [];
-  if(akku){ const b = akkuBedarf(); if(b) teile.push(`bis Ende ${naechsterMonatText()}: ${b}`); }
-  if(s.rec) teile.push((akku ? 'Akkus vorhanden' : 'Firma beauftragt')
-    + (s.offen.length ? ` (${s.gedeckt.length} von ${s.gedeckt.length + s.offen.length})` : ''));
-  return teile.join(' · ');
+  const s = vorbStand(art);
+  if(!Object.keys(s.jetzt).length) return '';
+  return vorbWort(1, s.rec && !s.offen.length ? 0 : 1, s.rec && s.rec.vermerk);
 }
-/* Die Karte oben in der Ansicht. Ohne Anstehendes gibt es sie nicht. */
-function vorbKarte(art){
-  const s = vorbStand(art), akku = art === 'akku', anzahl = Object.keys(s.jetzt).length;
-  if(!anzahl) return '';
-  const titel = akku ? 'Akkus bereitlegen' : 'Firma beauftragen';
-  const kopf = akku
-    ? `<p style="margin:0 0 8px">Bis Ende ${esc(naechsterMonatText())} benötigt: <b>${esc(akkuBedarf())}</b></p>`
-    : `<p class="muted small" style="margin:0 0 8px">${anzahl} ${anzahl === 1 ? 'Objekt steht' : 'Objekte stehen'} an – ohne Datum oder in den nächsten acht Wochen fällig.</p>`;
-  if(s.rec) return `<div class="card" id="vorbKarte">
-      <div class="eyebrow" style="margin:0 0 6px">${titel}</div>${kopf}
-      <p style="margin:0">${akku ? 'Akkus vorhanden' : 'Firma beauftragt'}, vermerkt am ${esc(dText(s.rec.datum))}${
-        s.rec.vermerk ? ' · ' + esc(s.rec.vermerk) : ''}</p>
-      ${s.offen.length ? `<p class="muted small" style="margin:6px 0 0">Seitdem ${s.offen.length === 1 ? 'ist eines' : 'sind ' + s.offen.length} dazugekommen.</p>` : ''}
-      <div class="row" style="margin-top:10px">
-        ${s.offen.length ? `<button class="btn klein" data-vorb="neu">Vorbereitung erledigt</button>` : ''}
-        <button class="btn ghost klein" data-vorb="weg">Zurücknehmen</button>
-      </div></div>`;
-  return `<div class="card" id="vorbKarte">
-      <div class="eyebrow" style="margin:0 0 6px">${titel}</div>${kopf}
-      <input id="vorbVermerk" placeholder="${akku ? 'Vermerk, z. B. im Lager vorhanden' : 'z. B. Fa. X kommt am 12.10.'}">
-      <button class="btn" data-vorb="neu" style="margin-top:10px">${akku ? 'Akkus vorhanden' : 'Firma beauftragt'}</button>
-    </div>`;
-}
-function vorbVerdrahten(art, neuZeichnen){
-  const karte = $('#vorbKarte'); if(!karte) return;
-  karte.querySelectorAll('[data-vorb]').forEach(b => b.onclick = () => {
-    if(b.dataset.vorb === 'weg') delete VORB[art];
-    else{
-      const feld = $('#vorbVermerk'), alt = VORB[art];
-      VORB[art] = {datum:heute(), vermerk:feld ? feld.value.trim() : ((alt && alt.vermerk) || ''),
-                   ziele:vorbAnstehend(art)};
-    }
-    saveVorb(); toast(b.dataset.vorb === 'weg' ? 'Zurückgenommen' : 'Vermerkt'); neuZeichnen();
-  });
+/* Die Karte „Vorbereiten“ der Fremdprüfung (v1.74). Ohne Anstehendes gibt es
+   sie nicht. Kommen nach dem Haken Objekte dazu, ist die Zeile wieder offen.
+   Zurücknehmen leert nur die gedeckten Objekte – Tag und Vermerk bleiben. */
+function fremdVorbKarte(box, art){
+  const s = vorbStand(art), anzahl = Object.keys(s.jetzt).length, alt = VORB[art];
+  if(!anzahl){ vorbKarteZeigen(box, []); return; }
+  const an = !!s.rec && !s.offen.length;
+  vorbKarteZeigen(box, [{an, html:'Firma beauftragen',
+    unten: an ? 'erledigt ' + dText(s.rec.datum)
+         : s.rec ? `vermerkt am ${dText(s.rec.datum)} · ${s.offen.length === 1 ? 'eines' : s.offen.length} seitdem dazugekommen` : '',
+    setzen: jetzt => {
+      if(jetzt) VORB[art] = {datum:heute(), vermerk:(alt && alt.vermerk) || '', ziele:vorbAnstehend(art)};
+      else if(VORB[art]) VORB[art].ziele = {};
+      saveVorb(); fremdVorbKarte(box, art);
+    },
+    vermerk:{wert:alt && alt.vermerk, beispiel:'Fa. X kommt am 20.10.',
+             setzen:t => { if(VORB[art]){ VORB[art].vermerk = t; saveVorb(); } }}}],
+    `<p class="muted small" style="margin:0 0 2px">${anzahl} ${anzahl === 1 ? 'Objekt steht' : 'Objekte stehen'} an – ohne Datum oder in den nächsten acht Wochen fällig.</p>`);
 }
 
 /* ---------- Wiederkehrende Aufgaben -----------------------------------------
@@ -6458,17 +6488,25 @@ function naechsterZeitraum(a){
   }
   return {von: von > bis ? bis : von, bis};
 }
-/* Stand der Vorbereitung einer eigenen Aufgabe, leer wenn es keine gibt oder
-   ihr Vorlauf noch nicht erreicht ist. */
-function vorbText(a){
-  if(!a.vorb || !String(a.vorb.text || '').trim()) return '';
-  if(a.vorbErledigt) return 'vorbereitet' + (a.vorbVermerk ? ': ' + kurz(a.vorbVermerk, 36) : '');
-  /* Beim Zeitraum zählt der Vorlauf bis zum Beginn: vorbereitet sein soll, was
-     aufgeht – nicht erst, was endet. */
-  const bezug = zeitraumVon(a) || a.frist;
-  const tage = bezug ? Math.round((alsDatum(bezug) - tagAnfang(new Date())) / TAG_MS) : 0;
-  return tage <= (+a.vorb.wochen || 0) * 7 ? 'Vorbereitung: ' + kurz(a.vorb.text, 36) : '';
+/* Was von der Vorbereitung einer Aufgabe zählt (v1.74): der Vorbereitungstext
+   ab seinem Vorlauf – beim Zeitraum bis zum Beginn, vorbereitet sein soll, was
+   aufgeht –, das Material im Fenster der Liste „Material bereitlegen“.
+   Abgehaktes zählt immer mit, damit „vorbereitet“ stehen bleibt. */
+function aufgVorbZahl(a){
+  let alle = 0, offen = 0;
+  if(a.vorb && String(a.vorb.text || '').trim()){
+    const bezug = zeitraumVon(a) || a.frist;
+    const tage = bezug ? Math.round((alsDatum(bezug) - tagAnfang(new Date())) / TAG_MS) : 0;
+    if(a.vorbErledigt) alle++;
+    else if(tage <= (+a.vorb.wochen || 0) * 7){ alle++; offen++; }
+  }
+  const o = aufgAnlass(a);
+  if(o && o.faellig && o.faellig <= matGrenze()) matPosten([o]).forEach(p => { alle++; if(!p.bereit) offen++; });
+  return {alle, offen};
 }
+const vorbWort = (alle, offen, vermerk) => !alle ? '' : offen ? `Vorbereiten: ${offen} offen`
+  : 'vorbereitet' + (vermerk ? ': ' + kurz(vermerk, 36) : '');
+const aufgVorbText = a => { const z = aufgVorbZahl(a); return vorbWort(z.alle, z.offen, a.vorbVermerk); };
 
 /* ---------- Ein Nachweis ---------------------------------------------------
    Je Anlage eine Zeile: Datum, Zustand, Bemerkung. Das Datum steht je Position,
@@ -6499,7 +6537,7 @@ function renderNachweis(){
   /* Material bereitlegen (v1.69): die Runden dieses Nachweises. */
   ob.insertAdjacentHTML('beforeend', '<div id="nwMat"></div>');
   const nwK = offen;
-  matKarte($('#nwMat'), o => o.nw === nwK, true);
+  matKarte($('#nwMat'), o => o.nw === nwK);
   $('#sigBlock').hidden = n.art === 'medien' || n.art === 'fremd';
   if(n.art === 'fremd'){     renderFremd();     return; }
   if(n.art === 'medien'){    renderMedien();    return; }
