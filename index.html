@@ -10,11 +10,6 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
-  v1.86 24.09.2026  Weißer Schleier über der Kopfleiste unter iOS 27: Safari
-                    tönte den Bereich der Statusleiste mit dem hellen
-                    Seitenhintergrund. Jetzt gibt theme-color die Farbe der
-                    Kopfleiste vor, und hinter der Statusleiste sowie beim
-                    Überziehen nach oben liegt dasselbe Dunkel.
   v1.85 24.09.2026  Schwebender Regler auf dem iPhone: die Unschärfe dahinter
                     ist schwächer (4 statt 10 Pixel).
   v1.84 24.09.2026  Der schwebende Regler auf dem iPhone ist durchsichtiger:
@@ -1343,9 +1338,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<!-- Farbe der Leiste oben (v1.86): Safari tönt den Bereich der Statusleiste
-     sonst mit dem hellen Seitenhintergrund – unter iOS 27 ein weißer Schleier. -->
-<meta name="theme-color" content="#111111">
 <meta name="apple-mobile-web-app-title" content="Nachweise">   <!-- kurz für den Startbildschirm -->
 <!-- Die Datei liegt in einem öffentlichen Repository. Diese Zeile hält sie aus
      Suchmaschinen heraus – der realistische Weg, auf dem jemand hier landet. -->
@@ -1401,9 +1393,6 @@
    Grundrissen; das Verhalten ist dann wieder das von iOS 26. */
 *{overflow-anchor:none}
 html,body{margin:0;padding:0}
-/* Hinter der Statusleiste und beim Überziehen nach oben dunkel wie die
-   Kopfleiste, unten hell wie die Seite (v1.86). */
-html{background:linear-gradient(var(--bar) 50%, var(--enclosure) 50%)}
 body{
   font-family:var(--f-body);color:var(--ink);background:var(--enclosure);
   font-size:16px;line-height:1.45;
@@ -2528,7 +2517,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.86';
+const VERSION = 'v1.85';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
