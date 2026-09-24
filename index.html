@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.82 24.09.2026  Grundriss: Marken und Bezugspunkte werden gezogen. Die eigene
+                    Marke und beim Ausrichten die beiden Punkte greift man
+                    direkt (Trefferfläche rund 44 px) und zieht sie an die neue
+                    Stelle; der Knopf „Verschieben“ und das Wählen eines Punktes
+                    vor dem Neusetzen entfallen. Überall sonst wischt und zoomt
+                    der Plan wie bisher, bewegt wird erst nach 8 px. Beim Ziehen
+                    zeigt eine Lupe über dem Finger den Plan dreifach mit
+                    Fadenkreuz, beim Ausrichten daneben klein denselben Punkt
+                    auf einem schon ausgerichteten Plan. Nach dem Loslassen
+                    „Verschoben“ mit Rückgängig. Feuerlöscher am selben
+                    Standort ziehen mit.
   v1.81 24.09.2026  Grundrissblatt: gedrängte Marken bleiben lesbar. Frei
                     stehende Marken bleiben, wo sie sind. Berühren sich Kreise,
                     markiert ein kleiner Punkt die genaue Stelle, und die Nummer
@@ -1950,6 +1961,22 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
   animation:puls 2.4s ease-out infinite;
 }
 #planBox .marke.zieh{border-style:dashed;background:none}
+/* Ziehen mit Lupe (v1.82). Die gezogene Marke folgt dem Finger, die Lupe sitzt
+   darüber und zeigt dreifach, wo sie landen wird. */
+#planBox .marke.gezogen{opacity:.35}
+#planLupe{position:fixed;z-index:60;width:130px;height:130px;border-radius:50%;overflow:hidden;pointer-events:none;
+  border:3px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.45);background:#777}
+#planLupe .lupeInnen{position:absolute;left:0;top:0;transform-origin:0 0}
+#planLupe .lupeInnen .ebene{position:absolute;transform-origin:0 0}
+#planLupe .lupeInnen .ebene img{display:block;width:100%;height:100%;max-width:none}
+#planLupe .kreuz{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px}
+#planLupe .kreuz::before,#planLupe .kreuz::after{content:'';position:absolute;background:#E8590C;box-shadow:0 0 0 1px rgba(255,255,255,.8)}
+#planLupe .kreuz::before{left:12px;top:0;width:2px;height:26px}
+#planLupe .kreuz::after{top:12px;left:0;height:2px;width:26px}
+#planLupe .lupeRef{position:absolute;right:6px;top:10px;width:46px;height:46px;border-radius:50%;overflow:hidden;
+  border:2px solid #111;background:#fff}
+#planLupe .lupeRef img{position:absolute;max-width:none}
+#planLupe .lupeRef i{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#E8590C}
 /* Übersicht: hier wird nicht gesucht, sondern gezeigt. Die Marke ist gefüllt
    und trägt ihre Nummer; die Farbe steht für die Kategorie, nicht für den
    Prüfstand. Der weiße Ring hält sie über den Planlinien lesbar. Die Größe
@@ -2450,7 +2477,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.81';
+const VERSION = 'v1.82';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -11231,7 +11258,7 @@ function planHinweisen(ausRegler){
         planRicht === 1 ? 'Ersten Bezugspunkt antippen.'
       : planRicht === 2 ? 'Zweiten Bezugspunkt antippen.'
       : planRichtWahl != null ? `Neue Stelle für Punkt ${planRichtWahl + 1}.`
-      : 'Punkt antippen.';
+      : 'Zum Verschieben einen Punkt ziehen.';
     kn.hidden = ob.hidden = au.hidden = true; richt.hidden = false;
     neu.hidden = planRicht !== 3;
     richt.textContent = planRicht === 3 ? 'Fertig' : 'Abbrechen';
@@ -11254,9 +11281,9 @@ function planHinweisen(ausRegler){
   ob.hidden = au.hidden = true;
   $('#planHinweis').textContent =
       planZiehen    ? 'Auf die neue Stelle tippen.'
-    : planGesetzt() ? 'Eingetragen.'
+    : planGesetzt() ? 'Zum Verschieben die Marke ziehen.'
                     : 'Auf die Stelle tippen, an der sich das Objekt befindet.';
-  kn.hidden = !planGesetzt() || planZiehen;
+  kn.hidden = true;                            // verschoben wird seit v1.82 durch Ziehen
   /* Solange nichts steht, wird der Hinweis gebraucht – dann bleibt er. */
   zeigen(!planGesetzt() || planZiehen);
 }
@@ -11305,6 +11332,149 @@ $('#btnPlanZieh').onclick = () => {
 };
 $('#planBox').oncontextmenu = e => e.preventDefault();
 
+/* --- Ziehen mit Lupe (v1.82) ------------------------------------------------
+   Die eigene Marke und die Bezugspunkte des Ausrichtens werden gezogen statt
+   erst gewählt und dann neu angetippt. Gezogen wird nur, wenn der Finger auf
+   einer davon aufsetzt (Trefferfläche rund 44 px); überall sonst wischt und
+   zoomt der Plan wie bisher, zwei Finger zoomen immer. Die Marke bewegt sich
+   erst nach 8 px – ein Antippen verschiebt nichts. Während des Ziehens zeigt
+   eine Lupe über dem Finger den Plan dreifach mit Fadenkreuz; beim Ausrichten
+   daneben klein, wo derselbe Punkt auf einem schon ausgerichteten Plan liegt.
+   Nach dem Loslassen: „Verschoben“ mit Rückgängig. Nur auf einem einzelnen
+   Plan, nicht in der Überblendung. */
+let planGezogen = false, zug = null;
+const ZUG_FANG = 22, ZUG_START = 8, LUPE = 130, LUPE_FAKTOR = 3;
+function zugZiel(x, y){
+  const id = planAktuell, box = $('#planBox');
+  if(!id || !box || !$('#planBox .ebenen') || sichtbarePlaene().length > 1) return null;
+  const r = box.getBoundingClientRect();
+  const dist = q => { const f = inRahmen(id, q.x, q.y); return Math.hypot(x - (r.left + f.x * r.width), y - (r.top + f.y * r.height)); };
+  if(planRicht === 3){
+    const b = bezugVon(id); if(!b) return null;
+    const d = [b.p1, b.p2].map(dist), i = d[0] <= d[1] ? 0 : 1;
+    return d[i] <= ZUG_FANG ? {art:'bezug', i, el:box.querySelectorAll('.marke.bezug')[i]} : null;
+  }
+  if(planRicht || !planZiel || !planGesetzt()) return null;
+  const o = CFG.orte[planZiel.key];
+  if(!o || dist(ortAuf(planZiel.key, id)) > ZUG_FANG) return null;
+  return {art:'marke', el:box.querySelector('.marke.aktiv, .marke.zieh')};
+}
+function lupeZeigen(x, y){
+  const box = $('#planBox'), r = box.getBoundingClientRect();
+  let l = $('#planLupe');
+  if(!l){
+    l = document.createElement('div'); l.id = 'planLupe';
+    const innen = document.createElement('div'); innen.className = 'lupeInnen';
+    const eb = $('#planBox .ebenen');
+    if(eb) innen.appendChild(eb.cloneNode(true));
+    box.querySelectorAll('.marke').forEach(m => { if(m !== (zug && zug.el)) innen.appendChild(m.cloneNode(true)); });
+    l.appendChild(innen);
+    l.insertAdjacentHTML('beforeend', '<div class="kreuz"></div>');
+    document.body.appendChild(l);
+    lupeRef(l);
+  }
+  const innen = l.querySelector('.lupeInnen');
+  innen.style.width = r.width + 'px'; innen.style.height = r.height + 'px';
+  innen.style.position = 'absolute';
+  const fx = x - r.left, fy = y - r.top;
+  innen.style.transform = `translate(${LUPE / 2 - fx * LUPE_FAKTOR}px, ${LUPE / 2 - fy * LUPE_FAKTOR}px) scale(${LUPE_FAKTOR})`;
+  /* Über dem Finger; oben am Rand zur Seite. */
+  let lx = x - LUPE / 2, ly = y - LUPE - 50;
+  if(ly < 8){ ly = Math.max(8, y - LUPE / 2); lx = x + 60 + LUPE > innerWidth ? x - 60 - LUPE : x + 60; }
+  l.style.left = Math.max(4, Math.min(innerWidth - LUPE - 4, lx)) + 'px';
+  l.style.top = ly + 'px';
+}
+/* Beim Ausrichten: derselbe Punkt auf einem schon ausgerichteten Plan. */
+async function lupeRef(l){
+  if(!zug || zug.art !== 'bezug') return;
+  const ref = planListe.find(p => p.id !== planAktuell && bezugVon(p.id));
+  if(!ref) return;
+  const pt = bezugVon(ref.id)[zug.i === 0 ? 'p1' : 'p2'];
+  try{ await planBild(ref.id); }catch(e){ return; }
+  const url = planUrls.get(ref.id); if(!url || !l.isConnected) return;
+  const img = new Image();
+  img.onload = () => {
+    if(!l.isConnected) return;
+    const w = 46 * 5, h = w * img.naturalHeight / (img.naturalWidth || 1);
+    img.style.width = w + 'px'; img.style.height = h + 'px';
+    img.style.left = (23 - pt.x * w) + 'px'; img.style.top = (23 - pt.y * h) + 'px';
+    const k = document.createElement('div'); k.className = 'lupeRef'; k.title = ref.name;
+    k.appendChild(img); k.insertAdjacentHTML('beforeend', '<i></i>');
+    l.appendChild(k);
+  };
+  img.src = url;
+}
+const lupeWeg = () => { const l = $('#planLupe'); if(l) l.remove(); };
+function zugBeginnen(e, x, y){
+  const z = zugZiel(x, y);
+  if(!z || !z.el) return false;
+  zug = Object.assign(z, {x0:x, y0:y, laeuft:false, id:e.pointerId});
+  return true;
+}
+function zugFolgen(x, y){
+  if(!zug) return;
+  if(!zug.laeuft){
+    if(Math.hypot(x - zug.x0, y - zug.y0) < ZUG_START) return;
+    zug.laeuft = true; zug.el.classList.add('gezogen'); tippWeg();
+  }
+  const box = $('#planBox'), r = box.getBoundingClientRect();
+  zug.el.style.left = ((x - r.left) / r.width * 100) + '%';
+  zug.el.style.top  = ((y - r.top) / r.height * 100) + '%';
+  lupeZeigen(x, y);
+  /* Am Rand des Ausschnitts wandert der Plan langsam mit. */
+  const w = $('#planWrap'), wr = w.getBoundingClientRect(), rand = 36, schritt = 8;
+  if(x < wr.left + rand) w.scrollLeft -= schritt; else if(x > wr.right - rand) w.scrollLeft += schritt;
+  if(y < wr.top + rand) w.scrollTop -= schritt; else if(y > wr.bottom - rand) w.scrollTop += schritt;
+}
+function zugEnden(e){
+  const z = zug; zug = null; lupeWeg();
+  if(!z || !z.laeuft) return;
+  planGezogen = true; setTimeout(() => { planGezogen = false; }, 400);
+  const id = planAktuell, p = planPunkt(e);
+  if(z.art === 'marke'){
+    const key = planZiel.key, vorher = CFG.orte[key] ? Object.assign({}, CFG.orte[key]) : null;
+    const etVorher = CFG.etagen && CFG.etagen[key] ? CFG.etagen[key].slice() : null;
+    const amOrt = key.startsWith('loescher|') ? loeAmOrt(key.slice(9)).map(a => 'loescher|' + a) : [key];
+    const alt = new Map(amOrt.map(k2 => [k2, CFG.orte[k2] ? Object.assign({}, CFG.orte[k2]) : null]));
+    if(etagenVon(key).length && vorher && vorher.plan && vorher.plan !== id)
+      CFG.etagen[key] = [...new Set([...etagenVon(key), vorher.plan, id])];
+    CFG.orte[key] = {plan:id, x:p.x, y:p.y};
+    loeMarkeTeilen(key);
+    saveCfg(); markenZeichnen(id, false); planHinweisen();
+    toastRueck('Verschoben', () => {
+      alt.forEach((o, k2) => { if(o) CFG.orte[k2] = o; else delete CFG.orte[k2]; });
+      if(etVorher) CFG.etagen[key] = etVorher; else if(CFG.etagen) delete CFG.etagen[key];
+      saveCfg(); markenZeichnen(planAktuell, false); planHinweisen();
+    });
+    return;
+  }
+  const b = bezugVon(id); if(!b) return;
+  const asp = planFormate.get(id) || b.asp, anderer = z.i === 0 ? b.p2 : b.p1, feld = z.i === 0 ? 'p1' : 'p2';
+  if(Math.hypot((p.x - anderer.x) * asp, p.y - anderer.y) < 0.15){
+    toast('Zu nah am anderen Punkt – weiter entfernt wählen'); markenZeichnen(id, false); return;
+  }
+  const vorher = Object.assign({}, b[feld]);
+  b[feld] = p; b.asp = asp; planRichtWahl = null;
+  saveCfg(); markenZeichnen(id, false); planHinweisen();
+  toastRueck('Punkt verschoben', () => { const b2 = bezugVon(planAktuell); if(b2){ b2[feld] = vorher; saveCfg(); markenZeichnen(planAktuell, false); planHinweisen(); } });
+}
+(function zugBinden(){
+  const box = $('#planBox'); if(!box) return;
+  /* Setzt ein Finger auf einer ziehbaren Marke auf, darf der Plan nicht
+     scrollen – sonst liefen Plan und Marke zugleich. */
+  box.addEventListener('touchstart', e => {
+    if(e.touches.length !== 1) { if(zug){ zug = null; lupeWeg(); markenZeichnen(planAktuell, false); } return; }
+    if(zugZiel(e.touches[0].clientX, e.touches[0].clientY)) e.preventDefault();
+  }, {passive:false});
+  box.addEventListener('pointerdown', e => {
+    if(e.button > 0 || planGezoomt) return;
+    if(zugBeginnen(e, e.clientX, e.clientY)){ try{ box.setPointerCapture(e.pointerId); }catch(x){} e.preventDefault(); }
+  });
+  box.addEventListener('pointermove', e => { if(zug && e.pointerId === zug.id){ e.preventDefault(); zugFolgen(e.clientX, e.clientY); } });
+  box.addEventListener('pointerup', e => { if(zug && e.pointerId === zug.id) zugEnden(e); });
+  box.addEventListener('pointercancel', () => { if(zug){ zug = null; lupeWeg(); markenZeichnen(planAktuell, false); } });
+})();
+
 /* Wo auf dem gezeigten Plan getippt wurde, in Anteilen seiner Kanten. Der Tipp
    trifft den Rahmen; von dort wird auf den Plan umgerechnet. */
 function planPunkt(e){
@@ -11342,6 +11512,7 @@ function markeNah(e, orte){
 }
 $('#planBox').onclick = e => {
   if(planGezoomt) return;                     // das war das Ende einer Zoom-Geste
+  if(planGezogen){ planGezogen = false; return; }   // das war das Ende eines Ziehens
   const id = planAktuell;
   if(!id || !$('#planBox .ebenen')) return;
   if(planRicht){
