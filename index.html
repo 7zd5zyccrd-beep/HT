@@ -10,6 +10,9 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.78 24.09.2026  Die Seite einer eigenen Wetterregel heißt in der Kopfzeile
+                    „Regel“ bzw. „Neue Regel“ – der Titel steht unter „Dann“
+                    und brach in der Kopfzeile um.
   v1.77 24.09.2026  Eigene Wetterregeln: „und“ und „oder“ kombinierbar. Die
                     Bedingungen stehen in Fällen – innerhalb eines Falls gilt
                     „und“, zwischen den Fällen „oder“; „+ und …“ und „+ oder …“
@@ -2400,7 +2403,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.77';
+const VERSION = 'v1.78';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3501,7 +3504,8 @@ function go(name, push = true){
                           : name === 'setsub' ? setTitel
                           : name === 'taet' && taetAktiv ? taetAktiv.name
                           : name === 'wregel' && regelAktiv ? (regelAktiv.startsWith('eigen:')
-                              ? ((eigeneRegel(regelAktiv.slice(6)) || regelEntwurf || {}).titel || 'Eigene Regel')
+                              /* Der Titel steht unter „Dann“; in der Kopfzeile bräche er um (v1.78). */
+                              ? (eigeneRegel(regelAktiv.slice(6)) ? 'Regel' : 'Neue Regel')
                               : hinweisRegel(regelAktiv).name) : TITEL[name];
   const start = name === 'home', bb = $('#btnBack');
   bb.innerHTML = start ? GEAR_SVG : '&#8592;';
