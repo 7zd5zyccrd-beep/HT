@@ -10,6 +10,19 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.75 24.09.2026  Aufgabenseite umgeordnet: oben steht, was jetzt zu tun ist.
+                    Eine Kopfkarte fasst die Aufgabe zusammen – Titel, Termin
+                    mit Frist („fällig in 2 Tagen“, „3 Tage überfällig“),
+                    Bezug, Wiederholung, Wetterprofil, Wichtigkeit (wenn nicht
+                    normal), Dauer und Werkzeug, Notiz – und trägt die Knöpfe
+                    „Grundriss“ und „Zum Nachweis“. Darunter Wetter,
+                    „Vorbereiten“ und „Erledigen“, dann „Dauer, Werkzeug und
+                    Material“. Alle Felder stehen zugeklappt unter „Angaben
+                    bearbeiten“: beim Öffnen einer Aufgabe zu, auf der Seite
+                    bleiben sie offen, auch über einen Neuaufbau; der Kopf
+                    zieht beim Verlassen eines Feldes nach. Mängel und
+                    erledigte Aufgaben ebenso; eine neue Aufgabe zeigt ihre
+                    Felder offen wie bisher.
   v1.74 24.09.2026  Vorbereitung und Material zusammengeführt: eine Karte
                     „Vorbereiten“ mit Haken statt drei Mustern (Vermerkfeld
                     mit „Vorbereitung erledigt“, Haken beim Material, „Firma
@@ -1403,6 +1416,16 @@ main{flex:1;padding:16px var(--pad) 0;width:100%;max-width:var(--col);margin:0 a
 /* Kopf der Aufgabenseite. */
 .aufgKopf{font-size:18px;font-weight:600;margin:0}
 .aufgText{margin:6px 0 0;white-space:pre-wrap}
+/* Aufgabe (v1.75): oben die Kopfkarte, die Angaben zugeklappt darunter. */
+.aufgZeile{margin:4px 0 0}
+.aufgKopfKarte .row{margin-top:12px}
+.angaben{margin:0 0 12px}
+.angaben > summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:16px}
+.angaben > summary::-webkit-details-marker{display:none}
+.angaben > summary::after{content:'›';font-size:22px;line-height:1;color:var(--ink-soft);transform:rotate(90deg);transition:transform .15s}
+.angaben[open] > summary{margin-bottom:14px}
+.angaben[open] > summary::after{transform:rotate(-90deg)}
 .btn.aufgabe small,.btn.eintrag small{display:block;margin-top:3px;font-size:14px;font-weight:400;color:var(--ink-soft)}
 /* Einträge, die eine Seite öffnen (v1.39): weiß, linksbündig, rechts ein ›.
    Aktionsknöpfe bleiben zentriert – so sieht man, was wohin führt und was
@@ -2340,7 +2363,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.74';
+const VERSION = 'v1.75';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4516,7 +4539,12 @@ function renderRundgang(){
    bei jeder Eingabe; die Seite baut sich dabei nicht neu auf, damit Feld und
    Tastatur stehen bleiben. */
 let aufgAktiv = null;
+/* Welche Aufgabe ihre Angaben aufgeklappt hat (v1.75) – beim Öffnen einer
+   Aufgabe sind sie zu, auf der Seite bleiben sie offen, auch über einen
+   Neuaufbau hinweg. */
+let angabenAuf = '';
 function aufgabeOeffnen(id){
+  angabenAuf = '';
   aufgAktiv = AUFG.find(a => a.id === id) || null;
   if(aufgAktiv) go('aufgabe');
 }
@@ -4525,6 +4553,50 @@ function aufgabeNeu(){
     notiz:'', zeitraum:'', festgestellt:'', angelegt:heute(), frist:tagPlus(heute(), 7),
     wichtig:'normal', erneut:[], erledigt:'', vermerk:'', entwurf:true};
   go('aufgabe');
+}
+/* Termin einer Aufgabe für die Kopfkarte: der Tag und wie weit er weg ist. */
+function aufgTerminText(a){
+  if(!a.frist) return 'ohne Termin';
+  const h0 = tagAnfang(new Date()), tage = Math.round((alsDatum(a.frist) - h0) / TAG_MS);
+  const rel = t => t < 0 ? `${-t} ${t === -1 ? 'Tag' : 'Tage'} überfällig`
+                 : t === 0 ? 'heute' : t === 1 ? 'morgen' : `in ${t} Tagen`;
+  if(a.von && a.art !== 'mangel'){
+    const tv = Math.round((alsDatum(a.von) - h0) / TAG_MS), span = `${ttmm(alsDatum(a.von))} bis ${dText(a.frist)}`;
+    if(a.erledigt) return span;
+    return span + ' · ' + (tv > 0 ? 'beginnt ' + rel(tv) : tage < 0 ? rel(tage) : 'endet ' + rel(tage));
+  }
+  if(a.erledigt) return 'Termin ' + dText(a.frist);
+  return dText(a.frist) + ' · ' + (tage < 0 ? rel(tage) : 'fällig ' + rel(tage));
+}
+const wdhText = w => { const n = Math.max(1, Math.round(+w.n) || 1);
+  return n === 1 ? {woche:'jede Woche', monat:'jeden Monat', jahr:'jedes Jahr'}[w.einheit] || ''
+                 : `alle ${n} ${(WDH_TEXT[w.einheit] || ['', ''])[1]}`; };
+/* Die Kopfkarte (v1.75): die Aufgabe auf einen Blick, darunter die Wege. Was
+   nicht gesetzt ist, fehlt. Beim Mangel steht oben der Befund. */
+function aufgKopfZeigen(a, mangelKopf){
+  const box = $('#aufgKopf');
+  if(!box) return;
+  const mangel = a.art === 'mangel', n = a.k ? NW(a.k) : null;
+  const key = taetSchluessel(a, false), s = key ? taetSchnitt(key) : null;
+  const ut = key ? ((TAET.t[key] || {}).utensilien || []) : (a.utensilien || []);
+  const wp = WETTER_PROFILE.find(x => x[0] === a.wetter);
+  const wi = a.wichtig && a.wichtig !== 'normal' ? WICHTIG.find(x => x[0] === a.wichtig) : null;
+  const zeilen = [
+    aufgTerminText(a),
+    !mangel && n ? n.label + (a.anlage ? ' · ' + anlageName(a) : '') : '',
+    [!mangel && a.wdh ? wdhText(a.wdh) : '', !mangel && wp ? 'Wetter: ' + wp[1] : '', wi ? 'Wichtigkeit ' + klein(wi[1]) : ''].filter(Boolean).join(' · '),
+    a.erledigt ? '' : [s ? '≈ ' + dauerText(s) : '', ut.length ? 'Werkzeug: ' + ut.join(', ') : ''].filter(Boolean).join(' · ')
+  ].filter(Boolean);
+  box.innerHTML = `<div class="card aufgKopfKarte">${mangel ? mangelKopf : `<p class="aufgKopf">${esc(a.titel || 'Aufgabe')}</p>`}
+    ${zeilen.map((z, i) => `<p class="aufgZeile${i ? ' muted small' : ''}"${mangel && !i ? ' style="margin-top:8px"' : ''}>${esc(z)}</p>`).join('')}
+    ${String(a.notiz || '').trim() ? `<p class="aufgText"><span class="muted">Notiz:</span> ${esc(a.notiz)}</p>` : ''}
+    ${a.k && n ? `<div class="row">
+      ${aufgOrt(a) ? `<button class="btn" data-weg="plan">⌖ Grundriss</button>` : ''}
+      <button class="btn" data-weg="nw">Zum Nachweis</button></div>` : ''}</div>`;
+  const plan = box.querySelector('[data-weg="plan"]');
+  if(plan) plan.onclick = () => verorten(aufgOrt(a), anlageName(a));
+  const nw = box.querySelector('[data-weg="nw"]');
+  if(nw) nw.onclick = () => nachweisOeffnen(a.k, mangel && a.punkt ? String(a.quelle).split('|')[1] : '');
 }
 /* Worauf sich eine eigene Aufgabe beziehen kann: Anlagen und Zähler, beides
    Orte im Haus mit Marke im Grundriss. Prüfpunkte des Sprinklers sind es nicht.
@@ -4560,17 +4632,17 @@ function renderAufgabe(){
   if(!a){ box.innerHTML = ''; return; }
   const mangel = a.art === 'mangel', neu = !!a.entwurf, n = a.k ? NW(a.k) : null;
   const sichern = () => { if(!neu) saveAufg(); };
+  let mangelKopf = '';
   $('#titel').textContent = neu ? 'Neue Aufgabe' : mangel ? 'Mangel' : 'Aufgabe';
-  let kopf;
+  let kopf = '';
   if(mangel){
-    kopf = `<div class="card">
+    mangelKopf = `
       <div class="eyebrow" style="margin:0 0 6px">${esc([n ? n.label : '', 'Runde ' + zeitraumText(a.zeitraum)].filter(Boolean).join(' · '))}</div>
       <p class="aufgKopf">${esc(a.titel)}</p>
       ${a.text ? `<p class="aufgText">${esc(a.text)}</p>` : `<p class="muted small" style="margin:6px 0 0">Keine Bemerkung eingetragen.</p>`}
       <p class="muted small" style="margin:8px 0 0">Festgestellt am ${esc(dText(a.festgestellt))}</p>
       ${(a.erneut || []).map(e => `<p class="muted small" style="margin:4px 0 0">Erneut festgestellt am ${
-        esc(dText(e.datum))} (Runde ${esc(zeitraumText(e.zeitraum))})${e.text && e.text !== a.text ? ': ' + esc(e.text) : ''}</p>`).join('')}
-    </div>`;
+        esc(dText(e.datum))} (Runde ${esc(zeitraumText(e.zeitraum))})${e.text && e.text !== a.text ? ': ' + esc(e.text) : ''}</p>`).join('')}`;
   }else{
     const anlagen = bezugsAnlagen(a.k);
     kopf = `<label class="field"><span>Titel</span>
@@ -4606,9 +4678,6 @@ function renderAufgabe(){
       <input id="vorbText" value="${esc(v.text)}" placeholder="z. B. Firma beauftragen"></label>
     <label class="field" id="vorbWochenFeld"${String(v.text || '').trim() ? '' : ' hidden'}><span>Vorlauf in Wochen${a.von && !mangel ? ' vor Beginn' : ''}</span>
       <input id="vorbWochen" type="number" inputmode="numeric" min="0" value="${esc(v.wochen ?? 4)}"></label>`;
-  const wege = !neu && a.k && n ? `<div class="row" style="margin-bottom:14px">
-      ${aufgOrt(a) ? `<button class="btn" data-weg="plan">⌖ Grundriss</button>` : ''}
-      <button class="btn" data-weg="nw">Zum Nachweis</button></div>` : '';
   /* Wiederkehrendes fragt nach dem Erledigen im eigenen Fenster nach Dauer und
      Utensilien (v1.61); alles andere bekommt hier ein freiwilliges Dauerfeld. */
   const fragtNachher = !neu && !a.erledigt && !a.taetVermerkt && taetFragenOffen(taetSchluessel(a, false));
@@ -4654,20 +4723,31 @@ function renderAufgabe(){
          ? `<label class="abwZeile"><span>von</span><input type="date" class="dat" id="aufgVon" value="${esc(a.von)}"></label>
             <label class="abwZeile"><span>bis</span><input type="date" class="dat" id="aufgFrist" value="${esc(a.frist)}"></label>`
          : `<input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}" aria-label="Termin" style="margin-top:10px">`}</div>`;
-  box.innerHTML = kopf
+  const felder = kopf
     + `${terminFeld}
        <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
          WICHTIG.map(([w, t]) => `<button type="button" data-w="${w}" aria-pressed="${a.wichtig === w}">${t}</button>`).join('')}</div></div>
        ${planung}
-       <label class="field"><span>Notiz</span><textarea id="aufgNotiz" style="min-height:90px">${esc(a.notiz)}</textarea></label>`
-    + wege + (!mangel && !a.erledigt && a.wetter ? `<div id="aufgWetterKarte">${aufgWetterKarteHtml(a)}</div>` : '')
-    + erfKarte + eigenKarte + '<div id="aufgVorb"></div>' + erledigung
-    + (!neu && !mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '');
+       <label class="field"><span>Notiz</span><textarea id="aufgNotiz" style="min-height:90px">${esc(a.notiz)}</textarea></label>`;
+  /* Seit v1.75 oben, was jetzt zu tun ist – Kopfkarte, Wetter, Vorbereiten,
+     Erledigen –, darunter Dauer und Werkzeug, die Angaben zugeklappt. Der
+     Entwurf einer neuen Aufgabe hat noch nichts zusammenzufassen: dort stehen
+     die Felder offen wie bisher. */
+  box.innerHTML = neu ? felder + erledigung
+    : `<div id="aufgKopf"></div>`
+    + (!mangel && !a.erledigt && a.wetter ? `<div id="aufgWetterKarte">${aufgWetterKarteHtml(a)}</div>` : '')
+    + '<div id="aufgVorb"></div>' + erledigung + erfKarte + eigenKarte
+    + `<details class="angaben" id="aufgAngaben"${angabenAuf === a.id ? ' open' : ''}><summary>Angaben bearbeiten</summary>${felder}</details>`
+    + (!mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '');
+  aufgKopfZeigen(a, mangelKopf);
+  if($('#aufgAngaben')) $('#aufgAngaben').ontoggle = e => { angabenAuf = e.target.open ? a.id : ''; };
+  const kopfNeu = () => aufgKopfZeigen(a, mangelKopf);
 
   /* Vorbereiten (v1.74) – nur die offene, gespeicherte Aufgabe. */
   if(!neu && !a.erledigt) aufgVorbKarte($('#aufgVorb'), a);
   if(!mangel){
     $('#aufgTitel').oninput = e => { a.titel = e.target.value; sichern(); };
+    $('#aufgTitel').onchange = () => kopfNeu();
     $('#aufgNw').onchange = e => { a.k = e.target.value; a.anlage = ''; a.anlageText = ''; sichern(); renderAufgabe(); };
     if($('#aufgAnlage')) $('#aufgAnlage').onchange = e => {
       const wahl = bezugsAnlagen(a.k).find(x => x.wert === e.target.value);
@@ -4686,7 +4766,7 @@ function renderAufgabe(){
         a.von = a.frist; $('#aufgVon').value = a.von;
         if(a.wdh) a.wdh.ankerVon = alsDatum(a.von).getDate();
       }
-      sichern();
+      sichern(); kopfNeu();
     }
   };
   const vonFeld = $('#aufgVon');
@@ -4698,7 +4778,7 @@ function renderAufgabe(){
         a.frist = a.von; frist.value = a.frist;
         if(a.wdh) a.wdh.anker = alsDatum(a.frist).getDate();
       }
-      sichern();
+      sichern(); kopfNeu();
     }
   };
   /* Umschalten: der Termin wird zu „von“, „bis“ einen Monat später; zurück gilt
@@ -4740,6 +4820,7 @@ function renderAufgabe(){
       const zahlN = Math.round(+e.target.value);
       if(a.wdh && zahlN >= 1){ a.wdh.n = zahlN; sichern(); }
     };
+    $('#wdhN').onchange = () => kopfNeu();
     box.querySelectorAll('[data-basis]').forEach(b => b.onclick = () => {
       a.wdh.basis = b.dataset.basis; sichern();
       box.querySelectorAll('[data-basis]').forEach(x => x.setAttribute('aria-pressed', x === b));
@@ -4758,14 +4839,11 @@ function renderAufgabe(){
     };
   }
   box.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
-    a.wichtig = b.dataset.w; sichern();
+    a.wichtig = b.dataset.w; sichern(); kopfNeu();
     box.querySelectorAll('[data-w]').forEach(x => x.setAttribute('aria-pressed', x === b));
   });
   $('#aufgNotiz').oninput = e => { a.notiz = e.target.value; sichern(); };
-  const plan = box.querySelector('[data-weg="plan"]');
-  if(plan) plan.onclick = () => verorten(aufgOrt(a), anlageName(a));
-  const nw = box.querySelector('[data-weg="nw"]');
-  if(nw) nw.onclick = () => nachweisOeffnen(a.k, mangel && a.punkt ? String(a.quelle).split('|')[1] : '');
+  $('#aufgNotiz').onchange = () => kopfNeu();
   if(neu) $('#aufgAnlegen').onclick = () => {
     if(!a.titel.trim()){ toast('Bitte einen Titel eintragen'); $('#aufgTitel').focus(); return; }
     delete a.entwurf; AUFG.push(a); saveAufg();
