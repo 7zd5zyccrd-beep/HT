@@ -10,6 +10,8 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.88 24.09.2026  Neues Passwort (neuer Prüfwert mit eigenem Salz). Alle
+                    Geräte fragen einmal danach.
   v1.87 24.09.2026  Weißer Schleier an der Oberkante unter iOS 27 (App vom
                     Home-Bildschirm): die Statusleiste ist jetzt undurchsichtig
                     schwarz statt durchsichtig; der Inhalt läuft nicht mehr
@@ -2526,7 +2528,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.87';
+const VERSION = 'v1.88';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -13538,7 +13540,7 @@ async function ausgeben(){
    PASSWORT ÄNDERN: unten auf "Prüfwert berechnen", das Ergebnis ersetzt die
    folgende Zeile. Ein neues Passwort sperrt alle Geräte wieder zu, weil der
    gemerkte Wert dann nicht mehr passt. */
-const ZUGANG = { salz:'a64df89c1f68e0878833c4d55fa064c9', pruef:'cf9dc2c005b1020c829b416babc4de3b87b1cc5a5ba7134160f96492216e2d9c' };
+const ZUGANG = { salz:'573575834b962fbb57b3f479c5dbb7af', pruef:'f6d2df48eb13c7dbb852be65811edac8fe2d2eb2ef8d2434dea49ebfee952af1' };
 const RUNDEN = 250000;
 
 const alsHex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
