@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.93 24.09.2026  Zurück zum originalen Nachfedern von iOS: v1.90 bis v1.92
+                    (Federn abgeschaltet, eigener Nachbau) sind wieder heraus.
+                    Gegen den Spalt über der Kopfleiste hat sie eine schwarze
+                    Verlängerung nach oben, die erst beim Herunterziehen zu
+                    sehen ist – die Leiste scheint sich zu strecken.
   v1.92 24.09.2026  Nachfedern auch mit Schwung: läuft die Seite nach einem
                     Wischer mit Tempo an den Anfang oder das Ende, federt der
                     Inhalt je nach Tempo kurz darüber hinaus und zurück.
@@ -1421,14 +1426,7 @@
    Grundrissen; das Verhalten ist dann wieder das von iOS 26. */
 *{overflow-anchor:none}
 html,body{margin:0;padding:0}
-/* Die Seite federt an den Enden nicht mehr nach (v1.90): beim Herunterziehen
-   riss sonst über der Kopfleiste ein heller Spalt auf, auch mit dunklem
-   Hintergrund dahinter (v1.89, zurückgenommen). Die Kopfleiste bleibt oben
-   stehen; innerhalb der Seite scrollt alles wie bisher. */
-html,body{overscroll-behavior-y:none}
-/* Eigenes Nachfedern (v1.91): nur der Inhalt unter der Kopfleiste. */
-main.federt{will-change:transform}
-main.federZurueck{transition:transform .42s cubic-bezier(.2,.9,.25,1)}
+
 body{
   font-family:var(--f-body);color:var(--ink);background:var(--enclosure);
   font-size:16px;line-height:1.45;
@@ -1442,6 +1440,11 @@ header{
   display:flex;align-items:center;gap:10px;
   padding:calc(env(safe-area-inset-top) + 10px) var(--pad) 10px;
 }
+/* Beim Herunterziehen federt iOS die ganze Seite nach; über der Kopfleiste
+   ging dann ein heller Spalt auf. Eine schwarze Verlängerung nach oben füllt
+   ihn: sie liegt über dem Seitenanfang und wird erst beim Nachfedern sichtbar –
+   die Leiste scheint sich zu strecken (v1.93). */
+header::before{content:'';position:absolute;left:0;right:0;bottom:100%;height:100vh;background:var(--bar);pointer-events:none}
 header h1{
   flex:1;margin:0;text-align:center;font-family:var(--f-label);
   font-size:21px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
@@ -2553,7 +2556,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.92';
+const VERSION = 'v1.93';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3705,78 +3708,6 @@ function zurueck(){
   if(p) go(p, false);
 }
 $('#btnBack').onclick = zurueck;
-/* --- Nachfedern (v1.91) -----------------------------------------------------
-   Die Seite selbst federt nicht mehr (overscroll-behavior), sonst riss über der
-   Kopfleiste ein Spalt auf. Damit sich das Ende trotzdem gewohnt anfühlt, zieht
-   hier nur der Inhalt unter der Kopfleiste nach – gedämpft wie bei iOS – und
-   schnellt beim Loslassen zurück. Nicht im Grundriss und in der Blattvorschau
-   (sie zoomen und wischen selbst), nicht in eigenen Bildlaufbereichen und nicht,
-   solange ein Fenster offen ist. */
-(function federBinden(){
-  const main = document.querySelector('main'); if(!main) return;
-  let start = null, weg = 0, finger = false;
-  const daempfen = d => { const h = window.innerHeight; return (1 - 1 / (Math.abs(d) * 0.55 / h + 1)) * h * Math.sign(d); };
-  const eigenerBildlauf = el => {
-    for(let e = el; e && e !== document.body; e = e.parentElement){
-      const o = getComputedStyle(e).overflowY;
-      if((o === 'auto' || o === 'scroll') && e.scrollHeight > e.clientHeight + 1) return true;
-    }
-    return false;
-  };
-  const oben = () => window.scrollY <= 0;
-  const unten = () => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
-  const setzen = y => { weg = y; main.style.transform = y ? `translate3d(0,${y.toFixed(1)}px,0)` : ''; };
-  document.addEventListener('touchstart', e => {
-    start = null; finger = true;
-    if(e.touches.length !== 1 || current === 'plan' || current === 'blatt' || !$('#dlg').hidden) return;
-    if(eigenerBildlauf(e.target)) return;
-    main.classList.remove('federZurueck');
-    start = {y:e.touches[0].clientY, oben:oben(), unten:unten()};
-  }, {passive:true});
-  document.addEventListener('touchmove', e => {
-    if(!start || e.touches.length !== 1) return;
-    /* Erreicht die Seite das Ende erst mitten im Zug, federt es ab dort weiter
-       (v1.92) – der Punkt, an dem das Ende erreicht war, wird zum Anfang. */
-    const yJetzt = e.touches[0].clientY;
-    if(!start.oben && oben() && yJetzt > start.y){ start.oben = true; start.y = yJetzt; }
-    if(!start.unten && unten() && yJetzt < start.y){ start.unten = true; start.y = yJetzt; }
-    const d = yJetzt - start.y;
-    /* Nur über das Ende hinaus: oben nach unten gezogen, unten nach oben. */
-    if(d > 0 && start.oben && oben()){ main.classList.add('federt'); setzen(daempfen(d)); }
-    else if(d < 0 && start.unten && unten()){ main.classList.add('federt'); setzen(daempfen(d)); }
-    else if(weg){ setzen(0); }
-  }, {passive:true});
-  const los = e => {
-    if(!e || !e.touches || !e.touches.length) finger = false;
-    start = null;
-    if(!weg) return;
-    main.classList.add('federZurueck'); setzen(0);
-    setTimeout(() => { if(!weg) main.classList.remove('federZurueck', 'federt'); }, 450);
-  };
-  document.addEventListener('touchend', los, {passive:true});
-  document.addEventListener('touchcancel', los, {passive:true});
-  /* Schwung (v1.92): läuft die Seite nach dem Loslassen mit Tempo an den
-     Anfang oder das Ende, federt der Inhalt je nach Tempo kurz darüber hinaus
-     und zurück – wie bei iOS. Das Tempo kommt aus den letzten Bildlaufschritten. */
-  let proben = [];
-  window.addEventListener('scroll', () => {
-    const t = performance.now(), y = window.scrollY;
-    proben.push({t, y}); proben = proben.filter(p => t - p.t < 90);
-    if(finger || weg || current === 'plan' || current === 'blatt') return;
-    const amEnde = y <= 0 ? 1 : unten() ? -1 : 0;
-    if(!amEnde || proben.length < 2) return;
-    const a = proben[0], v = (y - a.y) / Math.max(1, t - a.t);        // Pixel je ms
-    if(amEnde === 1 ? v > -0.3 : v < 0.3) return;                       // zu langsam oder falsche Richtung
-    proben = [];
-    const weite = Math.min(window.innerHeight * 0.12, Math.abs(v) * 55) * amEnde;
-    if(main.getAnimations) main.getAnimations().forEach(x => x.cancel());
-    main.animate([
-      {transform:'translate3d(0,0,0)', easing:'cubic-bezier(.15,.7,.3,1)'},
-      {transform:`translate3d(0,${weite.toFixed(1)}px,0)`, offset:0.3, easing:'cubic-bezier(.4,0,.2,1)'},
-      {transform:'translate3d(0,0,0)'}
-    ], {duration:Math.round(380 + Math.min(220, Math.abs(v) * 60))});
-  }, {passive:true});
-})();
 /* Kommt die App aus dem Hintergrund zurück, kann ein neuer Tag begonnen haben –
    Fristen und Gruppen der Liste rechnen dann neu. */
 document.addEventListener('visibilitychange', () => {
