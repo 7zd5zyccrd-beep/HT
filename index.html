@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.76 24.09.2026  Übersicht gestrafft. Die Wetterregeln stehen nicht mehr als
+                    eigener Eintrag auf der Startseite, sondern unten in
+                    „Wetter“, unter der Vorhersage („Eigene Wetterregeln“ mit
+                    „+ Regel hinzufügen“, darunter die ab Werk). Werkzeug- und
+                    Materialliste ziehen von „Tätigkeiten“ in die
+                    Einstellungen, als „Arbeitsmittel“ in die neue Gruppe
+                    „Listen“ neben die Akkutypen (die zusätzlich unter RWA
+                    bleiben); „Tätigkeiten“ führt unten mit einem Knopf hin. Die Zahl rechts sagt
+                    überall, wie viele Einträge die Seite hat: „Tätigkeiten“
+                    zählt alle aufgeführten, „Wetter“ zeigt keinen Stand mehr.
   v1.75 24.09.2026  Aufgabenseite umgeordnet: oben steht, was jetzt zu tun ist.
                     Eine Kopfkarte fasst die Aufgabe zusammen – Titel, Termin
                     mit Frist („fällig in 2 Tagen“, „3 Tage überfällig“),
@@ -2179,10 +2189,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       <div id="aufgBox"></div>
     </section>
 
-    <!-- Wetterregeln (v1.55) -->
-    <section class="view" id="view-wregeln">
-      <div id="wregelnBox"></div>
-    </section>
+    <!-- Eine Wetterregel (v1.55); die Liste steht seit v1.76 in „Wetter“ -->
     <section class="view" id="view-wregel">
       <div id="wregelBox"></div>
     </section>
@@ -2363,7 +2370,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.75';
+const VERSION = 'v1.76';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3435,7 +3442,7 @@ function ring(n, takt){
 const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigt', nachweis:'Nachweis', blatt:'Blatt',
                historie:'Historie', histnw:'Historie', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
-               plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregeln:'Wetterregeln', wregel:'Regel',
+               plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregel:'Regel',
                taeten:'Tätigkeiten', taet:'Tätigkeit', wplan:'Wochenplan', arbeit:'Arbeitsnachweis'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
@@ -3490,7 +3497,6 @@ function go(name, push = true){
   if(name === 'rundgang') renderRundgang();
   if(name === 'erledigt') renderErledigt();
   if(name === 'wetter')   renderWetter();
-  if(name === 'wregeln')  renderWetterregeln();
   if(name === 'taeten')   renderTaeten();
   if(name === 'wplan')    renderWochenplan();
   if(name === 'arbeit')   renderArbeit();
@@ -4137,15 +4143,14 @@ function renderHome(){
   /* Darunter der Weg zu allem Übrigen. Die Grundrisse hängen sich nach, sobald
      der Bilderspeicher geantwortet hat. */
   const erledigt = AUFG.filter(a => a.erledigt).length;
-  const regelnAn = CFG.wetter ? alleRegeln().filter(r => !r.aus).length : 0;
-  const taetL = taetKandidaten(), taetMit = taetL.filter(t => ((TAET.t[t.key] || {}).dauern || []).length).length;
+  /* Die Zahl rechts sagt überall, wie viele Einträge die Seite hat (v1.76). */
+  const taetL = taetKandidaten();
   const mehr = (gibt ? `<button class="btn eintrag" data-alle="1"><span>Alle Nachweise</span></button>` : '')
     + (liste.length ? `<button class="btn eintrag" data-wplan="1"><span>Wochenplan</span></button>` : '')
-    + (CFG.wetter ? `<button class="btn eintrag" data-wregeln="1"><span>Wetterregeln</span><span class="zahl">${regelnAn}</span></button>` : '')
-    + (taetL.length ? `<button class="btn eintrag" data-taeten="1"><span>Tätigkeiten</span><span class="zahl">${taetMit}</span></button>` : '')
+    + (taetL.length ? `<button class="btn eintrag" data-taeten="1"><span>Tätigkeiten</span><span class="zahl">${taetL.length}</span></button>` : '')
     + `<button class="btn eintrag" data-arbeit="1"><span>Arbeitsnachweis</span></button>`
     + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigt</span><span class="zahl">${erledigt}</span></button>` : '')
-    + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span><span class="zahl" id="homeWetterStand"></span></button>` : '');
+    + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span></button>` : '');
   $('#homeListe').innerHTML = `<button class="btn ghost klein" data-neuaufg="1" style="margin:0 0 12px">+ Aufgabe hinzufügen</button>`
     + warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
     + matStartHtml()
@@ -4161,8 +4166,6 @@ function renderHome(){
   $('#homeListe [data-neuaufg]').onclick = aufgabeNeu;
   const sich = $('#homeListe [data-sichern]');
   if(sich) sich.onclick = alsDateiSichern;
-  const wr = $('#homeListe [data-wregeln]');
-  if(wr) wr.onclick = () => go('wregeln');
   const ta = $('#homeListe [data-taeten]');
   if(ta) ta.onclick = () => go('taeten');
   $('#homeListe').querySelectorAll('[data-wplan]').forEach(b => b.onclick = () => go('wplan'));
@@ -5321,7 +5324,7 @@ function erfDetailHtml(key){
 function renderTaeten(){
   const box = $('#taetenBox');
   if(!box) return;
-  const i = info('Nach jeder wiederkehrenden Tätigkeit fragt die App nach Dauer, Werkzeug und Material, solange „Beim nächsten Mal wieder fragen“ angehakt ist. Der Durchschnitt nimmt die letzten zehn Angaben. Werkzeug und Verbrauchsmaterial gelten für alle Tätigkeiten; mit „→ Material“ bzw. „→ Werkzeug“ wechselt ein Eintrag die Liste, auch in allen Tätigkeiten.', 'margin:-2px 0 10px');
+  const i = info('Nach jeder wiederkehrenden Tätigkeit fragt die App nach Dauer, Werkzeug und Material, solange „Beim nächsten Mal wieder fragen“ angehakt ist. Der Durchschnitt nimmt die letzten zehn Angaben. Die Listen von Werkzeug und Material stehen in den Einstellungen unter „Arbeitsmittel“ – der Knopf unten führt hin.', 'margin:-2px 0 10px');
   const liste = taetKandidaten();
   const zusatz = t => {
     const e = TAET.t[t.key], n = ((e && e.dauern) || []).length, s = taetSchnitt(t.key);
@@ -5335,15 +5338,23 @@ function renderTaeten(){
     + (liste.length
         ? liste.map((t, j) => `<button class="btn eintrag" data-t="${j}"><span class="etext">${esc(t.name)}<small>${esc(zusatz(t))}</small></span></button>`).join('')
         : '<p class="muted small">Noch keine wiederkehrenden Tätigkeiten.</p>')
-    + `<div class="eyebrow">Werkzeug</div><div id="werkzeugListe"></div>`
-    + `<div class="eyebrow">Verbrauchsmaterial</div><div id="materialListe"></div>`;
+    + `<button class="btn eintrag" id="taetZuListen" style="margin-top:18px"><span>Arbeitsmittel</span></button>`;
   box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
     const t = liste[+b.dataset.t];
     taetAktiv = {key:t.key, name:t.name};
     go('taet');
   });
-  /* Dieselbe Liste wie in den Einstellungen. Umbenennen und Löschen wirken auf
-     alle Tätigkeiten, die das Utensil führen. */
+  $('#taetZuListen').onclick = () => setOeffnen('werkmat');
+}
+/* Einstellungen › Arbeitsmittel (v1.76, vorher unter Tätigkeiten) – ein Wort,
+   weil „Werkzeug und Material“ in der Kopfzeile umbräche.
+   Umbenennen und Löschen wirken auf alle Tätigkeiten und Aufgaben, die den
+   Eintrag führen. */
+function setWerkMat(box){
+  box.innerHTML = infoZeile('Werkzeug nimmt man mit, Verbrauchsmaterial wird vorher beschafft. Beide Listen gelten für alle Tätigkeiten und Aufgaben; Umbenennen und Löschen wirken überall, mit „→ Material“ bzw. „→ Werkzeug“ wechselt ein Eintrag die Liste. Die Einheit steht am Material, die Menge an der Tätigkeit.')
+    + `<div class="eyebrow">Werkzeug</div><div id="werkzeugListe"></div>`
+    + `<div class="eyebrow">Verbrauchsmaterial</div><div id="materialListe"></div>`;
+  const neu = () => setWerkMat(box);
   listeBauen($('#werkzeugListe'), {
     wort:'Werkzeug', liste:() => TAET.werkzeug,
     loeschHinweis:'Es verschwindet damit auch aus allen Tätigkeiten.',
@@ -5355,7 +5366,7 @@ function renderTaeten(){
         '<button class="btn ghost klein" data-wechsel="1">→ Material</button>');
       r.querySelector('[data-wechsel]').onclick = () => {
         const u = TAET.werkzeug[j];
-        utensilVerschieben(u, true); renderTaeten(); toast('Zum Verbrauchsmaterial verschoben');
+        utensilVerschieben(u, true); neu(); toast('Zum Verbrauchsmaterial verschoben');
       };
     }),
     beiUmbenennen:(alt, neu) => { utensilTraeger().forEach(e => {
@@ -5367,12 +5378,12 @@ function renderTaeten(){
       saveAufg();
     },
     nachher:() => saveTaet()});
-  materialListeBauen($('#materialListe'));
+  materialListeBauen($('#materialListe'), neu);
 }
 /* Die Liste des Verbrauchsmaterials (v1.68): je Zeile Name und Löschen,
    darunter die Einheit und der Wechsel zum Werkzeug. Ein Name ist eine Zeile;
    Umbenennen wirkt auf alle Tätigkeiten. */
-function materialListeBauen(box){
+function materialListeBauen(box, neu){
   let verworfen = false, basis = TAET.material.length;
   const zeile = (m, i) => `<div class="zeile matZeile" data-i="${i}">
       <textarea rows="1" placeholder="Material">${esc(m.name)}</textarea>
@@ -5434,7 +5445,7 @@ function materialListeBauen(box){
       };
       const wechsel = r.querySelector('[data-wechsel]');
       if(wechsel) wechsel.onclick = () => {
-        utensilVerschieben(TAET.material[i].name, false); renderTaeten(); toast('Zum Werkzeug verschoben');
+        utensilVerschieben(TAET.material[i].name, false); neu(); toast('Zum Werkzeug verschoben');
       };
     });
     box.querySelector('[data-plus]').onclick = () => {
@@ -5704,7 +5715,7 @@ function matStartHtml(){
     x.posten.forEach(p => { const l = m.get(p.o.name) || []; if(!l.includes(p.o.wann)) l.push(p.o.wann); m.set(p.o.name, l); });
     return [...m].map(([n, w]) => w.length > 2 ? `${n} (${w.length}×)` : `${n} ${w.join(', ')}`).join(' · ');
   };
-  const i = info('Verbrauchsmaterial für alles, was bis Ende des nächsten Monats ansteht – zusammengezählt, damit sich gesammelt bestellen oder einkaufen lässt. Was da ist, abhaken: es verschwindet dann auch an der Aufgabe bzw. am Nachweis. Mengen und Einheiten stehen unter Übersicht › Tätigkeiten.', 'margin:-4px 0 8px');
+  const i = info('Verbrauchsmaterial für alles, was bis Ende des nächsten Monats ansteht – zusammengezählt, damit sich gesammelt bestellen oder einkaufen lässt. Was da ist, abhaken: es verschwindet dann auch an der Aufgabe bzw. am Nachweis. Mengen stehen an der Tätigkeit, Einheiten unter Einstellungen › Arbeitsmittel.', 'margin:-4px 0 8px');
   return `<div class="eyebrow mitInfo">Material bereitlegen ${i.knopf}</div>${i.text}
     <div class="card matKarte" id="homeMat">${matStartListe.map((x, j) => matZeile(j, x.name, x.menge, wofuer(x))).join('')}</div>`;
 }
@@ -7376,6 +7387,7 @@ function renderWetter(){
   ].filter(Boolean).join(' · ');
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">${esc(o.name || 'Standort')} ${i.knopf}</div>${i.text}
     ${warnHtml}${inhalt}
+    <div id="wetterRegeln"></div>
     <div class="wetterFuss">
       ${stand ? `<p class="muted small" style="margin:0 0 4px">${esc(stand)}</p>` : ''}
       ${dwdFuss ? `<p class="muted small" style="margin:0 0 10px">${esc(dwdFuss)}</p>` : ''}
@@ -7383,6 +7395,7 @@ function renderWetter(){
       <p class="muted small" style="margin:14px 0 0">Vorhersage: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>, Lizenz CC BY 4.0 · Warnungen und Messwerte: <a href="https://brightsky.dev/" target="_blank" rel="noopener">Bright Sky</a> aus Daten des DWD</p>
     </div>`;
   $('#wetterJetzt').onclick = () => wetterAbrufen(true);
+  renderWetterregeln();
   /* Aufklappen an Ort und Stelle: nur dieser Tag, die Seite bleibt stehen. */
   box.querySelectorAll('.wzeile[data-warnid]').forEach(b => b.onclick = () => {
     const id = b.dataset.warnid, t = b.nextElementSibling, auf = !warnOffen.has(id);
@@ -7494,7 +7507,7 @@ function setWetter(box){
   };
   wetterEinstAnhaengen(box);
   box.insertAdjacentHTML('beforeend',
-    `<p class="muted small" style="margin:18px 0 0">Die Ereignisregeln stehen auf der Startseite unter „Übersicht › Wetterregeln“.</p>`);
+    `<p class="muted small" style="margin:18px 0 0">Die Ereignisregeln stehen auf der Startseite unter „Übersicht › Wetter“, unter der Vorhersage.</p>`);
 }
 
 /* ---------- DWD über Bright Sky (v1.53) -------------------------------------
@@ -8209,21 +8222,21 @@ function wetterRegelnAnwenden(){
   toast(neu === 1 ? 'Aufgabe aus einer Wetterregel angelegt' : `${neu} Aufgaben aus Wetterregeln angelegt`);
 }
 
-/* Startseite › Übersicht › Wetterregeln (v1.55): erst die Liste, dann je Regel
-   eine eigene Seite. */
+/* Die Wetterregeln (v1.55): erst die Liste, dann je Regel eine eigene Seite.
+   Die Liste steht seit v1.76 unten in „Wetter“ statt in einer eigenen Ansicht. */
 let regelAktiv = '';
 function renderWetterregeln(){
-  const box = $('#wregelnBox');
+  const box = $('#wetterRegeln');
   if(!box) return;
   const i = info('Regeln machen aus dem Wetter Aufgaben. Eine Regel schlägt entweder vor – dann steht sie auf der Startseite unter „Wetter-Hinweise“ – oder sie legt die Aufgabe gleich an. Schwellen, Text, Wichtigkeit und Termin stehen in der Regel selbst.', 'margin:-2px 0 10px');
   const zeile = r => `<button class="btn eintrag" data-regel="${esc(r.k)}"><span>${esc(r.name)}</span><span class="zahl">${
     r.aus ? 'aus' : r.modus === 'sofort' ? 'legt gleich an' : 'schlägt vor'}</span></button>`;
   const eigene = eigeneRegeln().map(eigenAlsRegel);
-  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Eigene Regeln ${i.knopf}</div>${i.text}`
+  box.innerHTML = `<div class="eyebrow mitInfo">Eigene Wetterregeln ${i.knopf}</div>${i.text}`
     + `<button class="btn ghost klein" id="regelPlus" style="margin:0 0 10px">+ Regel hinzufügen</button>`
     + (eigene.length ? eigene.map(zeile).join('')
         : `<p class="muted small" style="margin:0 0 10px">Noch keine eigene Regel.</p>`)
-    + `<div class="eyebrow">Regeln ab Werk</div>`
+    + `<div class="eyebrow">Wetterregeln ab Werk</div>`
     + HINWEIS_STD.map(std => zeile(hinweisRegel(std.k))).join('');
   /* Seit v1.73 auch von hier aus, nicht nur über „+ Aufgabe hinzufügen“. */
   $('#regelPlus').onclick = () => eigenRegelNeu('');
@@ -8351,7 +8364,7 @@ function setRegel(box, k){
    entsteht.
 
    Angelegt wird sie über „+ Aufgabe hinzufügen“ › Wetter; geändert und gelöscht
-   unter Übersicht › Wetterregeln, wo sie über den Regeln ab Werk steht.
+   unter Übersicht › Wetter, wo sie über den Regeln ab Werk steht.
 
    Warum Ruhezeit und Häufigkeit: Ein Zustand wie Trockenheit oder Hitze hält
    tagelang an. Ohne Sperre entstünde jeden Tag dieselbe Aufgabe. Gemerkt wird
@@ -8724,9 +8737,9 @@ function setEigenRegel(box, r, neu){
     regelAktiv = 'eigen:' + r.id;
     toast('Regel angelegt');
     /* Kam der Weg über „+ Aufgabe hinzufügen“, gehört die Seite nicht mehr in
-       den Rückweg; kam er aus der Liste, stünde die sonst zweimal darin. */
-    if(stack[stack.length - 1] === 'aufgabe' || stack[stack.length - 1] === 'wregeln') stack.pop();
-    go('wregeln', false);
+       den Rückweg; kam er aus „Wetter“, stünde das sonst zweimal darin. */
+    if(stack[stack.length - 1] === 'aufgabe' || stack[stack.length - 1] === 'wetter') stack.pop();
+    go('wetter', false);
   };
   if($('#regWeg')) $('#regWeg').onclick = () =>
     frage('Regel löschen', `„${r.titel || 'Die Regel'}“ wird gelöscht. Schon angelegte Aufgaben bleiben.`, 'Löschen', () => {
@@ -8766,6 +8779,10 @@ function renderSettings(){
     + knopf('wetter', '', 'Wetter')
     + '<div class="eyebrow">Anlagen und Prüfumfang</div>'
     + NACHWEISE.filter(n => !n.spaeter).map(n => knopf('nw', n.k, n.label, anzahl(n))).join('')
+    /* Stammlisten für alles (v1.76); die Akkutypen stehen zusätzlich unter RWA. */
+    + '<div class="eyebrow">Listen</div>'
+    + knopf('werkmat', '', 'Arbeitsmittel', TAET.werkzeug.length + TAET.material.length)
+    + (NW('rwa') ? knopf('akkus', 'rwa', 'Akkutypen', akkuTypen().length) : '')
     + '<div class="eyebrow">Gerät</div>'
     + knopf('plaene', '', 'Grundrisse', '…')
     + knopf('geraet', '', 'Sicherung')
@@ -8793,6 +8810,7 @@ function setOeffnen(art, k){
            : art === 'wetter' ? 'Wetter'
            : art === 'check'  ? 'Checkliste'
            : art === 'akkus'  ? 'Akkutypen'
+           : art === 'werkmat' ? 'Arbeitsmittel'
            : art === 'tausch' ? 'Zählertausch'
            : art === 'plaene' ? 'Grundrisse'
            : art === 'geraet' ? 'Sicherung'
@@ -8814,6 +8832,7 @@ function renderSetSub(){
   if(a === 'check') { setCheck(dyn, k); return; }
   if(a === 'tausch'){ setTausch(dyn);   return; }
   if(a === 'akkus') { setAkkus(dyn);     return; }
+  if(a === 'werkmat'){ setWerkMat(dyn); return; }
   const n = NW(k);
   /* Oben die Wichtigkeit für die Aufgabenliste, darunter wie gehabt die Seite
      des Nachweises in einem eigenen Behälter. */
@@ -9266,7 +9285,7 @@ function objektKarten(box, k){
    während man noch darin tippt (wie bei den Zählstellen). */
 function setAkkus(box){
   box.innerHTML =
-    infoZeile('Je nach Kapazität wird alle drei oder vier Jahre getauscht; hier stehen die Typen mit ihrem Zyklus. Welcher Typ in welcher Anlage steckt und wie viele, stellst du eine Ebene höher bei den Objekten ein.')
+    infoZeile('Je nach Kapazität wird alle drei oder vier Jahre getauscht; hier stehen die Typen mit ihrem Zyklus. Welcher Typ in welcher Anlage steckt und wie viele, stellst du unter Einstellungen › RWA bei den Objekten ein.')
     + `<button class="btn ghost klein" id="akkuTypPlus" style="margin:0 0 10px">+ Akkutyp hinzufügen</button>
      <div id="akkuTypListe"></div>`;
   akkuTypBasis = teilCfg('rwa').akkus.length;
