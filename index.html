@@ -10,6 +10,8 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.98 24.09.2026  Fehler: nach „Grundriss ausgeben“ fehlte beim Zurückkehren
+                    zum Grundriss der Knopf oben rechts in der Kopfleiste.
   v1.97 24.09.2026  Legende: ein Abschnitt wird nicht mehr auf zwei Spalten
                     verteilt (die Überschrift oben rechts war minimal
                     abgeschnitten, der Rest stand unten links). Ein Objekt auf
@@ -2615,7 +2617,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.97';
+const VERSION = 'v1.98';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3732,6 +3734,9 @@ function go(name, push = true){
   $('#btnPlanWahl').classList.add('unsichtbar');
   $('#btnPlanWahl').hidden = inSettings;
   menueZu();
+  /* Zurück in die Grundrissansicht (etwa aus der Blattvorschau): dort baut sich
+     nichts neu auf, der Knopf oben rechts muss eigens wieder her (v1.98). */
+  if(name === 'plan' && planAktuell) planWahlKnopf();
   $('#btnNeuLaden').hidden = !inSettings;
   document.body.classList.toggle('planAn', name === 'plan');
   /* Auf großen Schirmen dürfen Grundriss und Bogen aus der Textspalte heraus –
