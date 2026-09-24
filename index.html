@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.97 24.09.2026  Legende: ein Abschnitt wird nicht mehr auf zwei Spalten
+                    verteilt (die Überschrift oben rechts war minimal
+                    abgeschnitten, der Rest stand unten links). Ein Objekt auf
+                    mehreren Plänen, etwa ein Aufzug über alle Etagen, steht
+                    nur noch einmal da, mit allen Grundrissen dahinter.
   v1.96 24.09.2026  Legende der Grundrissblätter: eine Kategorie steht
                     beisammen untereinander in einer Spalte (nur eine längere
                     läuft in die nächste weiter). Die Überschrift sieht aus wie
@@ -2227,7 +2232,10 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
    Überschrift sieht aus wie eine lang gezogene Marke, die Nummern wie die
    Marken im Plan – mit etwas Luft, damit die Kreise nicht aneinanderstoßen. */
 .paper .legende{columns:2;column-gap:26px}
-.paper .lgruppe{margin-bottom:16px;break-inside:avoid}
+.paper .lgruppe{margin-bottom:16px;padding-top:2px;break-inside:avoid;
+  /* Safari teilt Blöcke trotz break-inside auf die Spalten auf; als Zeilenblock
+     über die volle Breite bleibt ein Abschnitt verlässlich beisammen (v1.97). */
+  display:inline-block;width:100%;vertical-align:top}
 .paper .lgruppe:empty{display:none}
 .paper .ltitel{display:inline-flex;align-items:center;margin:0 0 7px 1px;padding:4px 14px;border-radius:999px;
   background:var(--kat,#333);color:#fff;border:2px solid #fff;box-shadow:0 0 0 1px var(--kat,#333);
@@ -2607,7 +2615,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.96';
+const VERSION = 'v1.97';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -12780,12 +12788,18 @@ async function planBlattZeigen(ids){
     teil.gruppen.forEach(g => {
       let a = abschnitte.find(x => x.k === g.kat.k);
       if(!a){ a = {k:g.kat.k, farbe:g.kat.farbe, eintraege:[]}; abschnitte.push(a); }
-      g.orte.forEach(o => a.eintraege.push({nr:o.nr, text:ortName(o.key), plan:teil.name}));
+      /* Ein Objekt über mehrere Pläne (Aufzug) steht einmal da, mit allen
+         Plänen, auf denen es vorkommt (v1.97). */
+      g.orte.forEach(o => {
+        const da = a.eintraege.find(e => e.key === o.key);
+        if(da){ if(!da.plaene.includes(teil.name)) da.plaene.push(teil.name); return; }
+        a.eintraege.push({key:o.key, nr:o.nr, text:ortName(o.key), plaene:[teil.name]});
+      });
     });
   }
   if(!blaetter){ toast('Auf den gewählten Plänen steht nichts Eingeblendetes'); return; }
   /* Bei einem einzigen Plan trägt die Kopfzeile seinen Namen, die Zeilen nicht. */
-  if(namen.length === 1) abschnitte.forEach(a => a.eintraege.forEach(e => { delete e.plan; }));
+  abschnitte.forEach(a => a.eintraege.forEach(e => { e.plan = namen.length === 1 ? '' : e.plaene.join(', '); }));
   blaetter += legendeHtml(abschnitte, namen.length === 1 ? namen[0] : '');
   const roh = namen.length === 1 ? namen[0] : '';
   blattDatei = {
