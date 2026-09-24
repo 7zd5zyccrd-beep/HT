@@ -10,6 +10,10 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.90 24.09.2026  Kopfleiste oben festgenagelt: die Seite federt am Anfang
+                    und Ende nicht mehr nach, der Spalt über der Leiste kann
+                    nicht mehr aufgehen. Der dunkle Hintergrund aus v1.89 half
+                    nicht und ist wieder heraus.
   v1.89 24.09.2026  Beim Herunterziehen der Seite teilte sich die Kopfleiste:
                     im Spalt darüber stand der helle Hintergrund. Oben liegt
                     jetzt das Schwarz der Kopfleiste, unten weiter das Hell.
@@ -1407,11 +1411,11 @@
    Grundrissen; das Verhalten ist dann wieder das von iOS 26. */
 *{overflow-anchor:none}
 html,body{margin:0;padding:0}
-/* Beim Herunterziehen federt die ganze Seite nach; im Spalt über der
-   Kopfleiste zeigte sich der helle Hintergrund, die Leiste schien zu reißen.
-   Oben liegt deshalb das Schwarz der Kopfleiste, unten das Hell der Seite
-   (v1.89). */
-html{background:linear-gradient(var(--bar) 50%, var(--enclosure) 50%)}
+/* Die Seite federt an den Enden nicht mehr nach (v1.90): beim Herunterziehen
+   riss sonst über der Kopfleiste ein heller Spalt auf, auch mit dunklem
+   Hintergrund dahinter (v1.89, zurückgenommen). Die Kopfleiste bleibt oben
+   stehen; innerhalb der Seite scrollt alles wie bisher. */
+html,body{overscroll-behavior-y:none}
 body{
   font-family:var(--f-body);color:var(--ink);background:var(--enclosure);
   font-size:16px;line-height:1.45;
@@ -2536,7 +2540,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.89';
+const VERSION = 'v1.90';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
