@@ -10,6 +10,19 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.77 24.09.2026  Eigene Wetterregeln: „und“ und „oder“ kombinierbar. Die
+                    Bedingungen stehen in Fällen – innerhalb eines Falls gilt
+                    „und“, zwischen den Fällen „oder“; „+ und …“ und „+ oder …“
+                    ohne feste Obergrenze. Die Seite der Regel ist neu
+                    gegliedert: „Wenn“ mit je Bedingung einer Zeile im
+                    Klartext samt Probe (✓/✕ und gemessener Wert), ein Tipp
+                    klappt ihre Felder auf; „Dann“ (die Aufgabe) und „Wie oft“
+                    (Jahreszeit, Häufigkeit, Ruhezeit, Ein/Aus) zeigen
+                    zugeklappt eine Zusammenfassung, bei einer neuen Regel
+                    stehen sie offen. Der Satz „So liest sich die Regel“
+                    klammert die Fälle. Bestehende Regeln und Sicherungen
+                    behalten ihre Bedeutung: „alle“ wird ein Fall, „eine
+                    davon“ ein Fall je Bedingung.
   v1.76 24.09.2026  Übersicht gestrafft. Die Wetterregeln stehen nicht mehr als
                     eigener Eintrag auf der Startseite, sondern unten in
                     „Wetter“, unter der Vorhersage („Eigene Wetterregeln“ mit
@@ -2124,6 +2137,23 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 .wb.st0{color:var(--ink-soft)}
 /* Grenzwerte in den Einstellungen: Beschriftung links, Felder rechts. */
 .wgKarte{padding:4px 14px}
+/* Bedingungen in Fällen (v1.77): je Bedingung eine Zeile, ein Tipp klappt auf. */
+.fallKarte{padding:6px 14px 10px}
+.fallKopf{display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px}
+.bedZeile{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;background:none;border:0;
+  padding:10px 0;font:inherit;font-size:16px;color:var(--ink);cursor:pointer}
+.bedZeile .probe{flex:0 0 1.2em;font-weight:600}
+.bedZeile .probe.ja{color:#1E8E3E}
+.bedZeile .probe.nein{color:var(--ink-soft)}
+.bedZeile .btext{flex:1;min-width:0;line-height:1.35}
+.bedZeile .pfeil{flex:0 0 auto;color:var(--ink-soft);font-size:20px;line-height:1;transition:transform .15s}
+.bedZeile[aria-expanded="true"] .pfeil{transform:rotate(90deg)}
+.bedUnd{color:var(--ink-soft);font-size:13px;margin:0 0 0 1.9em;text-transform:lowercase}
+.bedOffen{padding:0 0 6px 1.9em}
+.bedOffen .wgZeile:first-child{border-top:0}
+.fallOder{text-align:center;color:var(--ink-soft);font-size:14px;margin:4px 0 12px;letter-spacing:.08em}
+.fallKarte .btn.klein{margin-top:4px}
+.angaben > summary .zfass{flex:1;min-width:0;line-height:1.35;padding-right:10px}
 .wgZeile{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0}
 .wgZeile + .wgZeile{border-top:1px solid var(--line)}
 .wgZeile > span:first-child{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;
@@ -2370,7 +2400,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.76';
+const VERSION = 'v1.77';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -8359,7 +8389,8 @@ function setRegel(box, k){
 
 /* ---------- Eigene Wetterregeln aus Bausteinen (v1.56) ----------------------
    Eine eigene Regel steht in CFG.wetterEigen und reist mit der Sicherung. Sie
-   besteht aus bis zu vier Bedingungen (alle oder eine davon müssen zutreffen),
+   besteht aus Bedingungen in Fällen (seit v1.77: innerhalb eines Falls „und“,
+   zwischen den Fällen „oder“),
    der Auslösung (Jahreszeit, Häufigkeit, Ruhezeit) und der Aufgabe, die dabei
    entsteht.
 
@@ -8398,14 +8429,31 @@ const groesse = k => WGROESSEN.find(g => g.k === k) || WGROESSEN[0];
 const lageNamen = k => (WLAGEN.find(l => l[0] === k) || WLAGEN[0])[1];
 const lageCodes = k => (WLAGEN.find(l => l[0] === k) || WLAGEN[0])[2];
 let REGELSTAND = Store.get('nwRegelStand', {});
-const eigeneRegeln = () => Array.isArray(CFG.wetterEigen) ? CFG.wetterEigen : (CFG.wetterEigen = []);
+/* Seit v1.77 trägt jede Bedingung ihren Fall (b.fall): innerhalb eines Falls
+   gilt „und“, zwischen den Fällen „oder“. Regeln von vorher hatten nur einen
+   Schalter für alle Bedingungen – „alle“ wird ein Fall, „eine davon“ ein Fall
+   je Bedingung. So bleibt jede Regel bei ihrer Bedeutung, auch aus Sicherungen. */
+function faelleOrdnen(r){
+  if(!r || !Array.isArray(r.bed)) return r;
+  r.bed.forEach((b, i) => { if(!Number.isInteger(b.fall)) b.fall = r.verkn === 'eine' ? i : 0; });
+  delete r.verkn;
+  return r;
+}
+/* Die Fälle einer Regel in ihrer Reihenfolge: [[{b, i}, …], …]. */
+function regelFaelle(r){
+  const je = new Map();
+  (r.bed || []).forEach((b, i) => { const f = Number.isInteger(b.fall) ? b.fall : 0; (je.get(f) || je.set(f, []).get(f)).push({b, i}); });
+  return [...je.keys()].sort((x, y) => x - y).map(f => je.get(f));
+}
+const faelleOk = (r, ergebnisse) => regelFaelle(r).some(fall => fall.every(({i}) => ergebnisse[i].ok));
+const eigeneRegeln = () => (Array.isArray(CFG.wetterEigen) ? CFG.wetterEigen : (CFG.wetterEigen = [])).map(faelleOrdnen);
 const eigeneRegel = id => eigeneRegeln().find(r => r.id === id);
-function bedingungStd(){
+function bedingungStd(fall = 0){
   return {groesse:'tmaxMittel', vgl:'unter', wert:5, lage:'gewitter', stichwort:'',
-          richtung:'zurueck', tage:7, dauer:1};
+          richtung:'zurueck', tage:7, dauer:1, fall};
 }
 function regelStd(titel){
-  return {id:neueId(), eigen:true, aus:false, modus:'sofort', verkn:'alle', bed:[bedingungStd()],
+  return {id:neueId(), eigen:true, aus:false, modus:'sofort', bed:[bedingungStd()],
           saisonVon:1, saisonBis:12, proSaison:0, ruhe:14,
           titel:titel || '', wichtig:'normal', fristArt:'tage', tage:2, profil:''};
 }
@@ -8547,14 +8595,16 @@ function ausloesungOffen(r){
 /* Die ganze Regel. Zurück kommt nichts oder {schluessel, zeit, grund}. */
 function eigenPruefen(r, reihen){
   if(!Array.isArray(r.bed) || !r.bed.length) return null;
+  faelleOrdnen(r);
   const ergebnisse = r.bed.map(b => bedPruefen(b, reihen));
-  const ok = r.verkn === 'eine' ? ergebnisse.some(e => e.ok) : ergebnisse.every(e => e.ok);
-  if(!ok) return null;
-  const treffer = ergebnisse.filter(e => e.ok);
+  /* Grund und Zeitpunkt kommen aus den Fällen, die ganz zutreffen. */
+  const treffer = regelFaelle(r).filter(fall => fall.every(({i}) => ergebnisse[i].ok))
+    .flat().map(({i}) => ergebnisse[i]);
+  if(!treffer.length) return null;
   const zeiten = treffer.map(e => e.zeit).filter(t => t > Date.now());
   return {schluessel:`eigen:${r.id}@${heute()}`,
           zeit:zeiten.length ? Math.min(...zeiten) : Date.now(),
-          grund:treffer.map(e => e.text).join(' · ')};
+          grund:[...new Set(treffer.map(e => e.text))].join(' · ')};
 }
 /* Nach dem Auslösen: Zeitpunkt und Zähler der Saison fortschreiben. */
 function regelStandSetzen(r){
@@ -8588,11 +8638,20 @@ function bedSatz(b){
   if(g.quelle === 'lage') return `${lageNamen(b.lage)} ${fenster} vorkommt${dauer}`;
   return `${g.name} ${fenster} ${b.vgl === 'unter' ? 'unter' : 'ab'} ${mmText(+b.wert)} ${g.einheit} liegt${dauer}`;
 }
+/* Eine Bedingung als Zeile auf der Seite der Regel. */
+function bedKurz(b){
+  const g = groesse(b.groesse);
+  const fenster = `${b.richtung === 'voraus' ? 'nächste' : 'letzte'} ${Math.max(1, Math.round(b.tage) || 1)} Tage`;
+  const dauer = g.dauer && Math.round(b.dauer) > 1
+    ? `, ${Math.round(b.dauer)} ${g.dauer === 'tage' ? 'Tage' : 'Stunden'} in Folge` : '';
+  if(g.quelle === 'warnung') return `Amtliche Warnung${b.stichwort ? ` mit „${b.stichwort}“` : ''}`;
+  if(g.quelle === 'trocken') return `Trocken seit ${b.vgl === 'unter' ? 'weniger als' : 'mindestens'} ${Math.max(0, +b.wert)} Tagen`;
+  if(g.quelle === 'lage') return `${lageNamen(b.lage)}, ${fenster}${dauer}`;
+  return `${g.name} ${b.vgl === 'unter' ? 'unter' : 'ab'} ${mmText(+b.wert)} ${g.einheit}, ${fenster}${dauer}`;
+}
 function regelSatz(r){
-  const teile = (r.bed || []).map(bedSatz);
-  const wenn = teile.length > 1
-    ? `${r.verkn === 'eine' ? 'eine dieser Bedingungen zutrifft' : 'all dies zutrifft'}: ${teile.join('; ')}`
-    : teile[0] || '…';
+  const faelle = regelFaelle(r).map(fall => fall.map(({b}) => bedSatz(b)).join(' und '));
+  const wenn = faelle.length > 1 ? faelle.map(f => `(${f})`).join(' oder ') : faelle[0] || '…';
   const saison = (+r.saisonVon || 1) === 1 && (+r.saisonBis || 12) === 12
     ? '' : `, von ${MONATE_KURZ[(+r.saisonVon || 1) - 1]} bis ${MONATE_KURZ[(+r.saisonBis || 12) - 1]}`;
   const wie = +r.proSaison ? `, höchstens ${+r.proSaison} mal je Saison` : '';
@@ -8608,13 +8667,15 @@ function regelProbe(r){
   if(!wetterDaten()) return 'Noch keine Wetterdaten.';
   const reihen = hinweisReihen();
   const e = (r.bed || []).map(b => bedPruefen(b, reihen));
-  const ok = r.verkn === 'eine' ? e.some(x => x.ok) : e.every(x => x.ok);
-  return `${ok ? 'Trifft gerade zu' : 'Trifft gerade nicht zu'} · ${e.map(x => `${x.ok ? '✓' : '✕'} ${x.text}`).join(' · ')}`;
+  const ok = faelleOk(r, e);
+  /* Die Probe je Bedingung steht seit v1.77 oben an den Bedingungen selbst. */
+  return ok ? 'Trifft gerade zu.' : 'Trifft gerade nicht zu.';
 }
 
 /* ---- Die Seite einer eigenen Regel (v1.56) ---------------------------------
-   Drei Karten – Bedingung, Auslösung, Aufgabe – und darunter die Regel als ein
-   Satz samt Probe gegen die aktuellen Wetterdaten. Eine bestehende Regel
+   Seit v1.77 drei Abschnitte – Wenn (die Fälle), Dann (die Aufgabe), Wie oft
+   (die Auslösung) – und darunter die Regel als ein Satz samt Probe gegen die
+   aktuellen Wetterdaten. Eine bestehende Regel
    speichert jede Änderung sofort; eine neue steht als Entwurf und wird erst mit
    „Regel anlegen“ gespeichert. */
 let regelEntwurf = null;
@@ -8626,7 +8687,7 @@ function bedKarte(b, n, mehr){
      dem Telefon nicht in eine Zeile. */
   const zeile = (titel, inhalt) => `<div class="wgZeile wgPaar"><span>${esc(titel)}</span><span class="wgWerte">${inhalt}</span></div>`;
   const zahl = (feld, wert, nach) => `<input type="number" step="any" data-f="${feld}" value="${esc(wert)}">${nach ? ' ' + esc(nach) : ''}`;
-  return `<div class="card wgKarte" data-bed="${n}">
+  return `<div class="wgKarte bedOffen" data-bed="${n}">
     <div class="wgZeile wgBreit"><span>Größe</span><select data-f="groesse">${
       WGROESSEN.map(x => `<option value="${x.k}"${x.k === g.k ? ' selected' : ''}>${x.name}</option>`).join('')}</select></div>
     ${g.quelle === 'lage' ? `<div class="wgZeile wgBreit"><span>Wetterlage</span><select data-f="lage">${
@@ -8646,19 +8707,59 @@ function bedKarte(b, n, mehr){
     ${mehr ? `<div class="knopfzeile"><button class="btn ghost klein" data-bedweg="${n}">Entfernen</button></div>` : ''}
   </div>`;
 }
+/* Was auf der Seite einer Regel aufgeklappt ist (v1.77): eine Bedingung und die
+   Abschnitte „Dann“ und „Wie oft“. Gilt für die offene Regel und übersteht den
+   Neuaufbau nach jeder Änderung. */
+let regelSicht = {id:'', bed:-1, dann:false, oft:false};
 function setEigenRegel(box, r, neu){
+  faelleOrdnen(r);
+  if(regelSicht.id !== r.id) regelSicht = {id:r.id, bed:neu ? 0 : -1, dann:neu, oft:neu};
   const speichern = () => { if(!neu) saveCfg(); };
   const nochmal = () => setEigenRegel(box, r, neu);
-  const i = info('Bis zu vier Bedingungen. „alle“ heißt: jede muss zutreffen, „eine“ genügt schon einer. Rückwärts reichen die Wetterdaten 30 Tage, vorwärts 10. Die Ruhezeit verhindert, dass ein tagelanger Zustand wie Trockenheit jeden Tag dieselbe Aufgabe erzeugt.', 'margin:-2px 0 10px');
+  const i = info('Die Regel löst aus, wenn einer der Fälle zutrifft; ein Fall trifft zu, wenn alle seine Bedingungen zutreffen. „+ und …“ fügt einem Fall eine Bedingung hinzu, „+ oder …“ einen neuen Fall. Ein Tipp auf eine Bedingung zeigt ihre Werte. ✓ und ✕ sind die Probe gegen die aktuellen Wetterdaten. Rückwärts reichen sie 30 Tage, vorwärts 10. Die Ruhezeit verhindert, dass ein tagelanger Zustand wie Trockenheit jeden Tag dieselbe Aufgabe erzeugt.', 'margin:-2px 0 10px');
   const seg = (feld, wahl) => `<div class="seg">${wahl.map(([w, t]) =>
     `<button type="button" data-seg="${feld}" data-wert="${w}" aria-pressed="${String(r[feld]) === String(w)}">${t}</button>`).join('')}</div>`;
+  /* Die Probe je Bedingung – nur mit Standort und Daten. */
+  const reihen = CFG.wetter && wetterDaten() ? hinweisReihen() : null;
+  const erg = reihen ? r.bed.map(b => bedPruefen(b, reihen)) : null;
+  const faelle = regelFaelle(r), mehr = faelle.length > 1;
+  const zeichen = ok => !erg ? '' : ok ? '<span class="probe ja">✓</span>' : '<span class="probe nein">✕</span>';
+  const fallHtml = (fall, fi) => `<div class="card fallKarte">${
+      mehr ? `<div class="fallKopf"><span class="eyebrow" style="margin:0">Fall ${fi + 1}</span>${
+        erg ? `<span class="small ${fall.every(({i}) => erg[i].ok) ? '' : 'muted'}">${fall.every(({i}) => erg[i].ok) ? 'trifft zu ✓' : 'trifft nicht zu'}</span>` : ''}</div>` : ''}
+    ${fall.map(({b, i: n}, k) => `${k ? '<div class="bedUnd">und</div>' : ''}
+      <button type="button" class="bedZeile" data-bedauf="${n}" aria-expanded="${regelSicht.bed === n}">
+        ${erg ? zeichen(erg[n].ok) : ''}<span class="btext">${esc(bedKurz(b))}${
+          erg ? `<small class="muted" style="display:block;font-size:13px;margin-top:2px">${esc(erg[n].text)}</small>` : ''}</span><span class="pfeil">›</span></button>
+      ${regelSicht.bed === n ? bedKarte(b, n, r.bed.length > 1) : ''}`).join('')}
+    <button class="btn ghost klein" data-und="${fall[0].b.fall}">+ und …</button></div>`;
+  const gesamt = erg ? (faelleOk(r, erg) ? 'trifft gerade zu ✓' : 'trifft gerade nicht zu') : '';
+  const frist = r.fristArt === 'heute' ? 'Termin heute' : r.fristArt === 'vorher' ? 'Termin am Tag vorher'
+    : `Termin in ${Math.max(0, Math.round(r.tage) || 0)} Tagen`;
+  const dann = [r.titel || 'ohne Titel', frist, r.modus === 'sofort' ? 'wird gleich angelegt' : 'wird vorgeschlagen'].join(' · ');
+  const ganz = (+r.saisonVon || 1) === 1 && (+r.saisonBis || 12) === 12;
+  const oft = [r.aus ? 'Regel aus' : '', ganz ? 'ganzjährig' : `${MONATE_KURZ[(+r.saisonVon || 1) - 1]} bis ${MONATE_KURZ[(+r.saisonBis || 12) - 1]}`,
+    +r.proSaison ? `höchstens ${+r.proSaison}× je Saison` : '', `Ruhezeit ${Math.max(0, Math.round(r.ruhe) || 0)} Tage`].filter(Boolean).join(' · ');
   box.innerHTML = `
-    <div class="eyebrow mitInfo" style="margin-top:0">Bedingung ${i.knopf}</div>${i.text}
-    <div class="field segfeld"><span>Es müssen zutreffen</span>${seg('verkn', [['alle', 'alle'], ['eine', 'eine davon']])}</div>
-    ${r.bed.map((b, n) => bedKarte(b, n, r.bed.length > 1)).join('')}
-    ${r.bed.length < 4 ? `<button class="btn ghost klein" id="bedPlus">+ Bedingung</button>` : ''}
+    <div class="eyebrow mitInfo" style="margin-top:0"><span>Wenn${gesamt ? ` <span class="summe">· ${gesamt}</span>` : ''}</span> ${i.knopf}</div>${i.text}
+    ${faelle.map(fallHtml).join('<div class="fallOder">— oder —</div>')}
+    <button class="btn ghost klein" id="oderPlus" style="margin:0 0 6px">+ oder …</button>
 
-    <div class="eyebrow">Auslösung</div>
+    <div class="eyebrow">Dann</div>
+    <details class="angaben" id="regDann"${regelSicht.dann ? ' open' : ''}><summary><span class="zfass">${esc(dann)}</span></summary>
+    <label class="field"><span>Titel</span><input id="regTitel" value="${esc(r.titel || '')}" placeholder="z. B. Junge Bäume wässern"></label>
+    <div class="field segfeld"><span>Wichtigkeit</span>${seg('wichtig', [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']])}</div>
+    <div class="field segfeld"><span>Termin</span>${seg('fristArt', [['tage', 'in x Tagen'], ['heute', 'heute'], ['vorher', 'Tag vorher']])}</div>
+    ${r.fristArt === 'tage' ? `<label class="field"><span>Termin in Tagen</span>
+      <input type="number" step="1" class="schmal" data-r="tage" value="${esc(r.tage)}"></label>` : ''}
+    <label class="field"><span>Wetterprofil</span><select id="regProfil"><option value="">– keines –</option>${
+      WETTER_PROFILE.map(([p, t]) => `<option value="${p}"${r.profil === p ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+    <div class="field segfeld"><span>Wenn die Regel auslöst</span>${seg('modus', [['vorschlag', 'Vorschlagen'], ['sofort', 'Gleich anlegen']])}</div>
+    </details>
+
+    <div class="eyebrow">Wie oft</div>
+    <details class="angaben" id="regOft"${regelSicht.oft ? ' open' : ''}><summary><span class="zfass">${esc(oft)}</span></summary>
+    ${neu ? '' : `<div class="field segfeld"><span>Regel</span>${seg('aus', [[false, 'Ein'], [true, 'Aus']])}</div>`}
     <div class="card wgKarte">
       <div class="wgZeile"><span>Jahreszeit</span><span class="wgWerte">
         <select data-r="saisonVon" class="mon">${MONATS_WAHL(r.saisonVon)}</select> bis
@@ -8668,17 +8769,7 @@ function setEigenRegel(box, r, neu){
       <div class="wgZeile"><span>Ruhezeit</span><span class="wgWerte">
         <input type="number" step="1" data-r="ruhe" value="${esc(r.ruhe)}"> Tage</span></div>
     </div>
-
-    <div class="eyebrow">Aufgabe</div>
-    <label class="field"><span>Titel</span><input id="regTitel" value="${esc(r.titel || '')}" placeholder="z. B. Junge Bäume wässern"></label>
-    <div class="field segfeld"><span>Wichtigkeit</span>${seg('wichtig', [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']])}</div>
-    <div class="field segfeld"><span>Termin</span>${seg('fristArt', [['tage', 'in x Tagen'], ['heute', 'heute'], ['vorher', 'Tag vorher']])}</div>
-    ${r.fristArt === 'tage' ? `<label class="field"><span>Termin in Tagen</span>
-      <input type="number" step="1" class="schmal" data-r="tage" value="${esc(r.tage)}"></label>` : ''}
-    <label class="field"><span>Wetterprofil</span><select id="regProfil"><option value="">– keines –</option>${
-      WETTER_PROFILE.map(([p, t]) => `<option value="${p}"${r.profil === p ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
-    <div class="field segfeld"><span>Wenn die Regel auslöst</span>${seg('modus', [['vorschlag', 'Vorschlagen'], ['sofort', 'Gleich anlegen']])}</div>
-    ${neu ? '' : `<div class="field segfeld"><span>Regel</span>${seg('aus', [[false, 'Ein'], [true, 'Aus']])}</div>`}
+    </details>
 
     <div class="card">
       <div class="eyebrow" style="margin:0 0 6px">So liest sich die Regel</div>
@@ -8687,11 +8778,27 @@ function setEigenRegel(box, r, neu){
     </div>
     ${neu ? `<button class="btn primary" id="regAnlegen">Regel anlegen</button>`
           : `<div class="knopfzeile"><button class="btn danger klein" id="regWeg">Löschen</button></div>`}`;
+  /* Zahlen und Texte bauen die Seite nicht neu auf (die Tastatur bliebe sonst
+     nicht stehen) – Satz, Probe und Zusammenfassungen ziehen erst beim
+     nächsten Aufbau bzw. hier im Satz nach. */
   const auffrischen = () => {
     $('#regSatz').textContent = regelSatz(r);
     $('#regProbe').textContent = regelProbe(r);
   };
   auffrischen();
+  $('#regDann').ontoggle = e => { regelSicht.dann = e.target.open; };
+  $('#regOft').ontoggle = e => { regelSicht.oft = e.target.open; };
+  box.querySelectorAll('[data-bedauf]').forEach(z => z.onclick = () => {
+    const n = +z.dataset.bedauf;
+    regelSicht.bed = regelSicht.bed === n ? -1 : n; nochmal();
+  });
+  box.querySelectorAll('[data-und]').forEach(k => k.onclick = () => {
+    r.bed.push(bedingungStd(+k.dataset.und)); regelSicht.bed = r.bed.length - 1; speichern(); nochmal();
+  });
+  $('#oderPlus').onclick = () => {
+    const f = Math.max(-1, ...r.bed.map(b => b.fall)) + 1;
+    r.bed.push(bedingungStd(f)); regelSicht.bed = r.bed.length - 1; speichern(); nochmal();
+  };
   box.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => {
     const w = b.dataset.wert;
     r[b.dataset.seg] = w === 'true' ? true : w === 'false' ? false : w;
@@ -8715,9 +8822,8 @@ function setEigenRegel(box, r, neu){
       speichern(); auffrischen();
     });
     const weg = karte.querySelector('[data-bedweg]');
-    if(weg) weg.onclick = () => { r.bed.splice(+weg.dataset.bedweg, 1); speichern(); nochmal(); };
+    if(weg) weg.onclick = () => { r.bed.splice(+weg.dataset.bedweg, 1); regelSicht.bed = -1; speichern(); nochmal(); };
   });
-  if($('#bedPlus')) $('#bedPlus').onclick = () => { r.bed.push(bedingungStd()); speichern(); nochmal(); };
   box.querySelectorAll('[data-r]').forEach(f => f.onchange = () => {
     const feld = f.dataset.r;
     if(f.tagName === 'SELECT'){ r[feld] = +f.value; speichern(); auffrischen(); return; }
