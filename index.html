@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.94 24.09.2026  App-Gerüst: die Seite scrollt nicht mehr als Ganzes. Kopf-
+                    und Fußleiste stehen fest, dazwischen scrollt der Inhalt in
+                    einem eigenen Bereich – dort federt iOS original nach, mit
+                    Schwung, und die Kopfleiste bewegt sich nicht mehr: kein
+                    Spalt darüber, nichts verschwindet beim Überdehnen. Alle
+                    Stellen, die sich die Bildlauflage merken oder setzen
+                    (Lagehalten, Rücksprung, erste offene Karte, Suche), gehen
+                    auf den neuen Bereich. Die Höhe folgt dem sichtbaren Teil
+                    des Bildschirms, eine offene Tastatur schiebt die Leiste
+                    nicht weg. Die Verlängerung aus v1.93 ist wieder heraus.
   v1.93 24.09.2026  Zurück zum originalen Nachfedern von iOS: v1.90 bis v1.92
                     (Federn abgeschaltet, eigener Nachbau) sind wieder heraus.
                     Gegen den Spalt über der Kopfleiste hat sie eine schwarze
@@ -1426,25 +1436,25 @@
    Grundrissen; das Verhalten ist dann wieder das von iOS 26. */
 *{overflow-anchor:none}
 html,body{margin:0;padding:0}
-
+/* App-Gerüst (v1.94): die Seite selbst scrollt nicht. Kopfleiste oben und
+   Fußleiste unten stehen fest, dazwischen scrollt #bild – dort federt iOS
+   original nach, die Kopfleiste bewegt sich dabei nicht mehr. Die Höhe folgt
+   dem sichtbaren Bereich (--app-h), damit die Tastatur nichts verschiebt. */
+html,body{height:100%;overflow:hidden}
+#bild{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;display:flex;flex-direction:column}
 body{
   font-family:var(--f-body);color:var(--ink);background:var(--enclosure);
   font-size:16px;line-height:1.45;
-  padding-bottom:env(safe-area-inset-bottom);
   -webkit-text-size-adjust:100%;
 }
-.app{min-height:100vh;display:flex;flex-direction:column}
+.app{position:relative;height:100vh;height:var(--app-h, 100dvh);display:flex;flex-direction:column;overflow:hidden}
 
 header{
   position:sticky;top:0;z-index:40;background:var(--bar);color:#fff;
   display:flex;align-items:center;gap:10px;
   padding:calc(env(safe-area-inset-top) + 10px) var(--pad) 10px;
 }
-/* Beim Herunterziehen federt iOS die ganze Seite nach; über der Kopfleiste
-   ging dann ein heller Spalt auf. Eine schwarze Verlängerung nach oben füllt
-   ihn: sie liegt über dem Seitenanfang und wird erst beim Nachfedern sichtbar –
-   die Leiste scheint sich zu strecken (v1.93). */
-header::before{content:'';position:absolute;left:0;right:0;bottom:100%;height:100vh;background:var(--bar);pointer-events:none}
 header h1{
   flex:1;margin:0;text-align:center;font-family:var(--f-label);
   font-size:21px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
@@ -1475,9 +1485,9 @@ header .kopfKnopf.unsichtbar{visibility:hidden}
 header .kopfKnopf[hidden]{display:none}
 /* In der Grundrissansicht reicht der Plan bis an den unteren Rand – das untere
    Polster würde sonst als heller Streifen darunter stehenbleiben. */
-body.planAn{padding-bottom:0}
+body.planAn main{padding-bottom:0}
 
-main{flex:1;padding:16px var(--pad) 0;width:100%;max-width:var(--col);margin:0 auto}
+main{flex:1 0 auto;padding:16px var(--pad) calc(16px + max(env(safe-area-inset-bottom), var(--leiste-h, 0px)));width:100%;max-width:var(--col);margin:0 auto}
 .view{display:none}
 .view.active{display:block}
 
@@ -1764,8 +1774,10 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
   line-height:1.35;resize:none;overflow:hidden}
 
 .actionbar{
-  position:sticky;bottom:0;z-index:30;margin-top:auto;
-  padding:22px var(--pad) 26px;
+  /* Liegt über dem unteren Rand von #bild, der Inhalt läuft weich darunter;
+     #bild hält unten so viel Platz frei (--leiste-h), wie die Leiste hoch ist. */
+  position:absolute;left:0;right:0;bottom:0;z-index:30;
+  padding:22px var(--pad) calc(18px + env(safe-area-inset-bottom));
   background:linear-gradient(180deg,transparent 0%,var(--enclosure) 30%);
 }
 .actionbar[hidden]{display:none}
@@ -2340,6 +2352,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
     <button class="kopfKnopf" id="btnNeuLaden" aria-label="Neu vom Server laden" hidden></button>
   </header>
 
+  <div id="bild">
   <main>
     <!-- Startseite -->
     <section class="view active" id="view-home">
@@ -2518,6 +2531,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       </div>
     </section>
   </main>
+  </div>
 
   <div class="actionbar" id="bar"><div class="inner" id="barInner"></div></div>
 </div>
@@ -2556,7 +2570,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.93';
+const VERSION = 'v1.94';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3677,7 +3691,7 @@ function go(name, push = true){
   /* Auf großen Schirmen dürfen Grundriss und Bogen aus der Textspalte heraus –
      welche Ansicht offen ist, sagt der Körper dem Stilblatt. */
   document.body.classList.toggle('blattAn', name === 'blatt');
-  window.scrollTo(0, 0);
+  bildNach(0);
   if(name === 'home')     renderHome();
   if(name === 'alle')     renderAlle();
   if(name === 'aufgabe')  renderAufgabe();
@@ -3708,6 +3722,26 @@ function zurueck(){
   if(p) go(p, false);
 }
 $('#btnBack').onclick = zurueck;
+/* Höhe des Gerüsts = sichtbarer Bereich (v1.94). Geht die Tastatur auf, wird
+   #bild kürzer, statt dass iOS die ganze Seite samt Kopfleiste hochschiebt;
+   das Feld mit dem Cursor bleibt im Bild. */
+(function hoeheBinden(){
+  const vv = window.visualViewport;
+  const setzen = () => {
+    const h = vv ? vv.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
+    if(window.scrollY) window.scrollTo(0, 0);
+    const f = document.activeElement;
+    if(f && f !== document.body && bild().contains(f) && /INPUT|TEXTAREA|SELECT/.test(f.tagName)){
+      const r = f.getBoundingClientRect(), b = bild().getBoundingClientRect();
+      if(r.bottom > b.bottom - 8) bildNach(bildY() + r.bottom - b.bottom + 24);
+      else if(r.top < b.top + 8) bildNach(bildY() - (b.top - r.top) - 24);
+    }
+  };
+  if(vv){ vv.addEventListener('resize', setzen); vv.addEventListener('scroll', () => { if(window.scrollY) window.scrollTo(0, 0); }); }
+  window.addEventListener('resize', setzen);
+  setzen();
+})();
 /* Kommt die App aus dem Hintergrund zurück, kann ein neuer Tag begonnen haben –
    Fristen und Gruppen der Liste rechnen dann neu. */
 document.addEventListener('visibilitychange', () => {
@@ -3807,11 +3841,16 @@ function kastenFenster(titel, eintraege, aufFertig){
    ganze Liste und muss nach jedem Schritt nachscrollen. Dasselbe Muster wie beim
    Plus und Minus in der Materialliste des E-Assistenten: Lage merken, umbauen,
    Bildlaufposition absolut wiederherstellen. */
+/* Bildlauf im App-Gerüst (v1.94): gescrollt wird #bild, nicht die Seite. */
+const bild = () => document.getElementById('bild');
+const bildY = () => bild().scrollTop;
+const bildNach = y => { bild().scrollTop = Math.max(0, Math.round(y)); };
+/* Lage eines Elements im Bildlaufbereich (statt im Dokument). */
+const imBild = el => el.getBoundingClientRect().top - bild().getBoundingClientRect().top + bild().scrollTop;
 function lageHalten(vorherTop, wiederfinden){
   const el = wiederfinden();
   if(!el || vorherTop == null) return;
-  const imDokument = el.getBoundingClientRect().top + window.scrollY;
-  window.scrollTo(0, Math.max(0, Math.round(imDokument - vorherTop)));
+  bildNach(imBild(el) - (vorherTop - bild().getBoundingClientRect().top));
 }
 
 /* --- Vorschlagskacheln an der Bemerkung (v1.59) ---------------------------
@@ -3882,13 +3921,13 @@ let sprungOffen = false, listenLage = null;
 function lageZurueck(){
   if(listenLage == null) return;
   const y = listenLage; listenLage = null;
-  window.scrollTo(0, y);
+  bildNach(y);
 }
 function listenSprung(istOffen){
   if(listenLage != null){
     const y = listenLage;
     listenLage = null; sprungOffen = false;
-    window.scrollTo(0, y);
+    bildNach(y);
     return;
   }
   if(!sprungOffen) return;
@@ -3897,9 +3936,7 @@ function listenSprung(istOffen){
   let i = -1;
   for(let n = 0; n < karten.length; n++) if(istOffen(n)){ i = n; break; }
   if(i <= 0) return;                    // gleich die erste ist offen, oder alles erledigt
-  const kopf = $('header') ? $('header').getBoundingClientRect().height : 0;
-  const oben = karten[i - 1].getBoundingClientRect().top + window.scrollY;
-  window.scrollTo(0, Math.max(0, Math.round(oben - kopf - 8)));
+  bildNach(imBild(karten[i - 1]) - 8);
 }
 
 let toastTimer = null;
@@ -4590,7 +4627,7 @@ function renderRundgang(){
       'Der Weg entsteht neu aus den Reihenfolgen der Nachweise und den Marken im Grundriss.\n\nWas du mit den Pfeilen verschoben hast, geht dabei verloren. Erfasste Ergebnisse bleiben erhalten.',
       'Neu bilden', () => {
         CFG.weg = []; saveCfg();
-        renderRundgang(); window.scrollTo(0, 0);
+        renderRundgang(); bildNach(0);
         toast('Weg neu gebildet');
       });
 
@@ -4717,9 +4754,7 @@ function renderRundgang(){
   rgSprung = false;
   const karten = $$('#rgListe .pos'), i = fertig.length;
   if(i <= 0 || i >= karten.length) return;
-  const kopfH = $('header') ? $('header').getBoundingClientRect().height : 0;
-  const obenY = karten[i - 1].getBoundingClientRect().top + window.scrollY;
-  window.scrollTo(0, Math.max(0, Math.round(obenY - kopfH - 8)));
+  bildNach(imBild(karten[i - 1]) - 8);
 }
 
 /* ---------- Eine Aufgabe ----------------------------------------------------
@@ -7206,7 +7241,8 @@ function renderSprinkler(){
     const neu = $(`#nwListe .pos[data-art="${art}"][data-g="${d[art].length - 1}"]`);
     if(neu){
       const r = neu.getBoundingClientRect();
-      if(r.top > window.innerHeight - 220) window.scrollBy(0, r.top - 120);
+      const b = bild().getBoundingClientRect();
+      if(r.top > b.bottom - 220) bildNach(bildY() + r.top - b.top - 60);
     }
   });
   /* Eine Karte bleibt beim Auf- und Zuklappen an ihrem Platz auf dem Schirm. */
@@ -7270,7 +7306,7 @@ function renderSprinkler(){
   /* Kommt der Aufruf vom monatlichen Eintrag der Startseite, gleich dorthin. */
   if(sprungZiel === 'mon'){
     const ziel = $('#ab-mon');
-    if(ziel) window.scrollTo(0, Math.max(0, ziel.offsetTop - 70));
+    if(ziel) bildNach(imBild(ziel) - 12);
   }
   sprungZiel = '';
 }
@@ -10295,8 +10331,8 @@ function planHoehe(){
      senkrechte steht daneben und nimmt sich die Höhe des Plans. */
   const rg = $('#planRegler');
   const unten = rg && !rg.hidden && !reglerSenk() && !$('.planBuehne.schwebt') ? rg.offsetHeight : 0;
-  const oben = wrap.getBoundingClientRect().top + window.scrollY;
-  const hoch = Math.max(200, Math.floor(window.innerHeight - oben - unten));
+  const oben = wrap.getBoundingClientRect().top - bild().getBoundingClientRect().top + bildY();
+  const hoch = Math.max(200, Math.floor(bild().clientHeight - oben - unten));
   wrap.style.height = hoch + 'px';
   reglerDichte();
   planZoomAnwenden();
@@ -11829,7 +11865,7 @@ async function verorten(key, titel){
            : (liste.find(p => etagenVon(key).includes(p.id)) || liste[0]).id;
   /* Erst hier merken, nicht schon beim Antippen: gibt es keinen Plan, bleibt
      die Liste stehen und dürfte beim nächsten Aufbau nicht springen. */
-  listenLage = window.scrollY;
+  listenLage = bildY();
   /* Der Weg kann aus einer Unterseite der Einstellungen kommen. zurueck() holt
      für ein 'setsub' immer einen Zustand vom setStack – also muss hier einer
      hinterlegt werden, sonst fischt der Pfeil den Eintrag einer anderen Seite
@@ -12073,6 +12109,8 @@ $('#cfgFile').onchange = e => {
 function renderBar(){
   barInhalt();
   $('#bar').hidden = !$('#barInner').innerHTML;
+  /* Platz für die Leiste unten im Bildlaufbereich (v1.94). */
+  document.documentElement.style.setProperty('--leiste-h', $('#bar').hidden ? '0px' : $('#bar').offsetHeight + 'px');
 }
 function barInhalt(){
   const b = $('#barInner');
@@ -12966,7 +13004,7 @@ function rundeZurueckholen(e){
    Eine eigene Ansicht mit Zurück-Pfeil. Die Liste, aus der man kommt, merkt sich
    ihre Lage wie beim Verorten und steht beim Zurückkommen wieder an der Stelle. */
 function verlaufOeffnen(k, id, titel, vorn){
-  listenLage = window.scrollY;
+  listenLage = bildY();
   verlaufZiel = {k, id, titel, vorn:vorn || ''};
   go('verlauf');
 }
@@ -13465,8 +13503,7 @@ function zurKarte(o){
   }
   const el = i >= 0 ? $(`#nwListe .pos[data-i="${i}"]`) : null;
   if(!el) return;
-  const kopf = $('header') ? $('header').getBoundingClientRect().height : 0;
-  window.scrollTo(0, Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY - kopf - 12)));
+  bildNach(imBild(el) - 12);
   el.classList.add('gesucht');
   setTimeout(() => el.classList.remove('gesucht'), 1800);
 }
