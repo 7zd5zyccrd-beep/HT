@@ -7,9 +7,26 @@
   Feststellanlagen folgen demselben Muster: eine Liste von Anlagen, je Anlage
   Datum, Zustand und Bemerkung, am Ende die Checkliste und die Unterschrift.
   Sprinkler/Feuerlöschanlage ist anders gebaut (Punkte abhaken, Werte eintragen,
-  wöchentlich und monatlich) und folgt später.
+  wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.73 24.09.2026  Begriffe und Beschriftungen vereinheitlicht. Ein Wort
+                    je Sache: „Werkzeug“ und „Material“
+                    statt Utensilien, Mitnehmen und Erfahrung; die Karte an der
+                    Aufgabe heißt „Dauer, Werkzeug und Material“, bei
+                    einmaligen Aufgaben „Werkzeug und Material“, ihr Knopf
+                    „Eintragen“ bzw. „Bearbeiten“; auf der Tätigkeit „Alles
+                    löschen“. Neue Aufgabe: „Wetterregel“ und „Wetterprofil“
+                    statt zweimal „Wetter“. Menü und Kopfzeile gleich:
+                    „Arbeitszeit“, „Sicherung“, „Erledigt“. Überall
+                    „+ … hinzufügen“, auch „+ Regel hinzufügen“ in den
+                    Wetterregeln. „Blatt ansehen“ des Arbeitsnachweises in der
+                    Fußleiste. Die Liste der Tätigkeiten zeigt Werkzeug und
+                    Material mit. Im Wochenplan stehen leere Tage am Stück in
+                    einer Zeile. Einheiten in Einzahl und Mehrzahl („1 Rolle“,
+                    „3 Rollen“). Fremdprüfung und Akkutausch sagen unter „Alle
+                    Nachweise“ wie in der Aufgabenliste „ohne Prüfdatum“ bzw.
+                    „überfällig“.
   v1.72 24.09.2026  Drei Sicherungen nach einer Durchsicht des Codes, an der
                     Bedienung ändert sich nichts. pdf.js läuft beim Öffnen von
                     PDFs ohne eval (isEvalSupported:false) – die Abhilfe gegen
@@ -2304,7 +2321,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.72';
+const VERSION = 'v1.73';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3373,7 +3390,7 @@ function ring(n, takt){
 }
 
 /* ---------- Ansichten ---------- */
-const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigte Aufgaben', nachweis:'Nachweis', blatt:'Blatt',
+const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigt', nachweis:'Nachweis', blatt:'Blatt',
                historie:'Historie', histnw:'Historie', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregeln:'Wetterregeln', wregel:'Regel',
@@ -3677,8 +3694,8 @@ function homeStand(n){
       const l = stellen(), fertig = l.filter(z => String(d.stand[z.key] ?? '').trim() !== '').length;
       if(fertig) stand = medienVoll(d) ? ' · vollständig' : ` · ${fertig} von ${l.length} abgelesen`;
     }else if(n.art === 'fremd'){
-      const fr = fristen(n.k), faellig = fr.filter(f => f.offen || f.faellig).length;
-      if(faellig)        stand = ` · ${faellig} von ${fr.length} fällig`;
+      const fr = fristen(n.k), grund = fristGrund(fr, 'Prüfdatum');
+      if(grund)          stand = ' · ' + grund;
       else if(fr.length) stand = ` · nächste Prüfung ${
         monatKurz(fr.slice().sort((a, b) => a.tage - b.tage)[0].ziel)}`;
     }else if(d && n.art === 'sprinkler'){
@@ -3728,11 +3745,18 @@ function akkuRing(){
   if(fr.some(f => f.offen || f.faellig)) return 'rot';
   return fr.some(f => f.tage <= VORWARN) ? 'gelb' : 'gruen';
 }
+/* Fremdprüfung und Akkutausch: dieselbe Lage heißt überall gleich (v1.73) –
+   in der Aufgabenliste wie unter „Alle Nachweise“. Objekte ohne Datum gehen
+   vor, dann Überfälliges; sonst leer. */
+function fristGrund(fr, wort){
+  const ohne = fr.filter(f => f.offen).length, ueber = fr.filter(f => !f.offen && f.faellig).length;
+  return ohne ? `${ohne} von ${fr.length} ohne ${wort}` : ueber ? `${ueber} von ${fr.length} überfällig` : '';
+}
 function akkuStand(){
   const alle = teilCfg('rwa').anlagen.length, fr = akkuFristen();
   if(!fr.length) return alle ? ' · kein Akkutyp gewählt' : '';
-  const faellig = fr.filter(f => f.offen || f.faellig).length;
-  if(faellig) return ` · ${faellig} von ${alle} fällig`;
+  const grund = fristGrund(fr, 'Tauschdatum');
+  if(grund) return ' · ' + grund;
   return ` · nächster Tausch ${monatKurz(fr.slice().sort((a, b) => a.tage - b.tage)[0].ziel)}`;
 }
 /* Kein Eintrag, kein Knopf – dieselbe Regel wie bei den Grundrissen. Wer alle
@@ -3801,9 +3825,7 @@ function aufgaben(){
     const faellig = mit.filter(f => f.faellig).length;
     const bald    = mit.filter(f => f.tage <= VORWARN).length;
     if(!ohne && !bald) return;
-    const grund = ohne ? `${ohne} von ${fr.length} ohne ${wort}`
-                : faellig ? `${faellig} von ${fr.length} überfällig`
-                :           `${bald} von ${fr.length} fällig`;
+    const grund = fristGrund(fr, wort) || `${bald} von ${fr.length} fällig`;
     neu(n, {titel, ring:rg, akku,
       faellig: ohne ? null : alsDatum(mit[0].ziel),
       stand:[grund, vorbZusatz(akku ? 'akku' : n.k)].filter(Boolean).join(' · ')});
@@ -4079,7 +4101,7 @@ function renderHome(){
     + (CFG.wetter ? `<button class="btn eintrag" data-wregeln="1"><span>Wetterregeln</span><span class="zahl">${regelnAn}</span></button>` : '')
     + (taetL.length ? `<button class="btn eintrag" data-taeten="1"><span>Tätigkeiten</span><span class="zahl">${taetMit}</span></button>` : '')
     + `<button class="btn eintrag" data-arbeit="1"><span>Arbeitsnachweis</span></button>`
-    + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigte Aufgaben</span><span class="zahl">${erledigt}</span></button>` : '')
+    + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigt</span><span class="zahl">${erledigt}</span></button>` : '')
     + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span><span class="zahl" id="homeWetterStand"></span></button>` : '');
   $('#homeListe').innerHTML = `<button class="btn ghost klein" data-neuaufg="1" style="margin:0 0 12px">+ Aufgabe hinzufügen</button>`
     + warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
@@ -4544,7 +4566,7 @@ function renderAufgabe(){
   /* Wiederholung und Vorbereitung gibt es nur bei eigenen Aufgaben. */
   const w = a.wdh || null, v = a.vorb || {text:'', wochen:4};
   const planung = mangel ? '' : `
-    <label class="field"><span>Wetter</span>
+    <label class="field"><span>Wetterprofil</span>
       <select id="aufgWetter"><option value="">– nicht wetterabhängig –</option>${
         WETTER_PROFILE.map(([k, t]) => `<option value="${k}"${a.wetter === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
     <label class="field"><span>Wiederholen</span>
@@ -4584,13 +4606,13 @@ function renderAufgabe(){
   const erfA = tKeyA ? erfDetailHtml(tKeyA) : '';
   /* Seit v1.70 auch ohne Erfahrungswerte: sonst ließe sich Material für eine
      neue wiederkehrende Aufgabe nur über Übersicht › Tätigkeiten eintragen. */
-  const erfKarte = tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erfahrung</div>${
-      erfA || '<p class="muted small" style="margin:0">Noch nichts eingetragen – weder Dauer noch Utensilien oder Material.</p>'}
-      <button class="btn ghost klein" id="aufgTaet" style="margin-top:10px">${erfA ? 'Bearbeiten' : 'Utensilien und Material'}</button></div>` : '';
+  const erfKarte = tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Dauer, Werkzeug und Material</div>${
+      erfA || '<p class="muted small" style="margin:0">Noch nichts eingetragen.</p>'}
+      <button class="btn ghost klein" id="aufgTaet" style="margin-top:10px">${erfA ? 'Bearbeiten' : 'Eintragen'}</button></div>` : '';
   /* Einmalige Aufgaben und Mängel (v1.71): dieselbe Karte, nur ohne Dauer –
      die Listen liegen an der Aufgabe, bearbeitet wird im Fenster. */
   const eigenA = !neu && !a.erledigt && !tKeyA ? eigenText(a, true) : '';
-  const eigenKarte = !neu && !a.erledigt && !tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Utensilien und Material</div>${
+  const eigenKarte = !neu && !a.erledigt && !tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Werkzeug und Material</div>${
       eigenA || '<p class="muted small" style="margin:0">Noch nichts eingetragen.</p>'}
       <button class="btn ghost klein" id="aufgEigen" style="margin-top:10px">${eigenA ? 'Bearbeiten' : 'Eintragen'}</button></div>` : '';
   let erlDauer = null;
@@ -4613,7 +4635,7 @@ function renderAufgabe(){
     : `<div class="field segfeld terminFeld"><div class="seg">
          <button type="button" data-tart="termin" aria-pressed="${!zr}">Termin</button>
          <button type="button" data-tart="zeitraum" aria-pressed="${zr}">Zeitraum</button>
-         ${a.entwurf ? '<button type="button" data-tart="wetter" aria-pressed="false">Wetter</button>' : ''}
+         ${a.entwurf ? '<button type="button" data-tart="wetter" aria-pressed="false">Wetterregel</button>' : ''}
        </div>${zr
          ? `<label class="abwZeile"><span>von</span><input type="date" class="dat" id="aufgVon" value="${esc(a.von)}"></label>
             <label class="abwZeile"><span>bis</span><input type="date" class="dat" id="aufgFrist" value="${esc(a.frist)}"></label>`
@@ -4745,7 +4767,7 @@ function renderAufgabe(){
   if($('#erlDauer')) dauerWahl($('#erlDauer'), null, true, w => { erlDauer = w; });
   if($('#aufgTaet')) $('#aufgTaet').onclick = () => { taetAktiv = {key:tKeyA, name:a.titel || 'Aufgabe'}; go('taet'); };
   if($('#aufgEigen')) $('#aufgEigen').onclick = () => {
-    frage('Utensilien und Material', '', 'Speichern', () => {
+    frage('Werkzeug und Material', '', 'Speichern', () => {
       ut.uebernehmen(a, true);
       if(!a.utensilien.length) delete a.utensilien;
       if(!a.material.length) delete a.material;
@@ -4902,7 +4924,23 @@ function dauerWahl(box, start, leer, bei){
 const mengeOk = x => { const v = zahl(x); return v != null && v > 0 ? v : 1; };
 const mengeText = v => String(Math.round(v * 1000) / 1000).replace('.', ',');
 const einheitVon = name => ((TAET.material.find(m => klein(m.name) === klein(name)) || {}).einheit) || 'Stück';
-const matText = (name, menge) => `${name} (${mengeText(mengeOk(menge))} ${einheitVon(name)})`;
+/* Einzahl und Mehrzahl gängiger Einheiten (v1.73): aus „1 Rollen“ wird „1 Rolle“,
+   aus „3 Rolle“ „3 Rollen“ – gleich, in welcher Form die Einheit eingetippt
+   wurde. Unbekannte Einheiten und Kürzel (kg, l, m) bleiben, wie sie sind. */
+const EINHEIT_FORMEN = [['Stück', 'Stück'], ['Rolle', 'Rollen'], ['Packung', 'Packungen'], ['Pack', 'Pack'],
+  ['Dose', 'Dosen'], ['Flasche', 'Flaschen'], ['Tube', 'Tuben'], ['Kartusche', 'Kartuschen'],
+  ['Sack', 'Säcke'], ['Karton', 'Kartons'], ['Schachtel', 'Schachteln'], ['Box', 'Boxen'],
+  ['Tüte', 'Tüten'], ['Beutel', 'Beutel'], ['Eimer', 'Eimer'], ['Kanister', 'Kanister'],
+  ['Glas', 'Gläser'], ['Set', 'Sets'], ['Satz', 'Sätze'], ['Paar', 'Paar'], ['Bund', 'Bund'],
+  ['Blatt', 'Blatt'], ['Liter', 'Liter'], ['Meter', 'Meter'], ['Palette', 'Paletten']];
+function einheitFuer(einheit, menge){
+  const f = EINHEIT_FORMEN.find(p => p.some(x => klein(x) === klein(String(einheit))));
+  return f ? f[Math.round(menge * 1000) === 1000 ? 0 : 1] : einheit;
+}
+const matText = (name, menge) => {
+  const v = mengeOk(menge);
+  return `${name} (${mengeText(v)} ${einheitFuer(einheitVon(name), v)})`;
+};
 /* Wird eine einmalige Aufgabe wiederkehrend, ziehen ihre Utensilien und ihr
    Material in die Tätigkeit um (sofern die noch keine hat); im umgekehrten Fall
    bekommt die Aufgabe eine Abschrift – die Tätigkeit bleibt, andere Termine
@@ -5097,7 +5135,7 @@ function taetFragen(o){
   const box = $('#dlgListe');
   box.hidden = false;
   box.innerHTML = `<div class="eyebrow" style="margin:14px 0 8px">Dauer</div><div id="taetDauer"></div>
-    <div class="eyebrow" style="margin:16px 0 8px">Utensilien</div><div id="taetUt"></div>
+    <div class="eyebrow" style="margin:16px 0 8px">Werkzeug und Material</div><div id="taetUt"></div>
     <label class="haken" style="margin:16px 0 0"><input type="checkbox" id="taetWieder" checked>
       <span>Beim nächsten Mal wieder fragen</span></label>`;
   wert = dauerWahl($('#taetDauer'), wert, false, w => { wert = w; }) || wert;
@@ -5146,7 +5184,7 @@ function erfText(keys, voll){
   const teile = [];
   if(n) teile.push('≈ ' + dauerText(alsStufe(min)));
   if(voll){
-    if(ut.length) teile.push('Mitnehmen: ' + ut.join(', '));
+    if(ut.length) teile.push('Werkzeug: ' + ut.join(', '));
     if(mat.size) teile.push('Material: ' + [...mat].map(([name, x]) => matText(name, x)).join(', '));
   }else{
     const alle = ut.concat([...mat.keys()]);
@@ -5162,7 +5200,7 @@ function eigenText(a, voll){
     const alle = ut.concat(mt.map(m => m.name));
     return alle.length > 3 ? alle.slice(0, 3).join(', ') + ` +${alle.length - 3}` : alle.join(', ');
   }
-  return (ut.length ? `<p style="margin:0">Mitnehmen: ${esc(ut.join(', '))}</p>` : '')
+  return (ut.length ? `<p style="margin:0">Werkzeug: ${esc(ut.join(', '))}</p>` : '')
     + (mt.length ? `<p style="margin:${ut.length ? '6px' : '0'} 0 0">Material: ${esc(mt.map(m => matText(m.name, m.menge)).join(', '))}</p>` : '');
 }
 function erfFuerEintrag(a){
@@ -5194,17 +5232,20 @@ function erfDetailHtml(key){
   const s = taetSchnitt(key), n = Math.min(10, (e.dauern || []).length), ut = e.utensilien || [];
   const mt = (e.material || []).filter(m => m && m.name);
   return (s ? `<p style="margin:0">≈ ${esc(dauerText(s))}<span class="muted small"> · Durchschnitt aus ${n} ${n === 1 ? 'Angabe' : 'Angaben'}</span></p>` : '')
-    + (ut.length ? `<p style="margin:${s ? '6px' : '0'} 0 0">Mitnehmen: ${esc(ut.join(', '))}</p>` : '')
+    + (ut.length ? `<p style="margin:${s ? '6px' : '0'} 0 0">Werkzeug: ${esc(ut.join(', '))}</p>` : '')
     + (mt.length ? `<p style="margin:${s || ut.length ? '6px' : '0'} 0 0">Material: ${esc(mt.map(m => matText(m.name, m.menge)).join(', '))}</p>` : '');
 }
 function renderTaeten(){
   const box = $('#taetenBox');
   if(!box) return;
-  const i = info('Nach jeder wiederkehrenden Tätigkeit fragt die App nach Dauer und Utensilien, solange „Beim nächsten Mal wieder fragen“ angehakt ist. Der Durchschnitt nimmt die letzten zehn Angaben. Werkzeug und Verbrauchsmaterial gelten für alle Tätigkeiten; mit „→ Material“ bzw. „→ Werkzeug“ wechselt ein Eintrag die Liste, auch in allen Tätigkeiten.', 'margin:-2px 0 10px');
+  const i = info('Nach jeder wiederkehrenden Tätigkeit fragt die App nach Dauer, Werkzeug und Material, solange „Beim nächsten Mal wieder fragen“ angehakt ist. Der Durchschnitt nimmt die letzten zehn Angaben. Werkzeug und Verbrauchsmaterial gelten für alle Tätigkeiten; mit „→ Material“ bzw. „→ Werkzeug“ wechselt ein Eintrag die Liste, auch in allen Tätigkeiten.', 'margin:-2px 0 10px');
   const liste = taetKandidaten();
   const zusatz = t => {
     const e = TAET.t[t.key], n = ((e && e.dauern) || []).length, s = taetSchnitt(t.key);
+    /* Werkzeug und Material in der Kurzform der Aufgabenliste (v1.73). */
+    const dinge = ((e && e.utensilien) || []).concat(((e && e.material) || []).filter(m => m && m.name).map(m => m.name));
     return [s ? '≈ ' + dauerText(s) : 'noch keine Dauer', n ? `${n} ${n === 1 ? 'Angabe' : 'Angaben'}` : '',
+            dinge.length > 3 ? dinge.slice(0, 3).join(', ') + ` +${dinge.length - 3}` : dinge.join(', '),
             e && e.fragen === false ? 'fragt nicht mehr' : ''].filter(Boolean).join(' · ');
   };
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Tätigkeiten ${i.knopf}</div>${i.text}`
@@ -5352,21 +5393,21 @@ function renderTaet(){
         n ? `<span class="muted small"> · aus ${Math.min(n, 10)} ${Math.min(n, 10) === 1 ? 'Angabe' : 'Angaben'}${n > 10 ? `, ${n} erfasst` : ''}</span>` : ''}</p></div>
     <label class="haken" style="margin:4px 0 6px"><input type="checkbox" id="taetFragenHaken"${!e || e.fragen !== false ? ' checked' : ''}>
       <span>Beim nächsten Mal wieder fragen</span></label>
-    <div class="eyebrow">Utensilien</div><div id="taetUtSeite"></div>
+    <div class="eyebrow">Werkzeug und Material</div><div id="taetUtSeite"></div>
     <div class="eyebrow">Erfasste Dauern</div>
-    <button class="btn ghost klein" id="taetPlus" style="margin:0 0 10px">+ Dauer nachtragen</button>
+    <button class="btn ghost klein" id="taetPlus" style="margin:0 0 10px">+ Dauer hinzufügen</button>
     ${n ? dauern.map(({d, i}) => `<div class="zeile taetDauer" data-i="${i}">
         <span class="etext">${esc(dText(d.datum))} · <b>${esc(dauerText(d))}</b></span>
         <button class="btn ghost klein" data-aendern="1">Ändern</button>
         <button class="btn danger klein" data-weg="1">Löschen</button></div>`).join('')
        : '<p class="muted small">Noch keine.</p>'}
-    ${e ? `<div class="knopfzeile"><button class="btn danger klein" id="taetZurueck">Erfahrungswerte löschen</button></div>` : ''}`;
+    ${e ? `<div class="knopfzeile"><button class="btn danger klein" id="taetZurueck">Alles löschen</button></div>` : ''}`;
   $('#taetFragenHaken').onchange = ev => { holen().fragen = ev.target.checked; saveTaet(); };
   const ut = utensilWahl($('#taetUtSeite'), e ? e.utensilien : [], () => {
     ut.uebernehmen(holen(), false); saveTaet();
   }, e ? e.material : []);
-  $('#taetPlus').onclick = () => dauerFenster('Dauer nachtragen', taetSchnitt(key) || {m:30}, heute(), (w, datum) => {
-    holen().dauern.push(Object.assign({datum}, w)); saveTaet(); renderTaet(); toast('Nachgetragen');
+  $('#taetPlus').onclick = () => dauerFenster('Dauer hinzufügen', taetSchnitt(key) || {m:30}, heute(), (w, datum) => {
+    holen().dauern.push(Object.assign({datum}, w)); saveTaet(); renderTaet(); toast('Hinzugefügt');
   });
   box.querySelectorAll('.taetDauer').forEach(r => {
     const i = +r.dataset.i, d = TAET.t[key].dauern[i];
@@ -5379,8 +5420,8 @@ function renderTaet(){
         TAET.t[key].dauern.splice(i, 1); saveTaet(); renderTaet(); toast('Gelöscht');
       });
   });
-  if($('#taetZurueck')) $('#taetZurueck').onclick = () => frage('Erfahrungswerte löschen',
-    `Dauern, Utensilien und „wieder fragen“ von „${name}“ werden gelöscht. Beim nächsten Mal fragt die App wieder.`,
+  if($('#taetZurueck')) $('#taetZurueck').onclick = () => frage('Alles löschen',
+    `Dauern, Werkzeug, Material und „wieder fragen“ von „${name}“ werden gelöscht. Beim nächsten Mal fragt die App wieder.`,
     'Löschen', () => { delete TAET.t[key]; saveTaet(); renderTaet(); toast('Gelöscht'); });
 }
 /* --- Verbrauchsmaterial bereitlegen (v1.69, Etappe 2) ------------------------
@@ -5543,7 +5584,7 @@ function matAbhaken(posten, name, nachher){
   });
 }
 const matZeile = (i, name, menge, unten) => `<label class="haken matPosten"><input type="checkbox" data-p="${i}">
-    <span class="etext"><b>${esc(name)}</b> · ${esc(mengeText(menge))} ${esc(einheitVon(name))}${
+    <span class="etext"><b>${esc(name)}</b> · ${esc(mengeText(menge))} ${esc(einheitFuer(einheitVon(name), menge))}${
       unten ? `<small>${esc(unten)}</small>` : ''}</span></label>`;
 /* Startseite: je Material zusammengezählt, das Dringendste zuerst; darunter
    klein, wofür. Ein Haken deckt alle Anlässe der Zeile. */
@@ -5765,15 +5806,27 @@ function renderWochenplan(){
   const box = $('#wplanBox');
   if(!box) return;
   const {tage, uebrig} = wochenplanRechnen();
-  const i = info('Ein Vorschlag, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Wetteraufgaben auf gute Halbtage. Die Dauer kommt aus den Erfahrungswerten, ohne sie gelten 30 Minuten („geschätzt“). Die Zeit je Arbeitstag steht unter Einstellungen › Arbeitszeit und Abwesenheit.', 'margin:-2px 0 10px');
+  const i = info('Ein Vorschlag, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Wetteraufgaben auf gute Halbtage. Die Dauer ist der Durchschnitt der erfassten Dauern, ohne sie gelten 30 Minuten („geschätzt“). Die Zeit je Arbeitstag steht unter Einstellungen › Arbeitszeit.', 'margin:-2px 0 10px');
+  const kopfVon = j => j === 0 && planTagWort(tage[j].t) === 'heute' ? `Heute ${ttmm(tage[j].t)}`
+                                                                    : `${WOCHENTAG[tage[j].t.getDay()]} ${ttmm(tage[j].t)}`;
+  /* Leere Tage am Stück stehen in einer Zeile (v1.73), ohne Balken – zehnmal
+     „Nichts eingeplant“ untereinander sagte nichts. */
+  let html = '';
+  for(let j = 0; j < tage.length; j++){
+    const tg = tage[j];
+    if(!tg.posten.length){
+      let bis = j;
+      while(bis + 1 < tage.length && !tage[bis + 1].posten.length) bis++;
+      html += `<div class="eyebrow">${esc(kopfVon(j))}${bis > j ? ' bis ' + esc(kopfVon(bis)) : ''} <span class="summe">· nichts eingeplant</span></div>`;
+      j = bis;
+      continue;
+    }
+    const belegt = tg.cap - tg.frei, anteil = tg.cap ? Math.min(100, Math.round(belegt / tg.cap * 100)) : 100;
+    html += `<div class="eyebrow">${esc(kopfVon(j))} <span class="summe">· ${esc(dauerText({m:belegt}))} von ${esc(dauerText({m:tg.cap}))}</span></div>
+        <div class="planBalken"><span style="width:${anteil}%"></span></div>` + tg.posten.map(planKnopf).join('');
+  }
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Nächste ${tage.length} Arbeitstage ${i.knopf}</div>${i.text}`
-    + tage.map((tg, j) => {
-      const belegt = tg.cap - tg.frei, anteil = tg.cap ? Math.min(100, Math.round(belegt / tg.cap * 100)) : 100;
-      const kopf = j === 0 && planTagWort(tg.t) === 'heute' ? `Heute ${ttmm(tg.t)}` : `${WOCHENTAG[tg.t.getDay()]} ${ttmm(tg.t)}`;
-      return `<div class="eyebrow">${esc(kopf)} <span class="summe">· ${esc(dauerText({m:belegt}))} von ${esc(dauerText({m:tg.cap}))}</span></div>
-        <div class="planBalken"><span style="width:${anteil}%"></span></div>`
-        + (tg.posten.length ? tg.posten.map(planKnopf).join('') : '<p class="muted small" style="margin:0 0 6px">Nichts eingeplant.</p>');
-    }).join('')
+    + html
     + (uebrig.length ? `<div class="eyebrow">Passt nicht mehr hinein</div>` + uebrig.map(planKnopf).join('') : '');
   knoepfeVerdrahten(box);
 }
@@ -5851,6 +5904,9 @@ function arbArt(art){
   }
   renderArbeit();
 }
+/* Was der Arbeitsnachweis zuletzt zeigt – die Fußleiste gibt genau das aus
+   (v1.73, wie bei den Nachweisen). */
+let arbLetzt = null;
 function renderArbeit(){
   const box = $('#arbeitBox');
   if(!box) return;
@@ -5861,7 +5917,7 @@ function renderArbeit(){
   const tage = [];
   liste.forEach(r => { const t = tage[tage.length - 1]; if(t && t.datum === r.datum) t.l.push(r); else tage.push({datum:r.datum, l:[r]}); });
   const gesamt = liste.reduce((sum, r) => sum + min(r), 0), ohne = liste.filter(r => !r.w).length;
-  const i = info('Die Einträge kommen von selbst: erfasste Dauern der Tätigkeiten, erledigte Aufgaben und ausgegebene Nachweise. Wo keine Dauer erfasst ist, steht der Durchschnitt der Tätigkeit („Schnitt“). „Ändern“ ändert den Wert an der Quelle, ein Schnitt wird so zur erfassten Dauer. „Löschen“ nimmt einen Eintrag nur aus dem Arbeitsnachweis – die Erfahrungswerte bleiben. Ein Tag zählt die Arbeitszeit je Tag.', 'margin:-2px 0 10px');
+  const i = info('Die Einträge kommen von selbst: erfasste Dauern der Tätigkeiten, erledigte Aufgaben und ausgegebene Nachweise. Wo keine Dauer erfasst ist, steht der Durchschnitt der Tätigkeit („Schnitt“). „Ändern“ ändert den Wert an der Quelle, ein Schnitt wird so zur erfassten Dauer. „Löschen“ nimmt einen Eintrag nur aus dem Arbeitsnachweis – die erfassten Dauern der Tätigkeit bleiben. Ein Tag zählt die Arbeitszeit je Tag.', 'margin:-2px 0 10px');
   const zeile = r => `<div class="zeile taetDauer" data-id="${esc(r.id)}">
       <span class="etext">${esc(r.name)}<br><span class="muted small">${
         r.w ? esc(dauerText(r.w)) : 'ohne Dauer'}${r.schnitt ? ' · Schnitt' : ''}${r.eigen ? ' · ergänzt' : ''}</span></span>
@@ -5877,8 +5933,7 @@ function renderArbeit(){
       <p style="margin:0"><b>≈ ${esc(dauerText({m:gesamt}))}</b>${
         tage.length ? ` <span class="muted small">· an ${tage.length} ${tage.length === 1 ? 'Tag' : 'Tagen'}${
           ohne ? `, ${ohne} ohne Dauer` : ''}</span>` : ''}</p></div>
-    <button class="btn" id="arbBlatt" style="margin:0 0 10px">Blatt ansehen</button>
-    <button class="btn ghost klein" id="arbPlus" style="margin:0 0 10px">+ Eintrag ergänzen</button>`
+    <button class="btn ghost klein" id="arbPlus" style="margin:0 0 10px">+ Eintrag hinzufügen</button>`
     + (tage.length ? tage.map(t => {
         const dt = alsDatum(t.datum), sum = t.l.reduce((s2, r) => s2 + min(r), 0);
         return `<div class="eyebrow">${esc(WOCHENTAG[dt.getDay()] + ' ' + dText(t.datum))} <span class="summe">· ${esc(dauerText({m:sum}))}</span></div>`
@@ -5886,10 +5941,10 @@ function renderArbeit(){
       }).join('') : '<p class="muted small">In diesem Zeitraum ist nichts eingetragen.</p>');
   box.querySelectorAll('[data-art]').forEach(b => b.onclick = () => arbArt(b.dataset.art));
   box.querySelectorAll('[data-blatt]').forEach(b => b.onclick = () => arbBlaettern(+b.dataset.blatt));
-  $('#arbBlatt').onclick = () => arbBlattZeigen(z, liste);
+  arbLetzt = {z, liste};                       // für „Blatt ansehen“ in der Fußleiste
   $('#arbPlus').onclick = () => {
     const vorschlag = heute() >= z.von && heute() <= z.bisIso ? heute() : z.von;
-    dauerFenster('Eintrag ergänzen', {m:60}, vorschlag, (w, datum, text) => {
+    dauerFenster('Eintrag hinzufügen', {m:60}, vorschlag, (w, datum, text) => {
       TAET.arb.eigen.push(Object.assign({id:kennung(), datum, text}, w));
       saveTaet(); renderArbeit(); toast('Ergänzt');
     }, '');
@@ -5916,7 +5971,7 @@ function renderArbeit(){
       });
     };
     row.querySelector('[data-weg]').onclick = () => frage('Eintrag löschen',
-      `„${r.name}“ am ${dText(r.datum)} verschwindet aus dem Arbeitsnachweis.` + (r.eigen ? '' : '\n\nDie Erfahrungswerte bleiben, wie sie sind.'),
+      `„${r.name}“ am ${dText(r.datum)} verschwindet aus dem Arbeitsnachweis.` + (r.eigen ? '' : '\n\nDie erfassten Dauern der Tätigkeit bleiben, wie sie sind.'),
       'Löschen', () => {
         if(r.eigen) TAET.arb.eigen = TAET.arb.eigen.filter(x => x !== r.x);
         else TAET.arb.weg.push(r.id);
@@ -7323,7 +7378,7 @@ function setWetter(box){
   };
   wetterEinstAnhaengen(box);
   box.insertAdjacentHTML('beforeend',
-    `<p class="muted small" style="margin:18px 0 0">Die Ereignisregeln stehen seit v1.55 auf der Startseite unter „Übersicht › Wetterregeln“.</p>`);
+    `<p class="muted small" style="margin:18px 0 0">Die Ereignisregeln stehen auf der Startseite unter „Übersicht › Wetterregeln“.</p>`);
 }
 
 /* ---------- DWD über Bright Sky (v1.53) -------------------------------------
@@ -8049,10 +8104,13 @@ function renderWetterregeln(){
     r.aus ? 'aus' : r.modus === 'sofort' ? 'legt gleich an' : 'schlägt vor'}</span></button>`;
   const eigene = eigeneRegeln().map(eigenAlsRegel);
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Eigene Regeln ${i.knopf}</div>${i.text}`
+    + `<button class="btn ghost klein" id="regelPlus" style="margin:0 0 10px">+ Regel hinzufügen</button>`
     + (eigene.length ? eigene.map(zeile).join('')
-        : `<p class="muted small" style="margin:0 0 10px">Noch keine eigene Regel. Angelegt wird sie auf der Startseite über „+ Aufgabe hinzufügen“ mit der Umschaltung „Wetter“.</p>`)
+        : `<p class="muted small" style="margin:0 0 10px">Noch keine eigene Regel.</p>`)
     + `<div class="eyebrow">Regeln ab Werk</div>`
     + HINWEIS_STD.map(std => zeile(hinweisRegel(std.k))).join('');
+  /* Seit v1.73 auch von hier aus, nicht nur über „+ Aufgabe hinzufügen“. */
+  $('#regelPlus').onclick = () => eigenRegelNeu('');
   box.querySelectorAll('[data-regel]').forEach(b => b.onclick = () => {
     regelAktiv = b.dataset.regel;
     go('wregel');
@@ -8549,9 +8607,9 @@ function setEigenRegel(box, r, neu){
     regelEntwurf = null;
     regelAktiv = 'eigen:' + r.id;
     toast('Regel angelegt');
-    /* Der Weg hierher kam über „+ Aufgabe hinzufügen“ – die Seite gehört nicht
-       mehr in den Rückweg. */
-    if(stack[stack.length - 1] === 'aufgabe') stack.pop();
+    /* Kam der Weg über „+ Aufgabe hinzufügen“, gehört die Seite nicht mehr in
+       den Rückweg; kam er aus der Liste, stünde die sonst zweimal darin. */
+    if(stack[stack.length - 1] === 'aufgabe' || stack[stack.length - 1] === 'wregeln') stack.pop();
     go('wregeln', false);
   };
   if($('#regWeg')) $('#regWeg').onclick = () =>
@@ -8588,13 +8646,13 @@ function renderSettings(){
                     : (teilCfg(n.k).anlagen || []).length;
   $('#setMenue').innerHTML =
       knopf('obj', '', 'Objekt und Prüfer')
-    + knopf('abwesend', '', 'Arbeitszeit und Abwesenheit')
+    + knopf('abwesend', '', 'Arbeitszeit')
     + knopf('wetter', '', 'Wetter')
     + '<div class="eyebrow">Anlagen und Prüfumfang</div>'
     + NACHWEISE.filter(n => !n.spaeter).map(n => knopf('nw', n.k, n.label, anzahl(n))).join('')
     + '<div class="eyebrow">Gerät</div>'
     + knopf('plaene', '', 'Grundrisse', '…')
-    + knopf('geraet', '', 'Sicherung und Gerätewechsel')
+    + knopf('geraet', '', 'Sicherung')
     + knopf('zugang', '', 'Zugang');
   $$('#setMenue [data-art]').forEach(b =>
     b.onclick = () => setOeffnen(b.dataset.art, b.dataset.k));
@@ -8615,7 +8673,7 @@ function setOeffnen(art, k){
   setSeite = {art, k:k || ''};
   setTitel = art === 'nw'     ? NW(k).label
            : art === 'obj'    ? 'Objekt und Prüfer'
-           : art === 'abwesend' ? 'Arbeitstage'
+           : art === 'abwesend' ? 'Arbeitszeit'
            : art === 'wetter' ? 'Wetter'
            : art === 'check'  ? 'Checkliste'
            : art === 'akkus'  ? 'Akkutypen'
@@ -11148,6 +11206,9 @@ function barInhalt(){
        </div>`;
     $('#barA').onclick = ausgeben;
     $('#barB').onclick = () => { blattZeigen(); go('blatt'); };
+  }else if(current === 'arbeit'){
+    b.innerHTML = `<button class="btn" id="barA">Blatt ansehen</button>`;
+    $('#barA').onclick = () => { if(arbLetzt) arbBlattZeigen(arbLetzt.z, arbLetzt.liste); };
   }else if(current === 'blatt'){
     /* Das Planblatt entsteht auf Zuruf und wird von hier aus geteilt; das Blatt
        eines Nachweises geht dagegen über die Leiste der Liste hinaus. */
