@@ -10,6 +10,14 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.81 24.09.2026  Grundrissblatt: gedrängte Marken bleiben lesbar. Frei
+                    stehende Marken bleiben, wo sie sind. Berühren sich Kreise,
+                    markiert ein kleiner Punkt die genaue Stelle, und die Nummer
+                    rückt an den ersten freien Platz daneben, weg von der Mitte
+                    der Traube, verbunden durch eine Linie in der Farbe der
+                    Kategorie mit weißem Saum. Ist für eine Traube kein Platz,
+                    stehen ihre Nummern gesammelt auf einem Schild daneben. Nur
+                    auf dem Blatt – in der App lässt sich hineinzoomen.
   v1.80 24.09.2026  Feuerlöscher: Kennzeichnung je Objekt in den Einstellungen,
                     zugeklappt unter dem Namen – Standort, Anzahl gleicher
                     Löscher, Löschmittel (belegt die Brandklassen vor),
@@ -2056,6 +2064,15 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
    statt Schlagschatten: Ränder überstehen die Umwandlung verlässlich. */
 .paper .planblatt{position:relative;display:block;border:1px solid #000}
 .paper .planblatt img{display:block;width:100%;height:auto}
+.paper .planblatt .pmLinien{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+/* Gedrängte Marken (v1.81): ein Punkt auf der genauen Stelle, die Nummer
+   daneben; bei sehr dichten Trauben ein Sammelschild. */
+.paper .planblatt .pmPunkt{position:absolute;transform:translate(-50%, -50%);width:7px;height:7px;border-radius:50%;
+  background:var(--kat,#333);border:1.5px solid #fff;box-sizing:content-box}
+.paper .planblatt .pmSchild{position:absolute;transform:translate(-50%, -50%);display:grid;gap:3px;padding:3px;
+  background:#fff;border:1.5px solid #000;border-radius:12px}
+.paper .planblatt .pmSchild span{width:20px;height:20px;border-radius:50%;background:var(--kat,#333);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-family:var(--f-label);font-size:10px;font-weight:700;line-height:1}
 .paper .planblatt .pm{
   position:absolute;transform:translate(-50%, -50%);
   width:26px;height:26px;border-radius:50%;border:2px solid #fff;
@@ -2433,7 +2450,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.80';
+const VERSION = 'v1.81';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -12052,10 +12069,6 @@ async function planSeite(id){
 
   /* Nach der Drehung liegt oben rechts, was vorher oben links lag: aus (x,y)
      wird (1-y, x). Die Nummern bleiben, was sie am Bildschirm waren. */
-  const marken = gruppen.reduce((alle, g) => alle.concat(g.orte.map(o => {
-    const x = quer ? 1 - o.y : o.x, y = quer ? o.x : o.y;
-    return `<div class="pm" style="--kat:${g.kat.farbe};left:${(x * 100).toFixed(3)}%;top:${(y * 100).toFixed(3)}%">${o.nr}</div>`;
-  })), []).join('');
   /* Der Plan bekommt, was das Blatt nach Kopfzeile und Rändern übrig lässt, und
      zwar in beiden Richtungen: quer wird er von der Breite begrenzt, hochkant
      von der Höhe. Gerechnet in Pixeln des Bogens – Vorschau und Ausgabe sind
@@ -12063,6 +12076,12 @@ async function planSeite(id){
   const bw = quer ? bild.naturalHeight : bild.naturalWidth;
   const bh = quer ? bild.naturalWidth  : bild.naturalHeight;
   const breit = Math.round(Math.min(PLAN_PLATZ_B, PLAN_PLATZ_H * (bw / bh)));
+  const hoch = breit * bh / bw;
+  const punkte = gruppen.reduce((alle, g) => alle.concat(g.orte.map(o => {
+    const x = quer ? 1 - o.y : o.x, y = quer ? o.x : o.y;
+    return {nr:o.nr, farbe:g.kat.farbe, x:x * breit, y:y * hoch};
+  })), []);
+  const marken = markenHtml(markenLegen(punkte, breit, hoch), breit, hoch);
   return {
     name: pl.name,
     gruppen,
@@ -12070,6 +12089,110 @@ async function planSeite(id){
       <div class="planblatt" style="width:${breit}px"><img src="${daten}" alt="${esc(pl.name)}">${marken}</div>
     </div>`
   };
+}
+/* --- Beschriftung des Planblatts (v1.81) ------------------------------------
+   Frei stehende Marken bleiben, wo sie sind. Berühren sich Kreise, bekommt
+   jede Marke der Traube einen Punkt auf ihrer genauen Stelle, und ihre Nummer
+   rückt an den ersten freien Platz ringsum – 16 Richtungen, drei Abstände,
+   zuerst weg von der Mitte der Traube –, verbunden durch eine Linie. Frei heißt:
+   keine Nummer, kein Punkt, keine Linie und kein Schild getroffen, ganz auf dem
+   Plan. Findet eine Traube nicht für alle Platz, stehen ihre Nummern gesammelt
+   auf einem Schild daneben. Gerechnet in Pixeln des Blatts; dieselben Daten
+   ergeben immer dasselbe Bild. Die Ansicht in der App bleibt, wie sie ist –
+   dort lässt sich hineinzoomen. */
+const PM_R = 15, PM_NAH = 29, PM_PUNKT = 6;
+function markenLegen(punkte, W, H){
+  const n = punkte.length, wurzel = punkte.map((p, i) => i);
+  const finde = i => wurzel[i] === i ? i : (wurzel[i] = finde(wurzel[i]));
+  for(let i = 0; i < n; i++) for(let j = i + 1; j < n; j++)
+    if(Math.hypot(punkte[i].x - punkte[j].x, punkte[i].y - punkte[j].y) < PM_NAH) wurzel[finde(i)] = finde(j);
+  const trauben = new Map();
+  punkte.forEach((p, i) => { const r = finde(i); (trauben.get(r) || trauben.set(r, []).get(r)).push(i); });
+  const kreise = [], linien = [], kaesten = [], raus = {marken:[], punkte:[], linien:[], schilder:[]};
+  const punktListe = [];
+  [...trauben.values()].filter(t => t.length === 1).forEach(([i]) => {
+    const p = punkte[i]; kreise.push({x:p.x, y:p.y}); raus.marken.push({p, x:p.x, y:p.y});
+  });
+  const gedraengt = [...trauben.values()].filter(t => t.length > 1)
+    .sort((a, b) => b.length - a.length || Math.min(...a.map(i => punkte[i].nr)) - Math.min(...b.map(i => punkte[i].nr)));
+  gedraengt.forEach(t => t.forEach(i => punktListe.push(punkte[i])));
+  /* Abstand eines Punktes zu einer Strecke. */
+  const zuStrecke = (px, py, l) => {
+    const dx = l.x2 - l.x1, dy = l.y2 - l.y1, q = dx * dx + dy * dy;
+    const t = q ? Math.max(0, Math.min(1, ((px - l.x1) * dx + (py - l.y1) * dy) / q)) : 0;
+    return Math.hypot(px - (l.x1 + t * dx), py - (l.y1 + t * dy));
+  };
+  const schneiden = (a, b) => {
+    const ccw = (p1, p2, p3) => (p3.y - p1.y) * (p2.x - p1.x) > (p2.y - p1.y) * (p3.x - p1.x);
+    const A = {x:a.x1, y:a.y1}, B = {x:a.x2, y:a.y2}, C = {x:b.x1, y:b.y1}, D = {x:b.x2, y:b.y2};
+    return ccw(A, C, D) !== ccw(B, C, D) && ccw(A, B, C) !== ccw(A, B, D);
+  };
+  const imKasten = (x, y, r, k) => x + r > k.x - k.w / 2 && x - r < k.x + k.w / 2 && y + r > k.y - k.h / 2 && y - r < k.y + k.h / 2;
+  const frei = (x, y, p, r = PM_R, w = 0, h = 0) => {
+    const halbW = w ? w / 2 : r, halbH = h ? h / 2 : r;
+    if(x - halbW < 1 || y - halbH < 1 || x + halbW > W - 1 || y + halbH > H - 1) return false;
+    const kasten = w ? {x, y, w, h} : null;
+    const trifft = (cx, cy, cr) => kasten ? imKasten(cx, cy, cr, kasten) : Math.hypot(cx - x, cy - y) < r + cr;
+    if(kreise.some(k => trifft(k.x, k.y, PM_R + 2))) return false;
+    if(punktListe.some(q => q !== p && trifft(q.x, q.y, PM_PUNKT))) return false;
+    if(kaesten.some(k => kasten ? !(x + halbW < k.x - k.w / 2 - 2 || x - halbW > k.x + k.w / 2 + 2 || y + halbH < k.y - k.h / 2 - 2 || y - halbH > k.y + k.h / 2 + 2)
+                               : imKasten(x, y, r + 2, k))) return false;
+    if(!kasten && linien.some(l => zuStrecke(x, y, l) < r + 1)) return false;
+    const neu = {x1:p.x, y1:p.y, x2:x, y2:y};
+    if(linien.some(l => schneiden(l, neu))) return false;
+    if(kreise.some(k => zuStrecke(k.x, k.y, neu) < PM_R - 2)) return false;
+    return true;
+  };
+  const kandidaten = (mx, my, p, abst) => {
+    const soll = Math.atan2(p.y - my, p.x - mx) || -Math.PI / 2;
+    const l = [];
+    for(let k = 0; k < 16; k++){
+      const w = k * Math.PI / 8;
+      let d = Math.abs(w - soll) % (2 * Math.PI); if(d > Math.PI) d = 2 * Math.PI - d;
+      abst.forEach((a, ai) => l.push({x:p.x + a * Math.cos(w), y:p.y + a * Math.sin(w), rang:ai * 10 + d}));
+    }
+    return l.sort((a, b) => a.rang - b.rang);
+  };
+  gedraengt.forEach(t => {
+    const mx = t.reduce((s2, i) => s2 + punkte[i].x, 0) / t.length, my = t.reduce((s2, i) => s2 + punkte[i].y, 0) / t.length;
+    const gelegt = [], merkK = kreise.length, merkL = linien.length;
+    let alle = true;
+    for(const i of t.slice().sort((a, b) => punkte[a].nr - punkte[b].nr)){
+      const p = punkte[i], c = kandidaten(mx, my, p, [36, 52, 70]).find(c2 => frei(c2.x, c2.y, p));
+      if(!c){ alle = false; break; }
+      kreise.push({x:c.x, y:c.y}); linien.push({x1:p.x, y1:p.y, x2:c.x, y2:c.y});
+      gelegt.push({p, x:c.x, y:c.y});
+    }
+    t.forEach(i => raus.punkte.push(punkte[i]));
+    if(alle){
+      gelegt.forEach(g => { raus.marken.push(g); raus.linien.push({x1:g.p.x, y1:g.p.y, x2:g.x, y2:g.y, farbe:g.p.farbe}); });
+      return;
+    }
+    /* Kein Platz für alle: zurücknehmen und ein Sammelschild setzen. */
+    kreise.length = merkK; linien.length = merkL;
+    const nrn = t.map(i => punkte[i]).sort((a, b) => a.nr - b.nr);
+    /* Höchstens sechs Nummern je Reihe, sonst würde das Schild zum Band. */
+    const sp = Math.min(6, nrn.length), zl = Math.ceil(nrn.length / 6);
+    const w = sp * 23 + 6, h = zl * 23 + 6, mitte = {x:mx, y:my};
+    const c = kandidaten(mx, my, mitte, [48, 72, 100, 140, 190]).find(c2 => frei(c2.x, c2.y, mitte, 0, w, h))
+           || {x:Math.min(W - w / 2 - 2, Math.max(w / 2 + 2, mx)), y:Math.max(h / 2 + 2, my - 48)};
+    kaesten.push({x:c.x, y:c.y, w, h});
+    linien.push({x1:mx, y1:my, x2:c.x, y2:c.y});
+    raus.linien.push({x1:mx, y1:my, x2:c.x, y2:c.y, farbe:'#000'});
+    raus.schilder.push({x:c.x, y:c.y, nrn, sp});
+  });
+  return raus;
+}
+function markenHtml(l, W, H){
+  const pz = (v, g) => (v / g * 100).toFixed(3) + '%';
+  const svg = l.linien.length ? `<svg class="pmLinien" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" preserveAspectRatio="none">${
+    l.linien.map(x => `<line x1="${x.x1.toFixed(1)}" y1="${x.y1.toFixed(1)}" x2="${x.x2.toFixed(1)}" y2="${x.y2.toFixed(1)}" stroke="#fff" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`
+      + `<line x1="${x.x1.toFixed(1)}" y1="${x.y1.toFixed(1)}" x2="${x.x2.toFixed(1)}" y2="${x.y2.toFixed(1)}" stroke="${x.farbe}" stroke-width="1.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`).join('')}</svg>` : '';
+  return svg
+    + l.punkte.map(p => `<div class="pmPunkt" style="--kat:${p.farbe};left:${pz(p.x, W)};top:${pz(p.y, H)}"></div>`).join('')
+    + l.marken.map(m => `<div class="pm" style="--kat:${m.p.farbe};left:${pz(m.x, W)};top:${pz(m.y, H)}">${m.p.nr}</div>`).join('')
+    + l.schilder.map(s2 => `<div class="pmSchild" style="left:${pz(s2.x, W)};top:${pz(s2.y, H)};grid-template-columns:repeat(${s2.sp}, 20px)">${
+        s2.nrn.map(p => `<span style="--kat:${p.farbe}">${p.nr}</span>`).join('')}</div>`).join('');
 }
 const blattKopf = (titel, zusatz, teil) => `<h2>${esc(titel)}</h2>
   <div class="meta">${esc(CFG.objekt || '')}${zusatz ? ' · ' + esc(zusatz) : ''}${
