@@ -10,6 +10,14 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.95 24.09.2026  Grundriss-Übersicht ohne Streifen: „Objekte einblenden …“
+                    und „Grundriss ausgeben …“ liegen in einem kleinen Menü
+                    hinter dem Knopf oben rechts in der Kopfleiste. Über dem
+                    Plan steht links der volle Name des Grundrisses, rechts
+                    rechtsbündig die eingeblendeten Objekte mit Farbpunkt
+                    (gekürzt mit „+n“); ohne Auswahl „Nichts eingeblendet“,
+                    ein Tipp darauf öffnet die Auswahl. Beim Setzen einer
+                    Marke, Ausrichten und Zuschneiden bleibt alles wie bisher.
   v1.94 24.09.2026  App-Gerüst: die Seite scrollt nicht mehr als Ganzes. Kopf-
                     und Fußleiste stehen fest, dazwischen scrollt der Inhalt in
                     einem eigenen Bereich – dort federt iOS original nach, mit
@@ -1876,6 +1884,20 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #planName{flex:1}
 #planWelcher{flex:0 1 auto;max-width:45%;opacity:.75}
+/* Übersicht (v1.95): links der Plan, rechts die eingeblendeten Objekte. */
+.planKopf.uebersicht #planName{flex:0 0 auto;max-width:60%}
+.planKopf.uebersicht #planWelcher{flex:1 1 auto;max-width:none;text-align:right;opacity:1;cursor:pointer}
+#planWelcher .kat{white-space:nowrap}
+#planWelcher .kat + .kat{margin-left:10px}
+#planWelcher .kat i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--kat);margin-right:5px;vertical-align:1px}
+/* Das kleine Menü unter dem Knopf oben rechts (v1.95). */
+#planMenue{position:fixed;z-index:80;min-width:220px;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:6px;display:flex;flex-direction:column}
+#planMenue[hidden]{display:none}
+#planMenue button{background:none;border:0;text-align:left;font:inherit;font-size:16px;color:var(--ink);
+  padding:12px 12px;border-radius:8px;cursor:pointer}
+#planMenue button[hidden]{display:none}
+#planMenue button:active{background:var(--enclosure)}
 
 /* Der Plan liegt im Querformat und wird auf die volle verfügbare Höhe gebracht;
    in der Breite läuft er über den Bildschirm hinaus und wird gewischt. Die Höhe
@@ -2348,7 +2370,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
   <header>
     <button class="back" id="btnBack" aria-label="Zurück">←</button>
     <h1 id="titel">Aufgaben</h1>
-    <button class="kopfKnopf unsichtbar" id="btnPlanWahl" aria-hidden="true" tabindex="-1"></button>
+    <button class="kopfKnopf unsichtbar" id="btnPlanWahl" aria-hidden="true" tabindex="-1" aria-label="Objekte und Ausgabe"
+      aria-haspopup="menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="m2 13 10 5 10-5"/></svg></button>
     <button class="kopfKnopf" id="btnNeuLaden" aria-label="Neu vom Server laden" hidden></button>
   </header>
 
@@ -2554,6 +2577,10 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
   </div>
 </div>
 <div id="toast"></div>
+<div id="planMenue" role="menu" hidden>
+  <button type="button" role="menuitem" data-m="objekte">Objekte einblenden …</button>
+  <button type="button" role="menuitem" data-m="ausgeben">Grundriss ausgeben …</button>
+</div>
 <!-- Eigenes Rückfragefenster: window.confirm wird in manchen Umgebungen
      unterdrückt und gilt dann als abgelehnt – dann passierte scheinbar nichts. -->
 <div id="dlg" hidden>
@@ -2570,7 +2597,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.94';
+const VERSION = 'v1.95';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3686,6 +3713,7 @@ function go(name, push = true){
   const inSettings = name === 'settings';
   $('#btnPlanWahl').classList.add('unsichtbar');
   $('#btnPlanWahl').hidden = inSettings;
+  menueZu();
   $('#btnNeuLaden').hidden = !inSettings;
   document.body.classList.toggle('planAn', name === 'plan');
   /* Auf großen Schirmen dürfen Grundriss und Bogen aus der Textspalte heraus –
@@ -11102,6 +11130,7 @@ function planImRahmen(id){
   planAktuell = id; planZiehen = false; tippWeg();
   $('#planName').textContent    = planZiel ? planZiel.titel : pl.name;
   $('#planWelcher').textContent = planZiel ? pl.name : '';
+  if(!planZiel) planKopfUebersicht();
   scharfPlan = pl.quelle ? pl : null;
   markenPlaene = '';                          // Marken des neuen Plans ganz neu
   planHinweisen(true);
@@ -11436,7 +11465,8 @@ async function planZeigen(id, ziel){
      trägt die linke Seite den Plannamen, sonst bliebe er ungenannt. */
   $('#planName').textContent    = planZiel ? planZiel.titel : pl.name;
   $('#planWelcher').textContent = planZiel ? pl.name : '';
-  $('#btnPlanWahl').classList.add('unsichtbar');
+  planWahlKnopf();
+  if(!planZiel) planKopfUebersicht();
   /* Der Regler steht auf dem gezeigten Plan – außer er kommt selbst vom Regler
      und steht schon zwischen den Punkten auf dessen Seite. */
   reglerAufbauen();
@@ -11481,6 +11511,7 @@ function planHinweisen(ausRegler){
   if(reglerLage()) planHoehe();
   reglerAufbauen();
   const kn = $('#btnPlanZieh'), ob = $('#btnPlanObjekte'), au = $('#btnPlanBlatt');
+  planWahlKnopf();
   const richt = $('#btnPlanRicht'), neu = $('#btnPlanRichtNeu');
   richt.hidden = neu.hidden = true;
   ['#btnPlanSchnitt', '#btnSchnittGem', '#btnSchnittOhne', '#btnSchnittFertig'].forEach(k => { $(k).hidden = true; });
@@ -11509,16 +11540,11 @@ function planHinweisen(ausRegler){
     return;
   }
   if(!planZiel){
-    /* In der Übersicht trägt der Streifen, was eingeblendet ist, und den Weg
-       zur Auswahl. Solange nichts steht, bleibt er stehen – er ist der
-       einzige Zugang dazu; danach macht er dem Plan Platz. */
-    const gewaehlt = katWahl();
-    $('#planHinweis').textContent = gewaehlt.length
-      ? gewaehlt.map(kat => NW(kat.k).label).join(', ')
-      : 'Nichts eingeblendet.';
-    kn.hidden = true; ob.hidden = false;
-    au.hidden = !gewaehlt.length;              // ohne Marken gäbe es nichts auszugeben
-    zeigen(!gewaehlt.length);
+    /* Übersicht (v1.95): kein Streifen mehr – Einblenden und Ausgeben liegen
+       im Knopf oben rechts, was eingeblendet ist, steht rechts über dem Plan. */
+    clearTimeout(streifenUhr); streifenUhr = null;
+    $('#planStreifen').hidden = true;
+    planKopfUebersicht();
     return;
   }
   ob.hidden = au.hidden = true;
@@ -11530,6 +11556,47 @@ function planHinweisen(ausRegler){
   /* Solange nichts steht, wird der Hinweis gebraucht – dann bleibt er. */
   zeigen(!planGesetzt() || planZiehen);
 }
+/* Knopf oben rechts (v1.95): nur in der Übersicht, nicht beim Setzen einer
+   Marke, beim Ausrichten oder Zuschneiden. */
+function planWahlKnopf(){
+  const k = $('#btnPlanWahl'), an = current === 'plan' && !planZiel && !planRicht && !planSchnitt;
+  k.classList.toggle('unsichtbar', !an);
+  k.setAttribute('aria-hidden', String(!an)); k.tabIndex = an ? 0 : -1;
+  $('.planKopf').classList.toggle('uebersicht', !planZiel);
+  if(!an) menueZu();
+}
+/* Rechts über dem Plan: die eingeblendeten Objekte mit ihrem Farbpunkt; reicht
+   der Platz nicht, die ersten und „+n“. Ohne Auswahl ein grauer Wegweiser. */
+function planKopfUebersicht(){
+  const w = $('#planWelcher'), l = katWahl();
+  if(!l.length){ w.innerHTML = '<span class="muted">Nichts eingeblendet</span>'; return; }
+  const bauen = n => l.slice(0, n).map(kat => `<span class="kat" style="--kat:${kat.farbe}"><i></i>${esc(NW(kat.k).label)}</span>`).join('')
+    + (n < l.length ? ` <span class="muted">+${l.length - n}</span>` : '');
+  let n = l.length;
+  w.innerHTML = bauen(n);
+  while(n > 1 && w.scrollWidth > w.clientWidth + 1){ n--; w.innerHTML = bauen(n); }
+}
+const menueZu = () => { const m = $('#planMenue'); if(m) m.hidden = true; };
+$('#btnPlanWahl').onclick = e => {
+  e.stopPropagation();
+  const m = $('#planMenue');
+  if(!m.hidden){ menueZu(); return; }
+  m.querySelector('[data-m="ausgeben"]').hidden = !katWahl().length;   // ohne Marken nichts auszugeben
+  const r = e.currentTarget.getBoundingClientRect();
+  m.hidden = false;
+  m.style.top = Math.round(r.bottom + 8) + 'px';
+  m.style.left = Math.round(Math.max(8, r.right - m.offsetWidth)) + 'px';
+};
+$('#planMenue').onclick = e => {
+  const b = e.target.closest('[data-m]'); if(!b) return;
+  menueZu();
+  if(b.dataset.m === 'objekte') $('#btnPlanObjekte').click();
+  else $('#btnPlanBlatt').click();
+};
+document.addEventListener('pointerdown', e => {
+  if(!e.target.closest('#planMenue, #btnPlanWahl')) menueZu();
+}, true);
+$('#planWelcher').onclick = () => { if(!planZiel && current === 'plan') $('#btnPlanObjekte').click(); };
 /* Die Knöpfe gelten immer für den Plan, der gerade gezeigt wird (planAktuell) –
    deshalb einmal gebunden statt bei jedem Öffnen neu. */
 $('#btnPlanBlatt').onclick = () => {
@@ -11572,7 +11639,7 @@ $('#btnPlanObjekte').onclick = () => {
   }));
   kastenFenster('Objekte einblenden', eintraege, gewaehlt => {
     CFG.planWahl = gewaehlt.filter(e => e.an).map(e => e.k);
-    saveCfg(); tippWeg(); markenZeichnen(planAktuell, false); planHinweisen();
+    saveCfg(); tippWeg(); markenZeichnen(planAktuell, false); planHinweisen(); planKopfUebersicht();
   });
 };
 /* Verschoben wird über den Knopf. Der lange Druck ist entfallen – er stritt
