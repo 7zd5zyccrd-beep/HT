@@ -10,6 +10,22 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.101 25.09.2026 Arbeitsmittel je Objekt: an jeder Karte eines Nachweises –
+                    Anlage, Feuerlöscher, Zähler, beim Sprinkler je Prüfpunkt
+                    im jüngsten Gang, auch im kombinierten Rundgang – unten
+                    „+ Arbeitsmittel“ bzw. was eingetragen ist. Ein Tipp öffnet
+                    dieselbe Auswahl wie an der Aufgabe. Es gilt dauerhaft für
+                    dieses Objekt, in jeder Runde; eingetragen wird bewusst im
+                    Nachweis und nicht in den Einstellungen, wie an Aufgabe und
+                    Tätigkeit. Das Werkzeug steht mit in der Zeile der
+                    Aufgabenliste und in der Karte oben am Nachweis („An
+                    einzelnen Objekten: …“), das Material zählt je Runde in
+                    „Vorbereiten“ und „Material bereitlegen“ mit, bei
+                    Fremdprüfungen zum Prüftermin des Objekts. Ein Mangel nimmt
+                    die Arbeitsmittel seines Objekts beim Ausgeben mit.
+                    Umbenennen und Zählertausch nehmen sie mit; ein gelöschtes
+                    Objekt behält sie wie seine Grundrissmarke, falls es mit
+                    demselben Namen wiederkommt. Sie reisen in der Sicherung mit.
   v1.100 25.09.2026 „Zeit übrig? Vorziehen“ – für Tage, an denen etwas ausfällt
                     oder wenig anliegt. Der Knopf steht am Ende von „Heute“
                     (ohne Heute unter dem Überfälligen) und nennt ab einer
@@ -1673,6 +1689,10 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child,.segfeld .seg button:first-child,.dauerWahl .seg button:first-child,.seg.arbArt button:first-child{border-left:0}
 .pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"],.segfeld .seg button[aria-pressed="true"],.dauerWahl .seg button[aria-pressed="true"],.seg.arbArt button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
 .pos .bem{margin-top:8px}
+/* Arbeitsmittel je Objekt (v1.101): eine zurückhaltende Zeile unten an der Karte. */
+.mittelZeile{display:block;width:100%;margin:8px 0 0;padding:4px 0;border:0;background:none;
+  color:var(--ink-soft);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.punkt .mittelZeile{margin-top:4px}
 .pos .seg.vorschlag{margin-top:8px}       /* Kacheln unter der Bemerkung (v1.59) */
 /* Dauer und Utensilien einer Tätigkeit (v1.61): ein Wähler mit Minus und Plus
    über alle Stufen, darunter Sprungkacheln; Utensilien als Kacheln, mehrere
@@ -2650,7 +2670,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.100';
+const VERSION = 'v1.101';
 const BUILD   = VERSION + ' · 25.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3387,11 +3407,15 @@ function maengelUebernehmen(k, d, zeitraum){
       if(!alt.erneut.some(e => e.zeitraum === zeitraum)) alt.erneut.push({datum:f.tag, zeitraum, text:f.text});
       return;
     }
-    const w = wichtigVon(k);
-    AUFG.push({id:neueId(), art:'mangel', quelle:f.quelle, k, anlage:f.anlage, punkt:f.punkt,
+    const w = wichtigVon(k), mi = mittelVon(f.quelle);
+    const neu = {id:neueId(), art:'mangel', quelle:f.quelle, k, anlage:f.anlage, punkt:f.punkt,
       titel:f.anlage || f.punkt, text:f.text, notiz:'', zeitraum, festgestellt:f.tag,
       angelegt:heute(), frist:tagPlus(heute(), FRIST_TAGE[w] || 30), wichtig:w,
-      erneut:[], erledigt:'', vermerk:''});
+      erneut:[], erledigt:'', vermerk:''};
+    /* Die Arbeitsmittel des Objekts (v1.101) als Vorschlag, an der Aufgabe änderbar. */
+    if(mi.ut.length) neu.utensilien = mi.ut.slice();
+    if(mi.mat.length) neu.material = mi.mat.map(x => Object.assign({}, x));
+    AUFG.push(neu);
   });
   if(funde.length) saveAufg();
 }
@@ -4755,6 +4779,7 @@ function renderRundgang(){
         `<button type="button" data-status="${esc(st)}" aria-pressed="${z.status === st}">${esc(st)}</button>`).join('')}</div>
       <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem)}">
       ${vorschlagHtml(n, z.bem)}
+      ${mittelZeile(`${o.k}|${o.id}`, o.id)}
     </div>`;
   };
   $('#rgListe').innerHTML = [...fertig, ...offene].map(karte).join('');
@@ -5648,12 +5673,91 @@ function taetKandidaten(){
   return [...m].map(([key, name]) => ({key, name}))
     .sort((x, y) => x.name.localeCompare(y.name, 'de', {numeric:true}));
 }
+/* --- Arbeitsmittel je Objekt (v1.101) ----------------------------------------
+   Werkzeug und Material, die ein einzelnes Objekt eines Nachweises immer
+   braucht – eine Anlage, ein Feuerlöscher, ein Zähler, ein Prüfpunkt des
+   Sprinklers. Eingetragen an seiner Karte im Nachweis, wie an der Aufgabe und
+   nicht in den Einstellungen; es gilt in jeder Runde. Gespeichert in
+   CFG.mittel unter demselben Schlüssel wie ein Mangel: Nachweis|Objekt, beim
+   Zähler medien|Schlüssel, beim Sprinkler sprinkler|woch bzw. mon|Punkt. Das
+   Werkzeug steht mit in der Zeile der Aufgabenliste und am Nachweis, das
+   Material zählt je Runde in „Vorbereiten“, ein Mangel nimmt beides mit. */
+const mittelVon = key => {
+  const m = (CFG.mittel || {})[key] || {};
+  return {ut:(m.ut || []).filter(Boolean), mat:(m.mat || []).filter(x => x && x.name)};
+};
+const matKurz = x => `${x.name} (${mengeText(mengeOk(x.menge))} ${einheitFuer(einheitVon(x.name), mengeOk(x.menge))})`;
+function mittelText(key){
+  const m = mittelVon(key);
+  return [m.ut.length ? 'Werkzeug: ' + m.ut.join(', ') : '', m.mat.length ? 'Material: ' + m.mat.map(matKurz).join(', ') : '']
+    .filter(Boolean).join(' · ');
+}
+/* Die kleine Zeile unten an der Karte; ein Tipp öffnet die Auswahl. */
+const mittelZeile = (key, name) => `<button type="button" class="mittelZeile" data-mittel="${esc(key)}" data-mname="${esc(name)}">${
+  esc(mittelText(key) || '+ Arbeitsmittel')}</button>`;
+function mittelBearbeiten(key, name){
+  const m = mittelVon(key);
+  frage('Arbeitsmittel', name, 'Speichern', () => {
+    const ziel = {};
+    ut.uebernehmen(ziel, true);
+    CFG.mittel = CFG.mittel || {};
+    if((ziel.utensilien || []).length || (ziel.material || []).length)
+      CFG.mittel[key] = {ut:ziel.utensilien || [], mat:ziel.material || []};
+    else delete CFG.mittel[key];
+    saveTaet(); saveCfg(); toast('Gespeichert');
+    if(current === 'nachweis') renderNachweis();
+    else if(current === 'rundgang') renderRundgang();
+  });
+  const box = $('#dlgListe');
+  box.hidden = false;
+  box.innerHTML = '<div id="mittelUt"></div>';
+  const ut = utensilWahl($('#mittelUt'), m.ut, null, m.mat);
+}
+/* Im Erfassungsmodus: vor allen anderen Klicks, damit eine Karte dabei nicht
+   auf- oder zuklappt. */
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-mittel]');
+  if(!b) return;
+  e.stopPropagation(); e.preventDefault();
+  mittelBearbeiten(b.dataset.mittel, b.dataset.mname);
+}, true);
+/* Die Schlüssel der Objekte eines Nachweises; beim Sprinkler je Teil. */
+function mittelSchluessel(k, teil){
+  const n = NW(k);
+  if(!n) return [];
+  if(n.art === 'medien') return stellen().map(z => 'medien|' + z.key);
+  if(n.art === 'sprinkler'){
+    const t = teilCfg('sprinkler');
+    return (teil ? [teil] : ['woch', 'mon']).flatMap(art => (t[art] || []).map(p => `sprinkler|${art}|${p}`));
+  }
+  return (teilCfg(k).anlagen || []).map(a => `${k}|${a}`);
+}
+/* Vereinigt: Werkzeug ohne Doppelte, Material zusammengezählt. */
+function mittelSumme(keys){
+  const ut = [], mat = new Map();
+  keys.forEach(key => {
+    const m = mittelVon(key);
+    m.ut.forEach(u => { if(!ut.includes(u)) ut.push(u); });
+    m.mat.forEach(x => mat.set(x.name, (mat.get(x.name) || 0) + mengeOk(x.menge)));
+  });
+  return {ut, mat:[...mat].map(([name, menge]) => ({name, menge}))};
+}
+/* Material der Tätigkeit und der Objekte einer Runde zusammen. */
+function matMitObjekten(liste, keys){
+  const je = new Map();
+  liste.concat(mittelSumme(keys).mat).forEach(x => je.set(x.name, (je.get(x.name) || 0) + mengeOk(x.menge)));
+  return [...je].map(([name, menge]) => ({name, menge}));
+}
 /* Eine Zeile Erfahrung für eine oder mehrere Tätigkeiten: die Dauern werden
    zusammengezählt (Rundgang), die Utensilien vereinigt. Kurz für die Liste
    (höchstens drei Utensilien), voll für den Nachweis. */
-function erfText(keys, voll){
+function erfText(keys, voll, objekte){
   let min = 0, n = 0;
   const ut = [], mat = new Map();
+  /* Werkzeug und Material der einzelnen Objekte (v1.101) kommen dazu. */
+  const obj = mittelSumme(objekte || []);
+  obj.ut.forEach(u => ut.push(u));
+  obj.mat.forEach(m => mat.set(m.name, m.menge));
   keys.forEach(k => {
     const s = taetSchnitt(k), e = TAET.t[k] || {};
     if(s){ min += dauerMin(s); n++; }
@@ -5685,15 +5789,20 @@ function eigenText(a, voll){
 }
 function erfFuerEintrag(a){
   if(a.akku) return erfText(['akku']);                 // v1.79
-  if(a.rundgang) return erfText((a.teilK || []).map(k => k === 'sprinkler' ? 'nw:sprinkler:woch' : 'nw:' + k));
+  if(a.rundgang) return erfText((a.teilK || []).map(k => k === 'sprinkler' ? 'nw:sprinkler:woch' : 'nw:' + k),
+    false, (a.teilK || []).flatMap(k => mittelSchluessel(k)));
   if(a.aufg){
     const x = AUFG.find(y => y.id === a.aufg), key = x ? taetSchluessel(x, false) : '';
     return key ? erfText([key]) : x ? eigenText(x, false) : '';
   }
   const n = a.k && NW(a.k);
-  if(!n || n.art === 'fremd') return '';
-  if(n.art === 'sprinkler') return erfText(['nw:sprinkler:' + (a.ziel === 'mon' ? 'mon' : 'woch')]);
-  return erfText(['nw:' + a.k]);
+  if(!n) return '';
+  if(n.art === 'fremd') return erfText([], false, mittelSchluessel(a.k));
+  if(n.art === 'sprinkler'){
+    const teil = a.ziel === 'mon' ? 'mon' : 'woch';
+    return erfText(['nw:sprinkler:' + teil], false, mittelSchluessel('sprinkler', teil));
+  }
+  return erfText(['nw:' + a.k], false, mittelSchluessel(a.k));
 }
 /* Tätigkeiten ohne Dauer – der Akkutausch hat nur Werkzeug und Material (v1.79). */
 const OHNE_DAUER = new Set(['akku']);
@@ -5701,9 +5810,15 @@ const OHNE_DAUER = new Set(['akku']);
    am Nachweis und beim Akkutausch. zeilen = [[Schlüssel, Überschrift, Name]];
    ein Tipp auf „Bearbeiten“ öffnet die Tätigkeit. Das Material steht wie an der
    Aufgabe darunter unter „Vorbereiten“. */
-function taetKarteZeigen(box, zeilen){
+function taetKarteZeigen(box, zeilen, objUt){
   if(!box) return;
-  if(!zeilen.length){ box.innerHTML = ''; return; }
+  /* Werkzeug einzelner Objekte (v1.101) steht mit darunter – bei Fremdprüfungen
+     ist es das Einzige. */
+  const obj = (objUt || []).length ? `<p class="muted small" style="margin:${zeilen.length ? '12px' : '0'} 0 0">An einzelnen Objekten: ${esc(objUt.join(', '))}</p>` : '';
+  if(!zeilen.length){
+    box.innerHTML = obj ? `<div class="card" style="margin-top:12px"><div class="eyebrow" style="margin:0 0 6px">Werkzeug</div>${obj}</div>` : '';
+    return;
+  }
   const ohne = zeilen.every(([key]) => OHNE_DAUER.has(key));
   const teil = ([key, was], j) => {
     const e = TAET.t[key] || {}, sch = OHNE_DAUER.has(key) ? null : taetSchnitt(key);
@@ -5715,7 +5830,7 @@ function taetKarteZeigen(box, zeilen){
       <button class="btn ghost klein" data-taetkey="${j}" style="margin-top:8px">${text || mat ? 'Bearbeiten' : 'Eintragen'}</button>`;
   };
   box.innerHTML = `<div class="card" style="margin-top:12px"><div class="eyebrow" style="margin:0 0 6px">${
-    ohne ? 'Werkzeug und Material' : 'Dauer, Werkzeug und Material'}</div>${zeilen.map(teil).join('')}</div>`;
+    ohne ? 'Werkzeug und Material' : 'Dauer, Werkzeug und Material'}</div>${zeilen.map(teil).join('')}${obj}</div>`;
   box.querySelectorAll('[data-taetkey]').forEach(b => b.onclick = () => {
     const [key, , name] = zeilen[+b.dataset.taetkey];
     taetAktiv = {key, name}; go('taet');
@@ -6042,7 +6157,7 @@ function matAnlassUmbenennen(altVor, neuVor){
 function matAnlaesse(){
   const raus = [], jetzt = new Date();
   const grenze = new Date(jetzt.getFullYear(), jetzt.getMonth() + 2, 0);
-  const dazu = o => { if(o.faellig <= grenze && matVon(o.key).length) raus.push(o); };
+  const dazu = o => { if(o.faellig <= grenze && (o.mat || matVon(o.key)).length) raus.push(o); };
   AUFG.filter(a => !a.erledigt).forEach(a => {
     const key = taetSchluessel(a, false), tag = zeitraumVon(a) || a.frist;
     if(!tag) return;
@@ -6069,24 +6184,42 @@ function matAnlaesse(){
   NACHWEISE.filter(n => !n.spaeter && n.art !== 'fremd').forEach(n => {
     if(n.art === 'sprinkler'){
       const km = 'nw:sprinkler:mon', kw = 'nw:sprinkler:woch';
-      if(hatEintraege(n, 'monat') && matVon(km).length)
+      /* Das Material der Prüfpunkte (v1.101) zählt je Gang mit. */
+      const matM = matMitObjekten(matVon(km), mittelSchluessel('sprinkler', 'mon'));
+      const matW = matMitObjekten(matVon(kw), mittelSchluessel('sprinkler', 'woch'));
+      if(hatEintraege(n, 'monat') && matM.length)
         runden(n, false, monAbgeschlossen(DAT[n.k])).forEach(z => dazu({id:km + '@' + z, key:km, nw:n.k,
-          name:SPR_TAET.mon, wann:zeitraumText(z), faellig:faelligIm(z)}));
-      if(hatEintraege(n, 'woche') && matVon(kw).length){
+          name:SPR_TAET.mon, wann:zeitraumText(z), faellig:faelligIm(z), mat:matM}));
+      if(hatEintraege(n, 'woche') && matW.length){
         let mo = wochenBeginn(jetzt);
         if(!sprinklerWoche(n, jetzt)) mo = new Date(mo.getFullYear(), mo.getMonth(), mo.getDate() + 7);
         for(; mo <= grenze; mo = new Date(mo.getFullYear(), mo.getMonth(), mo.getDate() + 7))
           raus.push({id:kw + '@' + isoTag(mo), key:kw, nw:n.k, name:SPR_TAET.woch,
-                     wann:'KW ' + kalenderwoche(mo), faellig:mo});
+                     wann:'KW ' + kalenderwoche(mo), faellig:mo, mat:matW});
       }
       return;
     }
     const quartal = n.art === 'medien', key = 'nw:' + n.k;
-    if(!matVon(key).length || !hatEintraege(n, quartal ? 'quartal' : 'monat')) return;
+    const mat = matMitObjekten(matVon(key), mittelSchluessel(n.k));
+    if(!mat.length || !hatEintraege(n, quartal ? 'quartal' : 'monat')) return;
     const fertig = quartal ? medienVoll(DAT.medien || {stand:{}})
                  : (() => { const z = zeilenJetzt(n.k); return z.length > 0 && z.length >= teilCfg(n.k).anlagen.length && z.every(x => x.status); })();
     runden(n, quartal, fertig).forEach(z => dazu({id:key + '@' + z, key, nw:n.k,
-      name:n.label, wann:zeitraumText(z), faellig:faelligIm(z)}));
+      name:n.label, wann:zeitraumText(z), faellig:faelligIm(z), mat}));
+  });
+  /* Fremdprüfungen (v1.101): das Material eines Objekts zu seinem Prüftermin –
+     im Fenster oder ohne Prüfdatum, wie beim Akkutausch. */
+  NACHWEISE.filter(n => !n.spaeter && n.art === 'fremd').forEach(n => {
+    const t = teilCfg(n.k);
+    (t.anlagen || []).forEach(a => {
+      const mat = mittelVon(`${n.k}|${a}`).mat;
+      if(!mat.length) return;
+      const f = frist(zeileVon(n.k, a).datum, t.jahre);
+      const faellig = f.ziel ? alsDatum(f.ziel) : tagAnfang(jetzt);
+      if(faellig > grenze) return;
+      raus.push({id:`fremd:${n.k}|${a}@${f.ziel || 'ohne'}`, key:'', nw:n.k, name:n.label, anlage:a,
+        wann:a, faellig, mat});
+    });
   });
   /* Das Fenster gilt bei den Akkus schon in vorbAnstehend: bis Ende des
      nächsten Monats oder ohne Tauschdatum. */
@@ -6906,6 +7039,7 @@ function renderFremd(){
           </div>
           <div class="muted small">${esc(fristText(f))}</div>
           <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem || '')}">
+          ${mittelZeile(offen + '|' + a, a)}
         </div>`;
       }).join('');
   $('#alleSetzen').onclick = () => {
@@ -7097,7 +7231,10 @@ function vorbZusatz(art){
    Zurücknehmen leert nur die gedeckten Objekte – Tag und Vermerk bleiben. */
 function fremdVorbKarte(box, art){
   const s = vorbStand(art), anzahl = Object.keys(s.jetzt).length, alt = VORB[art];
-  if(!anzahl){ vorbKarteZeigen(box, []); return; }
+  /* Das Material einzelner Objekte (v1.101) in derselben Karte, nicht in einer
+     zweiten „Vorbereiten“. */
+  const mat = matPosten(matAnlaesse().filter(o => o.nw === art)).map(p => matVorbZeile(p, p.o.wann, () => fremdVorbKarte(box, art)));
+  if(!anzahl){ vorbKarteZeigen(box, mat); return; }
   const an = !!s.rec && !s.offen.length;
   vorbKarteZeigen(box, [{an, html:'Firma beauftragen',
     unten: an ? 'erledigt ' + dText(s.rec.datum)
@@ -7108,7 +7245,7 @@ function fremdVorbKarte(box, art){
       saveVorb(); fremdVorbKarte(box, art);
     },
     vermerk:{wert:alt && alt.vermerk, beispiel:'Fa. X kommt am 20.10.',
-             setzen:t => { if(VORB[art]){ VORB[art].vermerk = t; saveVorb(); } }}}],
+             setzen:t => { if(VORB[art]){ VORB[art].vermerk = t; saveVorb(); } }}}].concat(mat),
     `<p class="muted small" style="margin:0 0 2px">${anzahl} ${anzahl === 1 ? 'Objekt steht' : 'Objekte stehen'} an – ohne Datum oder in den nächsten acht Wochen fällig.</p>`);
 }
 
@@ -7196,11 +7333,12 @@ function renderNachweis(){
   }
   /* Dauer, Werkzeug und Material (v1.79 als Karte zum Bearbeiten). */
   ob.insertAdjacentHTML('beforeend', '<div id="nwWerk"></div>');
-  taetKarteZeigen($('#nwWerk'), nwTaetZeilen(offen));
+  taetKarteZeigen($('#nwWerk'), nwTaetZeilen(offen), mittelSumme(mittelSchluessel(offen)).ut);
   /* Material bereitlegen (v1.69): die Runden dieses Nachweises. */
   ob.insertAdjacentHTML('beforeend', '<div id="nwMat"></div>');
   const nwK = offen;
-  matKarte($('#nwMat'), o => o.nw === nwK);
+  /* Bei Fremdprüfungen steht das Material in deren eigener Karte (v1.101). */
+  if(n.art !== 'fremd') matKarte($('#nwMat'), o => o.nw === nwK);
   $('#sigBlock').hidden = n.art === 'medien' || n.art === 'fremd';
   if(n.art === 'fremd'){     renderFremd();     return; }
   if(n.art === 'medien'){    renderMedien();    return; }
@@ -7272,6 +7410,7 @@ function renderNachweis(){
         `<button type="button" data-status="${esc(s)}" aria-pressed="${z.status === s}">${esc(s)}</button>`).join('')}</div>
       <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem)}">
       ${vorschlagHtml(n, z.bem)}
+      ${mittelZeile(offen + '|' + a, a)}
     </div>`;
   }).join('');
   $$('#nwListe .pos').forEach(box => {
@@ -7394,6 +7533,7 @@ function renderMedien(){
                 v ? ` · Verbrauch ${esc(v)} ${esc(z.einheit)}` : ''}`
             : 'Keine Ablesung aus dem Vorquartal'}</div>
       <div class="pruefZeile" data-pz="${esc(z.key)}">${pruefZeileHtml(d, z.key)}</div>
+      ${mittelZeile('medien|' + z.key, titel(z))}
     </div>`;
   };
   const kopf = `<label class="field"><span>Ablesedatum</span>
@@ -7476,6 +7616,9 @@ const medienVoll = d => {
    Papierformulars entfällt; unterschrieben wird einmal am Ende. */
 function gangKarte(art, punkte, g, idx){
   const voll = gangVoll(g, punkte);
+  /* Arbeitsmittel je Prüfpunkt (v1.101) nur im jüngsten Gang – sie gelten für
+     alle, fünfmal untereinander wäre nur Wiederholung. */
+  const letzter = idx === ((datenFuer('sprinkler')[art] || []).length - 1);
   const titel = art === 'woch' ? 'Kontrollgang ' + (idx + 1) : 'Monatliche Kontrolle';
   /* Abgeschlossener Gang: zugeklappt wie eine geprüfte Tür. */
   if(g.zu && voll && !spAuf.has(art + ':' + idx)){
@@ -7501,6 +7644,7 @@ function gangKarte(art, punkte, g, idx){
                <button type="button" data-w="io"     aria-pressed="${wert === 'io'}">In Ordnung</button>
                <button type="button" data-w="mangel" aria-pressed="${wert === 'mangel'}">Mangel</button>
              </div>`}
+        ${letzter ? mittelZeile(`sprinkler|${art}|${p}`, p) : ''}
       </div>`;
     }).join('')}
     <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
@@ -10318,6 +10462,7 @@ function tauschAnwenden(dran){
     /* Der neue Zähler hängt am selben Platz wie der alte – die Marke im
        Grundriss bleibt also, wo sie ist. */
     if(CFG.orte[x.key]){ CFG.orte[neuStelle.key] = CFG.orte[x.key]; delete CFG.orte[x.key]; }
+    mittelUmhaengen('medien|' + x.key, 'medien|' + neuStelle.key);
     zeitUmhaengen(d, x.key, neuStelle.key);
     aufgabenUmhaengen('medien', x.key, neuStelle.key);
     wegUmhaengen('medien', x.key, neuStelle.key);
@@ -10353,11 +10498,17 @@ function zuruecksetzenAusfuehren(){
    Zeile für sich gesichert wird, ist eindeutig, welcher Eintrag gemeint ist –
    die frühere Regel (nur solange die Zahl der Zeilen gleich bleibt) ist damit
    hinfällig: Umbenennen und Hinzufügen im selben Zug gehen jetzt zusammen. */
+/* Die Arbeitsmittel wandern mit (v1.101); gespeichert wird mit dem Aufrufer. */
+function mittelUmhaengen(alt, neu){
+  if(!CFG.mittel || !CFG.mittel[alt]) return;
+  CFG.mittel[neu] = CFG.mittel[alt]; delete CFG.mittel[alt];
+}
 function anlageUmbenennen(k, alt, neu){
   if(!alt || alt === neu) return;
   if(k === 'loescher'){ const t = teilCfg(k); if(t.info && t.info[alt]){ t.info[neu] = t.info[alt]; delete t.info[alt]; } }
   const va = k + '|' + alt, vb = k + '|' + neu, d = DAT[k];
   if(CFG.orte[va]){ CFG.orte[vb] = CFG.orte[va]; delete CFG.orte[va]; }
+  mittelUmhaengen(va, vb);
   if(CFG.etagen && CFG.etagen[va]){ CFG.etagen[vb] = CFG.etagen[va]; delete CFG.etagen[va]; }
   [k, ...(k === 'rwa' ? ['akku'] : [])].forEach(art => {
     const z = VORB[art] && VORB[art].ziele;
@@ -10378,6 +10529,7 @@ function stelleUmbenennen(alt, neu){
   if(!alt || alt === neu) return;
   const t = teilCfg('medien'), d = DAT.medien;
   if(CFG.orte[alt]){ CFG.orte[neu] = CFG.orte[alt]; delete CFG.orte[alt]; }
+  mittelUmhaengen('medien|' + alt, 'medien|' + neu);
   if(MED_ALT[alt]){ MED_ALT[neu] = MED_ALT[alt]; delete MED_ALT[alt]; saveAlt(); }
   if(d && d.stand && d.stand[alt] != null){
     d.stand[neu] = d.stand[alt]; delete d.stand[alt];
