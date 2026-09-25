@@ -18,6 +18,7 @@ steht.
   solange der Nutzer nichts anderes sagt. Vor dem Push `git fetch origin main`
   und prüfen, dass es ein Vorspulen ist.
 - **Jede Änderung ist eine neue Version:** `const VERSION = 'v1.xx'` hochzählen
+  (nach v1.99 geht es mit v1.100, v1.101 … weiter; `BUILD` trägt das Datum)
   und oben im Kopfkommentar unter `ÄNDERUNGEN` einen Eintrag im Stil der
   bisherigen schreiben (Datum, was und warum, aus Sicht der Bedienung).
   Zurückgenommenes bleibt als eigener Revert-Commit in der Geschichte.
@@ -61,7 +62,40 @@ steht.
   `isEvalSupported:false` geöffnet. Bei einem Versionswechsel beide Werte
   mitändern.
 - Nebenzweige lassen sich aus der Sitzung heraus nicht löschen (403); das muss
-  der Nutzer auf GitHub tun.
+  der Nutzer auf GitHub tun. Die Sitzung gibt oft einen Arbeitszweig
+  `claude/…` vor, und eine Prüfung am Ende jeder Antwort verlangt, dass er
+  übertragen ist. Dann nach `main` **und** auf diesen Zweig mit demselben
+  Stand übertragen und dem Nutzer sagen, dass er ihn löschen kann.
+- **Ausgegebene Blätter** (`blattDokument`) übernehmen alle Stilregeln der
+  App. Regeln für das App-Gerüst (`html,body{height:100%;overflow:hidden}`)
+  schnitten das Blatt deshalb auf einen Bildschirm zu (v1.102). `BLATT_FREI`
+  hebt das auf, `dateiTeilen` repariert auch ältere Blätter. Wer neue
+  Seiten-Regeln für `html`/`body` einführt, muss sie dort mit aufheben.
+- **Ausgabe leert den Nachweis** (`delete DAT[k]` in `ausgeben`). Alles, was
+  danach noch gelten soll, braucht einen eigenen Vermerk, z. B.
+  `DAT.sprinkler.wocheAus` für den erledigten Wochengang (v1.102).
+
+## Aufgabenliste und Planung (Stand v1.102)
+
+- Gruppen nach Tag (`aufgaben()`, `gruppeVon`): Überfällig, Heute, Morgen,
+  Diese Woche, Nächste Woche, dann je Monat. Überfällig nach Wichtigkeit,
+  sonst streng nach Tag, dann Wichtigkeit.
+- Eingeplant: `a.geplant` (ISO-Tag) an der Aufgabe; ein verstrichener Tag
+  fällt still weg (`einplanungAufraeumen`). Feld „Eingeplant für“ auf der
+  Aufgabe, der Wochenplan legt Eingeplantes auf seinen Tag.
+- „Gute Gelegenheit“ (`gelegenheiten`): Aufgabe mit Wetterprofil, Termin nach
+  dieser Woche, guter Halbtag in den nächsten 3 Arbeitstagen und genug freie
+  Zeit laut `wochenplanRechnen(liste).freiVor`. „Nicht jetzt“ merkt
+  `a.gelegenheitNein`. Nur bei gutem Wetter – so vom Nutzer gewünscht.
+- „Zeit übrig? Vorziehen“ (`vorziehenRechnen`): freie Zeit heute =
+  `heuteRest()` minus Überfälliges und Heutiges; Vorschläge ab Morgen, nichts
+  Ungesehenes außerhalb der Liste (vom Nutzer so entschieden).
+- Arbeitsmittel je Objekt: `CFG.mittel[Schlüssel] = {ut, mat}`, Schlüssel wie
+  bei Mängeln (`k|Anlage`, `medien|Zählerschlüssel`,
+  `sprinkler|woch|Punkt`). Eingetragen im Nachweis an der Karte, bewusst nicht
+  in den Einstellungen. Fließt in Listenzeile, Vorbereiten/Material je Runde
+  und in Mängel; `mittelUmhaengen` beim Umbenennen. Gelöschte Objekte
+  behalten ihre Angaben wie ihre Grundrissmarke.
 
 ## Testen
 
