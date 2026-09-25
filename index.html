@@ -10,6 +10,25 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.99 25.09.2026  Aufgabenliste nach Tagen gegliedert: Überfällig bleibt oben,
+                    dann Heute, Morgen (auch wenn er schon in der nächsten Woche
+                    liegt), Diese Woche, Nächste Woche und danach je Monat. Die
+                    Reihenfolge folgt streng dem Tag, bei gleichem Tag der
+                    Wichtigkeit; Überfälliges wie bisher erst nach
+                    Wichtigkeit. Die Zeile nennt unter Heute und Morgen keinen
+                    Termin mehr, in den Wochen den Wochentag („Mi 30.09.“).
+                    „Wetter passt“ entfällt als Gruppe; dafür die Karte „Gute
+                    Gelegenheit“: eine Aufgabe mit Wetterprofil, deren Termin
+                    nicht mehr in dieser Woche liegt, wird vorgeschlagen, wenn
+                    in den nächsten drei Arbeitstagen ein guter Halbtag kommt
+                    und an dem Tag nach dem Wochenplan genug Zeit frei ist.
+                    „Für Mo einplanen“ stellt sie an diesen Tag (Termin
+                    bleibt, Zeile „eingeplant · Termin …“), „Nicht jetzt“
+                    schweigt bis zum nächsten guten Tag. Auf der Aufgabe unter
+                    „Angaben bearbeiten“ das Feld „Eingeplant für“ mit
+                    „Entfernen“; ein verstrichener Tag fällt still weg. Der
+                    Wochenplan legt Eingeplantes auf seinen Tag. Der Tag wird
+                    mit der Aufgabe gesichert.
   v1.98 24.09.2026  Fehler: nach „Grundriss ausgeben“ fehlte beim Zurückkehren
                     zum Grundriss der Knopf oben rechts in der Kopfleiste.
   v1.97 24.09.2026  Legende: ein Abschnitt wird nicht mehr auf zwei Spalten
@@ -2617,7 +2636,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.98';
+const VERSION = 'v1.99';
 const BUILD   = VERSION + ' · 22.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4099,8 +4118,11 @@ const hatEintraege = (n, t) => {
    Die Aufgabenliste der Startseite. Gespeichert wird dafür nichts: die Aufgaben
    entstehen bei jedem Aufbau aus dem Stand der Nachweise, mit denselben Regeln
    wie die Ringe. Je laufende Runde eine Zeile; bei Fremdprüfungen und Akkutausch
-   eine je Nachweis mit dem frühesten Termin. Sortiert wird nach Gruppe, darin
-   nach Wichtigkeit, dann nach Termin – Überfälliges steht also immer oben. */
+   eine je Nachweis mit dem frühesten Termin. Gruppiert wird nach dem Tag
+   (v1.99): Überfällig, Heute, Morgen, Diese Woche, Nächste Woche, dann je
+   Monat. Überfälliges ordnet sich nach Wichtigkeit, dann nach Termin; alles
+   andere streng nach Tag, bei gleichem Tag nach Wichtigkeit. Eine eingeplante
+   Aufgabe steht an ihrem eingeplanten Tag, ihr Termin bleibt. */
 const WICHTIG = [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']];
 /* Vorbelegung: hoch, wo es um Brand- und Personenschutz geht. */
 const WICHTIG_STD = {aufzuege:'hoch', feststell:'hoch', sprinkler:'hoch', loescher:'hoch', rwa:'hoch'};
@@ -4108,8 +4130,6 @@ const wichtigVon = k => {
   const w = (CFG.teile[k] || {}).wichtig;
   return WICHTIG.some(x => x[0] === w) ? w : (WICHTIG_STD[k] || 'normal');
 };
-const GRUPPEN = [['ueber', 'Überfällig'], ['wetter', 'Wetter passt'], ['woche', 'Diese Woche'],
-                 ['monat', 'Diesen Monat'], ['bald', 'Demnächst']];
 const ttmm = d => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
 /* Gibt es überhaupt einen Nachweis mit Einträgen? Sonst hilft nur der Hinweis
    auf die Einstellungen. */
@@ -4134,8 +4154,18 @@ function fristenUmstellen(){
   });
   if(geaendert) Store.set('nwAufg', AUFG);
 }
+/* Eingeplant (v1.99): ein Tag an der Aufgabe, an dem sie erledigt werden
+   soll. Ist er verstrichen, fällt er still weg – die Aufgabe steht wieder an
+   ihrem Termin. */
+function einplanungAufraeumen(){
+  const h = heute();
+  let geaendert = false;
+  AUFG.forEach(a => { if(a.geplant && (a.erledigt || a.geplant < h)){ delete a.geplant; geaendert = true; } });
+  if(geaendert) Store.set('nwAufg', AUFG);
+}
 function aufgaben(){
   fristenUmstellen();
+  einplanungAufraeumen();
   const liste = [], jetzt = new Date(), heute0 = tagAnfang(jetzt);
   const neu = (n, a) => liste.push(Object.assign(
     {k:n.k, ziel:'', akku:false, begonnen:false, wichtig:wichtigVon(n.k), pos:NACHWEISE.indexOf(n)}, a));
@@ -4251,9 +4281,8 @@ function aufgaben(){
     }
     const ww = aufgWetter(a);
     liste.push({
-      /* Wetter (v1.52): der erste gute Halbtag in den nächsten drei Tagen holt
-         die Aufgabe in „Wetter passt“ – außer, sie ist überfällig. */
-      wetterGut: !!(ww && ww.erstGut && ww.erstGut.versatz <= 3),
+      /* Die Bewertung reist mit – für „Gute Gelegenheit“ (v1.99). */
+      wett: ww, geplant: a.geplant ? alsDatum(a.geplant) : null,
       /* Beim Zeitraum schiebt die Arbeitstagsregel das Ende höchstens bis zum
          Beginn zurück; reicht das nicht, heißt es „Vertretung klären“. */
       fenster: von ? {von:alsDatum(von)} : null, frueh: von ? alsDatum(von) : null,
@@ -4266,8 +4295,23 @@ function aufgaben(){
   const sonntag = (() => { const w = wochenBeginn(jetzt);
                            return new Date(w.getFullYear(), w.getMonth(), w.getDate() + 6); })();
   const monatLetzter = new Date(heute0.getFullYear(), heute0.getMonth() + 1, 0);
-  const gruppeNr = g => GRUPPEN.findIndex(x => x[0] === g);
+  const naechsterSonntag = new Date(sonntag.getFullYear(), sonntag.getMonth(), sonntag.getDate() + 7);
   const rang = w => WICHTIG.findIndex(x => x[0] === w);
+  /* Die Gruppe eines Tages (v1.99). Morgen bleibt „Morgen“, auch wenn er schon
+     in der nächsten Woche liegt; „Diese Woche“ sind die Tage danach bis
+     Sonntag. Leere Gruppen fallen beim Aufbau weg. */
+  const gruppeVon = d => {
+    const v = Math.round((d - heute0) / TAG_MS);
+    if(v <= 0) return {g:'heute', nr:1, titel:`Heute · ${WOCHENTAG[heute0.getDay()]} ${ttmm(heute0)}`};
+    if(v === 1) return {g:'morgen', nr:2, titel:`Morgen · ${WOCHENTAG[d.getDay()]} ${ttmm(d)}`};
+    if(d <= sonntag) return {g:'woche', nr:3, titel:'Diese Woche'};
+    if(d <= naechsterSonntag){
+      const mo = new Date(sonntag.getFullYear(), sonntag.getMonth(), sonntag.getDate() + 1);
+      return {g:'nwoche', nr:4, titel:`Nächste Woche · ${ttmm(mo)}–${ttmm(naechsterSonntag)}`};
+    }
+    return {g:'m' + d.getFullYear() + '-' + d.getMonth(), nr:5 + d.getFullYear() * 12 + d.getMonth(),
+            titel: MONATE[d.getMonth()] + (d.getFullYear() !== heute0.getFullYear() ? ' ' + d.getFullYear() : '')};
+  };
   liste.forEach(a => {
     /* Frist auf den letzten Arbeitstag davor. Geht das nicht, bleibt die Frist
        stehen und die Zeile sagt, dass eine Vertretung gebraucht wird. */
@@ -4281,18 +4325,23 @@ function aufgaben(){
     }
     a.tage = a.faellig ? Math.round((a.faellig - heute0) / TAG_MS) : null;
     if(a.aufg) a.ring = a.tage === null || a.tage < 0 ? 'rot' : (a.tage <= 7 || a.vorbAus) ? 'gelb' : '';
-    a.gruppe = !a.faellig || a.tage < 0   ? 'ueber'
-             : a.faellig <= sonntag       ? 'woche'
-             : a.faellig <= monatLetzter  ? 'monat' : 'bald';
-    if(a.wetterGut && a.gruppe !== 'ueber') a.gruppe = 'wetter';
+    /* Überfällig bleibt überfällig, auch wenn die Aufgabe eingeplant ist. */
+    if(!a.faellig || a.tage < 0){ Object.assign(a, {gruppe:'ueber', gNr:0, gTitel:'Überfällig'}); a.geplant = null; }
+    else{
+      a.tag = a.geplant || a.faellig;
+      const g = gruppeVon(a.tag);
+      Object.assign(a, {gruppe:g.g, gNr:g.nr, gTitel:g.titel});
+    }
   });
+  const zeit = d => d ? d.getTime() : 0;
   /* Weiter als die Vorwarnzeit entfernt steht nur, was schon angefangen ist –
      etwa eine Ablesung zu Beginn des Quartals. */
   return liste
-    .filter(a => a.gruppe !== 'bald' || a.tage <= VORWARN || a.begonnen)
-    .sort((x, y) => gruppeNr(x.gruppe) - gruppeNr(y.gruppe)
+    .filter(a => a.gruppe === 'ueber' || a.tag <= monatLetzter || a.tage <= VORWARN || a.begonnen)
+    .sort((x, y) => x.gNr - y.gNr
+                 || (x.gruppe === 'ueber' ? 0 : zeit(tagAnfang(x.tag)) - zeit(tagAnfang(y.tag)))
                  || rang(x.wichtig) - rang(y.wichtig)
-                 || (x.faellig ? x.faellig.getTime() : 0) - (y.faellig ? y.faellig.getTime() : 0)
+                 || zeit(x.faellig) - zeit(y.faellig)
                  || x.pos - y.pos);
 }
 /* Die Frist hält mit geschützten Leerzeichen zusammen: wird die Zeile zu lang,
@@ -4300,6 +4349,20 @@ function aufgaben(){
 const fristZeile = a => fristText0(a).replace(/ /g, '\u00a0');
 function fristText0(a){
   if(!a.faellig) return '';
+  /* Seit v1.99 sagt die Gruppenüberschrift den Tag: unter „Heute“ und „Morgen“
+     entfällt „fällig heute/morgen“, in den Wochen steht der Wochentag. Eine
+     eingeplante Aufgabe nennt dazu ihren Termin. */
+  if(a.gruppe && a.gruppe !== 'ueber'){
+    const h0 = tagAnfang(new Date());
+    const tagText = d => `${WOCHENTAG[d.getDay()]} ${ttmm(d)}${d.getFullYear() !== h0.getFullYear() ? d.getFullYear() : ''}`;
+    const inWoche = a.gruppe === 'woche' || a.gruppe === 'nwoche';
+    const termin = a.fenster
+      ? (a.fenster.von > h0 ? `Zeitraum ${ttmm(a.fenster.von)}–${tagText(a.faellig)}` : `Zeitraum bis ${tagText(a.faellig)}`)
+      : null;
+    if(a.geplant) return ['eingeplant' + (inWoche ? ' ' + tagText(a.geplant) : ''), termin || 'Termin ' + tagText(a.faellig)].join(' · ');
+    if(a.gruppe === 'heute' || a.gruppe === 'morgen') return a.fenster && a.fenster.von > h0 ? termin : '';
+    if(inWoche) return termin || tagText(a.faellig);
+  }
   /* Zeitraum: vor dem Beginn dessen Tag, danach das Ende und die Tage bis
      dahin. Ist das Ende vorbei, gilt der gewöhnliche Text („… überfällig“). */
   if(a.fenster && a.tage >= 0){
@@ -4403,14 +4466,20 @@ function renderHome(){
      selben Aufbau erscheinen (v1.55). */
   wetterRegelnAnwenden();
   const liste = aufgaben(), gibt = irgendeinNachweis(), hinweise = wetterHinweise();
-  let inhalt = abwesenheitsKarte(liste) + GRUPPEN.map(([g, titel]) => {
-    const teil = liste.filter(a => a.gruppe === g);
+  /* Die Gruppen folgen der Sortierung (v1.99); „Gute Gelegenheit“ steht unter
+     dem Überfälligen, sonst zuoberst. */
+  const gruppen = [];
+  liste.forEach(a => {
+    const g = gruppen[gruppen.length - 1];
+    if(g && g.g === a.gruppe) g.teil.push(a); else gruppen.push({g:a.gruppe, titel:a.gTitel, teil:[a]});
+  });
+  const gelegen = gelegenheitKarte(gelegenheiten(liste));
+  let inhalt = abwesenheitsKarte(liste) + (gruppen.length && gruppen[0].g === 'ueber' ? '' : gelegen)
+    + gruppen.map(({g, titel, teil}) => {
     /* Was die Gruppe an Zeit braucht (v1.63), aus den Erfahrungswerten. */
     const summe = teil.reduce((sum, a) => { const m = eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
-    return teil.length
-      ? `<div class="eyebrow">${esc(titel)}${summe ? ` <span class="summe">· ≈ ${esc(dauerText({m:summe}))}</span>` : ''}</div>`
-        + teil.map(aufgabeKnopf).join('')
-      : '';
+    return `<div class="eyebrow">${esc(titel)}${summe ? ` <span class="summe">· ≈ ${esc(dauerText({m:summe}))}</span>` : ''}</div>`
+        + teil.map(aufgabeKnopf).join('') + (g === 'ueber' ? gelegen : '');
   }).join('');
   if(!inhalt.includes('data-')) inhalt += gibt
     ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Alle Nachweise“.</p>`
@@ -4454,6 +4523,14 @@ function renderHome(){
   });
   $('#homeListe').querySelectorAll('[data-hnein]').forEach(b => b.onclick = () =>
     hinweisBeantwortet(b.dataset.hnein, false));
+  $('#homeListe').querySelectorAll('[data-gja],[data-gnein]').forEach(b => b.onclick = () => {
+    const [id, iso] = (b.dataset.gja || b.dataset.gnein).split('|');
+    const x = AUFG.find(y => y.id === id);
+    if(!x) return;
+    if(b.dataset.gja){ x.geplant = iso; toast('Eingeplant für ' + planTagWort(alsDatum(iso))); }
+    else x.gelegenheitNein = iso;
+    saveAufg();
+  });
   $('#buildTag').textContent = BUILD;
   hausKnopf();
   renderSuche();
@@ -4859,6 +4936,7 @@ function aufgKopfZeigen(a, mangelKopf){
   const wi = a.wichtig && a.wichtig !== 'normal' ? WICHTIG.find(x => x[0] === a.wichtig) : null;
   const zeilen = [
     aufgTerminText(a),
+    a.geplant && !a.erledigt && a.geplant >= heute() ? 'Eingeplant für ' + planTagWort(alsDatum(a.geplant)) : '',
     !mangel && n ? n.label + (a.anlage ? ' · ' + anlageName(a) : '') : '',
     [!mangel && a.wdh ? wdhText(a.wdh) : '', !mangel && wp ? 'Wetter: ' + wp[1] : '', wi ? 'Wichtigkeit ' + klein(wi[1]) : ''].filter(Boolean).join(' · '),
     a.erledigt ? '' : [s ? '≈ ' + dauerText(s) : '', ut.length ? 'Werkzeug: ' + ut.join(', ') : ''].filter(Boolean).join(' · ')
@@ -4999,8 +5077,15 @@ function renderAufgabe(){
          ? `<label class="abwZeile"><span>von</span><input type="date" class="dat" id="aufgVon" value="${esc(a.von)}"></label>
             <label class="abwZeile"><span>bis</span><input type="date" class="dat" id="aufgFrist" value="${esc(a.frist)}"></label>`
          : `<input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}" aria-label="Termin" style="margin-top:10px">`}</div>`;
+  /* Eingeplant für (v1.99): ein Tag, an dem die Aufgabe erledigt werden soll –
+     sie steht dann an diesem Tag in der Liste, der Termin bleibt. */
+  const planFeld = neu || a.erledigt ? ''
+    : `<label class="field"><span>Eingeplant für</span><div class="row" style="align-items:center">
+         <input type="date" id="aufgGeplant" class="schmal" value="${esc(a.geplant || '')}" min="${heute()}">
+         ${a.geplant ? '<button type="button" class="btn ghost klein" id="aufgGeplantWeg" style="width:auto;margin:0">Entfernen</button>' : ''}</div></label>`;
   const felder = kopf
     + `${terminFeld}
+       ${planFeld}
        <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
          WICHTIG.map(([w, t]) => `<button type="button" data-w="${w}" aria-pressed="${a.wichtig === w}">${t}</button>`).join('')}</div></div>
        ${planung}
@@ -5045,6 +5130,16 @@ function renderAufgabe(){
       sichern(); kopfNeu();
     }
   };
+  const gpFeld = $('#aufgGeplant');
+  if(gpFeld) gpFeld.oninput = gpFeld.onchange = () => {
+    const v = gpFeld.value;
+    if(!v || v === a.geplant) return;
+    if(v < heute()){ gpFeld.value = a.geplant || ''; return; }
+    const neuGesetzt = !a.geplant;
+    a.geplant = v; sichern(); kopfNeu();
+    if(neuGesetzt) renderAufgabe();          // „Entfernen“ erscheint
+  };
+  if($('#aufgGeplantWeg')) $('#aufgGeplantWeg').onclick = () => { delete a.geplant; sichern(); renderAufgabe(); };
   const vonFeld = $('#aufgVon');
   if(vonFeld) vonFeld.oninput = vonFeld.onchange = () => {
     if(vonFeld.value && vonFeld.value !== a.von){
@@ -5143,6 +5238,7 @@ function renderAufgabe(){
   if($('#erlSetzen')) $('#erlSetzen').onclick = () => {
     a.erledigt = $('#erlDatum').value || heute();
     a.vermerk = $('#erlVermerk').value.trim();
+    delete a.geplant;
     if(erlDauer) a.dauer = erlDauer;
     /* Die Tätigkeit steht fest, bevor die Folgeaufgabe entsteht – sie erbt die
        Reihenkennung. Gefragt wird, wenn die Liste wieder steht. */
@@ -6209,10 +6305,14 @@ function planKarte(liste){
    der Liste verteilt werden. Früheste Frist zuerst, bei gleicher Frist die
    höhere Wichtigkeit. Nicht vor ihrem Beginn (Zeitraum, Monatsanfang).
    Wetteraufgaben nur auf gute Halbtage, solange es im Plan einen gibt. Bis
-   vier Stunden bleibt eine Sache an einem Tag; Längeres verteilt sich. */
+   vier Stunden bleibt eine Sache an einem Tag; Längeres verteilt sich.
+   Eingeplantes (v1.99) kommt zuerst an seinem Tag unter, ohne Blick aufs
+   Wetter. Je Posten wird gemerkt, was an den Tagen vor ihm noch frei war –
+   daraus rechnet „Gute Gelegenheit“. */
 const PLAN_TAGE = 10;
-function wochenplanRechnen(){
-  const liste = aufgaben(), h0 = tagAnfang(new Date());
+function wochenplanRechnen(liste){
+  liste = liste || aufgaben();
+  const h0 = tagAnfang(new Date());
   const rangW = w => WICHTIG.findIndex(x => x[0] === w);
   const tage = [];
   for(let t = new Date(h0), i = 0; tage.length < PLAN_TAGE && i < 90; i++, t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)){
@@ -6223,10 +6323,13 @@ function wochenplanRechnen(){
   const posten = liste.map(a => ({a, m:eintragMinuten(a)})).filter(x => x.m && x.m.min > 0).map(x => {
     const von = x.a.fenster && x.a.fenster.von ? x.a.fenster.von : x.a.frueh;
     const aufg = x.a.aufg && AUFG.find(y => y.id === x.a.aufg);
-    return Object.assign(x, {ab: von && von > h0 ? von : h0, bis:x.a.faellig || h0, wett: aufg ? aufgWetter(aufg) : null});
-  }).sort((p, q) => p.bis - q.bis || rangW(p.a.wichtig) - rangW(q.a.wichtig) || p.a.pos - q.a.pos);
-  const uebrig = [];
+    const bis = x.a.faellig || h0, gp = x.a.geplant;
+    return Object.assign(x, {ab: gp ? gp : von && von > h0 ? von : h0, bis, reihung: gp && gp < bis ? gp : bis,
+      wett: gp ? null : x.a.wett !== undefined ? x.a.wett : aufg ? aufgWetter(aufg) : null});
+  }).sort((p, q) => p.reihung - q.reihung || rangW(p.a.wichtig) - rangW(q.a.wichtig) || p.a.pos - q.a.pos);
+  const uebrig = [], freiVor = new Map();
   posten.forEach(x => {
+    if(x.a.aufg) freiVor.set(x.a.aufg, new Map(tage.map(tg => [tg.iso, tg.frei])));
     let kand = tage.filter(tg => tg.t >= x.ab);
     let wetterNote = '';
     if(x.wett && x.wett.tage){
@@ -6250,6 +6353,7 @@ function wochenplanRechnen(){
     }
     belegt.forEach((b, i) => {
       const noten = [];
+      if(x.a.geplant) noten.push('eingeplant');
       if(x.m.geschaetzt) noten.push('geschätzt');
       const teil = b.tg.gutTeil && b.tg.gutTeil[x.a.aufg];
       if(teil) noten.push('Wetter gut ' + TEIL_KURZ[teil]);
@@ -6260,7 +6364,55 @@ function wochenplanRechnen(){
     });
     if(rest > 0) uebrig.push({a:x.a, min:rest, noten:[x.m.geschaetzt ? 'geschätzt' : ''].filter(Boolean)});
   });
-  return {tage, uebrig};
+  return {tage, uebrig, freiVor};
+}
+/* Gute Gelegenheit (v1.99): eine Aufgabe mit Wetterprofil, deren Termin noch
+   nicht in dieser Woche liegt, hat in den nächsten drei Arbeitstagen einen
+   guten Halbtag – und an dem Tag ist genug Zeit frei, nachdem alles mit
+   früherem Termin verteilt ist. Vorgeschlagen wird der erste solche Tag.
+   „Nicht jetzt“ merkt sich diesen Tag; ein anderer guter Tag fragt neu. */
+const GELEGEN_TAGE = 3;
+function gelegenheiten(liste){
+  const kand = liste.filter(a => a.aufg && !a.geplant && a.wett && a.wett.tage
+    && ['ueber', 'heute', 'morgen', 'woche'].indexOf(a.gruppe) < 0);
+  if(!kand.length) return [];
+  const {tage, freiVor} = wochenplanRechnen(liste);
+  const naechste = tage.slice(0, GELEGEN_TAGE).filter(tg => tg.cap > 0);
+  /* Mehrere Vorschläge für denselben Tag teilen sich dessen freie Zeit. */
+  const aus = [], vergeben = new Map();
+  kand.forEach(a => {
+    const m = eintragMinuten(a), frei = freiVor.get(a.aufg), x = AUFG.find(y => y.id === a.aufg);
+    if(!m || !frei || !x) return;
+    for(const tg of naechste){
+      const wt = a.wett.tage.find(w => w.datum === tg.iso);
+      const gut = wt && wt.teile.find(h => h.stufe === 2);
+      const rest = (frei.get(tg.iso) || 0) - (vergeben.get(tg.iso) || 0);
+      if(!gut || rest < m.min) continue;
+      if(x.gelegenheitNein !== tg.iso){
+        aus.push({a, tg, teil:gut.teil, min:m.min, frei:rest});
+        vergeben.set(tg.iso, (vergeben.get(tg.iso) || 0) + m.min);
+      }
+      break;
+    }
+  });
+  return aus;
+}
+function gelegenheitKarte(liste){
+  if(!liste.length) return '';
+  return `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Gute Gelegenheit</div>${liste.map(g => {
+    const tag = planTagWort(g.tg.t), a = g.a;
+    const termin = a.fenster ? `Zeitraum bis ${ttmm(a.faellig)}` : `Termin ${ttmm(a.faellig)}`;
+    /* Ein Tipp auf den Text öffnet die Aufgabe. */
+    return `<div class="hzeile">
+      <div data-aufg="${esc(a.aufg)}" style="cursor:pointer">
+        <p style="margin:0 0 2px"><b>${esc(a.titel)}</b></p>
+        <p class="muted small" style="margin:0 0 8px">${esc(
+          [`Wetter gut ${tag} ${TEIL_KURZ[g.teil]}`, `≈ ${dauerText({m:g.min})}, an dem Tag noch ${dauerText({m:Math.floor(g.frei / 15) * 15})} frei`, termin].join(' · '))}</p></div>
+      <div class="hknoepfe">
+        <button class="btn ghost klein" data-gja="${esc(a.aufg + '|' + g.tg.iso)}">${esc(tag.charAt(0).toUpperCase() + tag.slice(1))} einplanen</button>
+        <button class="btn ghost klein" data-gnein="${esc(a.aufg + '|' + g.tg.iso)}">Nicht jetzt</button>
+      </div></div>`;
+  }).join('')}</div>`;
 }
 const planKnopf = p => {
   const a = p.a;
@@ -6273,7 +6425,7 @@ function renderWochenplan(){
   const box = $('#wplanBox');
   if(!box) return;
   const {tage, uebrig} = wochenplanRechnen();
-  const i = info('Ein Vorschlag, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Wetteraufgaben auf gute Halbtage. Die Dauer ist der Durchschnitt der erfassten Dauern, ohne sie gelten 30 Minuten („geschätzt“). Die Zeit je Arbeitstag steht unter Einstellungen › Arbeitszeit.', 'margin:-2px 0 10px');
+  const i = info('Ein Vorschlag, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Eingeplantes an seinem Tag, Wetteraufgaben auf gute Halbtage. Die Dauer ist der Durchschnitt der erfassten Dauern, ohne sie gelten 30 Minuten („geschätzt“). Die Zeit je Arbeitstag steht unter Einstellungen › Arbeitszeit.', 'margin:-2px 0 10px');
   const kopfVon = j => j === 0 && planTagWort(tage[j].t) === 'heute' ? `Heute ${ttmm(tage[j].t)}`
                                                                     : `${WOCHENTAG[tage[j].t.getDay()]} ${ttmm(tage[j].t)}`;
   /* Leere Tage am Stück stehen in einer Zeile (v1.73), ohne Balken – zehnmal
@@ -9336,7 +9488,7 @@ function rundgangWahl(box, k){
 function wichtigWahl(box, k){
   const zeichnen = () => {
     const w = wichtigVon(k);
-    const i = info('Ordnet die Aufgabenliste innerhalb einer Gruppe; Überfälliges steht trotzdem immer zuerst.'
+    const i = info('Ordnet die Aufgabenliste bei gleichem Tag; unter „Überfällig“ zählt sie vor dem Datum.'
       + (NW(k).akku ? ' Gilt auch für den Akkutausch.' : ''), 'margin:-6px 0 14px');
     box.innerHTML =
       `<div class="field wichtig"><span class="mitInfo">Wichtigkeit ${i.knopf}</span><div class="seg">${
