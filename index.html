@@ -10,6 +10,20 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.100 25.09.2026 „Zeit übrig? Vorziehen“ – für Tage, an denen etwas ausfällt
+                    oder wenig anliegt. Der Knopf steht am Ende von „Heute“
+                    (ohne Heute unter dem Überfälligen) und nennt ab einer
+                    Stunde die freie Zeit: restliche Arbeitszeit abzüglich
+                    Überfälligem und Heutigem. Ein Tipp klappt Vorschläge auf:
+                    was später in der Liste steht, frühester Termin zuerst,
+                    bei gleichem Termin das Wichtigere, aufgefüllt bis die
+                    freie Zeit erschöpft ist; bis fünf, dann „Mehr zeigen“.
+                    Nichts, was noch nicht begonnen hat, keine Fremdprüfung,
+                    Wetteraufgaben nur bei gutem Wetter heute. „Heute
+                    einplanen“ stellt eine Aufgabe unter Heute; Nachweise
+                    öffnen sich mit einem Tipp. Ist nach dem Plan nichts frei,
+                    zeigt er trotzdem die Reihenfolge – die App weiß nicht,
+                    wenn etwas ausfällt, das nicht in ihr steht.
   v1.99 25.09.2026  Aufgabenliste nach Tagen gegliedert: Überfällig bleibt oben,
                     dann Heute, Morgen (auch wenn er schon in der nächsten Woche
                     liegt), Diese Woche, Nächste Woche und danach je Monat. Die
@@ -2636,8 +2650,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.99';
-const BUILD   = VERSION + ' · 22.09.2026';
+const VERSION = 'v1.100';
+const BUILD   = VERSION + ' · 25.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -4474,12 +4488,17 @@ function renderHome(){
     if(g && g.g === a.gruppe) g.teil.push(a); else gruppen.push({g:a.gruppe, titel:a.gTitel, teil:[a]});
   });
   const gelegen = gelegenheitKarte(gelegenheiten(liste));
+  /* „Zeit übrig? Vorziehen“ (v1.100) steht am Ende von „Heute“; ohne Heute
+     unter dem Überfälligen, sonst vor der ersten Gruppe. */
+  const vorz = vorziehenHtml(liste);
+  const vorzNach = gruppen.some(x => x.g === 'heute') ? 'heute' : gruppen.some(x => x.g === 'ueber') ? 'ueber' : '';
   let inhalt = abwesenheitsKarte(liste) + (gruppen.length && gruppen[0].g === 'ueber' ? '' : gelegen)
+    + (vorzNach ? '' : vorz)
     + gruppen.map(({g, titel, teil}) => {
     /* Was die Gruppe an Zeit braucht (v1.63), aus den Erfahrungswerten. */
     const summe = teil.reduce((sum, a) => { const m = eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
     return `<div class="eyebrow">${esc(titel)}${summe ? ` <span class="summe">· ≈ ${esc(dauerText({m:summe}))}</span>` : ''}</div>`
-        + teil.map(aufgabeKnopf).join('') + (g === 'ueber' ? gelegen : '');
+        + teil.map(aufgabeKnopf).join('') + (g === 'ueber' ? gelegen : '') + (g === vorzNach ? vorz : '');
   }).join('');
   if(!inhalt.includes('data-')) inhalt += gibt
     ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Alle Nachweise“.</p>`
@@ -4523,6 +4542,10 @@ function renderHome(){
   });
   $('#homeListe').querySelectorAll('[data-hnein]').forEach(b => b.onclick = () =>
     hinweisBeantwortet(b.dataset.hnein, false));
+  $('#homeListe').querySelectorAll('[data-vorz]').forEach(b => b.onclick = () => {
+    vorziehenAuf = !vorziehenAuf; vorziehenAlle = false; renderHome();
+  });
+  $('#homeListe').querySelectorAll('[data-vorzmehr]').forEach(b => b.onclick = () => { vorziehenAlle = true; renderHome(); });
   $('#homeListe').querySelectorAll('[data-gja],[data-gnein]').forEach(b => b.onclick = () => {
     const [id, iso] = (b.dataset.gja || b.dataset.gnein).split('|');
     const x = AUFG.find(y => y.id === id);
@@ -6396,6 +6419,74 @@ function gelegenheiten(liste){
     }
   });
   return aus;
+}
+/* Zeit übrig? Vorziehen (v1.100): fällt heute etwas aus oder liegt wenig an,
+   schlägt die App Späteres vor. Frei ist, was von der restlichen Arbeitszeit
+   nach Überfälligem und Heutigem bleibt. Der Knopf steht immer da – die App
+   weiß nicht, wenn etwas ausfällt, das nicht in ihr steht. Vorgeschlagen wird
+   ab „Morgen“, frühester Termin zuerst, bei gleichem Termin das Wichtigere;
+   nichts, was noch nicht begonnen hat, keine Fremdprüfung, Wetteraufgaben nur
+   bei gutem Wetter heute. Ab einer Stunde frei füllen die Vorschläge die Zeit
+   auf, was allein nicht mehr hineinpasst, fällt weg; darunter nur die
+   Reihenfolge. Bis fünf, dann „Mehr zeigen“. */
+let vorziehenAuf = false, vorziehenAlle = false;
+const VORZ_AB = 60, VORZ_ZAHL = 5;
+function vorziehenRechnen(liste){
+  const h0 = tagAnfang(new Date());
+  const heuteKap = freiGrund(h0) ? 0 : heuteRest();
+  const belegt = liste.filter(a => a.gruppe === 'ueber' || a.gruppe === 'heute')
+    .reduce((sum, a) => { const m = eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
+  const frei = Math.max(0, heuteKap - belegt);
+  const rang = w => WICHTIG.findIndex(x => x[0] === w);
+  const zeit = d => d ? d.getTime() : 0;
+  const kand = liste.filter(a => a.gruppe !== 'ueber' && a.gruppe !== 'heute' && !a.geplant
+      && !(a.fenster && a.fenster.von > h0) && !(a.frueh && a.frueh > h0))
+    .map(a => {
+      const m = eintragMinuten(a);
+      if(!m) return null;
+      let wetter = '';
+      if(a.wett){
+        if(!a.wett.tage) wetter = 'Wetter prüfen';
+        else{
+          const t = a.wett.tage.find(x => x.versatz === 0);
+          if(!t || !t.teile.some(h => h.stufe === 2)) return null;
+          wetter = 'Wetter heute gut';
+        }
+      }
+      return {a, min:m.min, wetter};
+    }).filter(Boolean)
+    .sort((x, y) => zeit(x.a.faellig) - zeit(y.a.faellig) || rang(x.a.wichtig) - rang(y.a.wichtig) || x.a.pos - y.a.pos);
+  let vorschlaege = kand;
+  if(frei >= VORZ_AB){
+    let rest = frei;
+    vorschlaege = kand.filter(x => { if(x.min > rest) return false; rest -= x.min; return true; });
+  }
+  return {frei, kand, vorschlaege};
+}
+function vorziehenHtml(liste){
+  const {frei, kand, vorschlaege} = vorziehenRechnen(liste);
+  if(!kand.length) return '';
+  const freiText = dauerText({m:Math.floor(frei / 15) * 15});
+  const knopf = `<button class="btn ghost klein" data-vorz="1" style="margin:14px 0 4px">${vorziehenAuf ? 'Vorschläge schließen'
+    : frei >= VORZ_AB ? `Zeit übrig? ≈ ${esc(freiText)} frei – Vorziehen` : 'Zeit übrig? Vorziehen'}</button>`;
+  if(!vorziehenAuf) return knopf;
+  const zeigen = vorziehenAlle ? vorschlaege : vorschlaege.slice(0, VORZ_ZAHL);
+  const zeile = ({a, min, wetter}) => {
+    const ziel = a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${esc(a.aufg)}"`
+               : `data-nw="${esc(a.k)}" data-ziel="${esc(a.ziel || '')}"${a.akku ? ' data-akku="1"' : ''}`;
+    const termin = a.fenster ? `Zeitraum bis ${ttmm(a.faellig)}` : `Termin ${ttmm(a.faellig)}`;
+    return `<div class="hzeile">
+      <div ${ziel} style="cursor:pointer">
+        <p style="margin:0 0 2px"><b>${esc(a.titel)}</b></p>
+        <p class="muted small" style="margin:0${a.aufg ? ' 0 8px' : ''}">${esc(['≈ ' + dauerText({m:min}), wetter, termin].filter(Boolean).join(' · '))}</p></div>
+      ${a.aufg ? `<div class="hknoepfe"><button class="btn ghost klein" data-gja="${esc(a.aufg + '|' + heute())}">Heute einplanen</button></div>` : ''}
+    </div>`;
+  };
+  return `<div class="card" style="margin-top:14px"><div class="eyebrow" style="margin:0 0 6px">${frei >= VORZ_AB
+      ? `Heute noch ≈ ${esc(freiText)} frei` : 'Nach dem Plan ist heute nichts mehr frei – falls doch:'}</div>
+    ${zeigen.length ? zeigen.map(zeile).join('') : '<p class="muted small" style="margin:0">Nichts, was in die freie Zeit passt.</p>'}
+    ${zeigen.length < vorschlaege.length ? '<button class="btn ghost klein" data-vorzmehr="1" style="margin-top:10px">Mehr zeigen</button>' : ''}
+  </div>` + knopf;
 }
 function gelegenheitKarte(liste){
   if(!liste.length) return '';
