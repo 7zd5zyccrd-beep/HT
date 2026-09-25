@@ -10,6 +10,18 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.102 25.09.2026 Zwei Fehler, am Sprinkler bemerkt. Das ausgegebene Blatt war
+                    abgeschnitten, wie ein Querformat im Hochformat: seit v1.94
+                    kam die Regel, dass die App-Seite nicht scrollt, mit in die
+                    Datei, und die Umwandlung zeigte nur einen Bildschirm
+                    Ausschnitt. Betraf alle Nachweise; das Blatt hebt die Regel
+                    jetzt auf, ältere Blätter aus der Historie bekommen es beim
+                    erneuten Teilen. Und: nach der Ausgabe stand der eben
+                    erledigte Kontrollgang der Woche als „fehlt, heute fällig“ in
+                    der Liste, weil die Ausgabe den Nachweis leert. Die Ausgabe
+                    vermerkt jetzt, dass der Gang dieser Woche erledigt ist; für
+                    eine schon geschehene Ausgabe wird es aus der Historie
+                    nachgetragen.
   v1.101 25.09.2026 Arbeitsmittel je Objekt: an jeder Karte eines Nachweises –
                     Anlage, Feuerlöscher, Zähler, beim Sprinkler je Prüfpunkt
                     im jüngsten Gang, auch im kombinierten Rundgang – unten
@@ -2670,7 +2682,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.101';
+const VERSION = 'v1.102';
 const BUILD   = VERSION + ' · 25.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3680,8 +3692,33 @@ function zeitraumText(z){
    unvollständiger Gang aus einer früheren Woche). */
 const monAbgeschlossen = d => !!d && (d.mon || []).length > 0
   && d.mon.every(g => g.zu && gangVoll(g, teilCfg('sprinkler').mon));
+/* Ausgegeben mit dem Wochengang dieser Woche (v1.102): die Ausgabe leert den
+   Nachweis – ohne diesen Vermerk stünde der eben erledigte Gang wieder als
+   fehlend in der Liste. */
+const sprWocheAus = (jetzt = new Date()) => { const d = DAT.sprinkler;
+  return !!d && d.wocheAus === isoTag(wochenBeginn(jetzt)); };
+function sprWocheMerken(d0){
+  const punkte = teilCfg('sprinkler').woch, jetzt = new Date();
+  if(((d0 && d0.woch) || []).some(g => inWoche(g.datum, jetzt) && gangVoll(g, punkte)))
+    DAT.sprinkler = {woch:[], mon:[], maengel:'', signatur:null, wocheAus:isoTag(wochenBeginn(jetzt))};
+}
+/* Einmal beim Start: wer vor v1.102 ausgegeben hat, bekommt den Vermerk aus
+   der Historie nachgetragen. */
+let sprNachgeholt = false;
+async function sprWocheNachholen(){
+  if(sprNachgeholt) return;
+  sprNachgeholt = true;
+  const n = NW('sprinkler'), jetzt = new Date(), d = DAT.sprinkler;
+  if(!n || sprWocheAus(jetzt) || ((d && d.woch) || []).some(g => inWoche(g.datum, jetzt))) return;
+  let l;
+  try{ l = await Historie.alle(); }catch(e){ return; }
+  const punkte = teilCfg('sprinkler').woch;
+  if(!l.some(e => e.k === 'sprinkler' && ((e.roh || {}).woch || []).some(g => inWoche(g.datum, jetzt) && gangVoll(g, punkte)))) return;
+  DAT.sprinkler = Object.assign(DAT.sprinkler || {woch:[], mon:[], maengel:'', signatur:null}, {wocheAus:isoTag(wochenBeginn(jetzt))});
+  saveDat(); listeNachziehen();
+}
 function sprinklerWoche(n, jetzt = new Date()){
-  if(!hatEintraege(n, 'woche')) return null;
+  if(!hatEintraege(n, 'woche') || sprWocheAus(jetzt)) return null;
   const d = DAT[n.k], punkte = teilCfg(n.k).woch;
   const gaenge = ((d && d.woch) || []).filter(g => inWoche(g.datum, jetzt));
   if(gaenge.length && gaenge.every(g => gangVoll(g, punkte))) return null;
@@ -3721,6 +3758,7 @@ function ring(n, takt){
     /* Rot in den letzten zwei Arbeitstagen der Woche – ohne Feiertag und
        Abwesenheit Donnerstag und Freitag, wie bisher. */
     const mo = wochenBeginn(jetzt);
+    if(!gaenge.length && sprWocheAus(jetzt)) return 'gruen';
     if(!gaenge.length) return restBis(new Date(mo.getFullYear(), mo.getMonth(), mo.getDate() + 6), mo) <= 2 ? 'rot' : '';
     const punkte = teilCfg(n.k).woch;
     return gaenge.every(g => gangVoll(g, punkte)) ? 'gruen' : 'gelb';
@@ -4496,6 +4534,7 @@ function abwesenheitsKarte(liste){
 }
 function renderHome(){
   listeGebaut = true;
+  sprWocheNachholen();
   /* Von hier aus (Suche) geöffnete Grundrisse und Verläufe merken sich eine
      Lage für die Rückkehr, die auf der Startseite niemand braucht – sie darf
      nicht in der nächsten Liste landen, die sich aufbaut. */
@@ -14004,13 +14043,21 @@ function zurKarte(o){
    hinaus, der Kurzbefehl wandelt sie in PDF. Ohne Titel im Teilen-Vorgang, sonst
    kommt er als zusätzliches Textobjekt an. */
 const nameTeil = s => String(s || '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+/* Das App-Gerüst (v1.94) hält die Seite fest: html und body sind so hoch wie
+   der Bildschirm und schneiden ab, was darüber hinausgeht. Mit den übrigen
+   Stilregeln kam das bis v1.101 ins Blatt – die Umwandlung zeigte dann nur
+   den Ausschnitt eines Bildschirms, rechts und unten abgeschnitten. Das Blatt
+   hebt es wieder auf; ältere Dateien (Historie) bekommen es beim Teilen. */
+const BLATT_FREI = '\nhtml,body{height:auto;overflow:visible}';
+const blattFreigeben = html => html.includes(BLATT_FREI) || !/<\/style>/.test(html) ? html
+  : html.replace(/<\/style>/, BLATT_FREI + '</style>');
 function blattDokument(titel, inhalt, breite){
   const stil = [...document.querySelectorAll('style')].map(s => s.textContent).join('\n')
     .replace(/\/\*[\s\S]*?\*\//g, '');
   return `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8">
 <title>${esc(titel)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>${stil}\nbody{background:#fff;padding:0}\n.paper{width:${breite || 1130}px;margin:0 auto}</style>
+<style>${stil}\nbody{background:#fff;padding:0}\n.paper{width:${breite || 1130}px;margin:0 auto}${BLATT_FREI}</style>
 </head><body>${inhalt}</body></html>`;
 }
 function exportHtml(k){ return blattDokument(NW(k).titel, blattHtml(k)); }
@@ -14018,6 +14065,7 @@ function exportHtml(k){ return blattDokument(NW(k).titel, blattHtml(k)); }
    anbietet. Ohne Titel im Teilen-Vorgang, sonst kommt er als zusätzliches
    Textobjekt an. */
 async function dateiTeilen(name, inhalt){
+  if(/\.html$/i.test(name)) inhalt = blattFreigeben(inhalt);
   const datei = new File([new Blob([inhalt], {type:'text/html'})], name, {type:'text/html'});
   try{
     if(navigator.canShare && navigator.canShare({files:[datei]})){
@@ -14073,7 +14121,9 @@ async function ausgeben(){
   maengelUebernehmen(offen, d0, EXP[offen]);
   /* Nach der Ausgabe steht der Nachweis wieder leer bereit – die nächste Runde
      beginnt von vorn. */
-  delete DAT[offen]; saveDat();
+  delete DAT[offen];
+  if(n.art === 'sprinkler') sprWocheMerken(d0);
+  saveDat();
   stack = []; go('home', false);
   toast(histOk ? 'Nachweis ausgegeben' : 'Ausgegeben – Historie nicht gespeichert');
   /* Nach Dauer und Utensilien fragen (v1.61), vorbelegt mit der gemessenen Zeit
