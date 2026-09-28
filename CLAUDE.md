@@ -113,6 +113,10 @@ steht.
   gar nicht (`datumBinden`, auch nicht bei `blur` – iOS meldet es schon beim Öffnen der Wahl); sonst verrutscht das Feld unter der
   offenen iOS-Datumswahl.
 
+- Wortwahl (v1.106): „Termin“ heißt nur die Verabredung mit Uhrzeit. Bei
+  Aufgaben, Mängeln und Wetterregeln heißt das Datum „Fällig am“ bzw.
+  „fällig …“ (intern weiter `frist`, `data-tart="termin"`).
+
 ## Testen
 
 Chromium liegt unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`,

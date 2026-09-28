@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.106 28.09.2026 Seit es Termine mit Uhrzeit gibt, hieß bei Aufgaben dasselbe
+                    Wort etwas anderes. Bei Aufgaben, Mängeln und Wetterregeln
+                    heißt es jetzt „Fällig am“: die Umschaltung „Fällig am |
+                    Zeitraum“, „ohne Fälligkeit“, „fällig 05.10.“ in Liste,
+                    „Zeit übrig?“ und „Gute Gelegenheit“, „Nächste Fälligkeit
+                    zählt ab“, „Erledigt · wieder fällig …“, „fällig in x
+                    Tagen“ bei den Regeln. „Termin“ meint nur noch die
+                    Verabredungen mit Uhrzeit; bei den Nachweisen bleibt der
+                    Prüftermin, wie er war.
   v1.105 28.09.2026 Auf der Aufgabe wurde das Datum oben in „Erledigen“ für den
                     Termin gehalten – es ist aber der Tag der Erledigung und
                     hatte keine Beschriftung. Jetzt steht „Erledigt am“ darüber.
@@ -2738,7 +2747,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.105';
+const VERSION = 'v1.106';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4502,7 +4511,7 @@ function fristText0(a){
     const termin = a.fenster
       ? (a.fenster.von > h0 ? `Zeitraum ${ttmm(a.fenster.von)}–${tagText(a.faellig)}` : `Zeitraum bis ${tagText(a.faellig)}`)
       : null;
-    if(a.geplant) return ['eingeplant' + (inWoche ? ' ' + tagText(a.geplant) : ''), termin || 'Termin ' + tagText(a.faellig)].join(' · ');
+    if(a.geplant) return ['eingeplant' + (inWoche ? ' ' + tagText(a.geplant) : ''), termin || 'fällig ' + tagText(a.faellig)].join(' · ');
     if(a.gruppe === 'heute' || a.gruppe === 'morgen') return a.fenster && a.fenster.von > h0 ? termin : '';
     if(inWoche) return termin || tagText(a.faellig);
   }
@@ -5075,7 +5084,7 @@ function aufgabeNeu(){
 }
 /* Termin einer Aufgabe für die Kopfkarte: der Tag und wie weit er weg ist. */
 function aufgTerminText(a){
-  if(!a.frist) return 'ohne Termin';
+  if(!a.frist) return 'ohne Fälligkeit';
   const h0 = tagAnfang(new Date()), tage = Math.round((alsDatum(a.frist) - h0) / TAG_MS);
   const rel = t => t < 0 ? `${-t} ${t === -1 ? 'Tag' : 'Tage'} überfällig`
                  : t === 0 ? 'heute' : t === 1 ? 'morgen' : `in ${t} Tagen`;
@@ -5084,7 +5093,7 @@ function aufgTerminText(a){
     if(a.erledigt) return span;
     return span + ' · ' + (tv > 0 ? 'beginnt ' + rel(tv) : tage < 0 ? rel(tage) : 'endet ' + rel(tage));
   }
-  if(a.erledigt) return 'Termin ' + dText(a.frist);
+  if(a.erledigt) return 'fällig war ' + dText(a.frist);
   return dText(a.frist) + ' · ' + (tage < 0 ? rel(tage) : 'fällig ' + rel(tage));
 }
 const wdhText = w => { const n = Math.max(1, Math.round(+w.n) || 1);
@@ -5205,8 +5214,8 @@ function renderAufgabe(){
           ${Object.entries(WDH_TEXT).map(([e, t]) => `<option value="${e}"${w && w.einheit === e ? ' selected' : ''}>${t[1]}</option>`).join('')}
         </select>
       </div></label>
-    ${w && !a.von ? `<div class="field segfeld"><span>Nächster Termin zählt ab</span><div class="seg">
-        <button type="button" data-basis="termin" aria-pressed="${w.basis !== 'erledigt'}">altem Termin</button>
+    ${w && !a.von ? `<div class="field segfeld"><span>Nächste Fälligkeit zählt ab</span><div class="seg">
+        <button type="button" data-basis="termin" aria-pressed="${w.basis !== 'erledigt'}">letzter Fälligkeit</button>
         <button type="button" data-basis="erledigt" aria-pressed="${w.basis === 'erledigt'}">Erledigung</button>
       </div></div>` : ''}
     <label class="field"><span>Vorbereitung</span>
@@ -5250,15 +5259,15 @@ function renderAufgabe(){
      Aufgaben; ein Mangel hat seinen Termin. */
   const zr = !mangel && !!a.von;
   const terminFeld = mangel
-    ? `<label class="field"><span>Termin</span><input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}"></label>`
+    ? `<label class="field"><span>Fällig am</span><input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}"></label>`
     : `<div class="field segfeld terminFeld"><div class="seg">
-         <button type="button" data-tart="termin" aria-pressed="${!zr}">Termin</button>
+         <button type="button" data-tart="termin" aria-pressed="${!zr}">Fällig am</button>
          <button type="button" data-tart="zeitraum" aria-pressed="${zr}">Zeitraum</button>
          ${a.entwurf ? '<button type="button" data-tart="wetter" aria-pressed="false">Wetterregel</button>' : ''}
        </div>${zr
          ? `<label class="abwZeile"><span>von</span><input type="date" class="dat" id="aufgVon" value="${esc(a.von)}"></label>
             <label class="abwZeile"><span>bis</span><input type="date" class="dat" id="aufgFrist" value="${esc(a.frist)}"></label>`
-         : `<input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}" aria-label="Termin" style="margin-top:10px">`}</div>`;
+         : `<input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}" aria-label="Fällig am" style="margin-top:10px">`}</div>`;
   /* Eingeplant für (v1.99): ein Tag, an dem die Aufgabe erledigt werden soll –
      sie steht dann an diesem Tag in der Liste, der Termin bleibt. */
   const planFeld = neu || a.erledigt ? ''
@@ -5328,7 +5337,7 @@ function renderAufgabe(){
       if(a.wdh) a.wdh.ankerVon = alsDatum(a.von).getDate();
     }
     sichern(); return true;
-  }, v => (zr ? 'Ende ' : 'Termin ') + dText(v) + ' übernommen');
+  }, v => (zr ? 'Ende ' : 'Fällig am ') + dText(v) + ' übernommen');
   const gpFeld = $('#aufgGeplant');
   datumBinden(gpFeld, v => {
     if(v === a.geplant) return false;
@@ -5455,7 +5464,7 @@ function renderAufgabe(){
       if(a.reihe) folge.reihe = a.reihe;
       AUFG.push(folge); a.folge = folge.id;
       saveAufg();
-      toast(fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · nächster Termin ${dText(folge.frist)}`);
+      toast(fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · wieder fällig ${dText(folge.frist)}`);
       zurueck(); tFragen();
       return;
     }
@@ -7080,7 +7089,7 @@ function vorziehenHtml(liste){
   const zeile = ({a, min, wetter}) => {
     const ziel = a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${esc(a.aufg)}"`
                : `data-nw="${esc(a.k)}" data-ziel="${esc(a.ziel || '')}"${a.akku ? ' data-akku="1"' : ''}`;
-    const termin = a.fenster ? `Zeitraum bis ${ttmm(a.faellig)}` : `Termin ${ttmm(a.faellig)}`;
+    const termin = a.fenster ? `Zeitraum bis ${ttmm(a.faellig)}` : `fällig ${ttmm(a.faellig)}`;
     return `<div class="hzeile">
       <div ${ziel} style="cursor:pointer">
         <p style="margin:0 0 2px"><b>${esc(a.titel)}</b></p>
@@ -7098,7 +7107,7 @@ function gelegenheitKarte(liste){
   if(!liste.length) return '';
   return `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Gute Gelegenheit</div>${liste.map(g => {
     const tag = planTagWort(g.tg.t), a = g.a;
-    const termin = a.fenster ? `Zeitraum bis ${ttmm(a.faellig)}` : `Termin ${ttmm(a.faellig)}`;
+    const termin = a.fenster ? `Zeitraum bis ${ttmm(a.faellig)}` : `fällig ${ttmm(a.faellig)}`;
     /* Ein Tipp auf den Text öffnet die Aufgabe. */
     return `<div class="hzeile">
       <div data-aufg="${esc(a.aufg)}" style="cursor:pointer">
@@ -9006,7 +9015,7 @@ function wetterListenText(r, a){
 function aufgWetterKarteHtml(a){
   const r = aufgWetter(a);
   if(!r) return '';
-  const i = info('Bewertet wird jeder Arbeitstag vormittags und nachmittags bis zum Ende des Termins, soweit die Vorhersage reicht. Fett: gut. Die Grenzwerte und die Halbtage stehen unter Einstellungen › Wetter.', 'margin:-2px 0 8px');
+  const i = info('Bewertet wird jeder Arbeitstag vormittags und nachmittags bis zur Fälligkeit, soweit die Vorhersage reicht. Fett: gut. Die Grenzwerte und die Halbtage stehen unter Einstellungen › Wetter.', 'margin:-2px 0 8px');
   let inhalt, knoepfe = '';
   if(r.fehlt === 'ort'){
     inhalt = `<p class="muted small" style="margin:0">Noch kein Standort festgelegt.</p>`;
@@ -9018,7 +9027,7 @@ function aufgWetterKarteHtml(a){
   }else if(!r.tage.length){
     inhalt = `<p class="muted small" style="margin:0">${r.beginntSpaeter
       ? 'Der Zeitraum beginnt erst nach dem Ende der Vorhersage.'
-      : 'Bis zum Termin gibt es keinen Arbeitstag mit Vorhersage.'}</p>`;
+      : 'Bis zur Fälligkeit gibt es keinen Arbeitstag mit Vorhersage.'}</p>`;
   }else{
     inhalt = r.tage.map(tg => `<div class="wbzeile"><span class="wbdat">${esc(WOCHENTAG[tg.t.getDay()])} ${esc(ttmm(tg.t))}${
       tendenzText(tg.versatz) ? `<small>${esc(tendenzText(tg.versatz))}</small>` : ''}</span><span class="wbteile">${
@@ -9424,7 +9433,7 @@ let regelAktiv = '';
 function renderWetterregeln(){
   const box = $('#wetterRegeln');
   if(!box) return;
-  const i = info('Regeln machen aus dem Wetter Aufgaben. Eine Regel schlägt entweder vor – dann steht sie auf der Startseite unter „Wetter-Hinweise“ – oder sie legt die Aufgabe gleich an. Schwellen, Text, Wichtigkeit und Termin stehen in der Regel selbst.', 'margin:-2px 0 10px');
+  const i = info('Regeln machen aus dem Wetter Aufgaben. Eine Regel schlägt entweder vor – dann steht sie auf der Startseite unter „Wetter-Hinweise“ – oder sie legt die Aufgabe gleich an. Schwellen, Text, Wichtigkeit und Fälligkeit stehen in der Regel selbst.', 'margin:-2px 0 10px');
   const zeile = r => `<button class="btn eintrag" data-regel="${esc(r.k)}"><span>${esc(r.name)}</span><span class="zahl">${
     r.aus ? 'aus' : r.modus === 'sofort' ? 'legt gleich an' : 'schlägt vor'}</span></button>`;
   const eigene = eigeneRegeln().map(eigenAlsRegel);
@@ -9489,7 +9498,7 @@ function setRegel(box, k){
       [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']].map(([w, t]) =>
         `<button type="button" data-wicht="${w}" aria-pressed="${r.wichtig === w}">${t}</button>`).join('')}</div></div>
     ${r.fristArt === 'tage'
-      ? `<label class="field"><span>Termin in Tagen</span><input type="number" step="1" id="regTage" class="schmal" value="${esc(r.tage)}"></label>`
+      ? `<label class="field"><span>Fällig in Tagen</span><input type="number" step="1" id="regTage" class="schmal" value="${esc(r.tage)}"></label>`
       : `<p class="muted small">${esc(fristText)}</p>`}
     <label class="field"><span>Wetterprofil</span>
       <select id="regProfil"><option value="">– keines –</option>${
@@ -9821,9 +9830,9 @@ function regelSatz(r){
   const saison = (+r.saisonVon || 1) === 1 && (+r.saisonBis || 12) === 12
     ? '' : `, von ${MONATE_KURZ[(+r.saisonVon || 1) - 1]} bis ${MONATE_KURZ[(+r.saisonBis || 12) - 1]}`;
   const wie = +r.proSaison ? `, höchstens ${+r.proSaison} mal je Saison` : '';
-  const frist = r.fristArt === 'heute' ? 'Termin heute'
-    : r.fristArt === 'vorher' ? 'Termin am Tag vor dem Ereignis'
-    : `Termin in ${Math.max(0, Math.round(r.tage) || 0)} Tagen`;
+  const frist = r.fristArt === 'heute' ? 'fällig heute'
+    : r.fristArt === 'vorher' ? 'fällig am Tag vor dem Ereignis'
+    : `fällig in ${Math.max(0, Math.round(r.tage) || 0)} Tagen`;
   return `Wenn ${wenn}${saison}${wie} → ${r.titel || 'Aufgabe ohne Titel'}, ${frist}`
     + `${r.profil ? `, Profil ${profilName(r.profil)}` : ''}`
     + `, ${r.modus === 'sofort' ? 'wird gleich angelegt' : 'wird vorgeschlagen'}.`;
@@ -9900,8 +9909,8 @@ function setEigenRegel(box, r, neu){
       ${regelSicht.bed === n ? bedKarte(b, n, r.bed.length > 1) : ''}`).join('')}
     <button class="btn ghost klein" data-und="${fall[0].b.fall}">+ und …</button></div>`;
   const gesamt = erg ? (faelleOk(r, erg) ? 'trifft gerade zu ✓' : 'trifft gerade nicht zu') : '';
-  const frist = r.fristArt === 'heute' ? 'Termin heute' : r.fristArt === 'vorher' ? 'Termin am Tag vorher'
-    : `Termin in ${Math.max(0, Math.round(r.tage) || 0)} Tagen`;
+  const frist = r.fristArt === 'heute' ? 'fällig heute' : r.fristArt === 'vorher' ? 'fällig am Tag vorher'
+    : `fällig in ${Math.max(0, Math.round(r.tage) || 0)} Tagen`;
   const dann = [r.titel || 'ohne Titel', frist, r.modus === 'sofort' ? 'wird gleich angelegt' : 'wird vorgeschlagen'].join(' · ');
   const ganz = (+r.saisonVon || 1) === 1 && (+r.saisonBis || 12) === 12;
   const oft = [r.aus ? 'Regel aus' : '', ganz ? 'ganzjährig' : `${MONATE_KURZ[(+r.saisonVon || 1) - 1]} bis ${MONATE_KURZ[(+r.saisonBis || 12) - 1]}`,
@@ -9915,8 +9924,8 @@ function setEigenRegel(box, r, neu){
     <details class="angaben" id="regDann"${regelSicht.dann ? ' open' : ''}><summary><span class="zfass">${esc(dann)}</span></summary>
     <label class="field"><span>Titel</span><input id="regTitel" value="${esc(r.titel || '')}" placeholder="z. B. Junge Bäume wässern"></label>
     <div class="field segfeld"><span>Wichtigkeit</span>${seg('wichtig', [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']])}</div>
-    <div class="field segfeld"><span>Termin</span>${seg('fristArt', [['tage', 'in x Tagen'], ['heute', 'heute'], ['vorher', 'Tag vorher']])}</div>
-    ${r.fristArt === 'tage' ? `<label class="field"><span>Termin in Tagen</span>
+    <div class="field segfeld"><span>Fällig</span>${seg('fristArt', [['tage', 'in x Tagen'], ['heute', 'heute'], ['vorher', 'Tag vorher']])}</div>
+    ${r.fristArt === 'tage' ? `<label class="field"><span>Fällig in Tagen</span>
       <input type="number" step="1" class="schmal" data-r="tage" value="${esc(r.tage)}"></label>` : ''}
     <label class="field"><span>Wetterprofil</span><select id="regProfil"><option value="">– keines –</option>${
       WETTER_PROFILE.map(([p, t]) => `<option value="${p}"${r.profil === p ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
@@ -14350,7 +14359,7 @@ function suchTermine(frage){
 function suchAufgStand(a){
   const h = heute();
   const von = zeitraumVon(a);
-  const termin = !a.frist ? 'ohne Termin'
+  const termin = !a.frist ? 'ohne Fälligkeit'
     : a.frist < h ? `überfällig seit ${dText(a.frist)}`
     : von ? `Zeitraum ${ttmm(alsDatum(von))}–${dText(a.frist)}`
     : a.frist === h ? 'fällig heute' : `bis ${dText(a.frist)}`;
