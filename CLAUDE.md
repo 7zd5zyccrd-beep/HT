@@ -97,6 +97,22 @@ steht.
   und in Mängel; `mittelUmhaengen` beim Umbenennen. Gelöschte Objekte
   behalten ihre Angaben wie ihre Grundrissmarke.
 
+## Termine (v1.103)
+
+- `TERM` (`nwTermine`, in der Sicherung als `termine`): Verabredungen mit
+  Uhrzeit (`zeitVon/zeitBis`) oder `ganz`, `von`–`bis` auch mehrtägig,
+  `wdh {n, einheit}`. Kein „erledigt“ – vorbei, wenn die Zeit um ist.
+- Vorkommen über `terminVorkommen`; Liste zeigt je Termin das nächste
+  (`termineFuerListe`, obenan in der Tagesgruppe über `listenGruppe`).
+- `tagKap(t)` = Arbeitszeit minus `terminBelegt`; gilt für Wochenplan,
+  Auslastung und „Vorziehen“.
+- iPhone-Kalender über eine .ics-Datei (`terminIcs`), wahlweise mit
+  Erinnerung. Auf dem Gerät noch nicht bestätigt, welcher der beiden Wege
+  („übergeben“ oder „Als Datei teilen“) dort besser funktioniert.
+- Datumsfelder auf Seiten mit Kopfkarte: übernehmen bei `input`, neu aufbauen
+  erst bei `blur` (`datumBinden`) – sonst verrutscht das Feld unter der
+  offenen iOS-Datumswahl.
+
 ## Testen
 
 Chromium liegt unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`,

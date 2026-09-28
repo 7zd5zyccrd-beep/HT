@@ -10,6 +10,27 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.103 28.09.2026 Termine mit anderen: Besprechung, Absprache, Vor-Ort-Termin.
+                    Oben auf der Startseite stehen jetzt „+ Aufgabe“ und
+                    „+ Termin“. Ein Termin hat Tag (auch mehrere Tage), Uhrzeit
+                    von–bis oder ganztägig, Ort, mit wem, wahlweise Nachweis und
+                    Anlage, Wiederholung und eine Notiz für das Ergebnis. Er
+                    steht in seiner Tagesgruppe obenan, links die Uhrzeit, und
+                    ist vorbei, wenn seine Zeit um ist – erledigt wird er nicht.
+                    Im Wochenplan steht er an seinem Tag und nimmt dort seine
+                    Zeit weg; ebenso zählt er bei „Zeit übrig?“ und der
+                    Auslastung. Übersicht › Termine zeigt alle kommenden und das
+                    Vergangene, die Suche findet sie. Auf Wunsch geht ein Termin
+                    in den iPhone-Kalender, mit Erinnerung. Termine reisen in der
+                    Sicherung. Dazu zwei Fehler an Aufgaben: ein geänderter
+                    Termin ließ sich auf dem iPhone nicht bestätigen – beim
+                    Antippen eines Tages baute sich die Kopfkarte darüber neu
+                    auf und das Feld verrutschte unter der offenen Auswahl. Jetzt
+                    wird der Tag sofort übernommen, eine kurze Meldung bestätigt
+                    ihn, neu aufgebaut wird erst nach dem Schließen. Und eine
+                    einmalige Aufgabe mit Zeitraum verschwand nach dem Anlegen
+                    bis zu ihrem Beginn aus der Liste; sie steht jetzt gleich da
+                    („Zeitraum ab …“).
   v1.102 25.09.2026 Zwei Fehler, am Sprinkler bemerkt. Das ausgegebene Blatt war
                     abgeschnitten, wie ein Querformat im Hochformat: seit v1.94
                     kam die Regel, dass die App-Seite nicht scrollt, mit in die
@@ -1809,6 +1830,12 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .abwZeile{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
 .abwZeile > span{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;
   font-size:13px;color:var(--ink-soft)}
+/* Termine (v1.103): links die Uhrzeit in fester Breite, damit die Titel
+   untereinander stehen; der dicke linke Rand unterscheidet sie von Aufgaben. */
+.btn.eintrag.termin{border-left:6px solid var(--strong);padding-left:10px}
+.btn.eintrag.termin .tzeit{flex:0 0 3.3em;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.25}
+.btn.eintrag.termin .tzeit small{display:block;margin-top:0;font-size:14px;font-weight:400;color:var(--ink-soft)}
+.neuZeile{margin:0 0 12px}
 /* Termin oder Zeitraum einer eigenen Aufgabe (v1.51): die Zeilen „von“ und
    „bis“ wie bei der Abwesenheit, aber ohne Karte – das Datum steht links unter
    seiner Beschriftung, nicht rechts am Rand, wie beim einzelnen Termin. */
@@ -2492,6 +2519,14 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       <div id="aufgBox"></div>
     </section>
 
+    <!-- Ein Termin und die Übersicht der Termine (v1.103) -->
+    <section class="view" id="view-termin">
+      <div id="terminBox"></div>
+    </section>
+    <section class="view" id="view-termine">
+      <div id="termineBox"></div>
+    </section>
+
     <!-- Eine Wetterregel (v1.55); die Liste steht seit v1.76 in „Wetter“ -->
     <section class="view" id="view-wregel">
       <div id="wregelBox"></div>
@@ -2682,8 +2717,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.102';
-const BUILD   = VERSION + ' · 25.09.2026';
+const VERSION = 'v1.103';
+const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -3315,6 +3350,10 @@ const zeitMerken = (o, s) => { o.zt = o.zt || {}; if(!o.zt[s]) o.zt[s] = Date.no
 let AUFG = Store.get('nwAufg', []);
 if(!Array.isArray(AUFG)) AUFG = [];
 const saveAufg = () => { Store.set('nwAufg', AUFG); listeNachziehen(); };
+/* Termine mit anderen (v1.103), siehe „Termine“ weiter unten. */
+let TERM = Store.get('nwTermine', []);
+if(!Array.isArray(TERM)) TERM = [];
+const saveTerm = () => { Store.set('nwTermine', TERM); listeNachziehen(); };
 /* --- Erfahrungswerte je Tätigkeit (v1.61, Etappe A) -------------------------
    Nach einer wiederkehrenden Tätigkeit fragt die App, wie lange sie ungefähr
    gedauert hat und was dafür gebraucht wurde. Eine Tätigkeit ist
@@ -3785,7 +3824,8 @@ const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufg
                historie:'Historie', histnw:'Historie', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregel:'Regel',
-               taeten:'Tätigkeiten', taet:'Tätigkeit', wplan:'Wochenplan', arbeit:'Arbeitsnachweis'};
+               taeten:'Tätigkeiten', taet:'Tätigkeit', wplan:'Wochenplan', arbeit:'Arbeitsnachweis',
+               termin:'Termin', termine:'Termine'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
    nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
@@ -3841,6 +3881,8 @@ function go(name, push = true){
   if(name === 'home')     renderHome();
   if(name === 'alle')     renderAlle();
   if(name === 'aufgabe')  renderAufgabe();
+  if(name === 'termin')   renderTermin();
+  if(name === 'termine')  renderTermine();
   if(name === 'rundgang') renderRundgang();
   if(name === 'erledigt') renderErledigt();
   if(name === 'wetter')   renderWetter();
@@ -4346,9 +4388,11 @@ function aufgaben(){
     const vorlauf = a.vorb && String(a.vorb.text || '').trim() ? (+a.vorb.wochen || 0) * 7 : 0;
     const von = zeitraumVon(a);
     if(von){
-      /* Zeitraum, einmalig oder wiederkehrend: erst ab Beginn, mit Vorbereitung
-         um deren Vorlauf früher. */
-      if(Math.round((alsDatum(von) - heute0) / TAG_MS) > vorlauf) return;
+      /* Wiederkehrender Zeitraum: erst ab Beginn, mit Vorbereitung um deren
+         Vorlauf früher. Ein einmaliger steht seit v1.103 sofort in der Liste
+         („Zeitraum ab …“) – vorher verschwand er nach dem Anlegen bis zu
+         seinem Beginn und war nur noch über die Suche zu finden. */
+      if(a.wdh && Math.round((alsDatum(von) - heute0) / TAG_MS) > vorlauf) return;
     }else if(a.wdh && a.frist){
       /* Wiederkehrende erst ab acht Wochen vorher, bei längerem Vorlauf früher –
          eine jährliche Aufgabe soll nicht das ganze Jahr in der Liste stehen. */
@@ -4368,26 +4412,9 @@ function aufgaben(){
       vorbAus: aufgVorbZahl(a).offen > 0,
       faellig: a.frist ? alsDatum(a.frist) : null});
   });
-  const sonntag = (() => { const w = wochenBeginn(jetzt);
-                           return new Date(w.getFullYear(), w.getMonth(), w.getDate() + 6); })();
   const monatLetzter = new Date(heute0.getFullYear(), heute0.getMonth() + 1, 0);
-  const naechsterSonntag = new Date(sonntag.getFullYear(), sonntag.getMonth(), sonntag.getDate() + 7);
   const rang = w => WICHTIG.findIndex(x => x[0] === w);
-  /* Die Gruppe eines Tages (v1.99). Morgen bleibt „Morgen“, auch wenn er schon
-     in der nächsten Woche liegt; „Diese Woche“ sind die Tage danach bis
-     Sonntag. Leere Gruppen fallen beim Aufbau weg. */
-  const gruppeVon = d => {
-    const v = Math.round((d - heute0) / TAG_MS);
-    if(v <= 0) return {g:'heute', nr:1, titel:`Heute · ${WOCHENTAG[heute0.getDay()]} ${ttmm(heute0)}`};
-    if(v === 1) return {g:'morgen', nr:2, titel:`Morgen · ${WOCHENTAG[d.getDay()]} ${ttmm(d)}`};
-    if(d <= sonntag) return {g:'woche', nr:3, titel:'Diese Woche'};
-    if(d <= naechsterSonntag){
-      const mo = new Date(sonntag.getFullYear(), sonntag.getMonth(), sonntag.getDate() + 1);
-      return {g:'nwoche', nr:4, titel:`Nächste Woche · ${ttmm(mo)}–${ttmm(naechsterSonntag)}`};
-    }
-    return {g:'m' + d.getFullYear() + '-' + d.getMonth(), nr:5 + d.getFullYear() * 12 + d.getMonth(),
-            titel: MONATE[d.getMonth()] + (d.getFullYear() !== heute0.getFullYear() ? ' ' + d.getFullYear() : '')};
-  };
+  const gruppeVon = listenGruppe;
   liste.forEach(a => {
     /* Frist auf den letzten Arbeitstag davor. Geht das nicht, bleibt die Frist
        stehen und die Zeile sagt, dass eine Vertretung gebraucht wird. */
@@ -4419,6 +4446,25 @@ function aufgaben(){
                  || rang(x.wichtig) - rang(y.wichtig)
                  || zeit(x.faellig) - zeit(y.faellig)
                  || x.pos - y.pos);
+}
+/* Die Gruppe eines Tages (v1.99). Morgen bleibt „Morgen“, auch wenn er schon
+   in der nächsten Woche liegt; „Diese Woche“ sind die Tage danach bis
+   Sonntag. Leere Gruppen fallen beim Aufbau weg. Seit v1.103 eigenständig,
+   damit auch die Termine ihre Gruppe finden. */
+function listenGruppe(d){
+  const jetzt = new Date(), heute0 = tagAnfang(jetzt), w = wochenBeginn(jetzt);
+  const sonntag = new Date(w.getFullYear(), w.getMonth(), w.getDate() + 6);
+  const naechsterSonntag = new Date(sonntag.getFullYear(), sonntag.getMonth(), sonntag.getDate() + 7);
+  const v = Math.round((d - heute0) / TAG_MS);
+  if(v <= 0) return {g:'heute', nr:1, titel:`Heute · ${WOCHENTAG[heute0.getDay()]} ${ttmm(heute0)}`};
+  if(v === 1) return {g:'morgen', nr:2, titel:`Morgen · ${WOCHENTAG[d.getDay()]} ${ttmm(d)}`};
+  if(d <= sonntag) return {g:'woche', nr:3, titel:'Diese Woche'};
+  if(d <= naechsterSonntag){
+    const mo = new Date(sonntag.getFullYear(), sonntag.getMonth(), sonntag.getDate() + 1);
+    return {g:'nwoche', nr:4, titel:`Nächste Woche · ${ttmm(mo)}–${ttmm(naechsterSonntag)}`};
+  }
+  return {g:'m' + d.getFullYear() + '-' + d.getMonth(), nr:5 + d.getFullYear() * 12 + d.getMonth(),
+          titel: MONATE[d.getMonth()] + (d.getFullYear() !== heute0.getFullYear() ? ' ' + d.getFullYear() : '')};
 }
 /* Die Frist hält mit geschützten Leerzeichen zusammen: wird die Zeile zu lang,
    bricht sie zwischen Stand und Frist statt mitten im Datum. */
@@ -4494,6 +4540,7 @@ const knoepfeVerdrahten = box => {
     b.dataset.akku ? akkuOeffnen() : nachweisOeffnen(b.dataset.nw, b.dataset.ziel));
   box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => aufgabeOeffnen(b.dataset.aufg));
   box.querySelectorAll('[data-rundgang]').forEach(b => b.onclick = rundgangOeffnen);
+  box.querySelectorAll('[data-termin]').forEach(b => b.onclick = () => terminOeffnen(b.dataset.termin));
 };
 
 /* Zwei Wochen vor einer Abwesenheit: was vorher zu erledigen ist und wofür eine
@@ -4546,7 +4593,13 @@ function renderHome(){
   /* Die Gruppen folgen der Sortierung (v1.99); „Gute Gelegenheit“ steht unter
      dem Überfälligen, sonst zuoberst. */
   const gruppen = [];
-  liste.forEach(a => {
+  /* Termine (v1.103) stehen in ihrer Tagesgruppe obenan, nach Beginn geordnet.
+     Die übrige Reihenfolge bleibt, wie aufgaben() sie gibt. */
+  const term = termineFuerListe();
+  const folge = liste.concat(term).sort((x, y) => x.gNr - y.gNr
+    || (y.istTermin ? 1 : 0) - (x.istTermin ? 1 : 0)
+    || (x.istTermin && y.istTermin ? x.schl.localeCompare(y.schl) : 0));
+  folge.forEach(a => {
     const g = gruppen[gruppen.length - 1];
     if(g && g.g === a.gruppe) g.teil.push(a); else gruppen.push({g:a.gruppe, titel:a.gTitel, teil:[a]});
   });
@@ -4559,9 +4612,9 @@ function renderHome(){
     + (vorzNach ? '' : vorz)
     + gruppen.map(({g, titel, teil}) => {
     /* Was die Gruppe an Zeit braucht (v1.63), aus den Erfahrungswerten. */
-    const summe = teil.reduce((sum, a) => { const m = eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
+    const summe = teil.reduce((sum, a) => { const m = !a.istTermin && eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
     return `<div class="eyebrow">${esc(titel)}${summe ? ` <span class="summe">· ≈ ${esc(dauerText({m:summe}))}</span>` : ''}</div>`
-        + teil.map(aufgabeKnopf).join('') + (g === 'ueber' ? gelegen : '') + (g === vorzNach ? vorz : '');
+        + teil.map(a => a.istTermin ? terminKnopf(a.o, g === 'heute' || g === 'morgen') : aufgabeKnopf(a)).join('') + (g === 'ueber' ? gelegen : '') + (g === vorzNach ? vorz : '');
   }).join('');
   if(!inhalt.includes('data-')) inhalt += gibt
     ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Alle Nachweise“.</p>`
@@ -4572,12 +4625,14 @@ function renderHome(){
   /* Die Zahl rechts sagt überall, wie viele Einträge die Seite hat (v1.76). */
   const taetL = taetKandidaten();
   const mehr = (gibt ? `<button class="btn eintrag" data-alle="1"><span>Alle Nachweise</span></button>` : '')
-    + (liste.length ? `<button class="btn eintrag" data-wplan="1"><span>Wochenplan</span></button>` : '')
+    + (liste.length || term.length ? `<button class="btn eintrag" data-wplan="1"><span>Wochenplan</span></button>` : '')
+    + (TERM.length ? `<button class="btn eintrag" data-termine="1"><span>Termine</span><span class="zahl">${termineKommend().length}</span></button>` : '')
     + (taetL.length ? `<button class="btn eintrag" data-taeten="1"><span>Tätigkeiten</span><span class="zahl">${taetL.length}</span></button>` : '')
     + `<button class="btn eintrag" data-arbeit="1"><span>Arbeitsnachweis</span></button>`
     + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigt</span><span class="zahl">${erledigt}</span></button>` : '')
     + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span></button>` : '');
-  $('#homeListe').innerHTML = `<button class="btn ghost klein" data-neuaufg="1" style="margin:0 0 12px">+ Aufgabe hinzufügen</button>`
+  $('#homeListe').innerHTML = `<div class="row neuZeile"><button class="btn ghost klein" data-neuaufg="1">+ Aufgabe</button>
+      <button class="btn ghost klein" data-neutermin="1">+ Termin</button></div>`
     + warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
     + matStartHtml()
     + '<div id="homeMehr">' + (mehr ? `<div class="eyebrow">Übersicht</div>${mehr}` : '') + '</div>';
@@ -4590,6 +4645,9 @@ function renderHome(){
   const wet = $('#homeListe [data-wetter]');
   if(wet){ wet.onclick = () => { go('wetter'); wetterAbrufen(); }; wetterStandZeigen(); }
   $('#homeListe [data-neuaufg]').onclick = aufgabeNeu;
+  $('#homeListe [data-neutermin]').onclick = terminNeu;
+  const tl = $('#homeListe [data-termine]');
+  if(tl) tl.onclick = () => go('termine');
   const sich = $('#homeListe [data-sichern]');
   if(sich) sich.onclick = alsDateiSichern;
   const ta = $('#homeListe [data-taeten]');
@@ -5188,7 +5246,9 @@ function renderAufgabe(){
     + `<details class="angaben" id="aufgAngaben"${angabenAuf === a.id ? ' open' : ''}><summary>Angaben bearbeiten</summary>${felder}</details>`
     + (!mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '');
   aufgKopfZeigen(a, mangelKopf);
-  if($('#aufgAngaben')) $('#aufgAngaben').ontoggle = e => { angabenAuf = e.target.open ? a.id : ''; };
+  /* Beim Zuklappen zieht die Kopfkarte sicher nach (v1.103) – falls iOS beim
+     Schließen einer Datumswahl kein "blur" gemeldet hat. */
+  if($('#aufgAngaben')) $('#aufgAngaben').ontoggle = e => { angabenAuf = e.target.open ? a.id : ''; if(!e.target.open) kopfNeu(); };
   const kopfNeu = () => aufgKopfZeigen(a, mangelKopf);
 
   /* Vorbereiten (v1.74) – nur die offene, gespeicherte Aufgabe. */
@@ -5203,42 +5263,53 @@ function renderAufgabe(){
       sichern(); renderAufgabe();
     };
   }
-  /* Beide Ereignisse: iOS meldet "change" erst beim Schließen der Datumswahl. */
+  /* Datumsfelder (v1.103). Übernommen wird bei jeder Meldung – iOS meldet
+     "change" erst beim Schließen der Datumswahl, "input" schon beim Antippen
+     eines Tages. Neu aufgebaut wird aber erst, wenn die Wahl zu ist (blur):
+     baute sich die Kopfkarte darüber schon beim Antippen neu, verrutschte das
+     Feld unter der offenen Wahl, und der neue Tag ließ sich auf dem iPhone
+     nicht bestätigen. Eine kurze Meldung sagt, dass er übernommen ist. */
+  let nachWahl = null;
+  const datumBinden = (feld, uebernehmen, meldung) => {
+    if(!feld) return;
+    let gemeldet = feld.value;
+    feld.oninput = feld.onchange = () => {
+      if(!feld.value || !uebernehmen(feld.value)) return;
+      if(!neu && feld.value !== gemeldet){ gemeldet = feld.value; toast(meldung(feld.value)); }
+    };
+    feld.onblur = () => { const f = nachWahl || kopfNeu; nachWahl = null; f(); };
+  };
   const frist = $('#aufgFrist');
-  frist.oninput = frist.onchange = () => {
-    if(frist.value && frist.value !== a.frist){
-      a.frist = frist.value;
-      if(a.wdh) a.wdh.anker = alsDatum(a.frist).getDate();   // der feste Rhythmus folgt dem neuen Tag
-      /* Ein Ende vor dem Beginn wird angeglichen, wie bei der Abwesenheit. */
-      if(zr && a.von > a.frist){
-        a.von = a.frist; $('#aufgVon').value = a.von;
-        if(a.wdh) a.wdh.ankerVon = alsDatum(a.von).getDate();
-      }
-      sichern(); kopfNeu();
-    }
-  };
-  const gpFeld = $('#aufgGeplant');
-  if(gpFeld) gpFeld.oninput = gpFeld.onchange = () => {
-    const v = gpFeld.value;
-    if(!v || v === a.geplant) return;
-    if(v < heute()){ gpFeld.value = a.geplant || ''; return; }
-    const neuGesetzt = !a.geplant;
-    a.geplant = v; sichern(); kopfNeu();
-    if(neuGesetzt) renderAufgabe();          // „Entfernen“ erscheint
-  };
-  if($('#aufgGeplantWeg')) $('#aufgGeplantWeg').onclick = () => { delete a.geplant; sichern(); renderAufgabe(); };
-  const vonFeld = $('#aufgVon');
-  if(vonFeld) vonFeld.oninput = vonFeld.onchange = () => {
-    if(vonFeld.value && vonFeld.value !== a.von){
-      a.von = vonFeld.value;
+  datumBinden(frist, v => {
+    if(v === a.frist) return false;
+    a.frist = v;
+    if(a.wdh) a.wdh.anker = alsDatum(a.frist).getDate();   // der feste Rhythmus folgt dem neuen Tag
+    /* Ein Ende vor dem Beginn wird angeglichen, wie bei der Abwesenheit. */
+    if(zr && a.von > a.frist){
+      a.von = a.frist; $('#aufgVon').value = a.von;
       if(a.wdh) a.wdh.ankerVon = alsDatum(a.von).getDate();
-      if(!a.frist || a.frist < a.von){
-        a.frist = a.von; frist.value = a.frist;
-        if(a.wdh) a.wdh.anker = alsDatum(a.frist).getDate();
-      }
-      sichern(); kopfNeu();
     }
-  };
+    sichern(); return true;
+  }, v => (zr ? 'Ende ' : 'Termin ') + dText(v) + ' übernommen');
+  const gpFeld = $('#aufgGeplant');
+  datumBinden(gpFeld, v => {
+    if(v === a.geplant) return false;
+    if(v < heute()){ gpFeld.value = a.geplant || ''; return false; }
+    /* „Entfernen“ erscheint erst nach dem Schließen der Wahl. */
+    if(!a.geplant) nachWahl = renderAufgabe;
+    a.geplant = v; sichern(); return true;
+  }, v => 'Eingeplant für ' + planTagWort(alsDatum(v)));
+  if($('#aufgGeplantWeg')) $('#aufgGeplantWeg').onclick = () => { delete a.geplant; sichern(); renderAufgabe(); };
+  datumBinden($('#aufgVon'), v => {
+    if(v === a.von) return false;
+    a.von = v;
+    if(a.wdh) a.wdh.ankerVon = alsDatum(a.von).getDate();
+    if(!a.frist || a.frist < a.von){
+      a.frist = a.von; frist.value = a.frist;
+      if(a.wdh) a.wdh.anker = alsDatum(a.frist).getDate();
+    }
+    sichern(); return true;
+  }, v => 'Beginn ' + dText(v) + ' übernommen');
   /* Umschalten: der Termin wird zu „von“, „bis“ einen Monat später; zurück gilt
      „bis“ als Termin. Beim Zeitraum zählt die Wiederholung immer ab dem alten
      Termin – ab der Erledigung wanderte der Zeitraum mit jeder Erledigung. */
@@ -5366,6 +5437,331 @@ function renderAufgabe(){
     frage('Aufgabe löschen', `„${a.titel || 'Ohne Titel'}“ wird gelöscht.`, 'Löschen', () => {
       AUFG = AUFG.filter(x => x !== a); saveAufg(); zurueck();
     });
+}
+/* ---------- Termine (v1.103) ------------------------------------------------
+   Verabredungen mit anderen – Besprechung, Absprache, Vor-Ort-Termin –, im
+   Unterschied zur Aufgabe mit Uhrzeit und ohne „erledigt“: ein Termin ist
+   vorbei, wenn seine Zeit um ist. Einer oder mehrere Tage, mit Uhrzeit oder
+   ganztägig, auf Wunsch wiederkehrend. In der Liste steht je Termin sein
+   nächstes Vorkommen obenan in der Tagesgruppe; im Wochenplan nimmt er seine
+   Zeit vom Tag. Gespeichert in TERM (nwTermine), reist in der Sicherung. */
+const TERMIN_ARTEN = [['besprechung', 'Besprechung'], ['absprache', 'Absprache'],
+                      ['vorort', 'Vor-Ort-Termin'], ['sonst', 'Sonstiges']];
+const terminArt = t => (TERMIN_ARTEN.find(x => x[0] === t.art) || TERMIN_ARTEN[3])[1];
+const hmMin = s => { const [h, m] = String(s || '').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+const minHm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+/* Die Vorkommen eines Termins, die in die Tage ab…bis (ISO) hineinreichen.
+   Wiederholt wird vom ersten Tag aus, jedes Mal mit dessen Monatstag – wie bei
+   den Aufgaben rutscht ein 31. nach einem kurzen Monat nicht dauerhaft. */
+function terminVorkommen(t, ab, bis){
+  if(!t || !t.von) return [];
+  const dauer = Math.max(0, Math.round((alsDatum(t.bis || t.von) - alsDatum(t.von)) / TAG_MS));
+  const w = t.wdh, n = w ? Math.max(1, Math.round(+w.n) || 1) : 0, anker = alsDatum(t.von).getDate();
+  const aus = [];
+  for(let i = 0; i < 3000; i++){
+    const von = i ? terminPlus(t.von, n * i, w.einheit, anker) : t.von;
+    if(von > bis) break;
+    const ende = tagPlus(von, dauer);
+    if(ende >= ab) aus.push({t, von, bis:ende});
+    if(!w) break;
+  }
+  return aus;
+}
+/* Beginn und Ende eines Vorkommens als Zeitpunkt; ganztägig von 0 bis 24 Uhr. */
+const vkBeginn = o => { const d = alsDatum(o.von); if(!o.t.ganz) d.setMinutes(hmMin(o.t.zeitVon)); return d; };
+const vkEnde = o => { const d = alsDatum(o.bis); d.setMinutes(o.t.ganz ? 1440 : hmMin(o.t.zeitBis)); return d; };
+/* Das nächste noch nicht vorbeie Vorkommen; null, wenn keins mehr kommt. */
+function terminNaechstes(t){
+  const jetzt = new Date(), h = heute();
+  return terminVorkommen(t, h, tagPlus(h, 800)).find(o => vkEnde(o) > jetzt) || null;
+}
+/* Alle Vorkommen an einem Tag, nach Beginn geordnet (Wochenplan). Was heute
+   schon vorbei ist, fällt weg. */
+function termineAm(iso){
+  const jetzt = new Date();
+  return TERM.flatMap(t => terminVorkommen(t, iso, iso)).filter(o => vkEnde(o) > jetzt)
+    .sort((x, y) => terminSchl(x, iso).localeCompare(terminSchl(y, iso)));
+}
+/* Sortierschlüssel: ganztägige und schon laufende zuerst, dann nach Uhrzeit. */
+const terminSchl = (o, iso) => (o.t.ganz || o.von < iso ? '00:00' : o.t.zeitVon || '00:00') + o.von + (o.t.titel || '');
+/* Wie viele Minuten der Halbtage (Einstellungen › Wetter) an einem Tag durch
+   Termine belegt sind; ab abMin (heute: jetzt). Überschneidungen zählen einmal. */
+function terminBelegt(iso, abMin){
+  if(!TERM.length) return 0;
+  const e = wetterEinst(), a0 = Math.max(e.vormVon * 60, abMin || 0), b0 = e.nachmBis * 60;
+  if(b0 <= a0) return 0;
+  const stuecke = [];
+  TERM.forEach(t => terminVorkommen(t, iso, iso).forEach(o => {
+    const s = t.ganz || o.von < iso ? 0 : hmMin(t.zeitVon);
+    const en = t.ganz || o.bis > iso ? 1440 : hmMin(t.zeitBis);
+    const x = Math.max(s, a0), y = Math.min(en, b0);
+    if(y > x) stuecke.push([x, y]);
+  }));
+  stuecke.sort((p, q) => p[0] - q[0]);
+  let sum = 0, bis = -1;
+  stuecke.forEach(([x, y]) => { if(y <= bis) return; sum += y - Math.max(x, bis); bis = y; });
+  return sum;
+}
+/* Die Zeilen für die Liste: je Termin das nächste Vorkommen. Einmalige stehen
+   immer da, wiederkehrende ab acht Wochen vorher – wie bei den Aufgaben. Ein
+   laufender mehrtägiger steht unter „Heute“. */
+function termineFuerListe(){
+  const h = heute();
+  return TERM.map(terminNaechstes).filter(Boolean)
+    .filter(o => !o.t.wdh || Math.round((alsDatum(o.von) - alsDatum(h)) / TAG_MS) <= VORWARN)
+    .map(o => {
+      const tag = o.von < h ? h : o.von, g = listenGruppe(alsDatum(tag));
+      return {istTermin:true, o, gruppe:g.g, gNr:g.nr, gTitel:g.titel, schl:tag + terminSchl(o, tag)};
+    });
+}
+const termineKommend = () => TERM.map(t => terminNaechstes(t)).filter(Boolean)
+  .sort((x, y) => (x.von + terminSchl(x, x.von)).localeCompare(y.von + terminSchl(y, y.von)));
+/* Die Uhrzeit eines Vorkommens als Text, z. B. „10:00–11:30“, mehrtägig mit
+   den Tagen. */
+function terminZeitText(o, mitTag){
+  const t = o.t, tagT = iso => { const d = alsDatum(iso); return `${WOCHENTAG[d.getDay()]} ${ttmm(d)}`; };
+  if(o.von !== o.bis){
+    return t.ganz ? `${tagT(o.von)}–${tagT(o.bis)}`
+                  : `${tagT(o.von)} ${t.zeitVon} – ${tagT(o.bis)} ${t.zeitBis}`;
+  }
+  const zeit = t.ganz ? 'ganztägig' : `${t.zeitVon}–${t.zeitBis}`;
+  return mitTag ? `${tagT(o.von)} · ${zeit}` : zeit;
+}
+/* Eine Terminzeile: links die Uhrzeit, daneben Titel und das Übrige. Unter
+   „Heute“ und „Morgen“ sagt die Überschrift den Tag, sonst steht er dabei. */
+function terminKnopf(o, ohneTag){
+  const t = o.t, einTag = o.von === o.bis, jetzt = new Date();
+  const laeuft = vkBeginn(o) <= jetzt && vkEnde(o) > jetzt;
+  /* Links die Uhrzeit, mehrtägig die beiden Tage; die Zeile darunter nennt
+     dann nur noch den Tag, nicht die Uhrzeit ein zweites Mal. */
+  const links = einTag && !t.ganz ? `${t.zeitVon}<small>${t.zeitBis}</small>` : einTag ? 'ganzer<small>Tag</small>'
+    : `${ttmm(alsDatum(o.von))}<small>–${ttmm(alsDatum(o.bis))}</small>`;
+  const tagT = d => `${WOCHENTAG[d.getDay()]} ${ttmm(d)}`;
+  const wann = einTag ? (ohneTag ? '' : tagT(alsDatum(o.von))) : terminZeitText(o, true);
+  const n = t.k ? NW(t.k) : null;
+  const unten = [laeuft ? 'läuft' : '', wann, terminArt(t),
+                 t.ort, t.mit ? 'mit ' + t.mit : '', n ? n.label + (t.anlage ? ' · ' + anlageName(t) : '') : '',
+                 t.wdh ? wdhText(t.wdh) : ''].filter(Boolean).join(' · ');
+  return `<button class="btn eintrag termin" data-termin="${esc(t.id)}"><span class="tzeit">${links}</span>`
+    + `<span class="etext">${esc(t.titel || 'Termin')}<small>${esc(unten)}</small></span></button>`;
+}
+let terminAktiv = null;
+function terminOeffnen(id){
+  terminAktiv = TERM.find(t => t.id === id) || null;
+  if(terminAktiv) go('termin');
+}
+function terminNeu(){
+  /* Vorschlag: morgen, die nächste volle Stunde nach Arbeitsbeginn, eine Stunde. */
+  const e = wetterEinst(), beginn = Math.max(8, Math.ceil(e.vormVon)) * 60;
+  terminAktiv = {id:neueId(), titel:'', art:'besprechung', von:tagPlus(heute(), 1), bis:tagPlus(heute(), 1),
+    ganz:false, zeitVon:minHm(beginn), zeitBis:minHm(beginn + 60), ort:'', mit:'', k:'', anlage:'', anlageText:'',
+    notiz:'', erinnern:'', angelegt:heute(), entwurf:true};
+  go('termin');
+}
+function renderTermin(){
+  const t = terminAktiv, box = $('#terminBox');
+  if(!t){ box.innerHTML = ''; return; }
+  const neu = !!t.entwurf, mehr = t.bis !== t.von, w = t.wdh || null;
+  const sichern = () => { if(!neu) saveTerm(); };
+  $('#titel').textContent = neu ? 'Neuer Termin' : 'Termin';
+  const anlagen = bezugsAnlagen(t.k);
+  const seg = (name, wahl) => `<div class="seg">${wahl.map(([k, text, an]) =>
+    `<button type="button" data-${name}="${k}" aria-pressed="${!!an}">${text}</button>`).join('')}</div>`;
+  const naechst = !neu && t.wdh ? terminNaechstes(t) : null;
+  box.innerHTML = `
+    ${naechst && naechst.von !== t.von ? `<div class="card"><p style="margin:0">Nächster Termin: ${esc(terminZeitText(naechst, true))}</p></div>` : ''}
+    <label class="field"><span>Titel</span>
+      <input id="tmTitel" value="${esc(t.titel)}" placeholder="z. B. Absprache Firma Müller"></label>
+    <label class="field"><span>Art</span><select id="tmArt">${
+      TERMIN_ARTEN.map(([k, text]) => `<option value="${k}"${t.art === k ? ' selected' : ''}>${text}</option>`).join('')}</select></label>
+    <div class="field segfeld terminFeld"><span>${w ? 'Erster Tag' : 'Tag'}</span>${seg('tage', [['ein', 'Ein Tag', !mehr], ['mehr', 'Mehrere Tage', mehr]])}
+      ${mehr
+        ? `<label class="abwZeile"><span>von</span><input type="date" class="dat" id="tmVon" value="${esc(t.von)}"></label>
+           <label class="abwZeile"><span>bis</span><input type="date" class="dat" id="tmBis" value="${esc(t.bis)}"></label>`
+        : `<input type="date" id="tmVon" class="schmal" value="${esc(t.von)}" aria-label="Tag" style="margin-top:10px">`}</div>
+    <div class="field segfeld terminFeld"><span>Uhrzeit</span>${seg('ganz', [['zeit', 'Uhrzeit', !t.ganz], ['ganz', 'Ganztägig', t.ganz]])}
+      ${t.ganz ? '' : `<label class="abwZeile"><span>von</span><input type="time" class="dat" id="tmZeitVon" value="${esc(t.zeitVon)}" step="300"></label>
+         <label class="abwZeile"><span>bis</span><input type="time" class="dat" id="tmZeitBis" value="${esc(t.zeitBis)}" step="300"></label>`}</div>
+    <label class="field"><span>Ort</span><input id="tmOrt" value="${esc(t.ort)}" placeholder="z. B. Technikraum, Büro Verwaltung"></label>
+    <label class="field"><span>Mit wem</span><input id="tmMit" value="${esc(t.mit)}" placeholder="z. B. Herr Schmidt, Firma Müller"></label>
+    <label class="field"><span>Nachweis</span>
+      <select id="tmNw"><option value="">– ohne Bezug –</option>${
+        NACHWEISE.filter(x => !x.spaeter).map(x =>
+          `<option value="${x.k}"${x.k === t.k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
+    ${anlagen.length ? `<label class="field"><span>${t.k === 'medien' ? 'Zähler' : 'Anlage'}</span>
+      <select id="tmAnlage"><option value="">– ohne –</option>${
+        anlagen.map(x => `<option value="${esc(x.wert)}"${x.wert === t.anlage ? ' selected' : ''}>${esc(x.text)}</option>`).join('')}</select></label>` : ''}
+    <label class="field"><span>Wiederholen</span>
+      <div class="row wdhZeile">
+        <span class="wdhAlle"${w ? '' : ' hidden'}>alle</span>
+        <input id="tmWdhN" type="number" inputmode="numeric" min="1" value="${esc(w ? w.n : 1)}"${w ? '' : ' hidden'}>
+        <select id="tmWdh">
+          <option value=""${w ? '' : ' selected'}>nicht wiederholen</option>
+          ${Object.entries(WDH_TEXT).map(([e, x]) => `<option value="${e}"${w && w.einheit === e ? ' selected' : ''}>${x[1]}</option>`).join('')}
+        </select>
+      </div></label>
+    <label class="field"><span>Notiz und Ergebnis</span><textarea id="tmNotiz" style="min-height:90px" placeholder="Worum es geht, was besprochen wurde">${esc(t.notiz)}</textarea></label>
+    <div class="card"><div class="eyebrow" style="margin:0 0 6px">iPhone-Kalender</div>
+      <label class="haken"><input type="checkbox" id="tmKal"${t.kalender ? ' checked' : ''}> In den Kalender übernehmen</label>
+      <div id="tmKalTeil"${t.kalender ? '' : ' hidden'}>
+        <label class="field" style="margin:8px 0 0"><span>Erinnerung</span><select id="tmErinnern">${
+          [['', 'keine'], ['15', '15 Minuten vorher'], ['60', '1 Stunde vorher'], ['1440', '1 Tag vorher']].map(([k, x]) =>
+            `<option value="${k}"${String(t.erinnern || '') === k ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+        <p class="muted small" style="margin:8px 0 0">${neu ? 'Beim Anlegen öffnet sich der Kalender mit dem Termin.'
+          : 'Der Kalender bekommt eine Kopie. Spätere Änderungen hier kommen dort nicht von selbst an – dann erneut übergeben.'}</p>
+        ${neu ? '' : `<button class="btn klein" id="tmKalJetzt" style="margin-top:10px">An den Kalender übergeben</button>
+          <button class="btn ghost klein" id="tmKalTeilen">Als Datei teilen</button>`}
+      </div></div>
+    ${neu ? `<button class="btn primary" id="tmAnlegen">Termin anlegen</button>`
+          : `<div class="knopfzeile"><button class="btn danger klein" id="tmWeg">Löschen</button></div>`}`;
+
+  $('#tmTitel').oninput = e => { t.titel = e.target.value; sichern(); };
+  $('#tmArt').onchange = e => { t.art = e.target.value; sichern(); };
+  $('#tmOrt').oninput = e => { t.ort = e.target.value; sichern(); };
+  $('#tmMit').oninput = e => { t.mit = e.target.value; sichern(); };
+  $('#tmNotiz').oninput = e => { t.notiz = e.target.value; sichern(); };
+  $('#tmNw').onchange = e => { t.k = e.target.value; t.anlage = ''; t.anlageText = ''; sichern(); renderTermin(); };
+  if($('#tmAnlage')) $('#tmAnlage').onchange = e => {
+    const wahl = bezugsAnlagen(t.k).find(x => x.wert === e.target.value);
+    t.anlage = wahl ? wahl.wert : ''; t.anlageText = wahl ? wahl.text : ''; sichern();
+  };
+  /* Datums- und Zeitfelder wie bei der Aufgabe: übernommen wird sofort, die
+     Seite baut sich dabei nicht neu auf – sonst verrutschte das Feld unter der
+     offenen Auswahl. Angeglichen wird, damit das Ende nie vor dem Beginn liegt. */
+  const feld = (id, setzen) => { const f = $('#' + id); if(f) f.oninput = f.onchange = () => { if(f.value){ setzen(f.value); sichern(); } }; };
+  const endeAngleichen = () => {
+    if(t.bis < t.von){ t.bis = t.von; if($('#tmBis')) $('#tmBis').value = t.bis; }
+    if(!t.ganz && t.bis === t.von && hmMin(t.zeitBis) <= hmMin(t.zeitVon)){
+      t.zeitBis = minHm(Math.min(hmMin(t.zeitVon) + 60, 23 * 60 + 55));
+      if($('#tmZeitBis')) $('#tmZeitBis').value = t.zeitBis;
+    }
+  };
+  feld('tmVon', v => {
+    if(mehr){ t.von = v; endeAngleichen(); }
+    else{ t.von = t.bis = v; }
+  });
+  feld('tmBis', v => { t.bis = v; if(t.bis < t.von){ t.von = t.bis; $('#tmVon').value = t.von; } });
+  feld('tmZeitVon', v => {
+    /* Der Beginn schiebt das Ende mit, die Dauer bleibt. */
+    const dauer = hmMin(t.zeitBis) - hmMin(t.zeitVon);
+    t.zeitVon = v;
+    if(t.bis === t.von && dauer > 0){
+      t.zeitBis = minHm(Math.min(hmMin(v) + dauer, 23 * 60 + 55));
+      $('#tmZeitBis').value = t.zeitBis;
+    }
+  });
+  feld('tmZeitBis', v => { t.zeitBis = v; });
+  ['tmZeitBis', 'tmVon', 'tmBis'].forEach(id => { const f = $('#' + id); if(f) f.onblur = () => { endeAngleichen(); sichern(); }; });
+  box.querySelectorAll('[data-tage]').forEach(b => b.onclick = () => {
+    const zu = b.dataset.tage === 'mehr';
+    if(zu === mehr) return;
+    t.bis = zu ? tagPlus(t.von, 1) : t.von;
+    endeAngleichen(); sichern(); renderTermin();
+  });
+  box.querySelectorAll('[data-ganz]').forEach(b => b.onclick = () => {
+    t.ganz = b.dataset.ganz === 'ganz'; sichern(); renderTermin();
+  });
+  $('#tmWdh').onchange = e => {
+    if(!e.target.value) delete t.wdh;
+    else t.wdh = Object.assign({n:1}, t.wdh || {}, {einheit:e.target.value});
+    sichern(); renderTermin();
+  };
+  $('#tmWdhN').oninput = e => {
+    const zahlN = Math.round(+e.target.value);
+    if(t.wdh && zahlN >= 1){ t.wdh.n = zahlN; sichern(); }
+  };
+  $('#tmKal').onchange = e => {
+    if(e.target.checked) t.kalender = true; else delete t.kalender;
+    $('#tmKalTeil').hidden = !e.target.checked; sichern();
+  };
+  $('#tmErinnern').onchange = e => { t.erinnern = e.target.value; sichern(); };
+  if($('#tmKalJetzt')) $('#tmKalJetzt').onclick = () => { endeAngleichen(); terminInKalender(t); };
+  if($('#tmKalTeilen')) $('#tmKalTeilen').onclick = () => { endeAngleichen(); terminTeilen(t); };
+  if($('#tmAnlegen')) $('#tmAnlegen').onclick = () => {
+    if(!t.titel.trim()){ toast('Bitte einen Titel eintragen'); $('#tmTitel').focus(); return; }
+    endeAngleichen();
+    delete t.entwurf; TERM.push(t); saveTerm();
+    /* Der Kalender zuerst, solange der Tipp noch als Tipp gilt – iOS lässt
+       das Öffnen sonst nicht zu. */
+    if(t.kalender) terminInKalender(t);
+    toast('Termin angelegt'); zurueck();
+  };
+  if($('#tmWeg')) $('#tmWeg').onclick = () =>
+    frage('Termin löschen', `„${t.titel || 'Termin'}“ wird gelöscht${t.wdh ? ', mit allen Wiederholungen' : ''}.`, 'Löschen', () => {
+      TERM = TERM.filter(x => x !== t); saveTerm(); zurueck();
+    });
+}
+/* Die Übersicht aller Termine: was kommt, nach Beginn; darunter Vergangenes,
+   das Neueste zuerst – dort steht, was besprochen wurde. */
+function renderTermine(){
+  const kommend = termineKommend();
+  const vorbei = TERM.filter(t => !terminNaechstes(t))
+    .sort((x, y) => String(y.bis || y.von).localeCompare(String(x.bis || x.von))).slice(0, 30);
+  const zeileVorbei = t => {
+    return `<button class="btn eintrag" data-termin="${esc(t.id)}"><span class="etext">${esc(t.titel || 'Termin')}<small>${
+      esc([dText(t.von), terminArt(t), t.mit ? 'mit ' + t.mit : '', kurz(t.notiz)].filter(Boolean).join(' · '))}</small></span></button>`;
+  };
+  $('#termineBox').innerHTML = `<button class="btn ghost klein" data-neutermin="1" style="margin:0 0 12px">+ Termin</button>`
+    + (kommend.length ? `<div class="eyebrow" style="margin-top:0">Kommende</div>` + kommend.map(o => terminKnopf(o, false)).join('')
+                      : '<p class="muted small">Keine kommenden Termine.</p>')
+    + (vorbei.length ? `<div class="eyebrow">Vergangene</div>` + vorbei.map(zeileVorbei).join('') : '');
+  knoepfeVerdrahten($('#termineBox'));
+  $('#termineBox [data-neutermin]').onclick = terminNeu;
+}
+/* --- An den iPhone-Kalender (v1.103) -----------------------------------------
+   Eine Kalenderdatei (.ics) mit dem Termin, auf Wunsch mit Erinnerung und
+   Wiederholung. Die Zeiten stehen ohne Zeitzone – der Kalender nimmt sie als
+   Ortszeit, wie sie eingetragen sind. Die Kennung bleibt je Termin gleich,
+   damit eine zweite Übergabe denselben Termin meint. */
+function terminIcs(t){
+  const text = s => String(s || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/[,;]/g, m => '\\' + m);
+  const tag = iso => iso.replace(/-/g, '');
+  const zeit = hm => hm.replace(':', '') + '00';
+  const j = new Date(), z = n => String(n).padStart(2, '0');
+  const stempel = `${j.getUTCFullYear()}${z(j.getUTCMonth() + 1)}${z(j.getUTCDate())}T${z(j.getUTCHours())}${z(j.getUTCMinutes())}${z(j.getUTCSeconds())}Z`;
+  const bis = t.bis || t.von;
+  const n = t.k ? NW(t.k) : null;
+  const beschreibung = [terminArt(t), t.mit ? 'Mit: ' + t.mit : '', n ? n.label + (t.anlage ? ' · ' + anlageName(t) : '') : '', t.notiz]
+    .filter(Boolean).join('\n');
+  const zeilen = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Betriebsnachweise//Termine//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'BEGIN:VEVENT', `UID:${t.id}@betriebsnachweise`, `DTSTAMP:${stempel}`,
+    ...(t.ganz ? [`DTSTART;VALUE=DATE:${tag(t.von)}`, `DTEND;VALUE=DATE:${tag(tagPlus(bis, 1))}`]
+               : [`DTSTART:${tag(t.von)}T${zeit(t.zeitVon)}`, `DTEND:${tag(bis)}T${zeit(t.zeitBis)}`]),
+    `SUMMARY:${text(t.titel || 'Termin')}`];
+  if(t.ort) zeilen.push(`LOCATION:${text(t.ort)}`);
+  if(beschreibung) zeilen.push(`DESCRIPTION:${text(beschreibung)}`);
+  if(t.wdh) zeilen.push(`RRULE:FREQ=${{woche:'WEEKLY', monat:'MONTHLY', jahr:'YEARLY'}[t.wdh.einheit]};INTERVAL=${Math.max(1, Math.round(+t.wdh.n) || 1)}`);
+  const vorher = +t.erinnern;
+  if(vorher > 0) zeilen.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${text(t.titel || 'Termin')}`,
+    `TRIGGER:-${vorher >= 1440 ? 'P' + vorher / 1440 + 'D' : vorher >= 60 ? 'PT' + vorher / 60 + 'H' : 'PT' + vorher + 'M'}`, 'END:VALARM');
+  zeilen.push('END:VEVENT', 'END:VCALENDAR');
+  /* Lange Zeilen werden nach der Norm gefaltet: Umbruch, dann ein Leerzeichen. */
+  return zeilen.map(l => l.length <= 70 ? l : l.match(/.{1,70}/g).join('\r\n ')).join('\r\n') + '\r\n';
+}
+const terminDateiname = t => `${(t.titel || 'Termin').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 40) || 'Termin'}.ics`;
+/* Öffnet die Kalenderdatei in Safari – dort bietet iOS „Zum Kalender
+   hinzufügen“ an. In einem neuen Fenster, damit die App stehen bleibt. */
+function terminInKalender(t){
+  const url = URL.createObjectURL(new Blob([terminIcs(t)], {type:'text/calendar'}));
+  const a = document.createElement('a');
+  a.href = url; a.target = '_blank'; a.rel = 'noopener';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+/* Falls das Öffnen nichts bewirkt: die Datei über das Teilen-Menü, etwa in
+   „Dateien“ oder per Mail – von dort nimmt der Kalender sie auch. */
+async function terminTeilen(t){
+  const datei = new File([new Blob([terminIcs(t)], {type:'text/calendar'})], terminDateiname(t), {type:'text/calendar'});
+  try{
+    if(navigator.canShare && navigator.canShare({files:[datei]})){
+      try{ await navigator.share({files:[datei]}); }catch(e){ /* Abbruch */ }
+    }else{
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(datei); a.download = datei.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }
+  }catch(e){ toast('Übergabe nicht möglich'); }
 }
 /* --- Dauer und Utensilien: Rechnen, Wählen, Fragen (v1.61) ------------------
    Stufen der Dauer: 15-Minuten-Schritte bis 4 Stunden, dann ½ Tag, 1 Tag und
@@ -6460,11 +6856,20 @@ function heuteRest(){
   if(nun <= e.vormVon * 60) return arbeitsMin();
   return Math.max(0, Math.floor(Math.min(arbeitsMin(), e.nachmBis * 60 - nun) / 15) * 15);
 }
+/* Die Arbeitszeit eines Tages abzüglich seiner Termine (v1.103): heute, was
+   noch bleibt, sonst die volle Arbeitszeit. Ein Termin zählt nur, soweit er in
+   die beiden Halbtage fällt, ganztägige nehmen den ganzen Tag. */
+function tagKap(t){
+  const j = new Date(), istHeute = t.getTime() === tagAnfang(j).getTime();
+  const basis = istHeute ? heuteRest() : arbeitsMin();
+  const belegt = terminBelegt(isoTag(t), istHeute ? j.getHours() * 60 + j.getMinutes() : 0);
+  return Math.max(0, Math.floor((basis - belegt) / 15) * 15);
+}
 function verfuegbarBis(bis){
   const h0 = tagAnfang(new Date());
   let sum = 0;
   for(let t = new Date(h0); t <= bis; t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1))
-    if(!freiGrund(t)) sum += t.getTime() === h0.getTime() ? heuteRest() : arbeitsMin();
+    if(!freiGrund(t)) sum += tagKap(t);
   return sum;
 }
 /* Reicht die Zeit bis zu den Fristen? Nach Frist geordnet wird aufsummiert;
@@ -6512,8 +6917,8 @@ function wochenplanRechnen(liste){
   const tage = [];
   for(let t = new Date(h0), i = 0; tage.length < PLAN_TAGE && i < 90; i++, t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)){
     if(freiGrund(t)) continue;
-    const cap = t.getTime() === h0.getTime() ? heuteRest() : arbeitsMin();
-    tage.push({t:new Date(t), iso:isoTag(t), cap, frei:cap, posten:[]});
+    const cap = tagKap(t), iso = isoTag(t);
+    tage.push({t:new Date(t), iso, cap, frei:cap, posten:[], termine:termineAm(iso)});
   }
   const posten = liste.map(a => ({a, m:eintragMinuten(a)})).filter(x => x.m && x.m.min > 0).map(x => {
     const von = x.a.fenster && x.a.fenster.von ? x.a.fenster.von : x.a.frueh;
@@ -6579,6 +6984,7 @@ function gelegenheiten(liste){
     const m = eintragMinuten(a), frei = freiVor.get(a.aufg), x = AUFG.find(y => y.id === a.aufg);
     if(!m || !frei || !x) return;
     for(const tg of naechste){
+      if(a.fenster && tg.t < a.fenster.von) continue;   // nicht vor Beginn des Zeitraums (v1.103)
       const wt = a.wett.tage.find(w => w.datum === tg.iso);
       const gut = wt && wt.teile.find(h => h.stufe === 2);
       const rest = (frei.get(tg.iso) || 0) - (vergeben.get(tg.iso) || 0);
@@ -6605,7 +7011,7 @@ let vorziehenAuf = false, vorziehenAlle = false;
 const VORZ_AB = 60, VORZ_ZAHL = 5;
 function vorziehenRechnen(liste){
   const h0 = tagAnfang(new Date());
-  const heuteKap = freiGrund(h0) ? 0 : heuteRest();
+  const heuteKap = freiGrund(h0) ? 0 : tagKap(h0);
   const belegt = liste.filter(a => a.gruppe === 'ueber' || a.gruppe === 'heute')
     .reduce((sum, a) => { const m = eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
   const frei = Math.max(0, heuteKap - belegt);
@@ -6688,7 +7094,7 @@ function renderWochenplan(){
   const box = $('#wplanBox');
   if(!box) return;
   const {tage, uebrig} = wochenplanRechnen();
-  const i = info('Ein Vorschlag, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Eingeplantes an seinem Tag, Wetteraufgaben auf gute Halbtage. Die Dauer ist der Durchschnitt der erfassten Dauern, ohne sie gelten 30 Minuten („geschätzt“). Die Zeit je Arbeitstag steht unter Einstellungen › Arbeitszeit.', 'margin:-2px 0 10px');
+  const i = info('Ein Vorschlag, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Eingeplantes an seinem Tag, Wetteraufgaben auf gute Halbtage. Termine stehen obenan und nehmen ihre Zeit vom Tag. Die Dauer ist der Durchschnitt der erfassten Dauern, ohne sie gelten 30 Minuten („geschätzt“). Die Zeit je Arbeitstag steht unter Einstellungen › Arbeitszeit.', 'margin:-2px 0 10px');
   const kopfVon = j => j === 0 && planTagWort(tage[j].t) === 'heute' ? `Heute ${ttmm(tage[j].t)}`
                                                                     : `${WOCHENTAG[tage[j].t.getDay()]} ${ttmm(tage[j].t)}`;
   /* Leere Tage am Stück stehen in einer Zeile (v1.73), ohne Balken – zehnmal
@@ -6696,16 +7102,20 @@ function renderWochenplan(){
   let html = '';
   for(let j = 0; j < tage.length; j++){
     const tg = tage[j];
-    if(!tg.posten.length){
+    /* Ein Tag nur mit Terminen ist nicht leer (v1.103). */
+    const leer = x => !x.posten.length && !x.termine.length;
+    if(leer(tg)){
       let bis = j;
-      while(bis + 1 < tage.length && !tage[bis + 1].posten.length) bis++;
+      while(bis + 1 < tage.length && leer(tage[bis + 1])) bis++;
       html += `<div class="eyebrow">${esc(kopfVon(j))}${bis > j ? ' bis ' + esc(kopfVon(bis)) : ''} <span class="summe">· nichts eingeplant</span></div>`;
       j = bis;
       continue;
     }
     const belegt = tg.cap - tg.frei, anteil = tg.cap ? Math.min(100, Math.round(belegt / tg.cap * 100)) : 100;
-    html += `<div class="eyebrow">${esc(kopfVon(j))} <span class="summe">· ${esc(dauerText({m:belegt}))} von ${esc(dauerText({m:tg.cap}))}</span></div>
-        <div class="planBalken"><span style="width:${anteil}%"></span></div>` + tg.posten.map(planKnopf).join('');
+    const frei = tg.posten.length || tg.cap ? `${dauerText({m:belegt})} von ${dauerText({m:tg.cap})}` : 'keine Zeit frei';
+    html += `<div class="eyebrow">${esc(kopfVon(j))} <span class="summe">· ${esc(frei)}</span></div>
+        <div class="planBalken"><span style="width:${anteil}%"></span></div>`
+      + tg.termine.map(o => terminKnopf(o, true)).join('') + tg.posten.map(planKnopf).join('');
   }
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Nächste ${tage.length} Arbeitstage ${i.knopf}</div>${i.text}`
     + html
@@ -12520,7 +12930,7 @@ async function dateiSichernLauf(){
      schlüge ein zweites Mal an. Die Wetterdaten selbst bleiben draußen, die holt
      das neue Gerät beim ersten Öffnen. */
   const paket = {format:CFG_FORMAT, stand:heute(),
-                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB,
+                 cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB, termine:TERM,
                  regelstand:REGELSTAND, hinweise:HINWEISE, frost:+Store.get('nwFrost', 0) || 0,
                  taet:TAET, mat:MAT,
                  plaene, quellen, historie};
@@ -12559,6 +12969,9 @@ async function paketUebernehmen(paket){
      vorhandene stehen, statt geleert zu werden. */
   if(Array.isArray(paket.buch)){ BUCH = paket.buch; saveBuch(); }
   if(Array.isArray(paket.aufg)){ AUFG = paket.aufg; saveAufg(); }
+  /* Termine (v1.103); ältere Sicherungen kennen sie nicht – dann bleiben die
+     vorhandenen stehen. */
+  if(Array.isArray(paket.termine)){ TERM = paket.termine; saveTerm(); }
   if(paket.vorb && typeof paket.vorb === 'object'){ VORB = paket.vorb; saveVorb(); }
   /* Stand der Wetterregeln (v1.57). Ältere Sicherungen kennen ihn nicht – dann
      bleibt der vorhandene stehen, statt geleert zu werden. */
@@ -13895,6 +14308,17 @@ function suchAufgaben(frage){
     return woerter.every(w => wortIn(w, text));
   }).sort((x, y) => (x.frist || '9999').localeCompare(y.frist || '9999'));
 }
+/* Termine in der Suche (v1.103): kommende nach Beginn, Vergangenes danach. */
+function suchTermine(frage){
+  const woerter = suchWoerter(frage);
+  if(!woerter.length) return [];
+  return TERM.filter(t => {
+    const n = t.k ? NW(t.k) : null;
+    const text = [t.titel, terminArt(t), t.ort, t.mit, t.notiz, n ? n.label : '', t.anlage ? anlageName(t) : ''].filter(Boolean).join(' ');
+    return woerter.every(w => wortIn(w, text));
+  }).map(t => terminNaechstes(t) || {t, von:t.von, bis:t.bis || t.von, vorbei:true})
+    .sort((x, y) => (x.vorbei ? 1 : 0) - (y.vorbei ? 1 : 0) || (x.vorbei ? y.von.localeCompare(x.von) : x.von.localeCompare(y.von)));
+}
 function suchAufgStand(a){
   const h = heute();
   const von = zeitraumVon(a);
@@ -13934,13 +14358,14 @@ function renderSuche(){
   $('#homeListe').hidden = !!q;
   if(!q){ box.innerHTML = ''; suchListe = []; return; }
   suchListe = suchTreffer(q);
-  const aufg = suchAufgaben(q);
-  if(!suchListe.length && !aufg.length){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
+  const aufg = suchAufgaben(q), term = suchTermine(q);
+  if(!suchListe.length && !aufg.length && !term.length){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
   /* Aufgaben zuoberst und ohne Kurzinfo: ihre eigene Seite sagt ohnehin alles. */
   box.innerHTML = (aufg.length
     ? `<div class="eyebrow">Aufgaben</div>`
       + aufg.map(a => `<button class="btn aufgabe eintrag" data-aufg="${esc(a.id)}"><span class="etext">${esc(aufgTitel(a))}<small>${esc(suchAufgStand(a))}</small></span></button>`).join('')
     : '')
+  + (term.length ? `<div class="eyebrow">Termine</div>` + term.map(o => terminKnopf(o, false)).join('') : '')
   + NACHWEISE.filter(n => suchListe.some(t => t.k === n.k)).map(n =>
     `<div class="eyebrow">${esc(n.art === 'medien' ? 'Zähler' : n.label)}</div>`
     + suchListe.map((t, i) => t.k !== n.k ? '' :
@@ -13948,6 +14373,7 @@ function renderSuche(){
   ).join('');
   box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => kurzinfo(suchListe[+b.dataset.t]));
   box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => aufgabeOeffnen(b.dataset.aufg));
+  box.querySelectorAll('[data-termin]').forEach(b => b.onclick = () => terminOeffnen(b.dataset.termin));
 }
 $('#suche').oninput = renderSuche;
 $('#suche').addEventListener('search', renderSuche);
