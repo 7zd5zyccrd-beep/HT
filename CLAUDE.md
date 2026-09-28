@@ -130,6 +130,12 @@ steht.
   Media-Abfrage – sonst würden ausgegebene Blätter dunkel. Neue Farben als
   Variable anlegen und unter `html.dunkel` mit dunklem Wert versehen.
 
+- Ringe der Aufgabenliste (v1.114, vom Nutzer so entschieden): rot =
+  überfällig oder heute fällig, gelb = morgen fällig, angefangene Runde oder
+  laufende Vorbereitung, sonst keiner. Grün nur in „Alle Nachweise“. Die
+  Zeile „Heute auf einen Blick“ (`heuteZeile`) steht unter der Überschrift
+  „Heute“, die Gruppe steht immer da.
+
 ## Testen
 
 Chromium liegt unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`,

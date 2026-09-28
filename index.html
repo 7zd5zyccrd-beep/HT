@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.114 28.09.2026 Die Zeile „Heute: …“ oben wiederholte, was gleich darunter
+                    in „Heute“ stand. Sie steht jetzt klein unter der
+                    Überschrift „Heute“ („1 Termin · 2 Aufgaben ≈ 3:00 h ·
+                    Arbeitszeit übrig ≈ 3:30 h · Wochenplan ›“); „Heute“ steht
+                    immer da, notfalls mit „Nichts für heute“. Ringe neu: rot
+                    heißt überfällig oder heute fällig, gelb morgen fällig,
+                    angefangen oder mit laufender Vorbereitung, sonst keiner.
+                    Bisher war schon die letzte Monatswoche rot und alles in
+                    den nächsten sieben Tagen gelb – die Farbe sagte kaum noch
+                    etwas. Grün kam in der Liste nicht mehr vor und bleibt nur
+                    in „Alle Nachweise“.
   v1.113 28.09.2026 Heute auf einen Blick: oben auf der Startseite eine Zeile
                     wie „Heute: 1 Termin ab 10:00 · 5 Aufgaben ≈ 3:00 h“,
                     darunter die nach den Terminen übrige Arbeitszeit bzw. an
@@ -1994,8 +2005,10 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .btn.eintrag.termin .tzeit{flex:0 0 3.3em;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.25}
 .btn.eintrag.termin .tzeit small{display:block;margin-top:0;font-size:14px;font-weight:400;color:var(--ink-soft)}
 .neuZeile{margin:0 0 12px}
-/* Heute auf einen Blick (v1.113): etwas kräftiger als eine Listenzeile. */
-.btn.eintrag.heuteZeile{margin-bottom:12px;font-weight:600}
+/* Heute auf einen Blick (v1.114): kleine Zeile unter der Überschrift „Heute“,
+   ein Tipp öffnet den Wochenplan. */
+.heuteZeile{display:block;width:100%;margin:0 0 10px;padding:4px 0;border:0;background:none;text-align:left;
+  font:inherit;font-size:14px;color:var(--ink-soft);cursor:pointer;-webkit-appearance:none;appearance:none}
 /* Termin oder Zeitraum einer eigenen Aufgabe (v1.51): die Zeilen „von“ und
    „bis“ wie bei der Abwesenheit, aber ohne Karte – das Datum steht links unter
    seiner Beschriftung, nicht rechts am Rand, wie beim einzelnen Termin. */
@@ -2881,7 +2894,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.113';
+const VERSION = 'v1.114';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4600,7 +4613,13 @@ function aufgaben(){
       }else{ a.ab = w.ab; a.vertretung = true; a.hinweis = 'Vertretung klären'; }
     }
     a.tage = a.faellig ? Math.round((a.faellig - heute0) / TAG_MS) : null;
-    if(a.aufg) a.ring = a.tage === null || a.tage < 0 ? 'rot' : (a.tage <= 7 || a.vorbAus) ? 'gelb' : '';
+    /* Ringe (v1.114), für alle Zeilen gleich: Rot heißt überfällig oder heute
+       fällig, Gelb morgen fällig, angefangen oder mit laufender Vorbereitung,
+       sonst keiner. Grün kam in der Liste nicht mehr vor – Erledigtes fällt
+       ja heraus; es bleibt in „Alle Nachweise“. Eigene Aufgaben tragen
+       „begonnen“ nur, um immer in der Liste zu stehen – das zählt hier nicht. */
+    const angefangen = a.aufg ? false : !!a.begonnen;
+    a.ring = a.tage === null || a.tage <= 0 ? 'rot' : (a.tage === 1 || angefangen || a.vorbAus) ? 'gelb' : '';
     /* Überfällig bleibt überfällig, auch wenn die Aufgabe eingeplant ist. */
     if(!a.faellig || a.tage < 0){ Object.assign(a, {gruppe:'ueber', gNr:0, gTitel:'Überfällig'}); a.geplant = null; }
     else{
@@ -4752,13 +4771,15 @@ function abwesenheitsKarte(liste){
     ${!vorher.length && !vertretung.length ? '<p class="muted small" style="margin:0">Nichts, was vorher erledigt werden muss.</p>' : ''}
   </div>`;
 }
-/* Heute auf einen Blick (v1.113): eine Zeile oben auf der Startseite –
-   Termine, was heute ansteht (Überfälliges eingeschlossen) mit seiner Zeit und
-   wie viel Arbeitszeit nach den Terminen noch bleibt. Ein Tipp öffnet den
-   Wochenplan. An freien Tagen sagt sie, warum frei ist. */
+/* Heute auf einen Blick (v1.113): Termine, was heute ansteht mit seiner Zeit
+   und wie viel Arbeitszeit nach den Terminen noch bleibt; an freien Tagen,
+   warum frei ist. Ein Tipp öffnet den Wochenplan. Seit v1.114 steht sie als
+   kleine Zeile unter der Überschrift „Heute“ statt als eigene Zeile oben –
+   dort wiederholte sie, was gleich darunter stand. Überfälliges hat seine
+   eigene Gruppe und zählt hier nicht mit. */
 function heuteZeile(liste){
   const h0 = tagAnfang(new Date()), iso = isoTag(h0), frei = freiGrund(h0);
-  const term = termineAm(iso), auf = liste.filter(a => a.gruppe === 'ueber' || a.gruppe === 'heute');
+  const term = termineAm(iso), auf = liste.filter(a => a.gruppe === 'heute');
   const min = auf.reduce((sum, a) => { const m = eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
   const teile = [];
   if(term.length){
@@ -4766,11 +4787,11 @@ function heuteZeile(liste){
     teile.push(`${term.length} ${term.length === 1 ? 'Termin' : 'Termine'}${erst ? ' ab ' + erst.t.zeitVon : ''}`);
   }
   if(auf.length) teile.push(`${auf.length} ${auf.length === 1 ? 'Aufgabe' : 'Aufgaben'}${min ? ' ≈ ' + dauerText({m:min}) : ''}`);
-  const unten = frei ? (frei.art === 'wochenende' ? 'Wochenende' : frei.art === 'feiertag' ? 'Feiertag'
+  const rest = frei ? (frei.art === 'wochenende' ? 'Wochenende' : frei.art === 'feiertag' ? 'Feiertag'
                         : (frei.ab && frei.ab.text) || 'Abwesend')
     : `Arbeitszeit übrig ≈ ${dauerText({m:tagKap(h0)})}`;
-  return `<button class="btn eintrag heuteZeile" data-wplan="1"><span class="etext">Heute: ${
-    esc(teile.length ? teile.join(' · ') : 'nichts offen')}<small>${esc(unten)}</small></span></button>`;
+  return `<button type="button" class="heuteZeile" data-wplan="1">${
+    esc([teile.length ? teile.join(' · ') : 'Nichts für heute', rest].join(' · '))} · Wochenplan ›</button>`;
 }
 function renderHome(){
   listeGebaut = true;
@@ -4796,6 +4817,11 @@ function renderHome(){
     const g = gruppen[gruppen.length - 1];
     if(g && g.g === a.gruppe) g.teil.push(a); else gruppen.push({g:a.gruppe, titel:a.gTitel, teil:[a]});
   });
+  /* „Heute“ steht immer da (v1.114), notfalls leer – ihre Zeile sagt, wie der
+     Tag aussieht. Unter dem Überfälligen, sonst zuoberst. */
+  if(!gruppen.some(x => x.g === 'heute'))
+    gruppen.splice(gruppen.length && gruppen[0].g === 'ueber' ? 1 : 0, 0,
+      {g:'heute', titel:listenGruppe(tagAnfang(new Date())).titel, teil:[]});
   const gelegen = gelegenheitKarte(gelegenheiten(liste));
   /* „Zeit übrig? Vorziehen“ (v1.100) steht am Ende von „Heute“; ohne Heute
      unter dem Überfälligen, sonst vor der ersten Gruppe. */
@@ -4806,10 +4832,12 @@ function renderHome(){
     + gruppen.map(({g, titel, teil}) => {
     /* Was die Gruppe an Zeit braucht (v1.63), aus den Erfahrungswerten. */
     const summe = teil.reduce((sum, a) => { const m = !a.istTermin && eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
+    if(g === 'heute') return `<div class="eyebrow" style="margin-bottom:2px">${esc(titel)}</div>` + heuteZeile(liste)
+        + teil.map(a => a.istTermin ? terminKnopf(a.o, true) : aufgabeKnopf(a)).join('') + (g === vorzNach ? vorz : '');
     return `<div class="eyebrow">${esc(titel)}${summe ? ` <span class="summe">· ≈ ${esc(dauerText({m:summe}))}</span>` : ''}</div>`
         + teil.map(a => a.istTermin ? terminKnopf(a.o, g === 'heute' || g === 'morgen') : aufgabeKnopf(a)).join('') + (g === 'ueber' ? gelegen : '') + (g === vorzNach ? vorz : '');
   }).join('');
-  if(!inhalt.includes('data-')) inhalt += gibt
+  if(!liste.length && !term.length) inhalt += gibt
     ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Alle Nachweise“.</p>`
     : `<p class="muted small">Noch nichts eingetragen. Über das Zahnrad oben links geht es in die Einstellungen – dort legst du je Nachweis an, was im Haus steht.</p>`;
   /* Darunter der Weg zu allem Übrigen. Die Grundrisse hängen sich nach, sobald
@@ -4826,7 +4854,7 @@ function renderHome(){
     + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span></button>` : '');
   $('#homeListe').innerHTML = `<div class="row neuZeile"><button class="btn ghost klein" data-neuaufg="1">+ Aufgabe</button>
       <button class="btn ghost klein" data-neutermin="1">+ Termin</button></div>`
-    + heuteZeile(liste) + warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
+    + warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
     + matStartHtml()
     + '<div id="homeMehr">' + (mehr ? `<div class="eyebrow">Übersicht</div>${mehr}` : '') + '</div>';
   knoepfeVerdrahten($('#homeListe'));
