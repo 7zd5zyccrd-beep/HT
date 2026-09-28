@@ -10,6 +10,20 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.111 28.09.2026 Einheitlicher und ruhiger: Umschaltknöpfe und die Knöpfe
+                    − und + sind so hoch wie die Felder. Abschnittsüberschriften
+                    („Heute“, „Arbeitszeit“) sind größer und dunkler als die
+                    Beschriftung eines Feldes. Ein gespeicherter Termin ist
+                    aufgebaut wie eine Aufgabe: oben die Kopfkarte (Zeile mit
+                    Datum und Uhrzeit antippbar), darunter der Kalender und
+                    „Angaben bearbeiten“. Beim Termin heißen die Überschriften
+                    „Datum“ und „Zeit“ statt „Tag“ und „Uhrzeit“ über „Ein Tag“
+                    und „Uhrzeit“. In Karten (Feuerlöscher, Zählertausch) trennt
+                    eine dünne Linie statt eines Rahmens im Rahmen. „Löschen“
+                    steht auch allein ganz rechts. Kontrollkästchen sind
+                    schwarz-weiß wie die übrigen Knöpfe. Kurze Meldungen
+                    erscheinen oben unter der Kopfleiste und verdecken unten
+                    keine Knöpfe mehr.
   v1.110 28.09.2026 Die Rahmen für Zusammengehöriges auch in Wetterregeln und
                     Einstellungen: eigene Regel „Fällig“ mit „Fällig in Tagen“,
                     Objekt mit Prüfer, beim Feuerlöscher Standort mit Anzahl,
@@ -1648,9 +1662,12 @@ main{flex:1 0 auto;padding:16px var(--pad) calc(16px + max(env(safe-area-inset-b
 .view{display:none}
 .view.active{display:block}
 
+/* Abschnittsüberschrift (v1.111): größer, dunkler und kräftiger als die
+   Beschriftung eines Feldes (.field > span), damit man die Gliederung einer
+   Seite auf einen Blick sieht. Zusätze wie „· ≈ 3:00 h“ bleiben leise. */
 .eyebrow{
   font-family:var(--f-label);text-transform:uppercase;letter-spacing:.08em;
-  font-size:14px;color:var(--ink-soft);margin:18px 0 8px;
+  font-size:16px;font-weight:600;color:var(--ink);margin:20px 0 8px;
 }
 .muted{color:var(--ink-soft)}
 .small{font-size:14px}
@@ -1698,6 +1715,12 @@ main{flex:1 0 auto;padding:16px var(--pad) calc(16px + max(env(safe-area-inset-b
 .wdhZeile .wdhAlle{flex:0 0 auto}
 .wdhZeile #wdhN{flex:0 0 5em;width:5em}
 /* Kontrollkästchen mit Text daneben. */
+/* Kontrollkästchen schwarz-weiß wie die übrigen Knöpfe (v1.111) statt in der
+   Gerätefarbe; der Haken ist ein kleines Bild im Hintergrund. */
+input[type=checkbox]{-webkit-appearance:none;appearance:none;flex:0 0 22px;width:22px;height:22px;margin:0;padding:0;
+  border:1.5px solid var(--field-border);border-radius:6px;background:var(--surface) center/16px 16px no-repeat;cursor:pointer}
+input[type=checkbox]:checked{background-color:var(--strong);border-color:var(--strong);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3L13 4.5' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
 .haken{display:flex;align-items:center;gap:10px;font-size:16px;margin:0 0 6px}
 .haken input{flex:0 0 22px;width:22px;height:22px;padding:0;margin:0}
 /* Im Rundgang steht über jeder Karte, zu welchem Nachweis sie gehört. */
@@ -1770,6 +1793,9 @@ input[type=date]::-webkit-datetime-edit,input[type=time]::-webkit-datetime-edit{
 .gruppe{border:1px solid var(--field-border);border-radius:12px;padding:12px;margin-bottom:14px}
 .gruppe > .field:last-child,.gruppe > .field:has(+ .field[hidden]:last-child),.gruppe > .row:last-child > .field{margin-bottom:0}
 .gruppe > .field:first-child{margin-top:0}
+/* In einer Karte stünde ein Rahmen im Rahmen (v1.111): dort trennt eine
+   dünne Linie über der Gruppe, die Einheit bleibt erkennbar. */
+.card .gruppe,.stelle .gruppe,.tausch .gruppe{border:0;border-top:1px solid var(--line);border-radius:0;padding:12px 0 0}
 /* Der Rahmen in einer Karte (Einstellungen): kein Abstand nach dem letzten. */
 .card > .gruppe:last-child{margin-bottom:0}
 /* Von und bis nebeneinander (v1.107), die Beschriftung darüber wie bei den
@@ -1805,8 +1831,10 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
    .stelle in den Einstellungen (Objektkarten). */
 .pos .seg,.stelle .seg,.wichtig .seg,.segfeld .seg,.dauerWahl .seg,.seg.arbArt{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
 .pos .seg button,.stelle .seg button,.wichtig .seg button,.segfeld .seg button,.dauerWahl .seg button,.seg.arbArt button{
-  flex:1;padding:11px 6px;border:0;background:var(--surface);color:var(--ink);
+  flex:1;padding:0 6px;border:0;background:var(--surface);color:var(--ink);
   font:inherit;font-size:14px;cursor:pointer;border-left:1px solid var(--line);
+  /* So hoch wie die Felder (v1.111); der Rahmen der Reihe zählt mit. */
+  min-height:calc(var(--feld-h) - 2px);
 }
 .pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child,.segfeld .seg button:first-child,.dauerWahl .seg button:first-child,.seg.arbArt button:first-child{border-left:0}
 .pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"],.segfeld .seg button[aria-pressed="true"],.dauerWahl .seg button[aria-pressed="true"],.seg.arbArt button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
@@ -1821,7 +1849,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
    wählbar – gewählt heißt wie überall: dunkel hinterlegt. */
 .dauerWahl .stufe{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .dauerWahl .stufe button{
-  flex:0 0 44px;width:44px;height:44px;border:1px solid var(--field-border);border-radius:12px;padding:0;
+  flex:0 0 var(--feld-h);width:var(--feld-h);height:var(--feld-h);border:1px solid var(--field-border);border-radius:12px;padding:0;
   background:var(--surface);color:var(--ink);font:inherit;font-size:20px;line-height:1;cursor:pointer;
   -webkit-appearance:none;appearance:none;
 }
@@ -1863,7 +1891,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .zeile.taetDauer{align-items:center}
 /* Einplanung (v1.63): Summe an der Gruppenüberschrift in normaler Schreibung,
    Balken der Tagesauslastung im Wochenplan. */
-.eyebrow .summe{text-transform:none;letter-spacing:0}
+.eyebrow .summe{text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink-soft)}
 .planBalken{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:-2px 0 10px}
 .planBalken span{display:block;height:100%;background:var(--strong)}
 /* Arbeitsnachweis (v1.65): Umschalter Monat/Woche und Blätterzeile. */
@@ -1941,6 +1969,8 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 /* Knopfreihe der Objektkarte: mit der Anzahl der Akkus wird es eng, deshalb
    etwas kleinere Abstände; die Anzahl steht rechts vor Löschen. */
 .stelle .knopfreihe{gap:8px}
+/* „Löschen“ steht immer ganz rechts (v1.111), auch wenn es allein ist. */
+.knopfreihe > .btn.danger:only-child{margin-left:auto}
 .stelle .knopfreihe .seg.anz{flex:0 0 88px;margin-left:auto;height:42px}
 .stelle .knopfreihe .seg.anz button{padding:0 4px}
 /* Grundriss in den Einstellungen: Name, darunter Pfeile, Ansehen und Löschen. */
@@ -2023,8 +2053,10 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 #schlossWerk{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
 #schlossWerk[hidden]{display:none}
 #toast{
-  position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);
-  transform:translateX(-50%) translateY(8px);
+  /* Oben unter der Kopfleiste (v1.111): unten verdeckte sie „Löschen“ und
+     die Knöpfe der Fußleiste. */
+  position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 66px);
+  transform:translateX(-50%) translateY(-8px);
   background:var(--strong);color:var(--on-strong);padding:10px 16px;border-radius:999px;
   opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60;max-width:90vw;text-align:center;
 }
@@ -2807,7 +2839,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.110';
+const VERSION = 'v1.111';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5657,8 +5689,9 @@ function terminKnopf(o, ohneTag){
   return `<button class="btn eintrag termin" data-termin="${esc(t.id)}"><span class="tzeit">${links}</span>`
     + `<span class="etext">${esc(t.titel || 'Termin')}<small>${esc(unten)}</small></span></button>`;
 }
-let terminAktiv = null;
+let terminAktiv = null, tmAngabenAuf = '';
 function terminOeffnen(id){
+  tmAngabenAuf = '';
   terminAktiv = TERM.find(t => t.id === id) || null;
   if(terminAktiv) go('termin');
 }
@@ -5670,6 +5703,30 @@ function terminNeu(){
     notiz:'', erinnern:'', angelegt:heute(), entwurf:true};
   go('termin');
 }
+/* Kopfkarte eines gespeicherten Termins (v1.111), wie bei der Aufgabe: Titel,
+   das nächste Vorkommen – antippbar, es führt zum Datumsfeld –, darunter Art,
+   Ort, mit wem, Bezug, Wiederholung und die Notiz. */
+function terminKopfZeigen(t){
+  const box = $('#tmKopf');
+  if(!box) return;
+  const o = terminNaechstes(t), n = t.k ? NW(t.k) : null;
+  const wann = o ? terminZeitText(o, true) : `vorbei · ${dText(t.von)}`;
+  const zeilen = [[terminArt(t), t.ort, t.mit ? 'mit ' + t.mit : ''].filter(Boolean).join(' · '),
+    [n ? n.label + (t.anlage ? ' · ' + anlageName(t) : '') : '', t.wdh ? wdhText(t.wdh) : ''].filter(Boolean).join(' · ')].filter(Boolean);
+  box.innerHTML = `<div class="card aufgKopfKarte"><p class="aufgKopf">${esc(t.titel || 'Termin')}</p>
+    <button type="button" class="aufgZeile aufgTerminKnopf" data-zumdatum="1">${esc(wann)}<span aria-hidden="true">›</span></button>
+    ${zeilen.map(z => `<p class="aufgZeile muted small">${esc(z)}</p>`).join('')}
+    ${String(t.notiz || '').trim() ? `<p class="aufgText"><span class="muted">Notiz:</span> ${esc(t.notiz)}</p>` : ''}
+    ${n ? `<div class="row"><button class="btn" data-weg="nw">Zum Nachweis</button></div>` : ''}</div>`;
+  box.querySelector('[data-zumdatum]').onclick = () => {
+    const ang = $('#tmAngaben'), feld = $('#tmVon');
+    if(!ang || !feld) return;
+    ang.open = true; tmAngabenAuf = t.id;
+    bildNach(imBild(feld.closest('.terminFeld') || feld) - 12);
+  };
+  const nw = box.querySelector('[data-weg="nw"]');
+  if(nw) nw.onclick = () => nachweisOeffnen(t.k, '');
+}
 function renderTermin(){
   const t = terminAktiv, box = $('#terminBox');
   if(!t){ box.innerHTML = ''; return; }
@@ -5679,20 +5736,21 @@ function renderTermin(){
   const anlagen = bezugsAnlagen(t.k);
   const seg = (name, wahl) => `<div class="seg">${wahl.map(([k, text, an]) =>
     `<button type="button" data-${name}="${k}" aria-pressed="${!!an}">${text}</button>`).join('')}</div>`;
-  const naechst = !neu && t.wdh ? terminNaechstes(t) : null;
-  box.innerHTML = `
-    ${naechst && naechst.von !== t.von ? `<div class="card"><p style="margin:0">Nächster Termin: ${esc(terminZeitText(naechst, true))}</p></div>` : ''}
+  /* Wie bei der Aufgabe (v1.111): ein gespeicherter Termin zeigt oben die
+     Kopfkarte und den Kalender, die Felder stehen zugeklappt darunter. Der
+     Entwurf eines neuen hat nichts zusammenzufassen, dort stehen sie offen. */
+  const felder = `
     <label class="field"><span>Titel</span>
       <input id="tmTitel" value="${esc(t.titel)}" placeholder="z. B. Absprache Firma Müller"></label>
     <label class="field"><span>Art</span><select id="tmArt">${
       TERMIN_ARTEN.map(([k, text]) => `<option value="${k}"${t.art === k ? ' selected' : ''}>${text}</option>`).join('')}</select></label>
-    <div class="field segfeld terminFeld gruppe"><span>${w ? 'Erster Tag' : 'Tag'}</span>${seg('tage', [['ein', 'Ein Tag', !mehr], ['mehr', 'Mehrere Tage', mehr]])}
+    <div class="field segfeld terminFeld gruppe"><span>${w ? 'Erstes Datum' : 'Datum'}</span>${seg('tage', [['ein', 'Ein Tag', !mehr], ['mehr', 'Mehrere Tage', mehr]])}
       ${mehr
         ? `<div class="vonBis">
               <label class="field"><span>von</span><input type="date" id="tmVon" value="${esc(t.von)}"></label>
               <label class="field"><span>bis</span><input type="date" id="tmBis" value="${esc(t.bis)}"></label></div>`
-        : `<input type="date" id="tmVon" class="schmal" value="${esc(t.von)}" aria-label="Tag" style="margin-top:10px">`}</div>
-    <div class="field segfeld terminFeld${t.ganz ? '' : ' gruppe'}"><span>Uhrzeit</span>${seg('ganz', [['zeit', 'Uhrzeit', !t.ganz], ['ganz', 'Ganztägig', t.ganz]])}
+        : `<input type="date" id="tmVon" class="schmal" value="${esc(t.von)}" aria-label="Datum" style="margin-top:10px">`}</div>
+    <div class="field segfeld terminFeld${t.ganz ? '' : ' gruppe'}"><span>Zeit</span>${seg('ganz', [['zeit', 'Uhrzeit', !t.ganz], ['ganz', 'Ganztägig', t.ganz]])}
       ${t.ganz ? '' : `<div class="vonBis">
               <label class="field"><span>von</span><input type="time" id="tmZeitVon" value="${esc(t.zeitVon)}" step="300"></label>
               <label class="field"><span>bis</span><input type="time" id="tmZeitBis" value="${esc(t.zeitBis)}" step="300"></label></div>`}</div>
@@ -5714,7 +5772,8 @@ function renderTermin(){
           ${Object.entries(WDH_TEXT).map(([e, x]) => `<option value="${e}"${w && w.einheit === e ? ' selected' : ''}>${x[1]}</option>`).join('')}
         </select>
       </div></label>
-    <label class="field"><span>Notiz und Ergebnis</span><textarea id="tmNotiz" style="min-height:90px" placeholder="Worum es geht, was besprochen wurde">${esc(t.notiz)}</textarea></label>
+    <label class="field"><span>Notiz und Ergebnis</span><textarea id="tmNotiz" style="min-height:90px" placeholder="Worum es geht, was besprochen wurde">${esc(t.notiz)}</textarea></label>`;
+  const kalender = `
     <div class="card"><div class="eyebrow" style="margin:0 0 6px">iPhone-Kalender</div>
       <label class="haken"><input type="checkbox" id="tmKal"${t.kalender ? ' checked' : ''}> In den Kalender übernehmen</label>
       <div id="tmKalTeil"${t.kalender ? '' : ' hidden'}>
@@ -5724,9 +5783,15 @@ function renderTermin(){
         <p class="muted small" style="margin:8px 0 0">${neu ? 'Beim Anlegen öffnet sich das Teilen-Menü mit dem Termin als Datei.'
           : 'Der Kalender bekommt eine Kopie. Spätere Änderungen hier kommen dort nicht von selbst an – dann erneut übergeben.'}</p>
         ${neu ? '' : `<button class="btn klein" id="tmKalTeilen" style="margin-top:10px">An den Kalender übergeben</button>`}
-      </div></div>
-    ${neu ? `<button class="btn primary" id="tmAnlegen">Termin anlegen</button>`
-          : `<div class="knopfzeile"><button class="btn danger klein" id="tmWeg">Löschen</button></div>`}`;
+      </div></div>`;
+  box.innerHTML = neu ? felder + kalender + `<button class="btn primary" id="tmAnlegen">Termin anlegen</button>`
+    : `<div id="tmKopf"></div>` + kalender
+      + `<details class="angaben" id="tmAngaben"${tmAngabenAuf === t.id ? ' open' : ''}><summary>Angaben bearbeiten</summary>${felder}</details>`
+      + `<div class="knopfzeile"><button class="btn danger klein" id="tmWeg">Löschen</button></div>`;
+  terminKopfZeigen(t);
+  /* Beim Zuklappen zieht die Kopfkarte nach; während die Angaben offen sind,
+     baut sich darüber nichts neu auf (Lehre aus v1.104). */
+  if($('#tmAngaben')) $('#tmAngaben').ontoggle = e => { tmAngabenAuf = e.target.open ? t.id : ''; if(!e.target.open) terminKopfZeigen(t); };
 
   $('#tmTitel').oninput = e => { t.titel = e.target.value; sichern(); };
   $('#tmArt').onchange = e => { t.art = e.target.value; sichern(); };
