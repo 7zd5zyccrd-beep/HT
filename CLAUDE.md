@@ -117,6 +117,10 @@ steht.
   Aufgaben, Mängeln und Wetterregeln heißt das Datum „Fällig am“ bzw.
   „fällig …“ (intern weiter `frist`, `data-tart="termin"`).
 
+- Feldhöhe (v1.107): alle einzeiligen Felder und Auswahllisten haben
+  `--feld-h` (48 px), Datum/Uhrzeit ohne iOS-Eigenform. Neue Felder nicht mit
+  eigener Höhe versehen. Von/bis nebeneinander über `.vonBis`.
+
 ## Testen
 
 Chromium liegt unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`,

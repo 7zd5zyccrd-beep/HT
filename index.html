@@ -10,6 +10,14 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.107 28.09.2026 Einzeilige Felder – Text, Zahl, Suche, Datum, Uhrzeit und
+                    Auswahllisten – haben überall dieselbe Höhe, gefüllt wie
+                    leer. Bisher lagen sie zwischen 43 und 51 Pixeln, ein leeres
+                    Datumsfeld fiel unter iOS niedriger aus. Datum und Uhrzeit
+                    stehen links im Feld wie jeder andere Wert. „von“ und „bis“
+                    stehen bei Zeitraum (Aufgabe) sowie Tagen und Uhrzeit
+                    (Termin) nebeneinander, die Beschriftung darüber wie bei
+                    den übrigen Feldern.
   v1.106 28.09.2026 Seit es Termine mit Uhrzeit gibt, hieß bei Aufgaben dasselbe
                     Wort etwas anderes. Bei Aufgaben, Mängeln und Wetterregeln
                     heißt es jetzt „Fällig am“: die Umschaltung „Fällig am |
@@ -1718,6 +1726,23 @@ input:focus,select:focus,textarea:focus,button:focus-visible{
 .row[hidden]{display:none}
 .row > *{flex:1}
 input.schmal{width:170px}
+/* Einheitliche Feldhöhe (v1.107): Text-, Zahl-, Such-, Datums- und
+   Zeitfelder und Auswahllisten sind überall gleich hoch, gefüllt wie leer.
+   Ein leeres Datumsfeld fiel unter iOS sonst niedriger aus als ein gefülltes,
+   und die kleineren Maße einzelner Karten wichen ab. Die Höhe steht fest, das
+   Polster regelt nur noch den Abstand zur Seite. */
+:root{--feld-h:48px}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select{
+  height:var(--feld-h);min-height:var(--feld-h);box-sizing:border-box;padding-top:0;padding-bottom:0}
+/* Datum und Uhrzeit ohne die eigene Form von iOS – die legt eigene Höhen an
+   und zentriert den Wert; so steht er links wie in jedem anderen Feld. */
+input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;display:block;text-align:left;line-height:normal}
+input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left;margin:0}
+/* Von und bis nebeneinander (v1.107), die Beschriftung darüber wie bei den
+   übrigen Feldern. Zwei gleich breite Spalten, die Felder füllen sie. */
+.vonBis{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:10px}
+.vonBis .field{margin:0;min-width:0}
+.vonBis input{width:100%;min-width:0}
 /* 16 px ist die Untergrenze fuer alles, was sich antippen und beschreiben
    laesst: darunter zoomt iOS beim Hineintippen von selbst in die Seite, und das
    laesst sich anders nicht abstellen (siehe auch #schloss input). */
@@ -1854,8 +1879,8 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 /* Abwesenheit: oben Bezeichnung und Löschen, darunter von und bis je in einer
    Zeile. Nebeneinander passten die Datumsfelder nicht in die Karte (v1.28). */
 .abwKopf{display:flex;align-items:center;gap:10px}
-.abwKopf input{flex:1;min-width:0;height:42px;padding:9px 10px;font-size:16px}
-.abwKopf .btn{flex:0 0 auto;width:auto;height:42px;padding:0 12px;margin:0;font-size:14px;
+.abwKopf input{flex:1;min-width:0;padding:0 10px;font-size:16px}
+.abwKopf .btn{flex:0 0 auto;width:auto;height:var(--feld-h);padding:0 12px;margin:0;font-size:14px;
   display:flex;align-items:center;justify-content:center}
 .abwZeile{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
 .abwZeile > span{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;
@@ -1884,7 +1909,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .stelle .knopfreihe .seg.anz{flex:0 0 88px;margin-left:auto;height:42px}
 .stelle .knopfreihe .seg.anz button{padding:0 4px}
 /* Grundriss in den Einstellungen: Name, darunter Pfeile, Ansehen und Löschen. */
-.planKarte > input{height:42px;padding:9px 10px;font-size:16px}
+.planKarte > input{padding:0 10px;font-size:16px}
 /* ⓘ: kleiner Knopf neben einer Überschrift, klappt den Erklärtext darunter auf.
    Die Tippfläche ist größer als der Kreis; negative Ränder halten die Zeile
    trotzdem so hoch wie ohne Knopf. */
@@ -2747,7 +2772,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.106';
+const VERSION = 'v1.107';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5265,8 +5290,9 @@ function renderAufgabe(){
          <button type="button" data-tart="zeitraum" aria-pressed="${zr}">Zeitraum</button>
          ${a.entwurf ? '<button type="button" data-tart="wetter" aria-pressed="false">Wetterregel</button>' : ''}
        </div>${zr
-         ? `<label class="abwZeile"><span>von</span><input type="date" class="dat" id="aufgVon" value="${esc(a.von)}"></label>
-            <label class="abwZeile"><span>bis</span><input type="date" class="dat" id="aufgFrist" value="${esc(a.frist)}"></label>`
+         ? `<div class="vonBis">
+              <label class="field"><span>von</span><input type="date" id="aufgVon" value="${esc(a.von)}"></label>
+              <label class="field"><span>bis</span><input type="date" id="aufgFrist" value="${esc(a.frist)}"></label></div>`
          : `<input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}" aria-label="Fällig am" style="margin-top:10px">`}</div>`;
   /* Eingeplant für (v1.99): ein Tag, an dem die Aufgabe erledigt werden soll –
      sie steht dann an diesem Tag in der Liste, der Termin bleibt. */
@@ -5623,12 +5649,14 @@ function renderTermin(){
       TERMIN_ARTEN.map(([k, text]) => `<option value="${k}"${t.art === k ? ' selected' : ''}>${text}</option>`).join('')}</select></label>
     <div class="field segfeld terminFeld"><span>${w ? 'Erster Tag' : 'Tag'}</span>${seg('tage', [['ein', 'Ein Tag', !mehr], ['mehr', 'Mehrere Tage', mehr]])}
       ${mehr
-        ? `<label class="abwZeile"><span>von</span><input type="date" class="dat" id="tmVon" value="${esc(t.von)}"></label>
-           <label class="abwZeile"><span>bis</span><input type="date" class="dat" id="tmBis" value="${esc(t.bis)}"></label>`
+        ? `<div class="vonBis">
+              <label class="field"><span>von</span><input type="date" id="tmVon" value="${esc(t.von)}"></label>
+              <label class="field"><span>bis</span><input type="date" id="tmBis" value="${esc(t.bis)}"></label></div>`
         : `<input type="date" id="tmVon" class="schmal" value="${esc(t.von)}" aria-label="Tag" style="margin-top:10px">`}</div>
     <div class="field segfeld terminFeld"><span>Uhrzeit</span>${seg('ganz', [['zeit', 'Uhrzeit', !t.ganz], ['ganz', 'Ganztägig', t.ganz]])}
-      ${t.ganz ? '' : `<label class="abwZeile"><span>von</span><input type="time" class="dat" id="tmZeitVon" value="${esc(t.zeitVon)}" step="300"></label>
-         <label class="abwZeile"><span>bis</span><input type="time" class="dat" id="tmZeitBis" value="${esc(t.zeitBis)}" step="300"></label>`}</div>
+      ${t.ganz ? '' : `<div class="vonBis">
+              <label class="field"><span>von</span><input type="time" id="tmZeitVon" value="${esc(t.zeitVon)}" step="300"></label>
+              <label class="field"><span>bis</span><input type="time" id="tmZeitBis" value="${esc(t.zeitBis)}" step="300"></label></div>`}</div>
     <label class="field"><span>Ort</span><input id="tmOrt" value="${esc(t.ort)}" placeholder="z. B. Technikraum, Büro Verwaltung"></label>
     <label class="field"><span>Mit wem</span><input id="tmMit" value="${esc(t.mit)}" placeholder="z. B. Herr Schmidt, Firma Müller"></label>
     <label class="field"><span>Nachweis</span>
