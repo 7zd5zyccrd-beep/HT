@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.113 28.09.2026 Heute auf einen Blick: oben auf der Startseite eine Zeile
+                    wie „Heute: 1 Termin ab 10:00 · 5 Aufgaben ≈ 3:00 h“,
+                    darunter die nach den Terminen übrige Arbeitszeit bzw. an
+                    freien Tagen „Wochenende“, „Feiertag“ oder der Name der
+                    Abwesenheit. Überfälliges zählt mit. Ein Tipp öffnet den
+                    Wochenplan.
   v1.112 28.09.2026 Dunkle Darstellung: steht das iPhone oder iPad auf
                     „Dunkel“ (auch automatisch am Abend), wird die App dunkel –
                     schwarzer Grund, dunkelgraue Karten, helle Schrift. Die
@@ -1988,6 +1994,8 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .btn.eintrag.termin .tzeit{flex:0 0 3.3em;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.25}
 .btn.eintrag.termin .tzeit small{display:block;margin-top:0;font-size:14px;font-weight:400;color:var(--ink-soft)}
 .neuZeile{margin:0 0 12px}
+/* Heute auf einen Blick (v1.113): etwas kräftiger als eine Listenzeile. */
+.btn.eintrag.heuteZeile{margin-bottom:12px;font-weight:600}
 /* Termin oder Zeitraum einer eigenen Aufgabe (v1.51): die Zeilen „von“ und
    „bis“ wie bei der Abwesenheit, aber ohne Karte – das Datum steht links unter
    seiner Beschriftung, nicht rechts am Rand, wie beim einzelnen Termin. */
@@ -2873,7 +2881,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.112';
+const VERSION = 'v1.113';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4744,6 +4752,26 @@ function abwesenheitsKarte(liste){
     ${!vorher.length && !vertretung.length ? '<p class="muted small" style="margin:0">Nichts, was vorher erledigt werden muss.</p>' : ''}
   </div>`;
 }
+/* Heute auf einen Blick (v1.113): eine Zeile oben auf der Startseite –
+   Termine, was heute ansteht (Überfälliges eingeschlossen) mit seiner Zeit und
+   wie viel Arbeitszeit nach den Terminen noch bleibt. Ein Tipp öffnet den
+   Wochenplan. An freien Tagen sagt sie, warum frei ist. */
+function heuteZeile(liste){
+  const h0 = tagAnfang(new Date()), iso = isoTag(h0), frei = freiGrund(h0);
+  const term = termineAm(iso), auf = liste.filter(a => a.gruppe === 'ueber' || a.gruppe === 'heute');
+  const min = auf.reduce((sum, a) => { const m = eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
+  const teile = [];
+  if(term.length){
+    const erst = term.find(o => !o.t.ganz && o.von === iso);
+    teile.push(`${term.length} ${term.length === 1 ? 'Termin' : 'Termine'}${erst ? ' ab ' + erst.t.zeitVon : ''}`);
+  }
+  if(auf.length) teile.push(`${auf.length} ${auf.length === 1 ? 'Aufgabe' : 'Aufgaben'}${min ? ' ≈ ' + dauerText({m:min}) : ''}`);
+  const unten = frei ? (frei.art === 'wochenende' ? 'Wochenende' : frei.art === 'feiertag' ? 'Feiertag'
+                        : (frei.ab && frei.ab.text) || 'Abwesend')
+    : `Arbeitszeit übrig ≈ ${dauerText({m:tagKap(h0)})}`;
+  return `<button class="btn eintrag heuteZeile" data-wplan="1"><span class="etext">Heute: ${
+    esc(teile.length ? teile.join(' · ') : 'nichts offen')}<small>${esc(unten)}</small></span></button>`;
+}
 function renderHome(){
   listeGebaut = true;
   sprWocheNachholen();
@@ -4798,7 +4826,7 @@ function renderHome(){
     + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span></button>` : '');
   $('#homeListe').innerHTML = `<div class="row neuZeile"><button class="btn ghost klein" data-neuaufg="1">+ Aufgabe</button>
       <button class="btn ghost klein" data-neutermin="1">+ Termin</button></div>`
-    + warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
+    + heuteZeile(liste) + warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
     + matStartHtml()
     + '<div id="homeMehr">' + (mehr ? `<div class="eyebrow">Übersicht</div>${mehr}` : '') + '</div>';
   knoepfeVerdrahten($('#homeListe'));
