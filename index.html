@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.105 28.09.2026 Auf der Aufgabe wurde das Datum oben in „Erledigen“ für den
+                    Termin gehalten – es ist aber der Tag der Erledigung und
+                    hatte keine Beschriftung. Jetzt steht „Erledigt am“ darüber.
+                    Und die Terminzeile in der Kopfkarte lässt sich antippen
+                    (mit ›): sie klappt „Angaben bearbeiten“ auf und fährt zum
+                    Feld für Termin bzw. Zeitraum.
   v1.104 28.09.2026 Der Termin einer Aufgabe ließ sich auf dem iPhone noch immer
                     nicht ändern, der eines Termins schon. Unterschied: die
                     Aufgabe baute ihre Kopfkarte weiterhin neu auf, sobald das
@@ -1664,6 +1670,10 @@ main{flex:1 0 auto;padding:16px var(--pad) calc(16px + max(env(safe-area-inset-b
 .aufgText{margin:6px 0 0;white-space:pre-wrap}
 /* Aufgabe (v1.75): oben die Kopfkarte, die Angaben zugeklappt darunter. */
 .aufgZeile{margin:4px 0 0}
+/* Die Terminzeile der Kopfkarte als Knopf (v1.105): sieht aus wie Text, mit ›. */
+.aufgTerminKnopf{display:flex;align-items:center;gap:8px;width:100%;padding:0;border:0;background:none;
+  color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.aufgTerminKnopf span{margin-left:auto;font-size:20px;line-height:1;color:var(--ink-soft)}
 .aufgKopfKarte .row{margin-top:12px}
 .angaben{margin:0 0 12px}
 .angaben > summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
@@ -2728,7 +2738,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.104';
+const VERSION = 'v1.105';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5098,11 +5108,26 @@ function aufgKopfZeigen(a, mangelKopf){
     a.erledigt ? '' : [s ? '≈ ' + dauerText(s) : '', ut.length ? 'Werkzeug: ' + ut.join(', ') : ''].filter(Boolean).join(' · ')
   ].filter(Boolean);
   box.innerHTML = `<div class="card aufgKopfKarte">${mangel ? mangelKopf : `<p class="aufgKopf">${esc(a.titel || 'Aufgabe')}</p>`}
-    ${zeilen.map((z, i) => `<p class="aufgZeile${i ? ' muted small' : ''}"${mangel && !i ? ' style="margin-top:8px"' : ''}>${esc(z)}</p>`).join('')}
+    ${zeilen.map((z, i) => !i && !a.erledigt
+      /* Die Terminzeile führt zum Datumsfeld (v1.105) – oben in „Erledigen“
+         steht nur der Tag der Erledigung, und der wurde für den Termin
+         gehalten. */
+      ? `<button type="button" class="aufgZeile aufgTerminKnopf" data-zumtermin="1"${mangel ? ' style="margin-top:8px"' : ''}>${esc(z)}<span aria-hidden="true">›</span></button>`
+      : `<p class="aufgZeile${i ? ' muted small' : ''}"${mangel && !i ? ' style="margin-top:8px"' : ''}>${esc(z)}</p>`).join('')}
     ${String(a.notiz || '').trim() ? `<p class="aufgText"><span class="muted">Notiz:</span> ${esc(a.notiz)}</p>` : ''}
     ${a.k && n ? `<div class="row">
       ${aufgOrt(a) ? `<button class="btn" data-weg="plan">⌖ Grundriss</button>` : ''}
       <button class="btn" data-weg="nw">Zum Nachweis</button></div>` : ''}</div>`;
+  const zt = box.querySelector('[data-zumtermin]');
+  if(zt) zt.onclick = () => {
+    const ang = $('#aufgAngaben'), feld = $('#aufgVon') || $('#aufgFrist');
+    if(!ang || !feld) return;
+    ang.open = true; angabenAuf = a.id;
+    /* Nur hinscrollen, nicht fokussieren – sonst ginge unter iOS sofort die
+       Datumswahl auf. */
+    const zeile = feld.closest('.field') || feld;
+    bildNach(imBild(zeile) - 12);
+  };
   const plan = box.querySelector('[data-weg="plan"]');
   if(plan) plan.onclick = () => verorten(aufgOrt(a), anlageName(a));
   const nw = box.querySelector('[data-weg="nw"]');
@@ -5216,7 +5241,8 @@ function renderAufgabe(){
            ${a.vermerk ? `<p class="aufgText">${esc(a.vermerk)}</p>` : ''}
            <button class="btn ghost klein" id="aufgWieder" style="margin-top:10px">Wieder öffnen</button></div>`
       : `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erledigen</div>
-           <input type="date" id="erlDatum" class="schmal" value="${heute()}" aria-label="Erledigt am">
+           <label class="field" style="margin:0"><span>Erledigt am</span>
+             <input type="date" id="erlDatum" class="schmal" value="${heute()}"></label>
            <input id="erlVermerk" placeholder="Vermerk, z. B. Firma" style="margin-top:10px">
            ${fragtNachher ? '' : `<div class="field" style="margin:12px 0 0"><span>Dauer (freiwillig)</span><div id="erlDauer"></div></div>`}
            <button class="btn primary" id="erlSetzen" style="margin-top:10px">Als erledigt vermerken</button></div>`;
