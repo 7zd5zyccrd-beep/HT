@@ -121,6 +121,10 @@ steht.
   `--feld-h` (48 px), Datum/Uhrzeit ohne iOS-Eigenform, Wert mittig über `line-height` (v1.108; ohne sie saß er unter iOS links oben). Neue Felder nicht mit
   eigener Höhe versehen. Von/bis nebeneinander über `.vonBis`.
 
+- Rahmen (v1.109): Zusammengehöriges mit mehr als einer Zeile steht in
+  `.gruppe` (Helfer `gerahmt(an, html)`), nur wenn es gerade mehrzeilig ist.
+  Bisher nur Aufgabe und Termin; andere Masken auf Nachfrage.
+
 ## Testen
 
 Chromium liegt unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`,

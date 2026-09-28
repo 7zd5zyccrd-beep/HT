@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.109 28.09.2026 Zusammengehöriges steht in einem dünnen Rahmen, wenn es mehr
+                    als eine Zeile hat. Aufgabe: Fällig am/Zeitraum mit Datum,
+                    Nachweis mit Anlage, Wiederholen mit „Nächste Fälligkeit
+                    zählt ab“, Vorbereitung mit Vorlauf. Termin: Tag, Uhrzeit,
+                    Ort mit „Mit wem“, Nachweis mit Anlage. Steht ein Feld
+                    gerade allein (etwa ohne Anlage), bleibt es ohne Rahmen.
   v1.108 28.09.2026 Datum und Uhrzeit standen seit v1.107 auf dem iPhone links
                     oben im Feld. Jetzt steht der Wert mittig, waagerecht wie
                     senkrecht.
@@ -1746,6 +1752,11 @@ input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;displa
 input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{
   text-align:center;margin:0;line-height:calc(var(--feld-h) - 2px);min-height:calc(var(--feld-h) - 2px)}
 input[type=date]::-webkit-datetime-edit,input[type=time]::-webkit-datetime-edit{line-height:normal}
+/* Zusammengehörige Felder im dünnen Rahmen (v1.109): Linie wie die Felder,
+   Ecken wie die Karten, die Beschriftung innen oben. Unten kein Abstand
+   nach dem letzten sichtbaren Feld. */
+.gruppe{border:1px solid var(--field-border);border-radius:12px;padding:12px;margin-bottom:14px}
+.gruppe > .field:last-child,.gruppe > .field:has(+ .field[hidden]:last-child){margin-bottom:0}
 /* Von und bis nebeneinander (v1.107), die Beschriftung darüber wie bei den
    übrigen Feldern. Zwei gleich breite Spalten, die Felder füllen sie. */
 .vonBis{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:10px}
@@ -2780,7 +2791,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.108';
+const VERSION = 'v1.109';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5204,6 +5215,9 @@ function aufgOrt(a){
   if(a.k !== 'medien') return `${a.k}|${a.anlage}`;
   return stellen().some(z => z.key === a.anlage) ? a.anlage : '';
 }
+/* Was zusammengehört und mehr als eine Zeile hat, steht in einem dünnen
+   Rahmen (v1.109) – nur, wenn es gerade wirklich mehr als eine Zeile ist. */
+const gerahmt = (an, inhalt) => an ? `<div class="gruppe">${inhalt}</div>` : inhalt;
 function renderAufgabe(){
   const a = aufgAktiv, box = $('#aufgBox');
   if(!a){ box.innerHTML = ''; return; }
@@ -5224,13 +5238,13 @@ function renderAufgabe(){
     const anlagen = bezugsAnlagen(a.k);
     kopf = `<label class="field"><span>Titel</span>
         <input id="aufgTitel" value="${esc(a.titel)}" placeholder="Was ist zu tun?"></label>
-      <label class="field"><span>Nachweis</span>
+      ${gerahmt(anlagen.length, `<label class="field"><span>Nachweis</span>
         <select id="aufgNw"><option value="">– ohne Bezug –</option>${
           NACHWEISE.filter(x => !x.spaeter).map(x =>
             `<option value="${x.k}"${x.k === a.k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
       ${anlagen.length ? `<label class="field"><span>${a.k === 'medien' ? 'Zähler' : 'Anlage'}</span>
         <select id="aufgAnlage"><option value="">– ohne –</option>${
-          anlagen.map(x => `<option value="${esc(x.wert)}"${x.wert === a.anlage ? ' selected' : ''}>${esc(x.text)}</option>`).join('')}</select></label>` : ''}`;
+          anlagen.map(x => `<option value="${esc(x.wert)}"${x.wert === a.anlage ? ' selected' : ''}>${esc(x.text)}</option>`).join('')}</select></label>` : ''}`)}`;
   }
   /* Wiederholung und Vorbereitung gibt es nur bei eigenen Aufgaben. */
   const w = a.wdh || null, v = a.vorb || {text:'', wochen:4};
@@ -5238,7 +5252,7 @@ function renderAufgabe(){
     <label class="field"><span>Wetterprofil</span>
       <select id="aufgWetter"><option value="">– nicht wetterabhängig –</option>${
         WETTER_PROFILE.map(([k, t]) => `<option value="${k}"${a.wetter === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
-    <label class="field"><span>Wiederholen</span>
+    ${gerahmt(w && !a.von, `<label class="field"><span>Wiederholen</span>
       <div class="row wdhZeile">
         <span class="wdhAlle"${w ? '' : ' hidden'}>alle</span>
         <input id="wdhN" type="number" inputmode="numeric" min="1" value="${esc(w ? w.n : 1)}"${w ? '' : ' hidden'}>
@@ -5250,11 +5264,11 @@ function renderAufgabe(){
     ${w && !a.von ? `<div class="field segfeld"><span>Nächste Fälligkeit zählt ab</span><div class="seg">
         <button type="button" data-basis="termin" aria-pressed="${w.basis !== 'erledigt'}">letzter Fälligkeit</button>
         <button type="button" data-basis="erledigt" aria-pressed="${w.basis === 'erledigt'}">Erledigung</button>
-      </div></div>` : ''}
-    <label class="field"><span>Vorbereitung</span>
+      </div></div>` : ''}`)}
+    <div id="vorbGruppe"${String(v.text || '').trim() ? ' class="gruppe"' : ''}><label class="field"><span>Vorbereitung</span>
       <input id="vorbText" value="${esc(v.text)}" placeholder="z. B. Firma beauftragen"></label>
     <label class="field" id="vorbWochenFeld"${String(v.text || '').trim() ? '' : ' hidden'}><span>Vorlauf in Wochen${a.von && !mangel ? ' vor Beginn' : ''}</span>
-      <input id="vorbWochen" type="number" inputmode="numeric" min="0" value="${esc(v.wochen ?? 4)}"></label>`;
+      <input id="vorbWochen" type="number" inputmode="numeric" min="0" value="${esc(v.wochen ?? 4)}"></label></div>`;
   /* Wiederkehrendes fragt nach dem Erledigen im eigenen Fenster nach Dauer und
      Utensilien (v1.61); alles andere bekommt hier ein freiwilliges Dauerfeld. */
   const fragtNachher = !neu && !a.erledigt && !a.taetVermerkt && taetFragenOffen(taetSchluessel(a, false));
@@ -5293,7 +5307,7 @@ function renderAufgabe(){
   const zr = !mangel && !!a.von;
   const terminFeld = mangel
     ? `<label class="field"><span>Fällig am</span><input type="date" id="aufgFrist" class="schmal" value="${esc(a.frist)}"></label>`
-    : `<div class="field segfeld terminFeld"><div class="seg">
+    : `<div class="field segfeld terminFeld gruppe"><div class="seg">
          <button type="button" data-tart="termin" aria-pressed="${!zr}">Fällig am</button>
          <button type="button" data-tart="zeitraum" aria-pressed="${zr}">Zeitraum</button>
          ${a.entwurf ? '<button type="button" data-tart="wetter" aria-pressed="false">Wetterregel</button>' : ''}
@@ -5438,6 +5452,7 @@ function renderAufgabe(){
     $('#vorbText').oninput = e => {
       a.vorb = Object.assign({wochen:4}, a.vorb || {}, {text:e.target.value});
       $('#vorbWochenFeld').hidden = !e.target.value.trim();
+      $('#vorbGruppe').classList.toggle('gruppe', !!e.target.value.trim());   // Rahmen nur mit Vorlauf (v1.109)
       sichern();
     };
     /* Die Karte „Vorbereiten“ zieht erst nach, wenn das Feld verlassen wird –
@@ -5655,25 +5670,25 @@ function renderTermin(){
       <input id="tmTitel" value="${esc(t.titel)}" placeholder="z. B. Absprache Firma Müller"></label>
     <label class="field"><span>Art</span><select id="tmArt">${
       TERMIN_ARTEN.map(([k, text]) => `<option value="${k}"${t.art === k ? ' selected' : ''}>${text}</option>`).join('')}</select></label>
-    <div class="field segfeld terminFeld"><span>${w ? 'Erster Tag' : 'Tag'}</span>${seg('tage', [['ein', 'Ein Tag', !mehr], ['mehr', 'Mehrere Tage', mehr]])}
+    <div class="field segfeld terminFeld gruppe"><span>${w ? 'Erster Tag' : 'Tag'}</span>${seg('tage', [['ein', 'Ein Tag', !mehr], ['mehr', 'Mehrere Tage', mehr]])}
       ${mehr
         ? `<div class="vonBis">
               <label class="field"><span>von</span><input type="date" id="tmVon" value="${esc(t.von)}"></label>
               <label class="field"><span>bis</span><input type="date" id="tmBis" value="${esc(t.bis)}"></label></div>`
         : `<input type="date" id="tmVon" class="schmal" value="${esc(t.von)}" aria-label="Tag" style="margin-top:10px">`}</div>
-    <div class="field segfeld terminFeld"><span>Uhrzeit</span>${seg('ganz', [['zeit', 'Uhrzeit', !t.ganz], ['ganz', 'Ganztägig', t.ganz]])}
+    <div class="field segfeld terminFeld${t.ganz ? '' : ' gruppe'}"><span>Uhrzeit</span>${seg('ganz', [['zeit', 'Uhrzeit', !t.ganz], ['ganz', 'Ganztägig', t.ganz]])}
       ${t.ganz ? '' : `<div class="vonBis">
               <label class="field"><span>von</span><input type="time" id="tmZeitVon" value="${esc(t.zeitVon)}" step="300"></label>
               <label class="field"><span>bis</span><input type="time" id="tmZeitBis" value="${esc(t.zeitBis)}" step="300"></label></div>`}</div>
-    <label class="field"><span>Ort</span><input id="tmOrt" value="${esc(t.ort)}" placeholder="z. B. Technikraum, Büro Verwaltung"></label>
-    <label class="field"><span>Mit wem</span><input id="tmMit" value="${esc(t.mit)}" placeholder="z. B. Herr Schmidt, Firma Müller"></label>
-    <label class="field"><span>Nachweis</span>
+    <div class="gruppe"><label class="field"><span>Ort</span><input id="tmOrt" value="${esc(t.ort)}" placeholder="z. B. Technikraum, Büro Verwaltung"></label>
+    <label class="field"><span>Mit wem</span><input id="tmMit" value="${esc(t.mit)}" placeholder="z. B. Herr Schmidt, Firma Müller"></label></div>
+    ${gerahmt(anlagen.length, `<label class="field"><span>Nachweis</span>
       <select id="tmNw"><option value="">– ohne Bezug –</option>${
         NACHWEISE.filter(x => !x.spaeter).map(x =>
           `<option value="${x.k}"${x.k === t.k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
     ${anlagen.length ? `<label class="field"><span>${t.k === 'medien' ? 'Zähler' : 'Anlage'}</span>
       <select id="tmAnlage"><option value="">– ohne –</option>${
-        anlagen.map(x => `<option value="${esc(x.wert)}"${x.wert === t.anlage ? ' selected' : ''}>${esc(x.text)}</option>`).join('')}</select></label>` : ''}
+        anlagen.map(x => `<option value="${esc(x.wert)}"${x.wert === t.anlage ? ' selected' : ''}>${esc(x.text)}</option>`).join('')}</select></label>` : ''}`)}
     <label class="field"><span>Wiederholen</span>
       <div class="row wdhZeile">
         <span class="wdhAlle"${w ? '' : ' hidden'}>alle</span>
