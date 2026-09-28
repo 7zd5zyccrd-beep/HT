@@ -10,6 +10,9 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.108 28.09.2026 Datum und Uhrzeit standen seit v1.107 auf dem iPhone links
+                    oben im Feld. Jetzt steht der Wert mittig, waagerecht wie
+                    senkrecht.
   v1.107 28.09.2026 Einzeilige Felder – Text, Zahl, Suche, Datum, Uhrzeit und
                     Auswahllisten – haben überall dieselbe Höhe, gefüllt wie
                     leer. Bisher lagen sie zwischen 43 und 51 Pixeln, ein leeres
@@ -1734,10 +1737,15 @@ input.schmal{width:170px}
 :root{--feld-h:48px}
 input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select{
   height:var(--feld-h);min-height:var(--feld-h);box-sizing:border-box;padding-top:0;padding-bottom:0}
-/* Datum und Uhrzeit ohne die eigene Form von iOS – die legt eigene Höhen an
-   und zentriert den Wert; so steht er links wie in jedem anderen Feld. */
-input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;display:block;text-align:left;line-height:normal}
-input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left;margin:0}
+/* Datum und Uhrzeit ohne die eigene Form von iOS – die legt eigene Höhen an.
+   Der Wert steht mittig, waagerecht wie senkrecht (v1.108): ohne die
+   Eigenform setzt iOS ihn sonst links oben ins Feld. Die Zeilenhöhe gleich
+   der Innenhöhe hebt ihn in die Mitte, auch im inneren Wertkasten von iOS. */
+input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;display:block;text-align:center;
+  line-height:calc(var(--feld-h) - 2px)}
+input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{
+  text-align:center;margin:0;line-height:calc(var(--feld-h) - 2px);min-height:calc(var(--feld-h) - 2px)}
+input[type=date]::-webkit-datetime-edit,input[type=time]::-webkit-datetime-edit{line-height:normal}
 /* Von und bis nebeneinander (v1.107), die Beschriftung darüber wie bei den
    übrigen Feldern. Zwei gleich breite Spalten, die Felder füllen sie. */
 .vonBis{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:10px}
@@ -2772,7 +2780,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.107';
+const VERSION = 'v1.108';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
