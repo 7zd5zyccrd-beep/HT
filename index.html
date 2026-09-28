@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.112 28.09.2026 Dunkle Darstellung: steht das iPhone oder iPad auf
+                    „Dunkel“ (auch automatisch am Abend), wird die App dunkel –
+                    schwarzer Grund, dunkelgraue Karten, helle Schrift. Die
+                    ausgegebenen Nachweisblätter bleiben immer weiß, auch in
+                    der Vorschau; ebenso die Grundrisse.
   v1.111 28.09.2026 Einheitlicher und ruhiger: Umschaltknöpfe und die Knöpfe
                     − und + sind so hoch wie die Felder. Abschnittsüberschriften
                     („Heute“, „Arbeitszeit“) sind größer und dunkler als die
@@ -1590,6 +1595,35 @@
   --pad:18px;
   --col:720px;
 }
+/* Dunkle Darstellung (v1.112): folgt der Einstellung des Geräts. Bewusst als
+   Klasse an <html> und nicht als Media-Abfrage – ausgegebene Blätter bringen
+   die Stilregeln der App mit (blattDokument), würden auf einem dunkel
+   gestellten Gerät sonst ebenfalls dunkel und so auch gedruckt. Die Klasse
+   setzt dunkelFolgen() nur in der App selbst. */
+html.dunkel{
+  --enclosure:#000000;
+  --enclosure-2:#111113;
+  --ink:#EDEDED;
+  --ink-soft:#A3A3A8;
+  --line:#38383C;
+  --surface:#1C1C1E;
+  --strong:#EDEDED;
+  --on-strong:#111111;
+  --bar:#000000;
+  --ok-bg:#2A2A2D;
+  --warn-bg:#1C1C1E;
+  --field-border:#76767C;
+  --placeholder:#7C7C82;
+  color-scheme:dark;
+}
+html.dunkel header{border-bottom:1px solid var(--line)}
+html.dunkel #planStreifen{background:rgba(28,28,30,.93)}
+html.dunkel input[type=checkbox]:checked{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3L13 4.5' fill='none' stroke='%23111' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+html.dunkel .bedZeile .probe.ja{color:#5BC477}
+/* Unterschrieben wird auch im Dunkeln auf Weiß – wie auf dem Blatt. */
+html.dunkel #sigpad{background:#fff}
+html.dunkel #sigpad.aus{background:#D8D8D8}
 /* pan-x pan-y laesst dem Browser das Wischen und nimmt ihm beides Zoomen: den
    Doppeltipp (iOS zaehlt dafuer zwei Tipps kurz nacheinander, auch auf
    verschiedenen Knoepfen – beim Umsortieren mit den Pfeilen sprang die Seite
@@ -2839,7 +2873,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.111';
+const VERSION = 'v1.112';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4032,6 +4066,15 @@ function zurueck(){
   if(p) go(p, false);
 }
 $('#btnBack').onclick = zurueck;
+/* Dunkle Darstellung (v1.112): die App folgt dem Gerät, auch wenn es
+   zwischendurch umschaltet (etwa abends automatisch). */
+(function dunkelFolgen(){
+  const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  const setzen = () => document.documentElement.classList.toggle('dunkel', !!(mq && mq.matches));
+  setzen();
+  if(mq && mq.addEventListener) mq.addEventListener('change', setzen);
+  else if(mq && mq.addListener) mq.addListener(setzen);
+})();
 /* Höhe des Gerüsts = sichtbarer Bereich (v1.94). Geht die Tastatur auf, wird
    #bild kürzer, statt dass iOS die ganze Seite samt Kopfleiste hochschiebt;
    das Feld mit dem Cursor bleibt im Bild. */

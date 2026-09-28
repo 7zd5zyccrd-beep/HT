@@ -126,6 +126,10 @@ steht.
   Aufgabe, Termin, eigene Wetterregel, Objekt/Prüfer, Feuerlöscher,
   Zählertausch (v1.110). Was schon in einer eigenen Karte steht, bleibt ohne.
 
+- Dunkel (v1.112): Klasse `dunkel` an <html> (dunkelFolgen), nicht per
+  Media-Abfrage – sonst würden ausgegebene Blätter dunkel. Neue Farben als
+  Variable anlegen und unter `html.dunkel` mit dunklem Wert versehen.
+
 ## Testen
 
 Chromium liegt unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`,
