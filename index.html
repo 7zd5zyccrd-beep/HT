@@ -10,6 +10,18 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.110 28.09.2026 Die Rahmen für Zusammengehöriges auch in Wetterregeln und
+                    Einstellungen: eigene Regel „Fällig“ mit „Fällig in Tagen“,
+                    Objekt mit Prüfer, beim Feuerlöscher Standort mit Anzahl,
+                    Löschmittel mit Brandklassen und Menge sowie Nummer mit
+                    Baujahr und Hersteller, beim Zählerwechsel die Felder des
+                    gewählten Zählers. Was schon in einer eigenen Karte steht
+                    (Auslöser, Halbtage, Zähler, Akkus), bleibt, wie es ist.
+                    Abwesenheiten zeigen „von“ und „bis“ nebeneinander mit der
+                    Beschriftung darüber, wie Aufgabe und Termin. Bei den
+                    Wetterregeln ragte unter „Wie oft“ das zweite Monatsfeld
+                    der Jahreszeit über den Rand; „Jahreszeit“ steht jetzt
+                    darüber, die Monate darunter.
   v1.109 28.09.2026 Zusammengehöriges steht in einem dünnen Rahmen, wenn es mehr
                     als eine Zeile hat. Aufgabe: Fällig am/Zeitraum mit Datum,
                     Nachweis mit Anlage, Wiederholen mit „Nächste Fälligkeit
@@ -1756,7 +1768,10 @@ input[type=date]::-webkit-datetime-edit,input[type=time]::-webkit-datetime-edit{
    Ecken wie die Karten, die Beschriftung innen oben. Unten kein Abstand
    nach dem letzten sichtbaren Feld. */
 .gruppe{border:1px solid var(--field-border);border-radius:12px;padding:12px;margin-bottom:14px}
-.gruppe > .field:last-child,.gruppe > .field:has(+ .field[hidden]:last-child){margin-bottom:0}
+.gruppe > .field:last-child,.gruppe > .field:has(+ .field[hidden]:last-child),.gruppe > .row:last-child > .field{margin-bottom:0}
+.gruppe > .field:first-child{margin-top:0}
+/* Der Rahmen in einer Karte (Einstellungen): kein Abstand nach dem letzten. */
+.card > .gruppe:last-child{margin-bottom:0}
 /* Von und bis nebeneinander (v1.107), die Beschriftung darüber wie bei den
    übrigen Feldern. Zwei gleich breite Spalten, die Felder füllen sie. */
 .vonBis{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:10px}
@@ -1876,6 +1891,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .tausch .wer{display:flex;align-items:center;gap:10px;font-size:14px}
 .tausch .wer input{flex:0 0 22px;width:22px;height:22px}
 .tausch .felder{margin:10px 0 4px}
+.tausch .felder.gruppe{margin:10px 0 4px}
 .tausch .felder .field{margin-bottom:10px}
 
 /* --- Einstellungen ---------------------------------------------------------
@@ -2791,7 +2807,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.109';
+const VERSION = 'v1.110';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -9536,7 +9552,7 @@ function setRegel(box, k){
       : `<p class="muted small">Diese Regel hat keine Schwelle: sie folgt der amtlichen Warnung und der Wetterlage im Modell.</p>`}
     <div class="eyebrow">Auslösung</div>
     <div class="card wgKarte">
-      <div class="wgZeile"><span>Jahreszeit</span><span class="wgWerte">
+      <div class="wgZeile wgPaar"><span>Jahreszeit</span><span class="wgWerte">
         <select data-a="saisonVon" class="mon">${MONATS_WAHL(r.saisonVon)}</select> bis
         <select data-a="saisonBis" class="mon">${MONATS_WAHL(r.saisonBis)}</select></span></div>
       <div class="wgZeile"><span>Je Saison höchstens</span><span class="wgWerte">
@@ -9975,9 +9991,9 @@ function setEigenRegel(box, r, neu){
     <details class="angaben" id="regDann"${regelSicht.dann ? ' open' : ''}><summary><span class="zfass">${esc(dann)}</span></summary>
     <label class="field"><span>Titel</span><input id="regTitel" value="${esc(r.titel || '')}" placeholder="z. B. Junge Bäume wässern"></label>
     <div class="field segfeld"><span>Wichtigkeit</span>${seg('wichtig', [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']])}</div>
-    <div class="field segfeld"><span>Fällig</span>${seg('fristArt', [['tage', 'in x Tagen'], ['heute', 'heute'], ['vorher', 'Tag vorher']])}</div>
+    ${gerahmt(r.fristArt === 'tage', `<div class="field segfeld"><span>Fällig</span>${seg('fristArt', [['tage', 'in x Tagen'], ['heute', 'heute'], ['vorher', 'Tag vorher']])}</div>
     ${r.fristArt === 'tage' ? `<label class="field"><span>Fällig in Tagen</span>
-      <input type="number" step="1" class="schmal" data-r="tage" value="${esc(r.tage)}"></label>` : ''}
+      <input type="number" step="1" class="schmal" data-r="tage" value="${esc(r.tage)}"></label>` : ''}`)}
     <label class="field"><span>Wetterprofil</span><select id="regProfil"><option value="">– keines –</option>${
       WETTER_PROFILE.map(([p, t]) => `<option value="${p}"${r.profil === p ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
     <div class="field segfeld"><span>Wenn die Regel auslöst</span>${seg('modus', [['vorschlag', 'Vorschlagen'], ['sofort', 'Gleich anlegen']])}</div>
@@ -9987,7 +10003,7 @@ function setEigenRegel(box, r, neu){
     <details class="angaben" id="regOft"${regelSicht.oft ? ' open' : ''}><summary><span class="zfass">${esc(oft)}</span></summary>
     ${neu ? '' : `<div class="field segfeld"><span>Regel</span>${seg('aus', [[false, 'Ein'], [true, 'Aus']])}</div>`}
     <div class="card wgKarte">
-      <div class="wgZeile"><span>Jahreszeit</span><span class="wgWerte">
+      <div class="wgZeile wgPaar"><span>Jahreszeit</span><span class="wgWerte">
         <select data-r="saisonVon" class="mon">${MONATS_WAHL(r.saisonVon)}</select> bis
         <select data-r="saisonBis" class="mon">${MONATS_WAHL(r.saisonBis)}</select></span></div>
       <div class="wgZeile"><span>Je Saison höchstens</span><span class="wgWerte">
@@ -10192,8 +10208,9 @@ function setAbwesend(box){
         <input data-f="text" value="${esc(x.text || '')}" placeholder="Bezeichnung, z. B. Urlaub">
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
-      <label class="abwZeile"><span>von</span><input type="date" class="dat" data-f="von" value="${esc(x.von || '')}"></label>
-      <label class="abwZeile"><span>bis</span><input type="date" class="dat" data-f="bis" value="${esc(x.bis || '')}"></label>
+      <div class="vonBis">
+        <label class="field"><span>von</span><input type="date" data-f="von" value="${esc(x.von || '')}"></label>
+        <label class="field"><span>bis</span><input type="date" data-f="bis" value="${esc(x.bis || '')}"></label></div>
     </div>`;
   const iFei = info('Gerechnet werden die landesweiten Feiertage. Regionale – etwa Fronleichnam in Teilen Sachsens und Thüringens oder Mariä Himmelfahrt in Teilen Bayerns – trägst du unten als Abwesenheit ein.', 'margin:-2px 0 10px');
   const iAbw = info('Fällt eine Frist aufs Wochenende, einen Feiertag oder in eine Abwesenheit, gilt der Arbeitstag davor. Zwei Wochen vorher zeigt die Startseite, was vorher zu erledigen ist.', 'margin:-2px 0 10px');
@@ -10283,8 +10300,8 @@ function setZurueck(){ zurueck(); }
 function setObjekt(box){
   const i = info('Objekt und Prüfer stehen im Kopf jedes Protokolls.', 'margin:-6px 0 14px');
   box.innerHTML =
-    `<label class="field"><span class="mitInfo">Objekt ${i.knopf}</span><input id="setObjekt" placeholder="z.B. Musterhaus, Musterstraße 1"></label>${i.text}
-     <label class="field"><span>Prüfer</span><input id="setPruefer" placeholder="Vor- und Nachname"></label>`;
+    `<div class="gruppe"><label class="field"><span class="mitInfo">Objekt ${i.knopf}</span><input id="setObjekt" placeholder="z.B. Musterhaus, Musterstraße 1"></label>${i.text}
+     <label class="field"><span>Prüfer</span><input id="setPruefer" placeholder="Vor- und Nachname"></label></div>`;
   $('#setObjekt').value  = CFG.objekt  || '';
   $('#setPruefer').value = CFG.pruefer || '';
   $('#setObjekt').onchange  = e => { CFG.objekt  = e.target.value.trim(); saveCfg(); };
@@ -10513,22 +10530,22 @@ function loeFelderZeigen(box, name, zf){
   const hersteller = [...new Set(teilCfg('loescher').anlagen.map(a => String(loeInfo(a).hersteller || '').trim()).filter(Boolean))];
   const lid = 'loeOrte' + Math.random().toString(36).slice(2, 8), hid = lid + 'h';
   box.innerHTML = `
-    <label class="field"><span>Standort</span><input data-l="standort" value="${esc(i.standort || '')}" list="${lid}" placeholder="z. B. EG Treppenhaus">
+    <div class="gruppe"><label class="field"><span>Standort</span><input data-l="standort" value="${esc(i.standort || '')}" list="${lid}" placeholder="z. B. EG Treppenhaus">
       <datalist id="${lid}">${orte.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label>
     <label class="field"><span>Anzahl gleicher Löscher</span><select data-l="anzahl" class="schmal">${
-      Array.from({length:20}, (_, j) => j + 1).map(x => `<option value="${x}"${x === n ? ' selected' : ''}>${x} ×</option>`).join('')}</select></label>
-    <label class="field"><span>Löschmittel</span><select data-l="mittel"><option value="">– offen –</option>${
+      Array.from({length:20}, (_, j) => j + 1).map(x => `<option value="${x}"${x === n ? ' selected' : ''}>${x} ×</option>`).join('')}</select></label></div>
+    <div class="gruppe"><label class="field"><span>Löschmittel</span><select data-l="mittel"><option value="">– offen –</option>${
       LOE_MITTEL.map(([m, t]) => `<option value="${m}"${i.mittel === m ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
     <div class="field"><span>Brandklassen</span><div class="seg">${LOE_KLASSEN.map(x =>
       `<button type="button" data-klasse="${x}" aria-pressed="${klassen.includes(x)}">${x}</button>`).join('')}</div></div>
     <label class="field"><span>${ein === 'l' ? 'Füllmenge' : 'Gewicht'}</span><select data-l="menge" class="schmal"><option value="">– offen –</option>${
       mengen.map(x => `<option value="${x}"${+i.menge === x ? ' selected' : ''}>${x} ${ein}</option>`).join('')}
       <option value="anders"${anders ? ' selected' : ''}>anderes …</option></select>
-      ${anders || i.mengeAnders ? `<input data-l="mengeZahl" inputmode="decimal" class="schmal" style="margin-top:8px" value="${esc(i.menge || '')}" placeholder="${ein}">` : ''}</label>
-    <label class="field"><span>Inventar- oder Seriennummer</span><input data-l="nr" value="${esc(i.nr || '')}"></label>
+      ${anders || i.mengeAnders ? `<input data-l="mengeZahl" inputmode="decimal" class="schmal" style="margin-top:8px" value="${esc(i.menge || '')}" placeholder="${ein}">` : ''}</label></div>
+    <div class="gruppe"><label class="field"><span>Inventar- oder Seriennummer</span><input data-l="nr" value="${esc(i.nr || '')}"></label>
     <label class="field"><span>Baujahr</span><input data-l="baujahr" type="number" inputmode="numeric" class="schmal" value="${esc(i.baujahr || '')}" placeholder="z. B. 2018"></label>
     <label class="field"><span>Hersteller</span><input data-l="hersteller" value="${esc(i.hersteller || '')}" list="${hid}">
-      <datalist id="${hid}">${hersteller.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label>`;
+      <datalist id="${hid}">${hersteller.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label></div>`;
   const setzen = (feld, wert) => { const x = loeInfo(name, true); if(wert === '' || wert == null) delete x[feld]; else x[feld] = wert; saveCfg(); };
   const nachziehen = () => { if(zf) zf.textContent = loeZusammenfassung(name); };
   const neu = () => loeFelderZeigen(box, name, zf);
@@ -10939,7 +10956,7 @@ function medienNamenListe(){
       <label class="wer"><input type="checkbox" data-an="1">
         <span>${esc(z.partei)} · ${esc(namen[z.key] || z.medium)}
           <span class="muted small">· bisher ${esc(z.nr || '–')}</span></span></label>
-      <div class="felder" hidden>
+      <div class="felder gruppe" hidden>
         <label class="field"><span>Wechsel am</span><input type="date" data-datum="1" class="schmal"></label>
         <label class="field"><span>Neue Zählernummer</span><input type="text" data-nr="1"></label>
         <div class="row">

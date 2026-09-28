@@ -123,7 +123,8 @@ steht.
 
 - Rahmen (v1.109): Zusammengehöriges mit mehr als einer Zeile steht in
   `.gruppe` (Helfer `gerahmt(an, html)`), nur wenn es gerade mehrzeilig ist.
-  Bisher nur Aufgabe und Termin; andere Masken auf Nachfrage.
+  Aufgabe, Termin, eigene Wetterregel, Objekt/Prüfer, Feuerlöscher,
+  Zählertausch (v1.110). Was schon in einer eigenen Karte steht, bleibt ohne.
 
 ## Testen
 
