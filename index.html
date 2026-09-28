@@ -10,6 +10,19 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.115 28.09.2026 Feuerlöscher einzeln: „Anzahl gleicher Löscher“ entfällt –
+                    jeder Löscher hat seine eigene Bezeichnung, Inventarnummer,
+                    Baujahr und Zeile im Prüfblatt. Unter der Kennzeichnung
+                    legt „+ Weiterer Löscher an diesem Standort“ direkt darunter
+                    einen neuen an; die Bezeichnung vergibst du selbst,
+                    Standort, Löschmittel, Brandklassen, Menge, Hersteller und
+                    die Grundrissmarke kommen mit, Nummer und Baujahr nicht.
+                    Einträge, die noch für mehrere Löscher stehen, zeigen das
+                    und bieten „In n einzelne Löscher aufteilen“ an – dabei wird
+                    für jeden weiteren die Bezeichnung erfragt, der Prüfeintrag
+                    dieser Runde kommt mit. Eine Bezeichnung, die es in der
+                    Liste schon gibt, wird bei allen Nachweisen nicht mehr ein
+                    zweites Mal angelegt.
   v1.114 28.09.2026 Die Zeile „Heute: …“ oben wiederholte, was gleich darunter
                     in „Heute“ stand. Sie steht jetzt klein unter der
                     Überschrift „Heute“ („1 Termin · 2 Aufgaben ≈ 3:00 h ·
@@ -2894,7 +2907,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.114';
+const VERSION = 'v1.115';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10696,8 +10709,8 @@ function loeFelderZeigen(box, name, zf){
   box.innerHTML = `
     <div class="gruppe"><label class="field"><span>Standort</span><input data-l="standort" value="${esc(i.standort || '')}" list="${lid}" placeholder="z. B. EG Treppenhaus">
       <datalist id="${lid}">${orte.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label>
-    <label class="field"><span>Anzahl gleicher Löscher</span><select data-l="anzahl" class="schmal">${
-      Array.from({length:20}, (_, j) => j + 1).map(x => `<option value="${x}"${x === n ? ' selected' : ''}>${x} ×</option>`).join('')}</select></label></div>
+    ${n > 1 ? `<div class="field"><p class="small" style="margin:0 0 8px">Dieser Eintrag steht noch für ${n} Löscher. Aufgeteilt bekommt jeder eine eigene Bezeichnung und Nummer.</p>
+      <button type="button" class="btn klein" data-aufteilen="1">In ${n} einzelne Löscher aufteilen</button></div>` : ''}</div>
     <div class="gruppe"><label class="field"><span>Löschmittel</span><select data-l="mittel"><option value="">– offen –</option>${
       LOE_MITTEL.map(([m, t]) => `<option value="${m}"${i.mittel === m ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
     <div class="field"><span>Brandklassen</span><div class="seg">${LOE_KLASSEN.map(x =>
@@ -10709,7 +10722,8 @@ function loeFelderZeigen(box, name, zf){
     <div class="gruppe"><label class="field"><span>Inventar- oder Seriennummer</span><input data-l="nr" value="${esc(i.nr || '')}"></label>
     <label class="field"><span>Baujahr</span><input data-l="baujahr" type="number" inputmode="numeric" class="schmal" value="${esc(i.baujahr || '')}" placeholder="z. B. 2018"></label>
     <label class="field"><span>Hersteller</span><input data-l="hersteller" value="${esc(i.hersteller || '')}" list="${hid}">
-      <datalist id="${hid}">${hersteller.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label></div>`;
+      <datalist id="${hid}">${hersteller.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label></div>
+    <button type="button" class="btn ghost klein" data-weiterer="1">+ Weiterer Löscher an diesem Standort</button>`;
   const setzen = (feld, wert) => { const x = loeInfo(name, true); if(wert === '' || wert == null) delete x[feld]; else x[feld] = wert; saveCfg(); };
   const nachziehen = () => { if(zf) zf.textContent = loeZusammenfassung(name); };
   const neu = () => loeFelderZeigen(box, name, zf);
@@ -10721,7 +10735,15 @@ function loeFelderZeigen(box, name, zf){
     if(mit){ loeMarkeTeilen('loescher|' + mit); saveCfg(); }
     nachziehen();
   };
-  box.querySelector('[data-l="anzahl"]').onchange = e => { setzen('anzahl', +e.target.value > 1 ? +e.target.value : ''); nachziehen(); };
+  /* Weiterer Löscher (v1.115): eine neue Karte direkt darunter, die Bezeichnung
+     vergibst du selbst; Standort, Löschmittel, Klassen, Menge und Hersteller
+     kommen mit, sobald sie gesichert ist. */
+  box.querySelector('[data-weiterer]').onclick = () => {
+    if(!loeStandort(name)){ toast('Bitte zuerst den Standort eintragen'); box.querySelector('[data-l="standort"]').focus(); return; }
+    loeVorlage = name; renderSetSub();
+  };
+  const auf = box.querySelector('[data-aufteilen]');
+  if(auf) auf.onclick = () => loeAufteilen(name, n);
   box.querySelector('[data-l="mittel"]').onchange = e => {
     const x = loeInfo(name, true), alt = loeMittel(x.mittel), m = e.target.value, neuM = loeMittel(m);
     /* Die Brandklassen folgen dem Löschmittel, solange sie niemand geändert hat. */
@@ -10747,6 +10769,49 @@ function loeFelderZeigen(box, name, zf){
     const j = Math.round(+e.target.value);
     setzen('baujahr', j >= 1950 && j <= new Date().getFullYear() ? j : '');
     if(e.target.value && !loeInfo(name).baujahr){ toast('Bitte ein Jahr ab 1950 eintragen'); e.target.value = ''; }
+  };
+}
+/* Feuerlöscher einzeln (v1.115). „Anzahl gleicher Löscher“ gibt es nicht mehr:
+   jeder Löscher hat seine Bezeichnung, Nummer und Prüfzeile. Neue am selben
+   Standort legt „+ Weiterer Löscher“ an (loeVorlage = der Löscher, von dem aus
+   angelegt wird), alte Einträge mit Anzahl teilt loeAufteilen. Die Anzahl in
+   älteren Daten und Sicherungen wird weiter gelesen, bis aufgeteilt ist. */
+let loeVorlage = '';
+const LOE_ERBT = ['standort', 'mittel', 'klassen', 'menge', 'mengeAnders', 'hersteller'];
+function loeAbleiten(quelle, name, mitPruefung){
+  const q = loeInfo(quelle), x = loeInfo(name, true);
+  LOE_ERBT.forEach(f => { if(q[f] != null && q[f] !== '') x[f] = Array.isArray(q[f]) ? q[f].slice() : q[f]; });
+  const key = 'loescher|' + quelle;
+  if(CFG.orte[key]) loeMarkeTeilen(key);          // die Marke des Standorts gilt mit
+  if(mitPruefung){
+    const z = datenFuer('loescher').zeilen, alt = z[quelle];
+    /* Die leere Zeile, die für jeden Namen schon bereitsteht, zählt nicht. */
+    const ziel = z[name];
+    if(alt && (alt.datum || alt.status) && !(ziel && (ziel.datum || ziel.status))) z[name] = JSON.parse(JSON.stringify(alt));
+  }
+}
+function loeAufteilen(name, n){
+  frage('In einzelne Löscher aufteilen',
+    `„${name}“ bleibt der erste. Für die übrigen ${n - 1} bitte je eine Bezeichnung eintragen – `
+    + 'Standort, Löschmittel, Menge, Hersteller und der Prüfeintrag dieser Runde werden übernommen, '
+    + 'Inventarnummer und Baujahr trägst du danach je Löscher ein.', 'Aufteilen', () => {});
+  const liste = $('#dlgListe');
+  liste.hidden = false;
+  liste.innerHTML = Array.from({length:n - 1}, (_, j) =>
+    `<label class="field"><span>Löscher ${j + 2}</span><input data-neu="${j}" placeholder="Bezeichnung"></label>`).join('');
+  /* Erst prüfen, dann schließen – bei fehlender oder doppelter Bezeichnung
+     bleibt das Fenster offen. */
+  $('#dlgJa').onclick = () => {
+    const namen = [...liste.querySelectorAll('[data-neu]')].map(f => f.value.replace(/\s+/g, ' ').trim());
+    const alle = teilCfg('loescher').anlagen;
+    if(namen.some(x => !x)){ toast('Bitte jede Bezeichnung eintragen'); return; }
+    if(new Set(namen).size < namen.length || namen.some(x => alle.includes(x))){ toast('Jede Bezeichnung nur einmal'); return; }
+    $('#dlg').hidden = true;
+    let pos = alle.indexOf(name);
+    namen.forEach(x => { alle.splice(++pos, 0, x); loeAbleiten(name, x, true); });
+    delete loeInfo(name, true).anzahl;
+    saveCfg(); saveDat(); toast(`Aufgeteilt in ${n} Löscher`);
+    renderSetSub(); menueAuffrischen();
   };
 }
 function objektKarten(box, k){
@@ -10782,12 +10847,17 @@ function objektKarten(box, k){
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
     </div>`;
+  /* Weiterer Löscher (v1.115): die neue Karte steht unter ihrer Vorlage. */
+  let vorlage = k === 'loescher' && teilCfg(k).anlagen.includes(loeVorlage) ? loeVorlage : '';
+  loeVorlage = '';
   const zeichnen = mitNeuer => {
     verworfen = false;
     const liste = teilCfg(k).anlagen;
+    if(!mitNeuer) vorlage = '';
     box.innerHTML = `<button class="btn ghost klein" data-plus="1" style="margin:0 0 10px">+ Objekt hinzufügen</button>`
-      + (mitNeuer ? karte('', -1, liste.length) : '')
-      + anzeigeFolge(liste.length, basis).map(i => karte(liste[i], i, liste.length)).join('');
+      + (mitNeuer && !vorlage ? karte('', -1, liste.length) : '')
+      + anzeigeFolge(liste.length, basis).map(i => karte(liste[i], i, liste.length)
+          + (mitNeuer && vorlage && liste[i] === vorlage ? karte('', -1, liste.length) : '')).join('');
     /* Die bewegte Karte bleibt auf dem Schirm stehen, die anderen wandern daran
        vorbei – wie beim Verschieben in den Nachweisen (v0.53). */
     const tausch = (i, j) => {
@@ -10806,7 +10876,19 @@ function objektKarten(box, k){
       ta.onchange = () => {
         const wert = ta.value.replace(/\s+/g, ' ').trim(), liste = teilCfg(k).anlagen;
         if(neu){
+          /* Eine zweite Meldung derselben Eingabe legt nichts doppelt an (v1.115). */
+          if(ta.dataset.fertig) return;
           if(!wert || verworfen){ zeichnen(false); return; }
+          if(liste.includes(wert)){ toast('Diese Bezeichnung gibt es schon'); return; }
+          ta.dataset.fertig = '1';
+          if(vorlage){
+            /* Gleich unter der Vorlage einsortiert, mit ihrer Kennzeichnung. */
+            const pos = liste.indexOf(vorlage) + 1;
+            liste.splice(pos, 0, wert); if(pos < basis) basis++;
+            loeAbleiten(vorlage, wert, false); loeKennAuf.add(wert);
+            saveCfg(); toast('Hinzugefügt');
+            zeichnen(false); menueAuffrischen(); return;
+          }
           liste.push(wert); saveCfg(); toast('Hinzugefügt');
           zeichnen(false); menueAuffrischen(); return;
         }
@@ -10864,6 +10946,12 @@ function objektKarten(box, k){
       if(t) t.focus();
     };
   };
+  if(vorlage){
+    zeichnen(true);
+    const t = box.querySelector('.stelle[data-i="-1"] textarea');
+    if(t){ t.placeholder = 'Bezeichnung des weiteren Löschers'; bildNach(imBild(t) - 120); t.focus(); }
+    return;
+  }
   zeichnen(false);
   lageZurueck();
 }

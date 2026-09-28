@@ -136,6 +136,11 @@ steht.
   Zeile „Heute auf einen Blick“ (`heuteZeile`) steht unter der Überschrift
   „Heute“, die Gruppe steht immer da.
 
+- Feuerlöscher (v1.115): kein „Anzahl gleicher Löscher“ mehr, jeder Löscher
+  ist ein eigener Eintrag (Bezeichnung vergibt immer der Nutzer). Neue am
+  Standort über `loeVorlage`/`loeAbleiten`, alte Einträge mit `info.anzahl`
+  über `loeAufteilen`. `anzahl` wird aus alten Daten weiter gelesen.
+
 ## Testen
 
 Chromium liegt unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`,
