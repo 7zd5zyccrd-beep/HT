@@ -107,10 +107,10 @@ steht.
 - `tagKap(t)` = Arbeitszeit minus `terminBelegt`; gilt für Wochenplan,
   Auslastung und „Vorziehen“.
 - iPhone-Kalender über eine .ics-Datei (`terminIcs`), wahlweise mit
-  Erinnerung. Auf dem Gerät noch nicht bestätigt, welcher der beiden Wege
-  („übergeben“ oder „Als Datei teilen“) dort besser funktioniert.
+  Erinnerung
+  – bestätigt: nur das Teilen-Menü (`terminTeilen`) funktioniert, direktes Öffnen in Safari hing (v1.104).
 - Datumsfelder auf Seiten mit Kopfkarte: übernehmen bei `input`, neu aufbauen
-  erst bei `blur` (`datumBinden`) – sonst verrutscht das Feld unter der
+  gar nicht (`datumBinden`, auch nicht bei `blur` – iOS meldet es schon beim Öffnen der Wahl); sonst verrutscht das Feld unter der
   offenen iOS-Datumswahl.
 
 ## Testen

@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.104 28.09.2026 Der Termin einer Aufgabe ließ sich auf dem iPhone noch immer
+                    nicht ändern, der eines Termins schon. Unterschied: die
+                    Aufgabe baute ihre Kopfkarte weiterhin neu auf, sobald das
+                    Datumsfeld verlassen schien – iOS meldet das offenbar schon
+                    beim Öffnen der Datumswahl. Jetzt baut sich beim Ändern
+                    eines Datums nichts mehr neu auf, wie beim Termin; die
+                    Kopfkarte zieht beim Zuklappen der Angaben nach, „Entfernen“
+                    neben „Eingeplant für“ erscheint an Ort und Stelle.
+                    Kalender: „An den Kalender übergeben“ blieb beim Laden
+                    hängen. Der Knopf nimmt jetzt den Weg über das Teilen-Menü,
+                    der funktioniert; der zweite Knopf fällt weg.
   v1.103 28.09.2026 Termine mit anderen: Besprechung, Absprache, Vor-Ort-Termin.
                     Oben auf der Startseite stehen jetzt „+ Aufgabe“ und
                     „+ Termin“. Ein Termin hat Tag (auch mehrere Tage), Uhrzeit
@@ -2717,7 +2728,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.103';
+const VERSION = 'v1.104';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5227,7 +5238,7 @@ function renderAufgabe(){
   const planFeld = neu || a.erledigt ? ''
     : `<label class="field"><span>Eingeplant für</span><div class="row" style="align-items:center">
          <input type="date" id="aufgGeplant" class="schmal" value="${esc(a.geplant || '')}" min="${heute()}">
-         ${a.geplant ? '<button type="button" class="btn ghost klein" id="aufgGeplantWeg" style="width:auto;margin:0">Entfernen</button>' : ''}</div></label>`;
+         <button type="button" class="btn ghost klein" id="aufgGeplantWeg" style="width:auto;margin:0"${a.geplant ? '' : ' hidden'}>Entfernen</button></div></label>`;
   const felder = kopf
     + `${terminFeld}
        ${planFeld}
@@ -5246,8 +5257,8 @@ function renderAufgabe(){
     + `<details class="angaben" id="aufgAngaben"${angabenAuf === a.id ? ' open' : ''}><summary>Angaben bearbeiten</summary>${felder}</details>`
     + (!mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '');
   aufgKopfZeigen(a, mangelKopf);
-  /* Beim Zuklappen zieht die Kopfkarte sicher nach (v1.103) – falls iOS beim
-     Schließen einer Datumswahl kein "blur" gemeldet hat. */
+  /* Beim Zuklappen zieht die Kopfkarte nach (v1.103) – während die Angaben
+     offen sind, baut sich über den Feldern nichts neu auf (v1.104). */
   if($('#aufgAngaben')) $('#aufgAngaben').ontoggle = e => { angabenAuf = e.target.open ? a.id : ''; if(!e.target.open) kopfNeu(); };
   const kopfNeu = () => aufgKopfZeigen(a, mangelKopf);
 
@@ -5263,13 +5274,15 @@ function renderAufgabe(){
       sichern(); renderAufgabe();
     };
   }
-  /* Datumsfelder (v1.103). Übernommen wird bei jeder Meldung – iOS meldet
-     "change" erst beim Schließen der Datumswahl, "input" schon beim Antippen
-     eines Tages. Neu aufgebaut wird aber erst, wenn die Wahl zu ist (blur):
-     baute sich die Kopfkarte darüber schon beim Antippen neu, verrutschte das
-     Feld unter der offenen Wahl, und der neue Tag ließ sich auf dem iPhone
-     nicht bestätigen. Eine kurze Meldung sagt, dass er übernommen ist. */
-  let nachWahl = null;
+  /* Datumsfelder (v1.103, v1.104). Übernommen wird bei jeder Meldung – iOS
+     meldet "change" erst beim Schließen der Datumswahl, "input" schon beim
+     Antippen eines Tages. Die Seite baut sich dabei gar nicht neu auf: baute
+     sich die Kopfkarte darüber neu, verrutschte das Feld unter der offenen
+     Wahl, und der neue Tag ließ sich auf dem iPhone nicht bestätigen. Auch
+     "blur" taugt dafür nicht – iOS meldet es offenbar schon beim Öffnen der
+     Wahl (v1.103 half deshalb nicht). Die Kopfkarte zieht beim Zuklappen der
+     Angaben nach, wie auf der Termin-Seite gibt es sonst nichts neu. Eine
+     kurze Meldung sagt, dass der Tag übernommen ist. */
   const datumBinden = (feld, uebernehmen, meldung) => {
     if(!feld) return;
     let gemeldet = feld.value;
@@ -5277,7 +5290,6 @@ function renderAufgabe(){
       if(!feld.value || !uebernehmen(feld.value)) return;
       if(!neu && feld.value !== gemeldet){ gemeldet = feld.value; toast(meldung(feld.value)); }
     };
-    feld.onblur = () => { const f = nachWahl || kopfNeu; nachWahl = null; f(); };
   };
   const frist = $('#aufgFrist');
   datumBinden(frist, v => {
@@ -5295,8 +5307,8 @@ function renderAufgabe(){
   datumBinden(gpFeld, v => {
     if(v === a.geplant) return false;
     if(v < heute()){ gpFeld.value = a.geplant || ''; return false; }
-    /* „Entfernen“ erscheint erst nach dem Schließen der Wahl. */
-    if(!a.geplant) nachWahl = renderAufgabe;
+    /* „Entfernen“ steht rechts daneben – das verschiebt nichts darüber. */
+    $('#aufgGeplantWeg').hidden = false;
     a.geplant = v; sichern(); return true;
   }, v => 'Eingeplant für ' + planTagWort(alsDatum(v)));
   if($('#aufgGeplantWeg')) $('#aufgGeplantWeg').onclick = () => { delete a.geplant; sichern(); renderAufgabe(); };
@@ -5607,10 +5619,9 @@ function renderTermin(){
         <label class="field" style="margin:8px 0 0"><span>Erinnerung</span><select id="tmErinnern">${
           [['', 'keine'], ['15', '15 Minuten vorher'], ['60', '1 Stunde vorher'], ['1440', '1 Tag vorher']].map(([k, x]) =>
             `<option value="${k}"${String(t.erinnern || '') === k ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
-        <p class="muted small" style="margin:8px 0 0">${neu ? 'Beim Anlegen öffnet sich der Kalender mit dem Termin.'
+        <p class="muted small" style="margin:8px 0 0">${neu ? 'Beim Anlegen öffnet sich das Teilen-Menü mit dem Termin als Datei.'
           : 'Der Kalender bekommt eine Kopie. Spätere Änderungen hier kommen dort nicht von selbst an – dann erneut übergeben.'}</p>
-        ${neu ? '' : `<button class="btn klein" id="tmKalJetzt" style="margin-top:10px">An den Kalender übergeben</button>
-          <button class="btn ghost klein" id="tmKalTeilen">Als Datei teilen</button>`}
+        ${neu ? '' : `<button class="btn klein" id="tmKalTeilen" style="margin-top:10px">An den Kalender übergeben</button>`}
       </div></div>
     ${neu ? `<button class="btn primary" id="tmAnlegen">Termin anlegen</button>`
           : `<div class="knopfzeile"><button class="btn danger klein" id="tmWeg">Löschen</button></div>`}`;
@@ -5675,15 +5686,14 @@ function renderTermin(){
     $('#tmKalTeil').hidden = !e.target.checked; sichern();
   };
   $('#tmErinnern').onchange = e => { t.erinnern = e.target.value; sichern(); };
-  if($('#tmKalJetzt')) $('#tmKalJetzt').onclick = () => { endeAngleichen(); terminInKalender(t); };
   if($('#tmKalTeilen')) $('#tmKalTeilen').onclick = () => { endeAngleichen(); terminTeilen(t); };
   if($('#tmAnlegen')) $('#tmAnlegen').onclick = () => {
     if(!t.titel.trim()){ toast('Bitte einen Titel eintragen'); $('#tmTitel').focus(); return; }
     endeAngleichen();
     delete t.entwurf; TERM.push(t); saveTerm();
-    /* Der Kalender zuerst, solange der Tipp noch als Tipp gilt – iOS lässt
-       das Öffnen sonst nicht zu. */
-    if(t.kalender) terminInKalender(t);
+    /* Das Teilen-Menü zuerst, solange der Tipp noch als Tipp gilt – iOS lässt
+       es sonst nicht zu. */
+    if(t.kalender) terminTeilen(t);
     toast('Termin angelegt'); zurueck();
   };
   if($('#tmWeg')) $('#tmWeg').onclick = () =>
@@ -5739,17 +5749,9 @@ function terminIcs(t){
   return zeilen.map(l => l.length <= 70 ? l : l.match(/.{1,70}/g).join('\r\n ')).join('\r\n') + '\r\n';
 }
 const terminDateiname = t => `${(t.titel || 'Termin').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 40) || 'Termin'}.ics`;
-/* Öffnet die Kalenderdatei in Safari – dort bietet iOS „Zum Kalender
-   hinzufügen“ an. In einem neuen Fenster, damit die App stehen bleibt. */
-function terminInKalender(t){
-  const url = URL.createObjectURL(new Blob([terminIcs(t)], {type:'text/calendar'}));
-  const a = document.createElement('a');
-  a.href = url; a.target = '_blank'; a.rel = 'noopener';
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
-}
-/* Falls das Öffnen nichts bewirkt: die Datei über das Teilen-Menü, etwa in
-   „Dateien“ oder per Mail – von dort nimmt der Kalender sie auch. */
+/* Die Datei geht über das Teilen-Menü hinaus; von dort nimmt der Kalender
+   sie. Der Versuch, sie direkt in Safari zu öffnen, blieb auf dem iPhone beim
+   Laden hängen und ist seit v1.104 wieder draußen. */
 async function terminTeilen(t){
   const datei = new File([new Blob([terminIcs(t)], {type:'text/calendar'})], terminDateiname(t), {type:'text/calendar'});
   try{
