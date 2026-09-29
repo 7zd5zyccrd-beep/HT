@@ -149,6 +149,12 @@ steht.
   solange es keine Marke gibt. Grundriss-Symbol: `ORT_SVG` (Plan mit
   Stecknadel) statt des Zeichens ⌖.
 
+- Knöpfe (v1.118): alle Handlungsknöpfe (`.btn` ohne `.eintrag`, Pfeile,
+  Verlauf, Stufen) sind `--feld-h` hoch, Rand `--field-border`, 16 px,
+  einzeilig, weiß (nur `.primary` schwarz). Symbolknöpfe: `.quadrat`.
+  Listeneinträge (`.eintrag`) wachsen mit dem Inhalt. Neue Knöpfe ohne
+  eigene Höhe oder Schriftgröße anlegen; auf 320 px prüfen.
+
 ## Testen
 
 Chromium liegt unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`,

@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.118 29.09.2026 Einheitliche Knöpfe: alles, was etwas tut, ist so hoch wie
+                    ein Eingabefeld, mit derselben Randfarbe und Schriftgröße.
+                    Vorher lagen die Knöpfe zwischen 32 und 53 Pixeln, mit
+                    hellen, grauen und schwarzen Rändern und drei
+                    Schriftgrößen. Symbolknöpfe (Grundriss, Pfeile, Verlauf,
+                    − und +) sind gleich große Quadrate; alle Knöpfe außer dem
+                    Hauptknopf sind weiß. Kein Knopf bricht mehr auf zwei
+                    Zeilen um – „Jetzt unterschreiben“ heißt dafür
+                    „Unterschreiben“. Listeneinträge bleiben, wie sie sind.
+                    Bei den RWA steht „1 × / 2 ×“ jetzt neben dem Akkutyp, damit
+                    Grundriss, Pfeile und Löschen in eine Reihe passen.
   v1.117 29.09.2026 Standort-Kacheln bei den Feuerlöschern: ist der Standort
                     leer, stehen darunter die Kurznamen der Grundrisse (KG, EG,
                     1.OG …). Ein Tipp schreibt „EG, “ ins Feld, dann erscheinen
@@ -1768,9 +1779,15 @@ main{flex:1 0 auto;padding:16px var(--pad) calc(16px + max(env(safe-area-inset-b
   border:1px solid var(--line);background:var(--surface);color:var(--ink);
   font:inherit;font-weight:500;text-align:center;cursor:pointer;
 }
+/* Einheitliche Knöpfe (v1.118): was etwas tut, ist so hoch wie ein Feld,
+   mit derselben Randfarbe, 16 px und einzeilig. Listeneinträge (.eintrag)
+   wachsen weiter mit ihrem Inhalt; sie sind Zeilen, keine Knöpfe. */
+.btn:not(.eintrag){display:flex;align-items:center;justify-content:center;gap:6px;
+  min-height:var(--feld-h);padding:0 16px;border-color:var(--field-border);font-size:16px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .btn.primary{background:var(--strong);color:var(--on-strong);border-color:var(--strong)}
 .btn.accent{background:var(--strong);color:var(--on-strong);border-color:var(--strong);font-weight:600}
-.btn.ghost{background:none}
+.btn.ghost{background:var(--surface)}   /* seit v1.118 wie alle: weiß */
 .btn.danger{color:var(--ink);border-color:var(--ink)}
 .btn[disabled]{opacity:.4;pointer-events:none}
 /* Eigene display-Angaben schlagen die eingebaute Regel für [hidden] – ohne
@@ -1992,8 +2009,8 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .pos .pfeile{flex:0 0 auto;display:flex;gap:6px}
 /* Dieselben Maße wie ⌖ ↑ ↓ in den Einstellungen (v1.38). */
 .pos .pfeile button{
-  width:42px;height:42px;border:1px solid var(--line);border-radius:12px;padding:0;
-  background:none;color:var(--ink);font:inherit;font-size:14px;cursor:pointer;
+  width:var(--feld-h);height:var(--feld-h);border:1px solid var(--field-border);border-radius:12px;padding:0;
+  background:var(--surface);color:var(--ink);font:inherit;font-size:16px;cursor:pointer;
   -webkit-appearance:none;appearance:none;
 }
 .pos .pfeile button[disabled]{opacity:.4}
@@ -2002,7 +2019,8 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 button > .ortIcon:only-child{display:block;margin:auto}
 .ortIcon{flex:0 0 auto}
 .btn > .ortIcon:not(:only-child){display:inline-block;vertical-align:-5px;margin-right:6px}
-.btn.klein{padding:9px 12px;font-size:14px}
+/* Klein heißt seit v1.118 nur noch: so breit wie die Beschriftung. */
+.btn.klein{padding:0 14px}
 /* Eine Zeile je Zähler: Haken, Bezeichnung, Feld für die neue Nummer. */
 /* Eine Karte je Zähler: Haken mit Bezeichnung, darunter die Felder des
    Wechsels – sie erscheinen erst mit dem Haken. */
@@ -2024,7 +2042,7 @@ button > .ortIcon:only-child{display:block;margin:auto}
   flex:1;min-width:0;min-height:0;height:42px;padding:9px 10px;font-size:16px;
   line-height:1.35;resize:none;overflow:hidden;
 }
-.zeile .btn,.stelle .btn{flex:0 0 auto;width:auto;height:42px;padding:0 12px;font-size:14px;
+.zeile .btn,.stelle .btn{flex:0 0 auto;width:auto;height:var(--feld-h);padding:0 14px;
   display:flex;align-items:center;justify-content:center}
 /* Nebeneinander stehende Knöpfe brauchen den oberen Abstand nicht (siehe v0.96),
    und die eigene display-Angabe muss die Regel für [hidden] dulden (v0.83). */
@@ -2063,10 +2081,23 @@ button > .ortIcon:only-child{display:block;margin:auto}
 .etagen button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong);border-color:var(--strong)}
 /* Knopfreihe der Objektkarte: mit der Anzahl der Akkus wird es eng, deshalb
    etwas kleinere Abstände; die Anzahl steht rechts vor Löschen. */
-.stelle .knopfreihe{gap:8px}
+.stelle .knopfreihe{gap:8px;flex-wrap:wrap}   /* sehr schmale Geräte: Löschen rutscht in die nächste Zeile (v1.118) */
+/* Zwei Knöpfe nebeneinander (Zeilen, Fußleiste) mit weniger seitlichem Polster
+   – sonst würde „Nachweis ausgeben“ auf schmalen Geräten abgeschnitten. */
+.row > .btn:not(.eintrag),.actionbar .barKnoepfe .btn,.hknoepfe .btn{padding:0 8px}
+@media (max-width:359px){
+  .btn:not(.eintrag){font-size:15px}
+  .row > .btn:not(.eintrag),.actionbar .barKnoepfe .btn{font-size:14px;padding:0 4px;overflow:visible;text-overflow:clip}
+}
 /* „Löschen“ steht immer ganz rechts (v1.111), auch wenn es allein ist. */
 .knopfreihe > .btn.danger:only-child{margin-left:auto}
-.stelle .knopfreihe .seg.anz{flex:0 0 88px;margin-left:auto;height:42px}
+.stelle .knopfreihe .seg.anz{flex:0 0 88px;margin-left:auto;height:var(--feld-h)}
+/* Akkutyp und Anzahl in einer Zeile (v1.118). */
+.akkuZeile{display:flex;gap:8px;margin-top:10px}
+.akkuZeile > .seg:first-child{flex:1;min-width:0}
+.akkuZeile .seg.anz{flex:0 0 96px}
+/* Symbolknöpfe sind Quadrate in Feldhöhe (v1.118). */
+.btn.quadrat,.zeile .btn.quadrat,.stelle .btn.quadrat{flex:0 0 var(--feld-h);width:var(--feld-h);padding:0}
 .stelle .knopfreihe .seg.anz button{padding:0 4px}
 /* Grundriss in den Einstellungen: Name, darunter Pfeile, Ansehen und Löschen. */
 .planKarte > input{padding:0 10px;font-size:16px}
@@ -2112,7 +2143,7 @@ button > .ortIcon:only-child{display:block;margin:auto}
    weniger Polster, damit „Nachweis ausgeben“ auch auf schmalen Telefonen in
    eine Zeile passt. */
 .actionbar .barHinweis{margin:0 0 8px;text-align:center}
-.actionbar .barKnoepfe .btn{padding:13px 6px;font-size:15px;white-space:nowrap}
+.actionbar .barKnoepfe .btn{padding:0 6px}
 .actionbar .inner{max-width:var(--col);margin:0 auto}
 
 /* Unterschrift – dasselbe Zeichenfeld wie im E-Assistenten, 3:1 */
@@ -2567,8 +2598,10 @@ button > .ortIcon:only-child{display:block;margin:auto}
 .pos .name.mitVerlauf > span{min-width:0}
 .verlaufKnopf{
   -webkit-appearance:none;appearance:none;
-  flex:0 0 auto;width:32px;height:32px;margin:-5px 0 -5px 0;padding:0;
-  border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);
+  /* So groß wie die übrigen Symbolknöpfe (v1.118); der negative Rand hält
+     die Titelzeile der Karte trotzdem niedrig. */
+  flex:0 0 auto;width:var(--feld-h);height:var(--feld-h);margin:-12px 0 -12px 0;padding:0;
+  border:1px solid var(--field-border);border-radius:12px;background:var(--surface);color:var(--ink);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
 .verlaufKnopf svg{display:block}
@@ -2801,7 +2834,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
         <div class="eyebrow">Unterschrift</div>
         <canvas id="sigpad" class="aus"></canvas>
         <div class="row" style="margin-top:10px">
-          <button class="btn" id="btnSigStart">Jetzt unterschreiben</button>
+          <button class="btn" id="btnSigStart">Unterschreiben</button>
           <button class="btn primary" id="btnSigOk">Übernehmen</button>
         </div>
       </div>
@@ -2934,7 +2967,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.117';
+const VERSION = 'v1.118';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -7531,9 +7564,9 @@ function renderArbeit(){
   box.innerHTML = `<div class="seg arbArt" role="group" aria-label="Zeitraum">
       <button type="button" data-art="monat" aria-pressed="${arbZeit.art === 'monat'}">Monat</button>
       <button type="button" data-art="woche" aria-pressed="${arbZeit.art === 'woche'}">Woche</button></div>
-    <div class="arbKopf"><button type="button" class="btn ghost klein" data-blatt="-1" aria-label="zurück">‹</button>
+    <div class="arbKopf"><button type="button" class="btn ghost klein quadrat" data-blatt="-1" aria-label="zurück">‹</button>
       <b>${esc(z.titel)}</b>
-      <button type="button" class="btn ghost klein" data-blatt="1" aria-label="weiter">›</button></div>
+      <button type="button" class="btn ghost klein quadrat" data-blatt="1" aria-label="weiter">›</button></div>
     <div class="card"><div class="eyebrow mitInfo" style="margin:0 0 6px">Summe ${i.knopf}</div>${i.text}
       <p style="margin:0"><b>≈ ${esc(dauerText({m:gesamt}))}</b>${
         tage.length ? ` <span class="muted small">· an ${tage.length} ${tage.length === 1 ? 'Tag' : 'Tagen'}${
@@ -10554,7 +10587,7 @@ const anzeigeFolge = (n, basis) => {
 };
 const feldHoehe = ta => {
   ta.style.height = 'auto';
-  ta.style.height = Math.max(42, ta.scrollHeight + 2) + 'px';
+  ta.style.height = Math.max(48, ta.scrollHeight + 2) + 'px';   // so hoch wie Felder und Knöpfe (v1.118)
 };
 function listeBauen(box, opt){
   const zeile = (text, i) =>
@@ -10839,8 +10872,10 @@ function objektKarten(box, k){
     const z = datenFuer(k).zeilen[name] || {}, typen = akkuTypen();
     if(!typen.length)
       return `<p class="muted small" style="margin:10px 0 0">Erst einen Akkutyp anlegen.</p>`;
-    return `<div style="margin-top:10px"><span class="seg">${typen.map(x =>
-      `<button type="button" data-typ="${esc(x.name)}" aria-pressed="${x.name === z.akkuTyp}">${esc(x.name)}</button>`).join('')}</span></div>`;
+    /* Die Anzahl steht seit v1.118 in derselben Zeile wie der Typ – in der
+       Knopfreihe darunter war mit gleich großen Knöpfen kein Platz mehr. */
+    return `<div class="akkuZeile"><span class="seg">${typen.map(x =>
+      `<button type="button" data-typ="${esc(x.name)}" aria-pressed="${x.name === z.akkuTyp}">${esc(x.name)}</button>`).join('')}</span>${anzWahl(name, i)}</div>`;
   };
   const anzWahl = (name, i) => {
     if(!NW(k).akku || i < 0 || !akkuTypen().length) return '';
@@ -10853,10 +10888,9 @@ function objektKarten(box, k){
       ${akkuWahl(text, i)}${k === 'loescher' && i >= 0 ? `<details class="loeKenn"${loeKennAuf.has(text) ? ' open' : ''}><summary><span class="loeZf">${
         esc(loeZusammenfassung(text))}</span></summary><div class="loeFelder"></div></details>` : ''}
       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
-        <button class="btn ghost klein" data-ort="1" aria-label="Grundriss"${i < 0 ? ' disabled' : ''}>${ORT_SVG}</button>
-        <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= basis ? ' disabled' : ''}>↑</button>
-        <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i < 0 || i >= basis - 1 ? ' disabled' : ''}>↓</button>
-        ${anzWahl(text, i)}
+        <button class="btn ghost klein quadrat" data-ort="1" aria-label="Grundriss"${i < 0 ? ' disabled' : ''}>${ORT_SVG}</button>
+        <button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= basis ? ' disabled' : ''}>↑</button>
+        <button class="btn ghost klein quadrat" data-runter="1" aria-label="nach unten"${i < 0 || i >= basis - 1 ? ' disabled' : ''}>↓</button>
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
     </div>`;
@@ -10977,8 +11011,8 @@ function akkuTypZeichnen(mitNeuer){
         <label class="field"><span>Jahre</span><input data-f="jahre" type="number" min="1" max="20" step="1" inputmode="numeric" value="${x.jahre}"></label>
       </div>
       <div class="zeile knopfreihe" style="border-top:0;padding:0">
-        <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= akkuTypBasis ? ' disabled' : ''}>↑</button>
-        <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i < 0 || i >= akkuTypBasis - 1 ? ' disabled' : ''}>↓</button>
+        <button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= akkuTypBasis ? ' disabled' : ''}>↑</button>
+        <button class="btn ghost klein quadrat" data-runter="1" aria-label="nach unten"${i < 0 || i >= akkuTypBasis - 1 ? ' disabled' : ''}>↓</button>
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
     </div>`;
@@ -11406,8 +11440,8 @@ async function renderPlaene(){
       <div class="planBezug"><span class="muted small">${bezugVon(pl.id) ? 'Ausgerichtet' : 'Nicht ausgerichtet'}</span>
         <button class="btn ghost klein" data-richt="1">Ausrichten</button></div>
       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
-        <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 ? ' disabled' : ''}>↑</button>
-        <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i >= n - 1 ? ' disabled' : ''}>↓</button>
+        <button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 ? ' disabled' : ''}>↑</button>
+        <button class="btn ghost klein quadrat" data-runter="1" aria-label="nach unten"${i >= n - 1 ? ' disabled' : ''}>↓</button>
         <button class="btn klein" data-sehen="1" style="margin-left:auto">Ansehen</button>
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
