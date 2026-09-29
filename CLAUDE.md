@@ -56,8 +56,8 @@ steht.
   Sperrbildschirm fest und schickt nur die ausgegebene Zeile; das Passwort
   selbst nie erfragen.
 - **Grundrisse:** Marken hängen an `CFG.orte[k|Name]`, ausgerichtete Pläne an
-  `CFG.bezug`, der gemeinsame Rahmen an `CFG.zuschnitt`. Feuerlöscher am
-  selben Standort teilen sich eine Marke (`loeMarkeTeilen`).
+  `CFG.bezug`, der gemeinsame Rahmen an `CFG.zuschnitt`. Jeder Feuerlöscher
+  hat seine eigene Marke (seit v1.116, vorher gemeinsam je Standort).
 - **pdf.js** wird mit festen SHA-256-Werten (`PDF_SHA`) geprüft und mit
   `isEvalSupported:false` geöffnet. Bei einem Versionswechsel beide Werte
   mitändern.
@@ -136,10 +136,11 @@ steht.
   Zeile „Heute auf einen Blick“ (`heuteZeile`) steht unter der Überschrift
   „Heute“, die Gruppe steht immer da.
 
-- Feuerlöscher (v1.115): kein „Anzahl gleicher Löscher“ mehr, jeder Löscher
-  ist ein eigener Eintrag (Bezeichnung vergibt immer der Nutzer). Neue am
-  Standort über `loeVorlage`/`loeAbleiten`, alte Einträge mit `info.anzahl`
-  über `loeAufteilen`. `anzahl` wird aus alten Daten weiter gelesen.
+- Feuerlöscher (v1.116, vom Nutzer so entschieden): jeder Löscher ist ein
+  Objekt wie alle anderen – eigene Marke, eigene Zeile, Reihenfolge der Liste.
+  Kein gemeinsamer Standort, keine Anzahl, kein „Weiterer Löscher“, kein
+  Aufteilen. `info.standort` ist nur Beschreibung; `info.anzahl` aus alten
+  Daten wird ignoriert.
 
 ## Testen
 
