@@ -10,6 +10,10 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.126 29.09.2026 Lupe: die Marken werden jetzt mit dem Plan vergrößert, so
+         dass sie dort im selben Verhältnis zum Plan stehen wie außerhalb.
+         Die verschobene Marke bleibt unangewählt dargestellt, das Fadenkreuz
+         liegt darüber.
   v1.125 29.09.2026 Marke verschieben: Ist die Lupe schon da (Finger kurz
          stillgehalten), folgt die Marke sofort jeder Bewegung. Vorher musste
          der Finger erst ein Stück wandern, bevor sie sich rührte.
@@ -2467,11 +2471,9 @@ button > .ortIcon:only-child{display:block;margin:auto}
 #planLupe .lupeInnen .ebene{position:absolute;transform-origin:0 0}
 #planLupe .lupeInnen .ebene img{display:block;width:100%;height:100%;max-width:none}
 /* Die Marken in der Lupe (v1.122): dieselben Stilregeln wie im Plan (sonst
-   waren sie unsichtbar), aber nicht mitvergrößert – die Lupe zeigt den Plan
-   dreifach, die Marken in ihrer Originalgröße. Fester Wert statt calc() (v1.124),
-   weil ältere iOS-Versionen calc() in scale() verwerfen und die Marken dann
-   dreifach groß zeigen. */
-#planLupe .lupeInnen .marke{transform:scale(.33333);pointer-events:none}
+   waren sie unsichtbar). Sie werden mit dem Plan vergrößert (v1.126, so vom
+   Nutzer gewünscht) – im selben Verhältnis zum Plan wie außerhalb der Lupe. */
+#planLupe .lupeInnen .marke{pointer-events:none}
 #planLupe .kreuz{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px}
 #planLupe .kreuz::before,#planLupe .kreuz::after{content:'';position:absolute;background:#E8590C;box-shadow:0 0 0 1px rgba(255,255,255,.8)}
 #planLupe .kreuz::before{left:12px;top:0;width:2px;height:26px}
@@ -3009,7 +3011,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.125';
+const VERSION = 'v1.126';
 const BUILD   = VERSION + ' · 29.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
