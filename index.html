@@ -10,6 +10,9 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.125 29.09.2026 Marke verschieben: Ist die Lupe schon da (Finger kurz
+         stillgehalten), folgt die Marke sofort jeder Bewegung. Vorher musste
+         der Finger erst ein Stück wandern, bevor sie sich rührte.
   v1.124 29.09.2026 Lupe beim Verschieben einer Marke: alle Marken erscheinen
          dort in ihrer Originalgröße statt vergrößert, auch die gerade
          verschobene – so, wie sie unangewählt im Plan aussieht, mit dem
@@ -3006,7 +3009,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.124';
+const VERSION = 'v1.125';
 const BUILD   = VERSION + ' · 29.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -13033,7 +13036,10 @@ function zugBeginnen(e, x, y){
 function zugFolgen(fx, fy){
   if(!zug) return;
   if(!zug.laeuft){
-    if(Math.hypot(fx - zug.x0, fy - zug.y0) < ZUG_START) return;
+    /* Steht die Lupe schon (Finger lag still), folgt die Marke sofort jeder
+       Bewegung (v1.125); sonst erst nach ein paar Pixeln, damit ein Tipp kein Zug wird. */
+    const d = Math.hypot(fx - zug.x0, fy - zug.y0);
+    if(zug.halten ? d === 0 : d < ZUG_START) return;
     zug.laeuft = true; clearTimeout(zug.uhr); zug.el.classList.remove('gehoben');
     if(zug.art !== 'schnitt') zug.el.classList.add('gezogen');
     tippWeg();
