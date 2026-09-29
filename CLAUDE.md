@@ -165,3 +165,9 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
 (390 × 844, `screen` gleich gesetzt) sowie iPad-Größe prüfen. Seitenfehler
 über `page.on('pageerror')` sammeln. Vorher die Syntax prüfen:
 `new Function(scriptInhalt)` für jeden `<script>`-Block.
+
+- Rückkehr aus dem Grundriss in die Objektliste der Einstellungen (v1.127):
+  seit dem Öffnen der Seite neu angelegtes Objekt (`objFrisch`) mit erster
+  Marke → Karte zu, Liste oben; sonst Karte offen, gleiche Stelle, gleiche
+  Reihenfolge (`objPlanWeg.basis`). Standort-Kacheln rollen nur bei Eingabe
+  oder Tipp ins Bild, nie beim Aufbau.

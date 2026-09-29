@@ -10,6 +10,14 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.127 29.09.2026 Objektlisten in den Einstellungen, Rückkehr aus dem
+         Grundriss: Hat ein gerade neu angelegtes Objekt dort seine erste
+         Marke bekommen, ist seine Karte zugeklappt und die Liste steht ganz
+         oben – gleich weiter mit „Objekt hinzufügen“. Wer nur nachsieht,
+         verschiebt oder bei einem älteren Objekt nachträgt, findet die Karte
+         offen und die Liste an derselben Stelle wieder. Dabei behoben: Die
+         Standort-Kacheln rollten beim Aufbau der Liste die Ansicht nach
+         unten, sodass sie nach der Rückkehr irgendwo stand.
   v1.126 29.09.2026 Lupe: die Marken werden jetzt mit dem Plan vergrößert, so
          dass sie dort im selben Verhältnis zum Plan stehen wie außerhalb.
          Die verschobene Marke bleibt unangewählt dargestellt, das Fadenkreuz
@@ -3011,7 +3019,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.126';
+const VERSION = 'v1.127';
 const BUILD   = VERSION + ' · 29.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10854,13 +10862,16 @@ function loeFelderZeigen(box, name, zf){
     const r = kacheln.getBoundingClientRect(), b = bild().getBoundingClientRect();
     if(r.bottom > b.bottom - 8) bildNach(bildY() + r.bottom - b.bottom + 16);
   };
-  const kachelnZeigen = () => {
+  /* Ins Bild rollen nur bei Eingabe oder Tipp, nicht beim Aufbau der Liste –
+     sonst schob jede Karte mit freiem Standort die Liste weiter nach unten
+     (v1.127). */
+  const kachelnZeigen = rollen => {
     const teile = stFeld.value.split(',').map(x => x.trim());
     const nurPlan = teile.length <= 2 && !teile[1] && planVon(teile[0]);
     const wahl = !stFeld.value.trim() ? plaene.map((p, j) => ({wert:kurz[j], plan:p.id}))
                : nurPlan ? bauteile().map(b => ({wert:b})) : [];
     kacheln.hidden = !wahl.length;
-    if(wahl.length) kachelnImBild();
+    if(wahl.length && rollen) kachelnImBild();
     kacheln.innerHTML = wahl.map(w => `<button type="button" data-wert="${esc(w.wert)}"${w.plan ? ` data-plan="${esc(w.plan)}"` : ''}>${esc(w.wert)}</button>`).join('');
     kacheln.querySelectorAll('button').forEach(b => b.onclick = () => {
       const erst = stFeld.value.split(',')[0].trim();
@@ -10870,7 +10881,7 @@ function loeFelderZeigen(box, name, zf){
       /* Nach dem Grundriss noch keine Tastatur (v1.123): sie schob die
          Bauteil-Kacheln darunter aus dem Bild. Erst nach dem Bauteil – dann
          wird der Rest getippt. */
-      kachelnZeigen();
+      kachelnZeigen(true);
       if(b.dataset.plan) stFeld.blur(); else ansEnde();
     });
   };
@@ -10878,7 +10889,7 @@ function loeFelderZeigen(box, name, zf){
     plaene = planSortieren(l || []); kurz = planKurzNamen(plaene);
     if(stFeld.isConnected) kachelnZeigen();
   }).catch(() => {});
-  stFeld.oninput = () => kachelnZeigen();
+  stFeld.oninput = () => kachelnZeigen(true);
   /* Geht die Tastatur auf, rollen die Kacheln mit über sie (v1.123) – die
      Höhe des Bildes folgt der Tastatur erst nach ihrer Bewegung. */
   stFeld.onfocus = () => setTimeout(kachelnImBild, 400);
@@ -10918,8 +10929,26 @@ function loeFelderZeigen(box, name, zf){
     if(e.target.value && !loeInfo(name).baujahr){ toast('Bitte ein Jahr ab 1950 eintragen'); e.target.value = ''; }
   };
 }
+/* Rückkehr aus dem Grundriss in die Objektliste (v1.127, vom Nutzer so
+   gewünscht): Hat ein seit dem Öffnen der Seite neu angelegtes Objekt dort
+   seine erste Marke bekommen, ist die Arbeit daran getan – Karte zu, Liste
+   ganz oben, gleich weiter mit „Objekt hinzufügen“. Sonst (angesehen,
+   verschoben, Nachtrag bei einem alten Objekt) bleibt alles, wie es war. */
+const objFrisch = new Set();          // 'k|Name', seit dem Öffnen der Seite angelegt
+let objPlanWeg = null;                // {key, hatteMarke, basis} beim Sprung in den Grundriss
 function objektKarten(box, k){
   let verworfen = false, basis = teilCfg(k).anlagen.length;
+  let weg = objPlanWeg; objPlanWeg = null;
+  if(weg && !weg.key.startsWith(k + '|')) weg = null;
+  if(!weg) [...objFrisch].forEach(x => { if(x.startsWith(k + '|')) objFrisch.delete(x); });
+  /* Nach dem Grundriss dieselbe Reihenfolge wie vorher – frisch Angelegtes
+     bleibt oben, sonst stünde die Karte nicht mehr an ihrer Stelle. */
+  else basis = Math.min(basis, weg.basis);
+  let nachOben = false;
+  if(weg && objFrisch.has(weg.key) && !weg.hatteMarke && CFG.orte[weg.key]){
+    loeKennAuf.delete(weg.key.slice(k.length + 1));
+    nachOben = true;
+  }
   /* Der Typ steht in einer eigenen Zeile über die volle Breite, die Anzahl in
      der Knopfreihe rechts vor Löschen (v1.28) – vorher nahm sie ab vier Typen
      eine ganze Zeile ein. Zusammen zu lesen als "2 × 12 Ah".
@@ -10981,12 +11010,13 @@ function objektKarten(box, k){
           if(!wert || verworfen){ zeichnen(false); return; }
           if(liste.includes(wert)){ toast('Diese Bezeichnung gibt es schon'); return; }
           ta.dataset.fertig = '1';
-          liste.push(wert); saveCfg(); toast('Hinzugefügt');
+          liste.push(wert); objFrisch.add(k + '|' + wert); saveCfg(); toast('Hinzugefügt');
           zeichnen(false); menueAuffrischen(); return;
         }
         if(!wert){ ta.value = liste[i]; feldHoehe(ta); return; }   // leeren geht nur über Löschen
         if(wert === liste[i]) return;
         anlageUmbenennen(k, liste[i], wert);
+        if(objFrisch.delete(k + '|' + liste[i])) objFrisch.add(k + '|' + wert);
         liste[i] = wert; saveCfg();
       };
       /* Hier wird nicht nur angesehen, sondern auch gesetzt und verschoben –
@@ -10994,6 +11024,7 @@ function objektKarten(box, k){
       r.querySelector('[data-ort]').onclick = () => {
         if(neu) return;
         const a = teilCfg(k).anlagen[i];
+        objPlanWeg = {key:k + '|' + a, hatteMarke:!!CFG.orte[k + '|' + a], basis};
         verorten(k + '|' + a, a);
       };
       /* Typ und Anzahl: die Karte wird nie ersetzt, nur die Knöpfe nachgezogen –
@@ -11039,7 +11070,8 @@ function objektKarten(box, k){
     };
   };
   zeichnen(false);
-  lageZurueck();
+  if(nachOben){ listenLage = null; bildNach(0); }
+  else lageZurueck();
 }
 /* Die Akkutypen: Bezeichnung und Zyklus. Eine Karte wird erst gesichert, wenn
    sie ganz verlassen wird – sonst risse der Neuaufbau das zweite Feld weg,
