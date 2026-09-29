@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.124 29.09.2026 Lupe beim Verschieben einer Marke: alle Marken erscheinen
+         dort in ihrer Originalgröße statt vergrößert, auch die gerade
+         verschobene – so, wie sie unangewählt im Plan aussieht, mit dem
+         Fadenkreuz darüber. Außerdem sitzt der Plan in der Lupe jetzt genau
+         unter dem Fadenkreuz (vorher um den Rand der Lupe versetzt).
   v1.123 29.09.2026 Standort-Kacheln der Feuerlöscher: nach dem Tipp auf den
                     Grundriss ging die Tastatur auf und verdeckte die Bauteil-
                     Kacheln. Jetzt kommt die Tastatur erst nach dem Bauteil,
@@ -2458,10 +2463,12 @@ button > .ortIcon:only-child{display:block;margin:auto}
 #planLupe .lupeInnen{position:absolute;left:0;top:0;transform-origin:0 0}
 #planLupe .lupeInnen .ebene{position:absolute;transform-origin:0 0}
 #planLupe .lupeInnen .ebene img{display:block;width:100%;height:100%;max-width:none}
-/* Die übrigen Marken in der Lupe (v1.122): dieselben Stilregeln wie im Plan
-   (sonst waren sie unsichtbar), aber nicht mitvergrößert – die Lupe zeigt den
-   Plan dreifach, die Marken in ihrer gewohnten Größe. */
-#planLupe .lupeInnen .marke{transform:scale(calc(1 / 3));pointer-events:none}
+/* Die Marken in der Lupe (v1.122): dieselben Stilregeln wie im Plan (sonst
+   waren sie unsichtbar), aber nicht mitvergrößert – die Lupe zeigt den Plan
+   dreifach, die Marken in ihrer Originalgröße. Fester Wert statt calc() (v1.124),
+   weil ältere iOS-Versionen calc() in scale() verwerfen und die Marken dann
+   dreifach groß zeigen. */
+#planLupe .lupeInnen .marke{transform:scale(.33333);pointer-events:none}
 #planLupe .kreuz{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px}
 #planLupe .kreuz::before,#planLupe .kreuz::after{content:'';position:absolute;background:#E8590C;box-shadow:0 0 0 1px rgba(255,255,255,.8)}
 #planLupe .kreuz::before{left:12px;top:0;width:2px;height:26px}
@@ -2999,8 +3006,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.123';
-const BUILD   = VERSION + ' · 28.09.2026';
+const VERSION = 'v1.124';
+const BUILD   = VERSION + ' · 29.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -12956,7 +12963,17 @@ function lupeZeigen(x, y){
     const innen = document.createElement('div'); innen.className = 'lupeInnen';
     const eb = $('#planBox .ebenen');
     if(eb) innen.appendChild(eb.cloneNode(true));
-    box.querySelectorAll('.marke').forEach(m => { if(m !== (zug && zug.el)) innen.appendChild(m.cloneNode(true)); });
+    /* Alle Marken, auch die gezogene, so wie sie unangewählt im Plan stehen
+       (v1.124); die gezogene folgt unten bei jedem Aufruf dem Finger. */
+    box.querySelectorAll('.marke').forEach(m => {
+      const k = m.cloneNode(true);
+      if(m === (zug && zug.el)){
+        k.classList.remove('aktiv', 'zieh', 'gezogen', 'gehoben');
+        if(!k.classList.contains('bezug')) k.classList.add('andere');
+        k.dataset.lupeZug = '1';
+      }
+      innen.appendChild(k);
+    });
     l.appendChild(innen);
     l.insertAdjacentHTML('beforeend', '<div class="kreuz"></div>');
     document.body.appendChild(l);
@@ -12965,8 +12982,12 @@ function lupeZeigen(x, y){
   const innen = l.querySelector('.lupeInnen');
   innen.style.width = r.width + 'px'; innen.style.height = r.height + 'px';
   innen.style.position = 'absolute';
+  const gz = innen.querySelector('[data-lupe-zug]');
+  if(gz && zug && zug.el){ gz.style.left = zug.el.style.left; gz.style.top = zug.el.style.top; }
   const fx = x - r.left, fy = y - r.top;
-  innen.style.transform = `translate(${LUPE / 2 - fx * LUPE_FAKTOR}px, ${LUPE / 2 - fy * LUPE_FAKTOR}px) scale(${LUPE_FAKTOR})`;
+  /* Mitte des Inneren, ohne den weißen Rand – dort sitzt das Fadenkreuz (v1.124). */
+  const m = (l.clientWidth || LUPE) / 2;
+  innen.style.transform = `translate(${m - fx * LUPE_FAKTOR}px, ${m - fy * LUPE_FAKTOR}px) scale(${LUPE_FAKTOR})`;
   /* Über dem Finger; oben am Rand zur Seite. */
   let lx = x - LUPE / 2, ly = y - LUPE - 50;
   if(ly < 8){ ly = Math.max(8, y - LUPE / 2); lx = x + 60 + LUPE > innerWidth ? x - 60 - LUPE : x + 60; }
