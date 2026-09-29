@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.123 29.09.2026 Standort-Kacheln der Feuerlöscher: nach dem Tipp auf den
+                    Grundriss ging die Tastatur auf und verdeckte die Bauteil-
+                    Kacheln. Jetzt kommt die Tastatur erst nach dem Bauteil,
+                    wenn der Rest getippt wird. Ist sie schon offen, rollt die
+                    Seite so, dass die Kacheln über ihr stehen.
   v1.122 29.09.2026 Beim Verschieben einer Marke zeigt die Lupe jetzt auch die
                     übrigen Marken auf dem Plan, in gewohnter Größe. Sie waren
                     schon mitgenommen, aber ohne ihr Aussehen und deshalb
@@ -2994,7 +2999,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.122';
+const VERSION = 'v1.123';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10832,19 +10837,29 @@ function loeFelderZeigen(box, name, zf){
   const stSauber = v => v.replace(/\s+/g, ' ').replace(/[,\s]+$/, '').trim();
   const planVon = teil => plaene[kurz.indexOf(teil)] || null;
   const ansEnde = () => { stFeld.focus(); const l = stFeld.value.length; try{ stFeld.setSelectionRange(l, l); }catch(e){} };
+  const kachelnImBild = () => {
+    if(kacheln.hidden || !kacheln.isConnected) return;
+    const r = kacheln.getBoundingClientRect(), b = bild().getBoundingClientRect();
+    if(r.bottom > b.bottom - 8) bildNach(bildY() + r.bottom - b.bottom + 16);
+  };
   const kachelnZeigen = () => {
     const teile = stFeld.value.split(',').map(x => x.trim());
     const nurPlan = teile.length <= 2 && !teile[1] && planVon(teile[0]);
     const wahl = !stFeld.value.trim() ? plaene.map((p, j) => ({wert:kurz[j], plan:p.id}))
                : nurPlan ? bauteile().map(b => ({wert:b})) : [];
     kacheln.hidden = !wahl.length;
+    if(wahl.length) kachelnImBild();
     kacheln.innerHTML = wahl.map(w => `<button type="button" data-wert="${esc(w.wert)}"${w.plan ? ` data-plan="${esc(w.plan)}"` : ''}>${esc(w.wert)}</button>`).join('');
     kacheln.querySelectorAll('button').forEach(b => b.onclick = () => {
       const erst = stFeld.value.split(',')[0].trim();
       stFeld.value = b.dataset.plan ? b.dataset.wert + ', ' : `${erst}, ${b.dataset.wert}, `;
       if(b.dataset.plan) setzen('plan', b.dataset.plan);
       setzen('standort', stSauber(stFeld.value)); nachziehen();
-      kachelnZeigen(); ansEnde();
+      /* Nach dem Grundriss noch keine Tastatur (v1.123): sie schob die
+         Bauteil-Kacheln darunter aus dem Bild. Erst nach dem Bauteil – dann
+         wird der Rest getippt. */
+      kachelnZeigen();
+      if(b.dataset.plan) stFeld.blur(); else ansEnde();
     });
   };
   Bilder.alle().then(l => {
@@ -10852,6 +10867,9 @@ function loeFelderZeigen(box, name, zf){
     if(stFeld.isConnected) kachelnZeigen();
   }).catch(() => {});
   stFeld.oninput = () => kachelnZeigen();
+  /* Geht die Tastatur auf, rollen die Kacheln mit über sie (v1.123) – die
+     Höhe des Bildes folgt der Tastatur erst nach ihrer Bewegung. */
+  stFeld.onfocus = () => setTimeout(kachelnImBild, 400);
   stFeld.onchange = e => {
     const st = stSauber(e.target.value);
     setzen('standort', st);
