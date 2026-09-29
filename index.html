@@ -10,6 +10,8 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.121 29.09.2026 Die Standort-Kacheln der Feuerlöscher berührten das Feld
+                    darüber; jetzt haben sie Abstand wie zwischen zwei Feldern.
   v1.120 29.09.2026 Kompakter: Felder und Knöpfe sind 40 statt 48 Pixel hoch,
                     die Abstände zwischen Feldern, Karten, Überschriften und
                     Listeneinträgen um etwa ein Viertel kleiner. Die Schrift
@@ -1970,6 +1972,8 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .dauerWahl .stufe button[disabled]{opacity:.4}
 .dauerWahl .wert{flex:1;text-align:center;font-weight:600;font-size:18px;font-variant-numeric:tabular-nums}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
+/* Standort-Kacheln der Feuerlöscher mit Abstand zum Feld darüber (v1.121). */
+.loeStKacheln{margin-top:8px}
 .chips button{
   border:1px solid var(--field-border);border-radius:10px;background:var(--surface);color:var(--ink);
   padding:9px 12px;font:inherit;font-size:14px;cursor:pointer;-webkit-appearance:none;appearance:none;
@@ -2981,7 +2985,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.120';
+const VERSION = 'v1.121';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
