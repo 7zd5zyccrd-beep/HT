@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.128 29.09.2026 Akkutypen in den Einstellungen: Pfeile und Löschen stehen
+         mit Typ und Jahren in einer Zeile – die Angaben sind kurz, die
+         zweite Zeile war nur Platzverbrauch. „Bezeichnung“ heißt dort jetzt
+         „Typ“ (passt über das schmale Feld), die Werte stehen mittig. Auf
+         sehr schmalen Bildschirmen rutschen die Knöpfe in eine zweite Zeile.
   v1.127 29.09.2026 Objektlisten in den Einstellungen, Rückkehr aus dem
          Grundriss: Hat ein gerade neu angelegtes Objekt dort seine erste
          Marke bekommen, ist seine Karte zugeklappt und die Liste steht ganz
@@ -2142,6 +2147,18 @@ button > .ortIcon:only-child{display:block;margin:auto}
 .stelle .knopfreihe .seg.anz{flex:0 0 88px;margin-left:auto;height:var(--feld-h)}
 /* Akkutyp und Anzahl in einer Zeile (v1.118). */
 .akkuZeile{display:flex;gap:8px;margin-top:8px}
+/* Akkutyp in einer Zeile (v1.128): „1,2 Ah“ und eine Ziffer brauchen wenig
+   Platz, Pfeile und Löschen stehen dahinter auf Höhe der Felder. */
+.akkuTypZeile{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.stelle .akkuTypZeile > .field{margin:0;min-width:0}
+.akkuTypZeile > .field:first-child{flex:1 1 70px}
+.akkuTypZeile > .field:nth-child(2){flex:0 0 52px}
+.akkuTypZeile > .field input{text-align:center;padding-left:4px;padding-right:4px}
+.akkuTypZeile input::-webkit-inner-spin-button,.akkuTypZeile input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+/* Auf sehr schmalen Schirmen rutschen die Knöpfe gemeinsam in die zweite
+   Zeile, rechtsbündig wie sonst die Knopfreihe. */
+.akkuTypKnoepfe{display:flex;gap:8px;margin-left:auto}
+.akkuTypKnoepfe [data-weg]{margin-left:0}
 .akkuZeile > .seg:first-child{flex:1;min-width:0}
 .akkuZeile .seg.anz{flex:0 0 96px}
 /* Symbolknöpfe sind Quadrate in Feldhöhe (v1.118). */
@@ -3019,7 +3036,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.127';
+const VERSION = 'v1.128';
 const BUILD   = VERSION + ' · 29.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -11095,17 +11112,14 @@ function akkuTypZeichnen(mitNeuer){
   const t = teilCfg('rwa');
   let verworfen = false;
   const karte = (x, i, n) => `<div class="stelle" data-i="${i}">
-      <div class="row">
-        <label class="field"><span>Bezeichnung</span><input data-f="name" value="${esc(x.name)}"${
-          i < 0 ? ' placeholder="z.B. 12 Ah"' : ''}></label>
+      <div class="akkuTypZeile">
+        <label class="field"><span>Typ</span><input data-f="name" value="${esc(x.name)}"${
+          i < 0 ? ' placeholder="12 Ah"' : ''}></label>
         <label class="field"><span>Jahre</span><input data-f="jahre" type="number" min="1" max="20" step="1" inputmode="numeric" value="${x.jahre}"></label>
-      </div>
-      <div class="zeile knopfreihe" style="border-top:0;padding:0">
-        <button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= akkuTypBasis ? ' disabled' : ''}>↑</button>
+        <span class="akkuTypKnoepfe"><button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= akkuTypBasis ? ' disabled' : ''}>↑</button>
         <button class="btn ghost klein quadrat" data-runter="1" aria-label="nach unten"${i < 0 || i >= akkuTypBasis - 1 ? ' disabled' : ''}>↓</button>
-        <button class="btn danger klein" data-weg="1">Löschen</button>
-      </div>
-    </div>`;
+        <button class="btn danger klein" data-weg="1">Löschen</button></span>
+    </div></div>`;
   box.innerHTML = (mitNeuer ? karte({name:'', jahre:4}, -1, t.akkus.length) : '')
     + anzeigeFolge(t.akkus.length, akkuTypBasis).map(i => karte(t.akkus[i], i, t.akkus.length)).join('');
   /* Die Reihenfolge bestimmt, in welcher Folge die Typknöpfe unter "Akkus je
