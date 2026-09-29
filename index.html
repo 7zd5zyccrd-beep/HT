@@ -10,6 +10,10 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.119 29.09.2026 Der Text in einzeiligen Namensfeldern (Objekte in den
+                    Einstellungen, Material, Checkliste, Listen) saß seit
+                    v1.118 oben im Feld. Jetzt steht er wieder mittig, und
+                    links mit demselben Abstand wie in allen anderen Feldern.
   v1.118 29.09.2026 Einheitliche Knöpfe: alles, was etwas tut, ist so hoch wie
                     ein Eingabefeld, mit derselben Randfarbe und Schriftgröße.
                     Vorher lagen die Knöpfe zwischen 32 und 53 Pixeln, mit
@@ -2038,9 +2042,12 @@ button > .ortIcon:only-child{display:block;margin:auto}
 /* Eine Zeile je Eintrag: Textfeld und Löschen-Knopf nebeneinander. Das Feld
    wächst mit, damit auch ein langer Prüfpunkt vollständig zu lesen ist. */
 .zeile{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+/* Einzeilige Textfelder, die bei Bedarf mitwachsen (Namen, Listen): so hoch
+   wie ein Feld und die erste Zeile mittig – das Polster oben und unten füllt
+   die Feldhöhe genau (v1.119, vorher saß der Text seit v1.118 oben). */
 .zeile textarea{
-  flex:1;min-width:0;min-height:0;height:42px;padding:9px 10px;font-size:16px;
-  line-height:1.35;resize:none;overflow:hidden;
+  flex:1;min-width:0;min-height:0;height:var(--feld-h);padding:12px;font-size:16px;
+  line-height:22px;resize:none;overflow:hidden;
 }
 .zeile .btn,.stelle .btn{flex:0 0 auto;width:auto;height:var(--feld-h);padding:0 14px;
   display:flex;align-items:center;justify-content:center}
@@ -2128,8 +2135,8 @@ button > .ortIcon:only-child{display:block;margin:auto}
 /* Die Bezeichnung in einer Objektkarte: beginnt einzeilig und waechst mit, wie
    in den Listenzeilen. Ohne eigene Regel griffe die Mindesthoehe von textarea
    (150 px) und die Karte waere ein Block. */
-.stelle textarea{min-height:0;height:42px;padding:9px 10px;font-size:16px;
-  line-height:1.35;resize:none;overflow:hidden}
+.stelle textarea{min-height:0;height:var(--feld-h);padding:12px;font-size:16px;
+  line-height:22px;resize:none;overflow:hidden}
 
 .actionbar{
   /* Liegt über dem unteren Rand von #bild, der Inhalt läuft weich darunter;
@@ -2967,7 +2974,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.118';
+const VERSION = 'v1.119';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10588,6 +10595,7 @@ const anzeigeFolge = (n, basis) => {
 const feldHoehe = ta => {
   ta.style.height = 'auto';
   ta.style.height = Math.max(48, ta.scrollHeight + 2) + 'px';   // so hoch wie Felder und Knöpfe (v1.118)
+  /* Die Rechnung geht auf: 12 + 22 + 12 + 2 × 1 Rand = 48 für eine Zeile. */
 };
 function listeBauen(box, opt){
   const zeile = (text, i) =>
