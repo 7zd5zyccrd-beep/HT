@@ -118,7 +118,7 @@ steht.
   „fällig …“ (intern weiter `frist`, `data-tart="termin"`).
 
 - Feldhöhe (v1.107): alle einzeiligen Felder und Auswahllisten haben
-  `--feld-h` (48 px), Datum/Uhrzeit ohne iOS-Eigenform, Wert mittig über `line-height` (v1.108; ohne sie saß er unter iOS links oben). Neue Felder nicht mit
+  `--feld-h` (40 px seit v1.120, vorher 48), Datum/Uhrzeit ohne iOS-Eigenform, Wert mittig über `line-height` (v1.108; ohne sie saß er unter iOS links oben). Neue Felder nicht mit
   eigener Höhe versehen. Von/bis nebeneinander über `.vonBis`.
 
 - Rahmen (v1.109): Zusammengehöriges mit mehr als einer Zeile steht in

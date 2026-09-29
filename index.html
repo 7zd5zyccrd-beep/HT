@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.120 29.09.2026 Kompakter: Felder und Knöpfe sind 40 statt 48 Pixel hoch,
+                    die Abstände zwischen Feldern, Karten, Überschriften und
+                    Listeneinträgen um etwa ein Viertel kleiner. Die Schrift
+                    bleibt bei 16 Pixeln – kleiner vergrößert das iPhone die
+                    Seite beim Antippen eines Feldes von selbst.
   v1.119 29.09.2026 Der Text in einzeiligen Namensfeldern (Objekte in den
                     Einstellungen, Material, Checkliste, Listen) saß seit
                     v1.118 oben im Feld. Jetzt steht er wieder mittig, und
@@ -1768,18 +1773,18 @@ main{flex:1 0 auto;padding:16px var(--pad) calc(16px + max(env(safe-area-inset-b
    Seite auf einen Blick sieht. Zusätze wie „· ≈ 3:00 h“ bleiben leise. */
 .eyebrow{
   font-family:var(--f-label);text-transform:uppercase;letter-spacing:.08em;
-  font-size:16px;font-weight:600;color:var(--ink);margin:20px 0 8px;
+  font-size:16px;font-weight:600;color:var(--ink);margin:16px 0 6px;
 }
 .muted{color:var(--ink-soft)}
 .small{font-size:14px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
 
 .btn{
   /* Die native Knopfdarstellung von iOS abschalten: sie legt eigene
      Innenabstände drauf, und die fallen je nach Beschriftung verschieden aus –
      zwei Knöpfe nebeneinander sitzen dann unterschiedlich hoch. */
   -webkit-appearance:none;appearance:none;
-  display:block;width:100%;padding:14px 16px;border-radius:12px;
+  display:block;width:100%;padding:11px 14px;border-radius:12px;
   border:1px solid var(--line);background:var(--surface);color:var(--ink);
   font:inherit;font-weight:500;text-align:center;cursor:pointer;
 }
@@ -1798,7 +1803,7 @@ main{flex:1 0 auto;padding:16px var(--pad) calc(16px + max(env(safe-area-inset-b
    diese beiden Zeilen bleiben ausgeblendete Knöpfe und Zeilen sichtbar (und
    dann stehen dort Knöpfe, die nichts mehr tun). */
 .btn[hidden]{display:none}
-.btn + .btn{margin-top:10px}
+.btn + .btn{margin-top:8px}
 /* Untereinander ja, nebeneinander nicht: in einer waagerechten Reihe schöbe der
    obere Abstand jeden Knopf ab dem zweiten um zehn Pixel nach unten – er säße
    dann sichtbar tiefer als sein Nachbar. */
@@ -1808,7 +1813,7 @@ main{flex:1 0 auto;padding:16px var(--pad) calc(16px + max(env(safe-area-inset-b
 /* Der Ring ist die Begrenzungslinie des Knopfes selbst, nur kräftiger und
    farbig. Die zwei zusätzlichen Pixel holt er sich aus dem Polster (14+1 = 12+3),
    damit die Außenmaße gleich bleiben und die Liste nicht zuckt. */
-.btn.ring-rot,.btn.ring-gelb,.btn.ring-gruen{border-width:3px;padding:12px 14px}
+.btn.ring-rot,.btn.ring-gelb,.btn.ring-gruen{border-width:3px;padding:9px 12px}
 .btn.ring-rot{border-color:#C0392B}
 .btn.ring-gelb{border-color:#E3A81F}
 .btn.ring-gruen{border-color:#4E9A2F}
@@ -1860,10 +1865,10 @@ input[type=checkbox]:checked{background-color:var(--strong);border-color:var(--s
 .btn.eintrag .zahl{flex:0 0 auto;color:var(--ink-soft);font-size:14px;font-variant-numeric:tabular-nums}
 .btn.eintrag::after{content:'›';flex:0 0 auto;font-size:22px;line-height:1;color:var(--ink-soft);margin-top:-2px}
 
-.field{display:block;margin-bottom:14px}
+.field{display:block;margin-bottom:10px}
 .field > span{
   display:block;font-family:var(--f-label);text-transform:uppercase;
-  letter-spacing:.06em;font-size:13px;color:var(--ink-soft);margin-bottom:5px;
+  letter-spacing:.06em;font-size:13px;color:var(--ink-soft);margin-bottom:4px;
 }
 input,select,textarea{
   width:100%;padding:12px;border:1px solid var(--field-border);border-radius:10px;
@@ -1873,7 +1878,7 @@ textarea{min-height:150px;line-height:1.4}
 input:focus,select:focus,textarea:focus,button:focus-visible{
   outline:3px solid var(--ink);outline-offset:1px;
 }
-.row{display:flex;gap:10px}
+.row{display:flex;gap:8px}
 .row[hidden]{display:none}
 .row > *{flex:1}
 input.schmal{width:170px}
@@ -1882,7 +1887,9 @@ input.schmal{width:170px}
    Ein leeres Datumsfeld fiel unter iOS sonst niedriger aus als ein gefülltes,
    und die kleineren Maße einzelner Karten wichen ab. Die Höhe steht fest, das
    Polster regelt nur noch den Abstand zur Seite. */
-:root{--feld-h:48px}
+/* Feldhöhe: 48 px seit v1.107, 40 px seit v1.120 – vom Nutzer gewählt, weil
+   die App mit 48 insgesamt zu groß wirkte. Alles Übrige rechnet damit. */
+:root{--feld-h:40px}
 input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select{
   height:var(--feld-h);min-height:var(--feld-h);box-sizing:border-box;padding-top:0;padding-bottom:0}
 /* Datum und Uhrzeit ohne die eigene Form von iOS – die legt eigene Höhen an.
@@ -1897,7 +1904,7 @@ input[type=date]::-webkit-datetime-edit,input[type=time]::-webkit-datetime-edit{
 /* Zusammengehörige Felder im dünnen Rahmen (v1.109): Linie wie die Felder,
    Ecken wie die Karten, die Beschriftung innen oben. Unten kein Abstand
    nach dem letzten sichtbaren Feld. */
-.gruppe{border:1px solid var(--field-border);border-radius:12px;padding:12px;margin-bottom:14px}
+.gruppe{border:1px solid var(--field-border);border-radius:12px;padding:10px;margin-bottom:10px}
 .gruppe > .field:last-child,.gruppe > .field:has(+ .field[hidden]:last-child),.gruppe > .row:last-child > .field{margin-bottom:0}
 .gruppe > .field:first-child{margin-top:0}
 /* In einer Karte stünde ein Rahmen im Rahmen (v1.111): dort trennt eine
@@ -1907,7 +1914,7 @@ input[type=date]::-webkit-datetime-edit,input[type=time]::-webkit-datetime-edit{
 .card > .gruppe:last-child{margin-bottom:0}
 /* Von und bis nebeneinander (v1.107), die Beschriftung darüber wie bei den
    übrigen Feldern. Zwei gleich breite Spalten, die Felder füllen sie. */
-.vonBis{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:10px}
+.vonBis{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px}
 .vonBis .field{margin:0;min-width:0}
 .vonBis input{width:100%;min-width:0}
 /* 16 px ist die Untergrenze fuer alles, was sich antippen und beschreiben
@@ -2046,7 +2053,7 @@ button > .ortIcon:only-child{display:block;margin:auto}
    wie ein Feld und die erste Zeile mittig – das Polster oben und unten füllt
    die Feldhöhe genau (v1.119, vorher saß der Text seit v1.118 oben). */
 .zeile textarea{
-  flex:1;min-width:0;min-height:0;height:var(--feld-h);padding:12px;font-size:16px;
+  flex:1;min-width:0;min-height:0;height:var(--feld-h);padding:8px 12px;font-size:16px;
   line-height:22px;resize:none;overflow:hidden;
 }
 .zeile .btn,.stelle .btn{flex:0 0 auto;width:auto;height:var(--feld-h);padding:0 14px;
@@ -2100,7 +2107,7 @@ button > .ortIcon:only-child{display:block;margin:auto}
 .knopfreihe > .btn.danger:only-child{margin-left:auto}
 .stelle .knopfreihe .seg.anz{flex:0 0 88px;margin-left:auto;height:var(--feld-h)}
 /* Akkutyp und Anzahl in einer Zeile (v1.118). */
-.akkuZeile{display:flex;gap:8px;margin-top:10px}
+.akkuZeile{display:flex;gap:8px;margin-top:8px}
 .akkuZeile > .seg:first-child{flex:1;min-width:0}
 .akkuZeile .seg.anz{flex:0 0 96px}
 /* Symbolknöpfe sind Quadrate in Feldhöhe (v1.118). */
@@ -2135,7 +2142,7 @@ button > .ortIcon:only-child{display:block;margin:auto}
 /* Die Bezeichnung in einer Objektkarte: beginnt einzeilig und waechst mit, wie
    in den Listenzeilen. Ohne eigene Regel griffe die Mindesthoehe von textarea
    (150 px) und die Karte waere ein Block. */
-.stelle textarea{min-height:0;height:var(--feld-h);padding:12px;font-size:16px;
+.stelle textarea{min-height:0;height:var(--feld-h);padding:8px 12px;font-size:16px;
   line-height:22px;resize:none;overflow:hidden}
 
 .actionbar{
@@ -2607,7 +2614,7 @@ button > .ortIcon:only-child{display:block;margin:auto}
   -webkit-appearance:none;appearance:none;
   /* So groß wie die übrigen Symbolknöpfe (v1.118); der negative Rand hält
      die Titelzeile der Karte trotzdem niedrig. */
-  flex:0 0 auto;width:var(--feld-h);height:var(--feld-h);margin:-12px 0 -12px 0;padding:0;
+  flex:0 0 auto;width:var(--feld-h);height:var(--feld-h);margin:-8px 0 0 0;padding:0;
   border:1px solid var(--field-border);border-radius:12px;background:var(--surface);color:var(--ink);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
@@ -2974,7 +2981,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.119';
+const VERSION = 'v1.120';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10594,8 +10601,8 @@ const anzeigeFolge = (n, basis) => {
 };
 const feldHoehe = ta => {
   ta.style.height = 'auto';
-  ta.style.height = Math.max(48, ta.scrollHeight + 2) + 'px';   // so hoch wie Felder und Knöpfe (v1.118)
-  /* Die Rechnung geht auf: 12 + 22 + 12 + 2 × 1 Rand = 48 für eine Zeile. */
+  ta.style.height = Math.max(40, ta.scrollHeight + 2) + 'px';   // so hoch wie Felder und Knöpfe (v1.118, 40 px seit v1.120)
+  /* Die Rechnung geht auf: 8 + 22 + 8 + 2 × 1 Rand = 40 für eine Zeile. */
 };
 function listeBauen(box, opt){
   const zeile = (text, i) =>
