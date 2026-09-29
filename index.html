@@ -10,6 +10,18 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.117 29.09.2026 Standort-Kacheln bei den Feuerlöschern: ist der Standort
+                    leer, stehen darunter die Kurznamen der Grundrisse (KG, EG,
+                    1.OG …). Ein Tipp schreibt „EG, “ ins Feld, dann erscheinen
+                    die Bauteile („EG, BT I, “), den Rest tippt man selbst. Der
+                    gewählte Grundriss wird gemerkt: ⌖ öffnet ihn, solange der
+                    Löscher noch keine Marke hat – auch wenn der Kurzname von
+                    Hand vorn im Standort steht. Die Bauteile stehen unter
+                    Einstellungen › Objekt und Prüfer, ab Werk BT I und BT II.
+                    Dazu ein neues Grundriss-Symbol: ein kleiner Plan mit
+                    Stecknadel statt des Zeichens ⌖, das schief saß und sich
+                    nicht als Ort las – überall, auch auf „Grundriss“ bei
+                    Aufgaben und in der Suche.
   v1.116 29.09.2026 Feuerlöscher sind jetzt Objekte wie alle anderen: jeder hat
                     seine eigene Marke im Grundriss, auch am selben Standort,
                     und verschiebt nur sich selbst. Grundriss und Blatt nennen
@@ -1985,6 +1997,11 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
   -webkit-appearance:none;appearance:none;
 }
 .pos .pfeile button[disabled]{opacity:.4}
+/* Das Grundriss-Symbol (v1.117) mittig im Knopf; vor einem Wort („Grundriss“)
+   auf dessen Zeile. */
+button > .ortIcon:only-child{display:block;margin:auto}
+.ortIcon{flex:0 0 auto}
+.btn > .ortIcon:not(:only-child){display:inline-block;vertical-align:-5px;margin-right:6px}
 .btn.klein{padding:9px 12px;font-size:14px}
 /* Eine Zeile je Zähler: Haken, Bezeichnung, Feld für die neue Nummer. */
 /* Eine Karte je Zähler: Haken mit Bezeichnung, darunter die Felder des
@@ -2917,7 +2934,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.116';
+const VERSION = 'v1.117';
 const BUILD   = VERSION + ' · 28.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -2925,6 +2942,11 @@ const BUILD   = VERSION + ' · 28.09.2026';
    Feld 24×24 mittig ausfüllt (x 3–21, y 4,5–19,5): sonst sitzt das Symbol im
    runden Knopf sichtbar zu hoch, auch wenn der Knopf selbst mittig ist. */
 const FRISCH_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>';
+/* Ort im Grundriss (v1.117): ein kleiner Plan mit Stecknadel. Das frühere
+   Zeichen ⌖ saß je nach Schrift schief und las sich nicht als Ort. */
+const ORT_SVG = '<svg class="ortIcon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  + '<path d="M9.5 9H4.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-4"/><path d="M3.5 15.5h6v5.5M12.5 21v-3"/>'
+  + '<path d="M17 2.5a4 4 0 0 0-4 4c0 3 4 6.5 4 6.5s4-3.5 4-6.5a4 4 0 0 0-4-4z"/><circle cx="17" cy="6.5" r="1.3" fill="currentColor" stroke="none"/></svg>';
 /* Uhr für den Verlauf einer Karte. */
 const UHR_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
@@ -5067,7 +5089,7 @@ function renderRundgang(){
   const pfeile = (w, mitPfeilen) => {
     const k = offene.indexOf(w);
     return `<span class="pfeile">
-        <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>${mitPfeilen ? `
+        <button type="button" data-ort="1" aria-label="Grundriss">${ORT_SVG}</button>${mitPfeilen ? `
         <button type="button" data-hoch="1" aria-label="nach oben"${k <= 0 ? ' disabled' : ''}>↑</button>
         <button type="button" data-runter="1" aria-label="nach unten"${k < 0 || k >= offene.length - 1 ? ' disabled' : ''}>↓</button>` : ''}
       </span>`;
@@ -5339,7 +5361,7 @@ function aufgKopfZeigen(a, mangelKopf){
       : `<p class="aufgZeile${i ? ' muted small' : ''}"${mangel && !i ? ' style="margin-top:8px"' : ''}>${esc(z)}</p>`).join('')}
     ${String(a.notiz || '').trim() ? `<p class="aufgText"><span class="muted">Notiz:</span> ${esc(a.notiz)}</p>` : ''}
     ${a.k && n ? `<div class="row">
-      ${aufgOrt(a) ? `<button class="btn" data-weg="plan">⌖ Grundriss</button>` : ''}
+      ${aufgOrt(a) ? `<button class="btn" data-weg="plan">${ORT_SVG}Grundriss</button>` : ''}
       <button class="btn" data-weg="nw">Zum Nachweis</button></div>` : ''}</div>`;
   const zt = box.querySelector('[data-zumtermin]');
   if(zt) zt.onclick = () => {
@@ -7769,7 +7791,7 @@ function renderFremd(){
           ${nameMitVerlauf(esc(a))}${kenn ? `<div class="muted small" style="margin:-2px 0 6px">${esc(kenn)}</div>` : ''}
           <div class="kopf">
             <input type="date" data-feld="datum" value="${esc(z.datum || '')}" aria-label="Prüfdatum">
-            <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">⌖</button></span>
+            <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">${ORT_SVG}</button></span>
           </div>
           <div class="muted small">${esc(fristText(f))}</div>
           <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem || '')}">
@@ -7817,7 +7839,7 @@ function akkuKarte(a, i, d){
     <div class="kopf" style="margin:0">
       <span class="muted small">Getauscht am</span>
       <input type="date" class="dat" data-feld="datum" value="${esc(z.akkuDatum || '')}" aria-label="Tauschdatum">
-      <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">⌖</button></span>
+      <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">${ORT_SVG}</button></span>
     </div>
     <div class="muted small stand" style="margin-top:8px">${esc(akkuText(z, j, f))}</div>
   </div>`;
@@ -8116,7 +8138,7 @@ function renderNachweis(){
        zählt, die Pfeile. In der zugeklappten Karte steht davon nichts – dort
        geht es ums Nachsehen, nicht ums Ändern. */
     const pfeile = `<span class="pfeile">
-          <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>${n.sortierbar && !z.n ? `
+          <button type="button" data-ort="1" aria-label="Grundriss">${ORT_SVG}</button>${n.sortierbar && !z.n ? `
           <button type="button" data-hoch="1" aria-label="nach oben"${nachbarOffen(i, -1) < 0 ? ' disabled' : ''}>↑</button>
           <button type="button" data-runter="1" aria-label="nach unten"${nachbarOffen(i, 1) < 0 ? ' disabled' : ''}>↓</button>` : ''}
         </span>`;
@@ -8257,7 +8279,7 @@ function renderMedien(){
         <input inputmode="decimal" data-stand="1" value="${esc(d.stand[z.key] || '')}" placeholder="Zählerstand">
         <span class="muted small" style="flex:0 0 auto">${esc(z.einheit)}</span>
         <span class="pfeile">
-          <button type="button" data-ort="1" aria-label="Grundriss">⌖</button>
+          <button type="button" data-ort="1" aria-label="Grundriss">${ORT_SVG}</button>
           <button type="button" data-hoch="1" aria-label="nach oben"${i === 0 ? ' disabled' : ''}>↑</button>
           <button type="button" data-runter="1" aria-label="nach unten"${i === liste.length - 1 ? ' disabled' : ''}>↓</button>
         </span>
@@ -10482,12 +10504,23 @@ function setObjekt(box){
   const i = info('Objekt und Prüfer stehen im Kopf jedes Protokolls.', 'margin:-6px 0 14px');
   box.innerHTML =
     `<div class="gruppe"><label class="field"><span class="mitInfo">Objekt ${i.knopf}</span><input id="setObjekt" placeholder="z.B. Musterhaus, Musterstraße 1"></label>${i.text}
-     <label class="field"><span>Prüfer</span><input id="setPruefer" placeholder="Vor- und Nachname"></label></div>`;
+     <label class="field"><span>Prüfer</span><input id="setPruefer" placeholder="Vor- und Nachname"></label></div>
+     <label class="field"><span>Bauteile</span><input id="setBauteile" placeholder="z. B. BT I, BT II"></label>
+     <p class="muted small" style="margin:-6px 0 14px">Durch Komma getrennt. Erscheinen als Kacheln beim Standort eines Feuerlöschers, nach dem Grundriss.</p>`;
   $('#setObjekt').value  = CFG.objekt  || '';
   $('#setPruefer').value = CFG.pruefer || '';
+  $('#setBauteile').value = bauteile().join(', ');
   $('#setObjekt').onchange  = e => { CFG.objekt  = e.target.value.trim(); saveCfg(); };
   $('#setPruefer').onchange = e => { CFG.pruefer = e.target.value.trim(); saveCfg(); };
+  /* Leer heißt: keine Bauteil-Kacheln (v1.117). */
+  $('#setBauteile').onchange = e => {
+    CFG.bauteile = e.target.value.split(',').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    e.target.value = CFG.bauteile.join(', '); saveCfg();
+  };
 }
+/* Bauteile des Objekts (v1.117) für die Standort-Kacheln der Feuerlöscher,
+   ab Werk BT I und BT II. */
+const bauteile = () => Array.isArray(CFG.bauteile) ? CFG.bauteile : ['BT I', 'BT II'];
 function setCheck(box, k){
   box.innerHTML =
     infoZeile('Steht im Protokoll genau so wie hier – Nummern, Spiegelstriche und „&gt;“ bleiben erhalten.')
@@ -10676,7 +10709,7 @@ function setSprinkler(box, k){
 function setFremd(box, k){
   const n = NW(k), t = teilCfg(k);
   const iAbst = info('Aus dem letzten Prüfdatum und diesem Abstand ergibt sich der nächste Termin – und unter welcher Überschrift der Nachweis in „Alle Nachweise“ steht.', 'margin:-6px 0 14px');
-  const iObj = info('Neue Objekte hängen sich hinten an. ⌖ zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge.'
+  const iObj = info('Neue Objekte hängen sich hinten an. Das Grundriss-Symbol (Plan mit Stecknadel) zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge.'
     + (n.akku ? ' Unter dem Namen wählst du den Akkutyp, rechts in der Knopfreihe die Anzahl.' : ''), 'margin:-4px 0 6px');
   box.innerHTML =
     `<label class="field"><span class="mitInfo">Prüfabstand in Jahren ${iAbst.knopf}</span>
@@ -10713,7 +10746,7 @@ function loeFelderZeigen(box, name, zf){
   box.innerHTML = `
     <div class="gruppe"><label class="field"><span>Standort</span><input data-l="standort" value="${esc(i.standort || '')}" list="${lid}" placeholder="z. B. EG Treppenhaus">
       <datalist id="${lid}">${orte.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label>
-</div>
+    <div class="chips loeStKacheln" hidden></div></div>
     <div class="gruppe"><label class="field"><span>Löschmittel</span><select data-l="mittel"><option value="">– offen –</option>${
       LOE_MITTEL.map(([m, t]) => `<option value="${m}"${i.mittel === m ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
     <div class="field"><span>Brandklassen</span><div class="seg">${LOE_KLASSEN.map(x =>
@@ -10729,9 +10762,42 @@ function loeFelderZeigen(box, name, zf){
   const setzen = (feld, wert) => { const x = loeInfo(name, true); if(wert === '' || wert == null) delete x[feld]; else x[feld] = wert; saveCfg(); };
   const nachziehen = () => { if(zf) zf.textContent = loeZusammenfassung(name); };
   const neu = () => loeFelderZeigen(box, name, zf);
-  box.querySelector('[data-l="standort"]').onchange = e => {
-    const st = e.target.value.replace(/\s+/g, ' ').trim();
+  /* Standort-Kacheln (v1.117): solange der Standort leer ist, die Kurznamen
+     der Grundrisse; nach dem Grundriss die Bauteile; danach nichts mehr – den
+     Rest tippt man selbst. Jede Kachel setzt ein Komma dahinter. Der gewählte
+     Grundriss wird gemerkt, ⌖ öffnet ihn, solange es noch keine Marke gibt. */
+  const stFeld = box.querySelector('[data-l="standort"]'), kacheln = box.querySelector('.loeStKacheln');
+  let plaene = [], kurz = [];
+  const stSauber = v => v.replace(/\s+/g, ' ').replace(/[,\s]+$/, '').trim();
+  const planVon = teil => plaene[kurz.indexOf(teil)] || null;
+  const ansEnde = () => { stFeld.focus(); const l = stFeld.value.length; try{ stFeld.setSelectionRange(l, l); }catch(e){} };
+  const kachelnZeigen = () => {
+    const teile = stFeld.value.split(',').map(x => x.trim());
+    const nurPlan = teile.length <= 2 && !teile[1] && planVon(teile[0]);
+    const wahl = !stFeld.value.trim() ? plaene.map((p, j) => ({wert:kurz[j], plan:p.id}))
+               : nurPlan ? bauteile().map(b => ({wert:b})) : [];
+    kacheln.hidden = !wahl.length;
+    kacheln.innerHTML = wahl.map(w => `<button type="button" data-wert="${esc(w.wert)}"${w.plan ? ` data-plan="${esc(w.plan)}"` : ''}>${esc(w.wert)}</button>`).join('');
+    kacheln.querySelectorAll('button').forEach(b => b.onclick = () => {
+      const erst = stFeld.value.split(',')[0].trim();
+      stFeld.value = b.dataset.plan ? b.dataset.wert + ', ' : `${erst}, ${b.dataset.wert}, `;
+      if(b.dataset.plan) setzen('plan', b.dataset.plan);
+      setzen('standort', stSauber(stFeld.value)); nachziehen();
+      kachelnZeigen(); ansEnde();
+    });
+  };
+  Bilder.alle().then(l => {
+    plaene = planSortieren(l || []); kurz = planKurzNamen(plaene);
+    if(stFeld.isConnected) kachelnZeigen();
+  }).catch(() => {});
+  stFeld.oninput = () => kachelnZeigen();
+  stFeld.onchange = e => {
+    const st = stSauber(e.target.value);
     setzen('standort', st);
+    /* Von Hand getippt, aber mit dem Kurznamen eines Grundrisses vorn: der
+       Plan gilt dann ebenso. */
+    const p = planVon(st.split(',')[0].trim());
+    if(p) setzen('plan', p.id);
     nachziehen();
   };
   box.querySelector('[data-l="mittel"]').onchange = e => {
@@ -10787,7 +10853,7 @@ function objektKarten(box, k){
       ${akkuWahl(text, i)}${k === 'loescher' && i >= 0 ? `<details class="loeKenn"${loeKennAuf.has(text) ? ' open' : ''}><summary><span class="loeZf">${
         esc(loeZusammenfassung(text))}</span></summary><div class="loeFelder"></div></details>` : ''}
       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
-        <button class="btn ghost klein" data-ort="1" aria-label="Grundriss"${i < 0 ? ' disabled' : ''}>⌖</button>
+        <button class="btn ghost klein" data-ort="1" aria-label="Grundriss"${i < 0 ? ' disabled' : ''}>${ORT_SVG}</button>
         <button class="btn ghost klein" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= basis ? ' disabled' : ''}>↑</button>
         <button class="btn ghost klein" data-runter="1" aria-label="nach unten"${i < 0 || i >= basis - 1 ? ' disabled' : ''}>↓</button>
         ${anzWahl(text, i)}
@@ -13045,7 +13111,11 @@ async function verorten(key, titel){
   liste = planSortieren(liste);
   const ort = CFG.orte[key] || {};
   /* Ohne Marke, aber mit gewählten Etagen öffnet die erste davon. */
+  /* Ein Feuerlöscher ohne Marke öffnet den Plan, der beim Standort gewählt
+     wurde (v1.117). */
+  const loePlan = String(key).startsWith('loescher|') ? loeInfo(String(key).slice(9)).plan : '';
   const id = liste.some(p => p.id === ort.plan) ? ort.plan
+           : liste.some(p => p.id === loePlan) ? loePlan
            : (liste.find(p => etagenVon(key).includes(p.id)) || liste[0]).id;
   /* Erst hier merken, nicht schon beim Antippen: gibt es keinen Plan, bleibt
      die Liste stehen und dürfte beim nächsten Aufbau nicht springen. */
@@ -14679,7 +14749,7 @@ async function kurzinfo(o){
   const liste = $('#dlgListe');
   liste.hidden = false;
   liste.innerHTML = `<button class="btn primary" data-w="karte" style="margin-top:14px">Zur Karte</button>`
-    + (plan ? `<button class="btn" data-w="plan">⌖ Grundriss</button>` : '')
+    + (plan ? `<button class="btn" data-w="plan">${ORT_SVG}Grundriss</button>` : '')
     + `<button class="btn" data-w="verlauf">Verlauf</button>`
     + `<button class="btn ghost" data-w="zu" style="margin-top:14px">Schließen</button>`;
   $('#dlg').hidden = false;

@@ -142,6 +142,13 @@ steht.
   Aufteilen. `info.standort` ist nur Beschreibung; `info.anzahl` aus alten
   Daten wird ignoriert.
 
+- Standort der Feuerlöscher (v1.117): Kacheln unter dem Feld – erst die
+  Kurznamen der Grundrisse (`planKurzNamen`), dann die Bauteile
+  (`CFG.bauteile`, ab Werk BT I, BT II, einstellbar unter Objekt und
+  Prüfer). Der gewählte Plan steht in `info.plan`; `verorten` öffnet ihn,
+  solange es keine Marke gibt. Grundriss-Symbol: `ORT_SVG` (Plan mit
+  Stecknadel) statt des Zeichens ⌖.
+
 ## Testen
 
 Chromium liegt unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`,
