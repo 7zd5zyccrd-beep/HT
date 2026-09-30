@@ -178,3 +178,9 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   `.fangLinie` in Plan und Lupe. Schalter `nwEinrasten` (nur Gerät) unter
   Einstellungen › Grundrisse. Nächster Schritt nach Rückmeldung: Einrasten an
   der Wand (dunkle Linie im Planbild suchen).
+
+- Umschalten (v1.130): langer Druck (`UMSCHALT_MS`) auf eine Nachbarmarke
+  beim Verorten → `markeUmschalten` setzt `planZiel` auf sie, danach im
+  selben Zug ziehen. Bis dahin (`zug.fremd`) kein preventDefault, damit
+  Wischen den Plan schiebt; kurzer Tipp zeigt weiter den Namen. Marken tragen
+  `data-key`. Nicht in der Übersicht (vom Nutzer so entschieden).

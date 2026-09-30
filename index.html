@@ -10,6 +10,10 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.130 30.09.2026 Grundriss: Langes Drücken auf eine andere Marke macht sie zur
+         angewählten – ihr Name steht oben, die Lupe kommt, und sie lässt sich
+         im selben Zug verschieben. Kurz antippen zeigt weiter nur den Namen.
+         Nur beim Festlegen einer Stelle, nicht in der Übersicht.
   v1.129 30.09.2026 Grundriss, Marke verschieben: Sie rastet an den Nachbarmarken
          derselben Art ein – fast gleiche Höhe oder fast senkrecht darüber wird
          genau gleich, und liegen schon zwei in einer Reihe, auch der gleiche
@@ -3050,7 +3054,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.129';
+const VERSION = 'v1.130';
 const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -12023,7 +12027,7 @@ function markenZeichnen(planId, ziehen){
       const da = marken.get(schluessel);
       if(da){ da.plaene.push(pid); return; }
       const q = inRahmen(pid, pos.x, pos.y);
-      marken.set(schluessel, {x:q.x, y:q.y, klassen, text, farbe, plaene:[pid]});
+      marken.set(schluessel, {x:q.x, y:q.y, klassen, text, farbe, plaene:[pid], key:schluessel.slice(2)});
     };
     /* Übersicht: es wird keine Stelle gesucht, sondern gezeigt, was auf diesem
        Plan steht – je Kategorie eine Farbe, je Marke ihre Nummer. */
@@ -12046,6 +12050,7 @@ function markenZeichnen(planId, ziehen){
     if(o.farbe) m.style.setProperty('--kat', o.farbe);
     if(o.text != null) m.textContent = o.text;
     m.dataset.plaene = o.plaene.join('\n');
+    m.dataset.key = o.key;
     box.appendChild(m);
   });
   markenGewichte();
@@ -13071,10 +13076,32 @@ function zugZiel(x, y){
     const d = [b.p1, b.p2].map(dist), i = d[0] <= d[1] ? 0 : 1;
     return d[i] <= ZUG_FANG ? {art:'bezug', i, el:box.querySelectorAll('.marke.bezug')[i]} : null;
   }
-  if(planRicht || !planZiel || !planGesetzt()) return null;
-  const o = CFG.orte[planZiel.key];
-  if(!o || dist(ortAuf(planZiel.key, id)) > ZUG_FANG) return null;
-  return {art:'marke', el:box.querySelector('.marke.aktiv, .marke.zieh')};
+  if(planRicht || !planZiel) return null;
+  if(planGesetzt() && CFG.orte[planZiel.key] && dist(ortAuf(planZiel.key, id)) <= ZUG_FANG)
+    return {art:'marke', el:box.querySelector('.marke.aktiv, .marke.zieh')};
+  /* Eine Nachbarmarke wird erst nach langem Druck zur eigenen (v1.130) – ein
+     kurzer Tipp zeigt weiter nur ihren Namen, ein Wischen schiebt den Plan. */
+  const n = markeNah({clientX:x, clientY:y}, andereOrte(id, planZiel.key));
+  const el = n && [...box.querySelectorAll('.marke.andere')].find(m => m.dataset.key === n.key);
+  return el ? {art:'marke', el, fremd:n.key} : null;
+}
+/* Langer Druck auf eine Nachbarmarke (v1.130, vom Nutzer so gewünscht): sie
+   wird die angewählte – Name oben, Aussehen der eigenen – und lässt sich im
+   selben Zug weiterziehen. Der Zurück-Pfeil führt weiter dorthin, woher der
+   Plan geöffnet wurde. Nur beim Verorten, nicht in der Übersicht. */
+const UMSCHALT_MS = 500;
+function markeUmschalten(z){
+  planZiel = {key:z.fremd, titel:ortName(z.fremd)};
+  $('#planName').textContent = planZiel.titel;
+  planZiehen = false; tippWeg();
+  markenZeichnen(planAktuell, false);
+  const el = $('#planBox .marke.aktiv');
+  if(!el){ zug = null; return; }
+  z.el = el; delete z.fremd; z.halten = true;
+  el.classList.add('gehoben');
+  try{ $('#planBox').setPointerCapture(z.id); }catch(x){}
+  lupeZeigen(z.x0 + z.ox, z.y0 + z.oy);
+  planHinweisen();
 }
 function lupeZeigen(x, y){
   const box = $('#planBox'), r = box.getBoundingClientRect();
@@ -13144,6 +13171,10 @@ function zugBeginnen(e, x, y){
      unter den Finger, und das Fadenkreuz sitzt auf ihrer Mitte. */
   const q = z.el.getBoundingClientRect(), mx = q.left + q.width / 2, my = q.top + q.height / 2;
   zug = Object.assign(z, {x0:x, y0:y, ox:mx - x, oy:my - y, laeuft:false, id:e.pointerId});
+  if(z.fremd){
+    zug.uhr = setTimeout(() => { if(zug === z && z.fremd) markeUmschalten(z); }, UMSCHALT_MS);
+    return true;
+  }
   /* Liegt der Finger rund 0,3 Sekunden still, kommt die Lupe schon (v1.83). */
   zug.uhr = setTimeout(() => {
     if(zug !== z || z.laeuft) return;
@@ -13157,6 +13188,8 @@ function zugFolgen(fx, fy){
     /* Steht die Lupe schon (Finger lag still), folgt die Marke sofort jeder
        Bewegung (v1.125); sonst erst nach ein paar Pixeln, damit ein Tipp kein Zug wird. */
     const d = Math.hypot(fx - zug.x0, fy - zug.y0);
+    /* Vor dem Umschalten bewegt: gemeint war der Plan, nicht die Marke. */
+    if(zug.fremd){ if(d >= ZUG_START){ clearTimeout(zug.uhr); zug = null; } return; }
     if(zug.halten ? d === 0 : d < ZUG_START) return;
     zug.laeuft = true; clearTimeout(zug.uhr); zug.el.classList.remove('gehoben');
     if(zug.art !== 'schnitt') zug.el.classList.add('gezogen');
@@ -13228,11 +13261,15 @@ function zugEnden(e){
      scrollen – sonst liefen Plan und Marke zugleich. */
   box.addEventListener('touchstart', e => {
     if(e.touches.length !== 1) { if(zug){ clearTimeout(zug.uhr); zug = null; lupeWeg(); markenZeichnen(planAktuell, false); } return; }
-    if(zugZiel(e.touches[0].clientX, e.touches[0].clientY)) e.preventDefault();
+    const z = zugZiel(e.touches[0].clientX, e.touches[0].clientY);
+    if(z && !z.fremd) e.preventDefault();
   }, {passive:false});
+  /* Nach dem Umschalten auf eine Nachbarmarke darf der Plan nicht mehr
+     mitlaufen – bis dahin durfte er, falls doch gewischt wurde (v1.130). */
+  box.addEventListener('touchmove', e => { if(zug && !zug.fremd && (zug.halten || zug.laeuft)) e.preventDefault(); }, {passive:false});
   box.addEventListener('pointerdown', e => {
     if(e.button > 0 || planGezoomt) return;
-    if(zugBeginnen(e, e.clientX, e.clientY)){ try{ box.setPointerCapture(e.pointerId); }catch(x){} e.preventDefault(); }
+    if(zugBeginnen(e, e.clientX, e.clientY) && !zug.fremd){ try{ box.setPointerCapture(e.pointerId); }catch(x){} e.preventDefault(); }
   });
   box.addEventListener('pointermove', e => { if(zug && e.pointerId === zug.id){ e.preventDefault(); zugFolgen(e.clientX, e.clientY); } });
   box.addEventListener('pointerup', e => { if(zug && e.pointerId === zug.id) zugEnden(e); });
