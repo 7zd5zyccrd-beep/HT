@@ -10,6 +10,9 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.140 30.09.2026 Blattvorschau: der hellgraue Streifen links, rechts und unter
+         dem Bogen ist weg – die dunkle Fläche reicht bis an die Ränder, der
+         Bogen wird dadurch auf dem Telefon auch etwas größer eingepasst.
   v1.139 30.09.2026 Grundriss: ruhigeres Zoomen mit zwei Fingern. Die Stelle
          zwischen den Fingern wird beim Aufsetzen gemerkt und bleibt ohne
          Rundungssprünge stehen, gezeichnet wird höchstens einmal je
@@ -2355,6 +2358,12 @@ button > .ortIcon:only-child{display:block;margin:auto}
    rollt seitlich; Kneifen des Systems ist hier wie überall aus. */
 #blattWrap{background:#555;padding:12px;overflow:auto}
 #blattWrap > *{zoom:var(--blattZoom, 1)}
+/* Der Tisch reicht bis an die Ränder (v1.140): ohne das Polster der Spalte
+   bleibt links, rechts und unter dem Bogen kein hellgrauer Streifen stehen.
+   Unten hält er Abstand zur Fußleiste wie sonst die Spalte. */
+body.blattAn main{max-width:none;padding:0;display:flex;flex-direction:column}
+body.blattAn #view-blatt.active{flex:1 0 auto;display:flex;flex-direction:column}
+body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-area-inset-bottom), var(--leiste-h, 0px)))}
 /* Über dem Plan steht nur noch eine Zeile: links, wonach gesucht wird, rechts
    der Name des Plans – als Text, gewechselt wird über die Kopfzeile. */
 #view-plan{margin-top:-8px}
@@ -3125,7 +3134,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.139';
+const VERSION = 'v1.140';
 const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
