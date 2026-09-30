@@ -177,11 +177,16 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   gleicher Abstand in einer Reihe, Fang `FANG` px auf dem Schirm, Linien
   `.fangLinie` in Plan und Lupe. Schalter `nwEinrasten` (nur Gerät) unter
   Einstellungen › Grundrisse.
-- Wand (v1.131): `wandFangen` tastet das Planbild (`planVorrat`) rund um die
-  Marke in Schirmpixeln ab, sucht die nächste dunkle Kante (`WAND_DUNKEL`),
-  prüft Dicke und Geradheit und legt den Ring (`MARKE_R` = 13 px, wie aktive
-  und Nummernmarke) an; quer zur Wand, längs bleibt das Einrasten an den
-  Nachbarn. Fast waagrecht/senkrecht wird genau. Linie `.fangLinie.wand`.
+- Wand (v1.131, umgebaut v1.133): `wandFangen` tastet das Planbild
+  (`planVorrat`) rund um die Marke in Schirmpixeln ab (`WAND_DUNKEL`). Nur
+  Linien, die der Ring berührt (`MARKE_R` = 13 px + `WAND_BERUEHRT`), zählen –
+  der Nutzer drückt die Marke an die gemeinte (vom Nutzer so gewünscht).
+  Mehrere: tiefer berührte, bei Gleichstand Schieberichtung (`zug.schub`).
+  Gerade: Strahlenfächer bis zur ersten dunklen Stelle, Ausgleichsgerade ohne
+  Ausreißer (klappt bei Schraffur und Schräge), Länge ≥ 1,5 R; keine
+  Dickeprüfung. Bis 5° wird waagrecht/senkrecht genau. Steht die Marke schon
+  auf der Höhe ihrer Reihe (`fang.hatX/hatY`), geht die Reihe vor.
+  Linie `.fangLinie.wand`.
 
 - Umschalten (v1.130): langer Druck (`UMSCHALT_MS`) auf eine Nachbarmarke
   beim Verorten → `markeUmschalten` setzt `planZiel` auf sie, danach im
