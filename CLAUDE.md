@@ -188,3 +188,10 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   selben Zug ziehen. Bis dahin (`zug.fremd`) kein preventDefault, damit
   Wischen den Plan schiebt; kurzer Tipp zeigt weiter den Namen. Marken tragen
   `data-key`. Nicht in der Übersicht (vom Nutzer so entschieden).
+
+- Sammelmarken (v1.132): `sammelnAuffrischen` fasst in der Übersicht
+  Nummernmarken zusammen, die sich bei der aktuellen Zoomstufe berühren
+  (`SAMMEL_NAH`, Schirmpixel) – auch verschiedene Arten. Linie → `.kapsel`
+  gedreht (Ziffern über `--gegen` aufrecht), sonst `.kaestchen` mit Zeilen.
+  Neu bei Zoom (`planZoomAnwenden`), Überblendung (`markenGewichte`) und
+  Aufbau. Tipp nennt alle. Nicht im Blatt (vom Nutzer so entschieden).

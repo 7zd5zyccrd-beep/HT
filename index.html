@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.132 30.09.2026 Übersichtsplan mit Nummern: Marken, die sich berühren, werden
+         zu einer Sammelmarke – die Nummern dicht an dicht, jede in ihrer
+         Farbe, angeordnet wie im Plan (Reihe waagrecht, senkrecht oder schräg
+         als Kapsel, sonst ein Kästchen mit Zeilen). Hineinzoomen löst sie
+         wieder auf; Antippen nennt alle Objekte darin. Nur in der App, das
+         Blatt behält seine Beschriftung.
   v1.131 30.09.2026 Grundriss, Marke verschieben: Sie legt sich auch an die Wand –
          liegt ganz in der Nähe eine kräftige, gerade dunkle Linie im Plan,
          berührt der Ring sie genau; ein kurzes oranges Stück auf der Kante
@@ -2545,6 +2551,20 @@ button > .ortIcon:only-child{display:block;margin:auto}
   display:flex;align-items:center;justify-content:center;
   font-family:var(--f-label);font-size:12px;font-weight:700;line-height:1;
 }
+/* Sammelmarke (v1.132): weißer Grund als gemeinsamer Ring, darin die Nummern
+   als Kreise dicht an dicht. Die Kapsel dreht sich mit der Reihe, die Ziffern
+   drehen zurück und stehen aufrecht. */
+#planBox .marke.nummer.gesammelt{display:none}
+#planBox .sammel{position:absolute;z-index:3;pointer-events:none;padding:2px;background:#fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.35);display:flex;gap:2px}
+#planBox .sammel.kapsel{border-radius:13px;flex-direction:row}
+#planBox .sammel.kaestchen{border-radius:13px;flex-direction:column;transform:translate(-50%, -50%)}
+#planBox .sammel.kaestchen > div{display:flex;gap:2px;justify-content:center}
+#planBox .sammel span{width:22px;height:22px;border-radius:50%;flex:0 0 22px;
+  background:var(--kat,#333);color:#fff;display:flex;align-items:center;justify-content:center;
+  font-family:var(--f-label);font-size:12px;font-weight:700;line-height:1}
+#planBox .sammel.kapsel span{transform:rotate(var(--gegen, 0deg))}
+#planBox .planTipp{white-space:pre-line}
 /* Zeile mit Kästchen im Auswahlfenster; wo es eine Kategoriefarbe gibt, steht
    links ihr Punkt – bei den Plänen gibt es keine, dort bleibt die Zeile schlicht. */
 #dlgListe .kasten{text-align:left}
@@ -3064,7 +3084,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.131';
+const VERSION = 'v1.132';
 const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -11777,6 +11797,7 @@ function planZoomAnwenden(){
   box.style.marginBottom = planZoom > 1 && $('.planBuehne.schwebt') ? '76px' : '0';
   const frei = wrap.clientWidth - box.offsetWidth;
   box.style.marginLeft = box.offsetWidth && frei > 0 ? Math.round(frei / 2) + 'px' : '0';
+  sammelnAuffrischen();
   /* Die vorhandene Nachzeichnung wächst mit, bis die neue steht – sonst
      blitzte beim Zoomen kurz das unscharfe Grundbild auf. */
   scharfSpaeter();
@@ -12007,7 +12028,7 @@ async function scharfPlanZeichnen(pl, grenze, gross, lauf){
 let markenPlaene = '';        // welche Pläne die Marken gerade tragen
 function markenZeichnen(planId, ziehen){
   const box = $('#planBox'); if(!box) return;
-  box.querySelectorAll('.marke, .schnitt, .griff').forEach(m => m.remove());
+  box.querySelectorAll('.marke, .schnitt, .griff, .sammel').forEach(m => m.remove());
   markenPlaene = '';
   if(planSchnitt){ schnittZeichnen(); return; }
   /* Beim Ausrichten zählen nur die Bezugspunkte: beim Verschieben die beiden
@@ -12073,6 +12094,69 @@ function markenGewichte(){
   box.querySelectorAll('.marke[data-plaene]').forEach(m => {
     const summe = m.dataset.plaene.split('\n').reduce((n, id) => n + (w.get(id) || 0), 0);
     m.style.setProperty('--w', Math.min(1, summe).toFixed(3));
+  });
+  sammelnAuffrischen();
+}
+/* Sammelmarken der Übersicht (v1.132, vom Nutzer so gewünscht): Nummernmarken,
+   die sich bei der jetzigen Zoomstufe berühren, werden eine Marke – die
+   Nummern dicht an dicht, jede in ihrer Farbe, in der Anordnung wie im Plan:
+   liegen sie in einer Linie, eine Kapsel entlang dieser Linie (waagrecht,
+   senkrecht oder schräg, die Ziffern stehen immer aufrecht), sonst ein
+   Kästchen mit Zeilen von oben nach unten. Hineinzoomen löst sie wieder auf.
+   Gerechnet wird in Schirmpixeln, neu bei Zoom, Größe und Überblendung. Nur in
+   der Übersicht; beim Verorten braucht man jede Marke einzeln. */
+const SAMMEL_NAH = 26;        // zwei Nummernmarken samt weißem Ring berühren sich
+function sammelnAuffrischen(){
+  const box = $('#planBox'); if(!box) return;
+  box.querySelectorAll('.sammel').forEach(x => x.remove());
+  const marken = [...box.querySelectorAll('.marke.nummer')];
+  marken.forEach(m => m.classList.remove('gesammelt'));
+  const r = box.getBoundingClientRect();
+  if(planZiel || marken.length < 2 || !r.width) return;
+  const pt = marken.map(m => ({m, x:parseFloat(m.style.left) / 100 * r.width, y:parseFloat(m.style.top) / 100 * r.height,
+    w:parseFloat(m.style.getPropertyValue('--w')) || 1}));
+  const wurzel = pt.map((p, i) => i), finde = i => wurzel[i] === i ? i : (wurzel[i] = finde(wurzel[i]));
+  for(let i = 0; i < pt.length; i++) for(let j = i + 1; j < pt.length; j++)
+    if(Math.hypot(pt[i].x - pt[j].x, pt[i].y - pt[j].y) < SAMMEL_NAH) wurzel[finde(i)] = finde(j);
+  const gruppen = new Map();
+  pt.forEach((p, i) => { const w = finde(i); (gruppen.get(w) || gruppen.set(w, []).get(w)).push(p); });
+  gruppen.forEach(g => {
+    if(g.length < 2) return;
+    g.forEach(p => p.m.classList.add('gesammelt'));
+    const mx = g.reduce((a, p) => a + p.x, 0) / g.length, my = g.reduce((a, p) => a + p.y, 0) / g.length;
+    /* Hauptrichtung der Gruppe; liegt alles nah an ihr, ist es eine Linie. */
+    let sxx = 0, syy = 0, sxy = 0;
+    g.forEach(p => { const dx = p.x - mx, dy = p.y - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; });
+    let w = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+    if(w <= -Math.PI / 2 + 1e-6) w += Math.PI; if(w > Math.PI / 2) w -= Math.PI;
+    const ux = Math.cos(w), uy = Math.sin(w);
+    const quer = p => Math.abs(-(p.x - mx) * uy + (p.y - my) * ux), laengs = p => (p.x - mx) * ux + (p.y - my) * uy;
+    const linie = g.every(p => quer(p) < 6);
+    const zelle = p => `<span style="--kat:${p.m.style.getPropertyValue('--kat') || '#333'}">${esc(p.m.textContent)}</span>`;
+    const el = document.createElement('div');
+    el.className = 'sammel';
+    el.dataset.keys = g.map(p => p.m.dataset.key).join('\n');
+    el.style.left = (mx / r.width * 100) + '%'; el.style.top = (my / r.height * 100) + '%';
+    el.style.opacity = Math.min(1, Math.max(...g.map(p => p.w)));
+    if(linie){
+      /* Fast waagrecht oder senkrecht gilt als genau so. */
+      const grad = w * 180 / Math.PI, gerade = Math.abs(grad) < 12 ? 0 : Math.abs(Math.abs(grad) - 90) < 12 ? 90 : grad;
+      el.classList.add('kapsel');
+      el.innerHTML = g.slice().sort((a, b) => laengs(a) - laengs(b)).map(zelle).join('');
+      el.style.transform = `translate(-50%, -50%) rotate(${gerade}deg)`;
+      el.style.setProperty('--gegen', `${-gerade}deg`);
+    }else{
+      /* Zeilen: von oben nach unten, wer höchstens eine halbe Marke tiefer
+         liegt, gehört noch in dieselbe; darin von links nach rechts. */
+      const zeilen = [];
+      g.slice().sort((a, b) => a.y - b.y).forEach(p => {
+        const z = zeilen.find(z2 => Math.abs(z2[0].y - p.y) < 13);
+        if(z) z.push(p); else zeilen.push([p]);
+      });
+      el.classList.add('kaestchen');
+      el.innerHTML = zeilen.map(z => `<div>${z.sort((a, b) => a.x - b.x).map(zelle).join('')}</div>`).join('');
+    }
+    box.appendChild(el);
   });
 }
 function markenAuffrischen(){
@@ -12280,7 +12364,8 @@ function tippZeigen(o){
   f.className = 'planTipp';
   /* In der Übersicht steht vor dem Namen, was die Marke selbst sagt: ihre
      Nummer und die Kategorie – sonst müsste man die Farbe im Kopf zuordnen. */
-  f.textContent = o.nr ? `${o.nr} · ${NW(o.kat).label} · ${ortName(o.key)}`
+  f.textContent = o.text ? o.text
+               : o.nr ? `${o.nr} · ${NW(o.kat).label} · ${ortName(o.key)}`
                        : ortName(o.key);
   f.style.left = (o.x * 100) + '%';
   f.style.top  = (o.y * 100) + '%';
@@ -13443,6 +13528,19 @@ $('#planBox').onclick = e => {
      holt er den Streifen zurück. Gesetzt wird hier nichts. */
   if(!planZiel){
     const o = markeNah(e, katWahl().reduce((alle, kat) => alle.concat(katOrte(kat.k, id)), []));
+    /* Eine Sammelmarke nennt alle, die in ihr stecken (v1.132). */
+    const sm = [...$('#planBox').querySelectorAll('.sammel')].find(x => {
+      const q = x.getBoundingClientRect();
+      return e.clientX > q.left - 4 && e.clientX < q.right + 4 && e.clientY > q.top - 4 && e.clientY < q.bottom + 4;
+    });
+    if(sm){
+      const alle = katWahl().reduce((a, kat) => a.concat(katOrte(kat.k, id)), []), keys = sm.dataset.keys.split('\n');
+      const drin = keys.map(k => alle.find(x => x.key === k)).filter(Boolean).sort((a, b) => a.kat === b.kat ? a.nr - b.nr : 0);
+      const r = $('#planBox').getBoundingClientRect(), q = sm.getBoundingClientRect();
+      tippZeigen({x:(q.left + q.width / 2 - r.left) / r.width, y:(q.top - r.top + 11) / r.height,
+        text:drin.map(x => `${x.nr} · ${NW(x.kat).label} · ${ortName(x.key)}`).join('\n')});
+      return;
+    }
     if(o) tippZeigen(o); else { tippWeg(); planHinweisen(); }
     return;
   }
