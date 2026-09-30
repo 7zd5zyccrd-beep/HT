@@ -191,7 +191,7 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   Einstellungen › Grundrisse.
 - Wand (v1.131, umgebaut v1.133): `wandFangen` tastet das Planbild
   (`planVorrat`) rund um die Marke in Schirmpixeln ab (`WAND_DUNKEL`). Nur
-  Linien, die der Ring berührt (`MARKE_R` = 13 px + `WAND_BERUEHRT`), zählen –
+  Linien, die der Ring berührt (`MARKE_R` + `WAND_BERUEHRT`), zählen –
   der Nutzer drückt die Marke an die gemeinte (vom Nutzer so gewünscht).
   Mehrere: tiefer berührte, bei Gleichstand Schieberichtung (`zug.schub`).
   Gerade: Strahlenfächer bis zur ersten dunklen Stelle, Ausgleichsgerade ohne
@@ -219,3 +219,13 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   gedreht (Ziffern über `--gegen` aufrecht), sonst `.kaestchen` mit Zeilen.
   Neu bei Zoom (`planZoomAnwenden`), Überblendung (`markenGewichte`) und
   Aufbau. Tipp nennt alle. Nicht im Blatt (vom Nutzer so entschieden).
+
+## Offen / bekannt (Stand v1.142)
+
+- iPad mit Tastatur-Trackpad: Kneifen erreicht die Seite nicht (iPadOS
+  behandelt es selbst) – weder Grundriss noch Blattvorschau zoomen damit.
+- Sammelmarken nur in der App, das Blatt hat seine eigene Beschriftung
+  (`markenLegen`); Übernahme ins Blatt wäre ein möglicher nächster Schritt.
+- Wanderkennung an echten Plänen nur vom Nutzer geprüft (Schraffur, Schräge,
+  parallele Linien klappten nach v1.134); bei neuen Problemen Bildschirmfoto
+  erbitten.
