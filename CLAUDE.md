@@ -176,8 +176,12 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   Senkrechte wie eine Nachbarmarke (`.marke.andere`, also dieselbe Art) und
   gleicher Abstand in einer Reihe, Fang `FANG` px auf dem Schirm, Linien
   `.fangLinie` in Plan und Lupe. Schalter `nwEinrasten` (nur Gerät) unter
-  Einstellungen › Grundrisse. Nächster Schritt nach Rückmeldung: Einrasten an
-  der Wand (dunkle Linie im Planbild suchen).
+  Einstellungen › Grundrisse.
+- Wand (v1.131): `wandFangen` tastet das Planbild (`planVorrat`) rund um die
+  Marke in Schirmpixeln ab, sucht die nächste dunkle Kante (`WAND_DUNKEL`),
+  prüft Dicke und Geradheit und legt den Ring (`MARKE_R` = 13 px, wie aktive
+  und Nummernmarke) an; quer zur Wand, längs bleibt das Einrasten an den
+  Nachbarn. Fast waagrecht/senkrecht wird genau. Linie `.fangLinie.wand`.
 
 - Umschalten (v1.130): langer Druck (`UMSCHALT_MS`) auf eine Nachbarmarke
   beim Verorten → `markeUmschalten` setzt `planZiel` auf sie, danach im

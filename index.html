@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.131 30.09.2026 Grundriss, Marke verschieben: Sie legt sich auch an die Wand –
+         liegt ganz in der Nähe eine kräftige, gerade dunkle Linie im Plan,
+         berührt der Ring sie genau; ein kurzes oranges Stück auf der Kante
+         zeigt es. Zusammen mit dem Einrasten an den Nachbarn ergibt das eine
+         saubere Reihe an der Wand entlang. Schrift und dünne Linien zählen
+         nicht. Derselbe Schalter unter Einstellungen › Grundrisse. In der
+         Lupe steht die gezogene Marke dafür in voller Größe (unangewählt).
   v1.130 30.09.2026 Grundriss: Langes Drücken auf eine andere Marke macht sie zur
          angewählten – ihr Name steht oben, die Lupe kommt, und sie lässt sich
          im selben Zug verschieben. Kurz antippen zeigt weiter nur den Namen.
@@ -2516,6 +2523,9 @@ button > .ortIcon:only-child{display:block;margin:auto}
 .fangLinie.senk{top:0;bottom:0;width:1px;margin-left:-.5px}
 #planLupe .fangLinie.waag{height:.5px;margin-top:-.25px}
 #planLupe .fangLinie.senk{width:.5px;margin-left:-.25px}
+/* An der Wand: ein kurzes Stück orange auf der Kante (v1.131). */
+.fangLinie.wand{width:48px;height:3px;border-radius:2px;opacity:1}
+#planLupe .fangLinie.wand{height:1px}
 #planLupe .kreuz{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px}
 #planLupe .kreuz::before,#planLupe .kreuz::after{content:'';position:absolute;background:#E8590C;box-shadow:0 0 0 1px rgba(255,255,255,.8)}
 #planLupe .kreuz::before{left:12px;top:0;width:2px;height:26px}
@@ -3054,7 +3064,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.130';
+const VERSION = 'v1.131';
 const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -13046,6 +13056,72 @@ function markeFangen(x, y, box, r){
   if(nx != null && (lx != null || abstand === 'x')) linien.push({art:'senk', wert:(nx - r.left) / r.width, nurMarke: lx == null});
   return {x:nx != null ? nx : x, y:ny != null ? ny : y, linien};
 }
+/* Einrasten an der Wand (v1.131): Die App kennt keine Wände, nur das Bild.
+   Rund um die gezogene Marke wird es auf dem Schirm Pixel für Pixel abgetastet
+   (dunkel oder hell); liegt ganz in der Nähe eine kräftige, gerade dunkle
+   Kante, wird der Ring genau daran angelegt – quer zur Wand verschoben, längs
+   bleibt, was das Einrasten an den Nachbarn ergeben hat. Schrift, dünne
+   Bemaßungslinien und Rundungen bestehen die Prüfung auf Dicke und Geradheit
+   nicht und werden übergangen. Alle Maße in Pixeln auf dem Schirm, die Marke
+   ist dort immer gleich groß. */
+const MARKE_R = 13, WAND_FANG = 12, WAND_DUNKEL = 110;
+let wandLeinwand = null;
+function wandFangen(x, y, r){
+  const v = planVorrat.get(planAktuell), img = v && v.img;
+  if(!img || !img.complete || !img.naturalWidth) return null;
+  const W = img.naturalWidth, H = img.naturalHeight, S = MARKE_R + WAND_FANG + 4, N = 2 * S + 1;
+  /* Schirm → Bildpixel: im Rahmen eine lineare Abbildung (Maßstab, Drehung). */
+  const zuPlan = (sx, sy) => ausRahmen(planAktuell, (sx - r.left) / r.width, (sy - r.top) / r.height);
+  const p0 = zuPlan(x, y), p1 = zuPlan(x + 1, y), p2 = zuPlan(x, y + 1);
+  const ax = (p1.x - p0.x) * W, ay = (p1.y - p0.y) * H, bx = (p2.x - p0.x) * W, by = (p2.y - p0.y) * H;
+  const zuBild = (dx, dy) => [p0.x * W + ax * dx + bx * dy, p0.y * H + ay * dx + by * dy];
+  const ecken = [[-S, -S], [S, -S], [-S, S], [S, S]].map(([a, b]) => zuBild(a, b));
+  const x0 = Math.max(0, Math.floor(Math.min(...ecken.map(e => e[0])))), x1 = Math.min(W, Math.ceil(Math.max(...ecken.map(e => e[0]))));
+  const y0 = Math.max(0, Math.floor(Math.min(...ecken.map(e => e[1])))), y1 = Math.min(H, Math.ceil(Math.max(...ecken.map(e => e[1]))));
+  const sw = x1 - x0, sh = y1 - y0;
+  if(sw < 2 || sh < 2) return null;
+  /* Nur der kleine Ausschnitt wird gezeichnet, höchstens 160 Pixel breit. */
+  const k = Math.min(1, 160 / Math.max(sw, sh)), cw = Math.max(1, Math.round(sw * k)), ch = Math.max(1, Math.round(sh * k));
+  if(!wandLeinwand) wandLeinwand = document.createElement('canvas');
+  const c = wandLeinwand; c.width = cw; c.height = ch;
+  const g = c.getContext('2d', {willReadFrequently:true});
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch);
+  let d;
+  try{ g.drawImage(img, x0, y0, sw, sh, 0, 0, cw, ch); d = g.getImageData(0, 0, cw, ch).data; }catch(e){ return null; }
+  const dunkel = new Uint8Array(N * N);
+  for(let j = -S; j <= S; j++) for(let i = -S; i <= S; i++){
+    const [bxp, byp] = zuBild(i, j), cx = Math.floor((bxp - x0) * k), cy = Math.floor((byp - y0) * k);
+    if(cx < 0 || cy < 0 || cx >= cw || cy >= ch) continue;
+    const o = (cy * cw + cx) * 4;
+    dunkel[(j + S) * N + i + S] = d[o] * .3 + d[o + 1] * .59 + d[o + 2] * .11 < WAND_DUNKEL ? 1 : 0;
+  }
+  const an = (i, j) => { i = Math.round(i); j = Math.round(j); return Math.abs(i) <= S && Math.abs(j) <= S && dunkel[(j + S) * N + i + S] === 1; };
+  /* Nächster Pixel der anderen Art: steht die Mitte hell, die nächste dunkle
+     Stelle; steht sie schon auf der Wand, die nächste helle daneben. */
+  const mitteDunkel = an(0, 0);
+  let best = null, bd = Infinity;
+  for(let j = -S; j <= S; j++) for(let i = -S; i <= S; i++)
+    if(an(i, j) !== mitteDunkel){ const q = i * i + j * j; if(q < bd){ bd = q; best = [i, j]; } }
+  if(!best) return null;
+  const dist = Math.sqrt(bd);
+  if(!mitteDunkel && dist - .5 > MARKE_R + WAND_FANG) return null;
+  /* Normale: von der Wand weg zur Marke. Fast waagrecht oder senkrecht gilt
+     als genau so – Pläne sind meist rechtwinklig, die Pixel treppen. */
+  let nx = mitteDunkel ? best[0] / dist : -best[0] / dist, ny = mitteDunkel ? best[1] / dist : -best[1] / dist;
+  if(Math.abs(nx) < .18){ nx = 0; ny = Math.sign(ny); } else if(Math.abs(ny) < .18){ ny = 0; nx = Math.sign(nx); }
+  /* Die Kante selbst: zwischen dem letzten dunklen und dem ersten hellen Pixel. */
+  const kante = mitteDunkel ? [best[0] - nx * .5, best[1] - ny * .5] : [best[0] + nx * .5, best[1] + ny * .5];
+  const tx = -ny, ty = nx;
+  /* Prüfung: dick genug (zwei Pixel dunkel hinter der Kante) und gerade (die
+     Kante läuft beidseits auf derselben Linie weiter). */
+  const istKante = s => an(kante[0] + tx * s - nx * 1, kante[1] + ty * s - ny * 1)
+                     && an(kante[0] + tx * s - nx * 2, kante[1] + ty * s - ny * 2)
+                     && !an(kante[0] + tx * s + nx * 1, kante[1] + ty * s + ny * 1);
+  if([-9, -5, 0, 5, 9].filter(istKante).length < 4) return null;
+  const mx = x + kante[0] + nx * MARKE_R, my = y + kante[1] + ny * MARKE_R;
+  return {x:mx, y:my, n:[nx, ny],
+    linie:{art:'wand', x:(x + kante[0] - r.left) / r.width, y:(y + kante[1] - r.top) / r.height, winkel:Math.atan2(ty, tx)}};
+}
 /* Die Hilfslinien liegen im Plan und – da die Lupe nur beim Öffnen abkupfert –
    auch in der Lupe; beide werden bei jedem Schritt neu gesetzt. */
 function fangLinienZeigen(linien){
@@ -13055,7 +13131,10 @@ function fangLinienZeigen(linien){
     linien.filter(l => !l.nurMarke).forEach(l => {
       const d = document.createElement('div');
       d.className = 'fangLinie ' + l.art;
-      d.style[l.art === 'waag' ? 'top' : 'left'] = (l.wert * 100) + '%';
+      if(l.art === 'wand'){
+        d.style.left = (l.x * 100) + '%'; d.style.top = (l.y * 100) + '%';
+        d.style.transform = `translate(-50%, -50%) rotate(${l.winkel}rad)`;
+      }else d.style[l.art === 'waag' ? 'top' : 'left'] = (l.wert * 100) + '%';
       ort.appendChild(d);
     });
   });
@@ -13116,8 +13195,9 @@ function lupeZeigen(x, y){
     box.querySelectorAll('.marke').forEach(m => {
       const k = m.cloneNode(true);
       if(m === (zug && zug.el)){
-        k.classList.remove('aktiv', 'zieh', 'gezogen', 'gehoben');
-        if(!k.classList.contains('bezug')) k.classList.add('andere');
+        /* Unangewählt, aber in voller Größe (v1.131): so sieht man in der Lupe,
+           dass der Ring die Wand genau berührt. */
+        k.classList.remove('aktiv', 'zieh', 'gezogen', 'gehoben', 'andere');
         k.dataset.lupeZug = '1';
       }
       innen.appendChild(k);
@@ -13200,8 +13280,17 @@ function zugFolgen(fx, fy){
   /* Einrasten an den Nachbarmarken (v1.129). */
   const fang = zug.art === 'marke' && einrastenAn() ? markeFangen(x, y, box, r) : null;
   if(fang){ x = fang.x; y = fang.y; }
-  zug.fang = fang ? {x:(x - r.left) / r.width, y:(y - r.top) / r.height} : null;
-  if(zug.art === 'marke') fangLinienZeigen(fang ? fang.linien : []);
+  /* Dann an die Wand (v1.131): quer zur Wand zählt sie, längs bleibt die
+     Reihe. Eine Hilfslinie der Nachbarn, die dadurch nicht mehr trifft, geht. */
+  const wand = zug.art === 'marke' && einrastenAn() ? wandFangen(x, y, r) : null;
+  let linien = fang ? fang.linien : [];
+  if(wand){
+    x = wand.x; y = wand.y;
+    linien = linien.filter(l => Math.abs(l.art === 'waag' ? r.top + l.wert * r.height - y : r.left + l.wert * r.width - x) < 1)
+      .concat(wand.linie);
+  }
+  zug.fang = fang || wand ? {x:(x - r.left) / r.width, y:(y - r.top) / r.height} : null;
+  if(zug.art === 'marke') fangLinienZeigen(linien);
   if(zug.art === 'schnitt'){
     const f = {x:Math.min(1, Math.max(0, (x - r.left) / r.width)), y:Math.min(1, Math.max(0, (y - r.top) / r.height))};
     schnittSetzen(zug.g, ausRahmen(planAktuell, f.x, f.y));
