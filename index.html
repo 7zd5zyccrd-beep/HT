@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.139 30.09.2026 Grundriss: ruhigeres Zoomen mit zwei Fingern. Die Stelle
+         zwischen den Fingern wird beim Aufsetzen gemerkt und bleibt ohne
+         Rundungssprünge stehen, gezeichnet wird höchstens einmal je
+         Bildschirmbild, die Sammelmarken kommen erst beim Loslassen. Der
+         Plan bleibt dabei scharf.
   v1.138 30.09.2026 Blattvorschau: eigenes Zoomen. Beim Öffnen passt der Bogen
          genau in die Breite, zwei Finger vergrößern nur das Blatt (bis
          dreifach), Kopf- und Fußleiste bleiben stehen. Bisher vergrößerte
@@ -3120,7 +3125,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.138';
+const VERSION = 'v1.139';
 const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -11867,16 +11872,18 @@ window.addEventListener('resize', planHoehe);
    Der Punkt zwischen den Fingern bleibt dabei stehen – sonst rutscht einem beim
    Zoomen die Stelle aus dem Bild, die man gerade ansieht. */
 let planZoom = 1;
-function planZoomAnwenden(){
+function planZoomAnwenden(leicht){
   const wrap = $('#planWrap'), box = $('#planBox');
   if(!wrap || !box) return;
   /* Beim Zuschneiden liegen Griffe am Rand – der Streifen oben darf sie nicht
      verdecken, der Plan rückt um seine Höhe nach unten (v1.83). */
   const st = $('#planStreifen'), oben = planSchnitt && st && !st.hidden ? st.offsetHeight + 6 : 0;
   box.style.marginTop = oben + 'px';
-  const hoch = Math.round((wrap.clientHeight - oben) * planZoom);
+  /* Ungerundet (v1.139): gerundete Pixel ließen den Punkt zwischen den Fingern
+     bei jedem Schritt um Bruchteile springen – das Zittern beim Zoomen. */
+  const hoch = (wrap.clientHeight - oben) * planZoom;
   box.style.height = hoch + 'px';
-  box.style.width  = Math.round(hoch * (Rahmen.asp || 1)) + 'px';
+  box.style.width  = hoch * (Rahmen.asp || 1) + 'px';
   /* Passt der Plan in der Breite ganz ins Bild, steht er in der Mitte statt
      links mit Grau daneben – auf einem breiten Schirm ist das der Regelfall.
      Reicht er über den Rand hinaus, bleibt er linksbündig: sonst wäre sein
@@ -11884,9 +11891,10 @@ function planZoomAnwenden(){
   /* Schwebt der Regler über dem Plan, lässt sich der hineingezoomte Plan um
      seine Höhe weiter schieben – der unterste Streifen bleibt erreichbar. */
   box.style.marginBottom = planZoom > 1 && $('.planBuehne.schwebt') ? '76px' : '0';
-  const frei = wrap.clientWidth - box.offsetWidth;
-  box.style.marginLeft = box.offsetWidth && frei > 0 ? Math.round(frei / 2) + 'px' : '0';
-  sammelnAuffrischen();
+  const breit = hoch * (Rahmen.asp || 1), frei = wrap.clientWidth - breit;
+  box.style.marginLeft = breit && frei > 0 ? frei / 2 + 'px' : '0';
+  /* Während der Geste nicht: die Sammelmarken kommen beim Loslassen. */
+  if(!leicht) sammelnAuffrischen();
   /* Die vorhandene Nachzeichnung wächst mit, bis die neue steht – sonst
      blitzte beim Zoomen kurz das unscharfe Grundbild auf. */
   scharfSpaeter();
@@ -11894,30 +11902,42 @@ function planZoomAnwenden(){
 (function zoomBinden(){
   const wrap = $('#planWrap'); if(!wrap) return;
   const abstand = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-  let d0 = 0, z0 = 1, mx = 0, my = 0;
+  /* Ruhiger Zoom (v1.139): Beim Aufsetzen wird gemerkt, welche Stelle des Plans
+     (in Anteilen) zwischen den Fingern liegt; jeder Schritt rechnet von dort
+     neu, statt die Rollposition fortzuschreiben – so sammeln sich keine
+     Rundungsfehler, auch nicht, wenn der Plan anfangs mittig steht. Gezeichnet
+     wird höchstens einmal je Bildschirmbild. */
+  let d0 = 0, z0 = 1, anker = null, wunsch = null, bild_ = 0;
+  const schritt = () => {
+    bild_ = 0; if(!wunsch || !anker) return;
+    const {neu, mx, my} = wunsch; wunsch = null;
+    planZoom = neu; planZoomAnwenden(true);
+    const q = $('#planBox').getBoundingClientRect();
+    wrap.scrollLeft += q.left + anker.fx * q.width - mx;
+    wrap.scrollTop  += q.top + anker.fy * q.height - my;
+  };
   wrap.addEventListener('touchstart', e => {
     if(e.touches.length !== 2) return;
-    const t = e.touches, r = wrap.getBoundingClientRect();
+    const t = e.touches, q = $('#planBox').getBoundingClientRect();
+    const mx = (t[0].clientX + t[1].clientX) / 2, my = (t[0].clientY + t[1].clientY) / 2;
     d0 = abstand(t) || 1; z0 = planZoom;
-    mx = wrap.scrollLeft + (t[0].clientX + t[1].clientX) / 2 - r.left;
-    my = wrap.scrollTop  + (t[0].clientY + t[1].clientY) / 2 - r.top;
+    anker = {fx:(mx - q.left) / (q.width || 1), fy:(my - q.top) / (q.height || 1)};
     planGezoomt = true;
   }, {passive:false});
   wrap.addEventListener('touchmove', e => {
-    if(e.touches.length !== 2) return;
+    if(e.touches.length !== 2 || !anker) return;
     e.preventDefault();                       // sonst zoomt die ganze Seite mit
-    const t = e.touches, r = wrap.getBoundingClientRect();
-    const neu = Math.min(6, Math.max(1, z0 * (abstand(t) / d0)));
-    const v = neu / planZoom;
-    planZoom = neu; planZoomAnwenden();
-    const mitteX = (t[0].clientX + t[1].clientX) / 2 - r.left;
-    const mitteY = (t[0].clientY + t[1].clientY) / 2 - r.top;
-    mx *= v; my *= v;
-    wrap.scrollLeft = mx - mitteX;
-    wrap.scrollTop  = my - mitteY;
+    const t = e.touches;
+    wunsch = {neu:Math.min(6, Math.max(1, z0 * (abstand(t) / d0))),
+              mx:(t[0].clientX + t[1].clientX) / 2, my:(t[0].clientY + t[1].clientY) / 2};
+    if(!bild_) bild_ = requestAnimationFrame(schritt);
   }, {passive:false});
   /* Nach einer Geste soll der abschließende Tipp nicht als Setzen gelten. */
-  wrap.addEventListener('touchend', () => {
+  wrap.addEventListener('touchend', e => {
+    if(e.touches.length < 2 && anker){
+      if(bild_){ cancelAnimationFrame(bild_); schritt(); }
+      anker = null; sammelnAuffrischen();
+    }
     if(planGezoomt) setTimeout(() => { planGezoomt = false; }, 250);
     scharfSpaeter();
   });
