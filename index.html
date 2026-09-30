@@ -10,6 +10,10 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.142 30.09.2026 Grundriss: Zoomen mit zwei Fingern ohne Wackeln. Größe und
+         Lage des Plans werden nicht mehr auf ganze Pixel gerundet, und was das
+         iPhone beim Rollen abschneidet, gleicht die App aus. Der Ablauf bleibt
+         sonst wie vorher, Schieben während des Zoomens geht weiter.
   v1.141 30.09.2026 Zurückgenommen: das geänderte Zoomen im Grundriss aus v1.139.
          Es wirkte kaum ruhiger, und Zoomen während des Hin- und Herschiebens
          ging nicht mehr. Der Grundriss zoomt wieder wie in v1.138.
@@ -3137,7 +3141,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.141';
+const VERSION = 'v1.142';
 const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -11884,16 +11888,18 @@ window.addEventListener('resize', planHoehe);
    Der Punkt zwischen den Fingern bleibt dabei stehen – sonst rutscht einem beim
    Zoomen die Stelle aus dem Bild, die man gerade ansieht. */
 let planZoom = 1;
-function planZoomAnwenden(){
+function planZoomAnwenden(inGeste){
   const wrap = $('#planWrap'), box = $('#planBox');
   if(!wrap || !box) return;
+  if(!inGeste) box.style.translate = '';
   /* Beim Zuschneiden liegen Griffe am Rand – der Streifen oben darf sie nicht
      verdecken, der Plan rückt um seine Höhe nach unten (v1.83). */
   const st = $('#planStreifen'), oben = planSchnitt && st && !st.hidden ? st.offsetHeight + 6 : 0;
   box.style.marginTop = oben + 'px';
-  const hoch = Math.round((wrap.clientHeight - oben) * planZoom);
+  /* Ungerundet (v1.142): ganze Pixel ließen den Plan beim Zoomen wackeln. */
+  const hoch = (wrap.clientHeight - oben) * planZoom, breit = hoch * (Rahmen.asp || 1);
   box.style.height = hoch + 'px';
-  box.style.width  = Math.round(hoch * (Rahmen.asp || 1)) + 'px';
+  box.style.width  = breit + 'px';
   /* Passt der Plan in der Breite ganz ins Bild, steht er in der Mitte statt
      links mit Grau daneben – auf einem breiten Schirm ist das der Regelfall.
      Reicht er über den Rand hinaus, bleibt er linksbündig: sonst wäre sein
@@ -11901,8 +11907,8 @@ function planZoomAnwenden(){
   /* Schwebt der Regler über dem Plan, lässt sich der hineingezoomte Plan um
      seine Höhe weiter schieben – der unterste Streifen bleibt erreichbar. */
   box.style.marginBottom = planZoom > 1 && $('.planBuehne.schwebt') ? '76px' : '0';
-  const frei = wrap.clientWidth - box.offsetWidth;
-  box.style.marginLeft = box.offsetWidth && frei > 0 ? Math.round(frei / 2) + 'px' : '0';
+  const frei = wrap.clientWidth - breit;
+  box.style.marginLeft = breit && frei > 0 ? frei / 2 + 'px' : '0';
   sammelnAuffrischen();
   /* Die vorhandene Nachzeichnung wächst mit, bis die neue steht – sonst
      blitzte beim Zoomen kurz das unscharfe Grundbild auf. */
@@ -11916,7 +11922,10 @@ function planZoomAnwenden(){
     if(e.touches.length !== 2) return;
     const t = e.touches, r = wrap.getBoundingClientRect();
     d0 = abstand(t) || 1; z0 = planZoom;
-    mx = wrap.scrollLeft + (t[0].clientX + t[1].clientX) / 2 - r.left;
+    $('#planBox').style.translate = '';
+    /* Gemessen ab der linken Kante des Plans, ohne den Rand, der ihn mittig
+       hält – der schrumpft beim Vergrößern, sonst lief der Plan weg (v1.142). */
+    mx = wrap.scrollLeft + (t[0].clientX + t[1].clientX) / 2 - r.left - (parseFloat($('#planBox').style.marginLeft) || 0);
     my = wrap.scrollTop  + (t[0].clientY + t[1].clientY) / 2 - r.top;
     planGezoomt = true;
   }, {passive:false});
@@ -11926,12 +11935,20 @@ function planZoomAnwenden(){
     const t = e.touches, r = wrap.getBoundingClientRect();
     const neu = Math.min(6, Math.max(1, z0 * (abstand(t) / d0)));
     const v = neu / planZoom;
-    planZoom = neu; planZoomAnwenden();
+    planZoom = neu; planZoomAnwenden(true);
     const mitteX = (t[0].clientX + t[1].clientX) / 2 - r.left;
     const mitteY = (t[0].clientY + t[1].clientY) / 2 - r.top;
     mx *= v; my *= v;
-    wrap.scrollLeft = mx - mitteX;
-    wrap.scrollTop  = my - mitteY;
+    const zx = mx + (parseFloat($('#planBox').style.marginLeft) || 0) - mitteX, zy = my - mitteY;
+    wrap.scrollLeft = zx;
+    wrap.scrollTop  = zy;
+    /* Das iPhone rollt nur in ganzen Pixeln; der abgeschnittene Rest ließ den
+       Plan bei jedem Schritt um Bruchteile springen (v1.142). Er wird durch ein
+       Verschieben ausgeglichen, gerastet auf die Bildpunkte des Schirms, damit
+       nichts weich wird. Am Rand (Rollen geht nicht weiter) bleibt es aus. */
+    const k = window.devicePixelRatio || 1, rest = (a, b) => Math.abs(a - b) < 1 ? Math.round((a - b) * k) / k : 0;
+    const rx = rest(zx, wrap.scrollLeft), ry = rest(zy, wrap.scrollTop);
+    $('#planBox').style.translate = rx || ry ? `${-rx}px ${-ry}px` : '';
   }, {passive:false});
   /* Nach einer Geste soll der abschließende Tipp nicht als Setzen gelten. */
   wrap.addEventListener('touchend', () => {

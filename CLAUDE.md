@@ -77,6 +77,12 @@ steht.
   (CSS `zoom` auf den Kindern von `#blattWrap`, bis `BLATT_MAX`); der Anker
   wird beim Aufsetzen am Bogen selbst gemerkt. Kein Doppeltipp (vom Nutzer so
   entschieden). Das geteilte Blatt bleibt unberührt.
+- **Zoom im Grundriss (v1.142):** Ablauf wie seit jeher (Anker `mx/my` beim
+  Aufsetzen, je Fingermeldung sofort gerechnet – ein Umbau mit
+  requestAnimationFrame und relativem Anker, v1.139, nahm das Schieben
+  während des Zoomens und wurde zurückgenommen). Gegen das Wackeln: Größe
+  ungerundet, `mx` ohne den Mittig-Rand, und der Rollrest, den iOS auf ganze
+  Pixel schneidet, als `translate` am `#planBox` (auf Bildpunkte gerastet).
 - **Ausgabe leert den Nachweis** (`delete DAT[k]` in `ausgeben`). Alles, was
   danach noch gelten soll, braucht einen eigenen Vermerk, z. B.
   `DAT.sprinkler.wocheAus` für den erledigten Wochengang (v1.102).
