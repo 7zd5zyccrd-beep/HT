@@ -71,6 +71,12 @@ steht.
   schnitten das Blatt deshalb auf einen Bildschirm zu (v1.102). `BLATT_FREI`
   hebt das auf, `dateiTeilen` repariert auch ältere Blätter. Wer neue
   Seiten-Regeln für `html`/`body` einführt, muss sie dort mit aufheben.
+- **Blattvorschau zoomt selbst (v1.138):** Safaris Kneifen ist auch dort aus
+  (es vergrößerte seit v1.94 Kopf- und Fußleiste mit). `blattEinpassen` passt
+  den Bogen beim Öffnen in die Breite, zwei Finger ändern `--blattZoom`
+  (CSS `zoom` auf den Kindern von `#blattWrap`, bis `BLATT_MAX`); der Anker
+  wird beim Aufsetzen am Bogen selbst gemerkt. Kein Doppeltipp (vom Nutzer so
+  entschieden). Das geteilte Blatt bleibt unberührt.
 - **Ausgabe leert den Nachweis** (`delete DAT[k]` in `ausgeben`). Alles, was
   danach noch gelten soll, braucht einen eigenen Vermerk, z. B.
   `DAT.sprinkler.wocheAus` für den erledigten Wochengang (v1.102).

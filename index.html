@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.138 30.09.2026 Blattvorschau: eigenes Zoomen. Beim Öffnen passt der Bogen
+         genau in die Breite, zwei Finger vergrößern nur das Blatt (bis
+         dreifach), Kopf- und Fußleiste bleiben stehen. Bisher vergrößerte
+         das Kneifen von Safari die ganze Seite samt Bedienelementen – seit
+         dem festen Gerüst traf es nicht mehr nur den Bogen.
   v1.137 30.09.2026 Übersicht: Sammelmarken lösen sich früher. Gezählt wird nur,
          ob der farbige Kreis einer Marke die Ziffern der anderen trifft (der
          weiße Ring darüber stört nicht), und die Breite der Nummer wird in
@@ -2339,14 +2344,12 @@ button > .ortIcon:only-child{display:block;margin:auto}
 /* --- Blattvorschau ---------------------------------------------------------
    Aufbau wie im E-Assistenten: 1024 px breiter Bogen, keine @page-Regel, damit
    die Umwandlung im Kurzbefehl den Bogen auf die Seitenbreite einpasst. */
-/* Die Ausnahme vom Zoomverbot: der Bogen ist 1024 px breit, auf dem Telefon
-   sieht man also immer einen Ausschnitt und muss ihn groesser ziehen koennen.
-   pinch-zoom ausdruecklich dazu, den Doppeltipp laesst die Aufzaehlung weg. */
+/* Eigener Zoom (v1.138): Safaris Kneifen vergrößerte seit dem festen Gerüst
+   (v1.94) die ganze Seite samt Kopf- und Fußleiste. Jetzt wird nur der Inhalt
+   des Rahmens vergrößert (zoom über --blattZoom), der Rahmen selbst bleibt und
+   rollt seitlich; Kneifen des Systems ist hier wie überall aus. */
 #blattWrap{background:#555;padding:12px;overflow:auto}
-/* Auch die Kinder ausdruecklich: entscheidend ist die Angabe an dem Element,
-   auf dem die Finger aufsetzen – das ist der Bogen, nicht sein Rahmen. Stuende
-   dort die globale Regel, bliebe das Kneifen trotz der Ausnahme weg. */
-#blattWrap, #blattWrap *{touch-action:pan-x pan-y pinch-zoom}
+#blattWrap > *{zoom:var(--blattZoom, 1)}
 /* Über dem Plan steht nur noch eine Zeile: links, wonach gesucht wird, rechts
    der Name des Plans – als Text, gewechselt wird über die Kopfzeile. */
 #view-plan{margin-top:-8px}
@@ -3117,7 +3120,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.137';
+const VERSION = 'v1.138';
 const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4235,7 +4238,7 @@ let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nach
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
    nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
    Weg, den WebKit selbst anbietet. Ausgenommen bleiben der Grundriss – er zoomt
-   mit eigenen Mitteln – und die Blattvorschau, wo der 1024er Bogen steht.
+   mit eigenen Mitteln. Die Blattvorschau zoomt seit v1.138 ebenfalls selbst.
    Das Trackpad der iPad-Tastatur erreicht beides nicht: iPadOS behandelt sein
    Kneifen oberhalb der Seite, die erfährt davon nichts. Versucht wurde es in
    v1.09 über Strg-Rollen, ohne Wirkung; der Versuch ist wieder draußen. Wer auf
@@ -4243,7 +4246,7 @@ let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nach
    Auflösung (siehe GROSSER_SCHIRM weiter unten). */
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(art =>
   document.addEventListener(art, e => {
-    if(current === 'plan' || current === 'blatt') return;
+    if(current === 'plan') return;
     if(e.cancelable) e.preventDefault();
   }, {passive:false}));
 function go(name, push = true){
@@ -4304,8 +4307,61 @@ function go(name, push = true){
   if(name === 'plaene')   renderPlaeneWahl();
   if(name === 'settings') renderSettings();
   if(name === 'setsub')   renderSetSub();
+  if(name === 'blatt')    requestAnimationFrame(blattEinpassen);
   renderBar();
 }
+/* --- Zoom der Blattvorschau (v1.138, vom Nutzer so gewünscht) ---------------
+   Beim Öffnen passt der Bogen genau in die Breite; zwei Finger vergrößern bis
+   zur dreifachen Originalgröße, kleiner als eingepasst geht es nicht. Der Punkt
+   zwischen den Fingern bleibt stehen – waagrecht rollt der Rahmen, senkrecht
+   das Bild. Das ausgegebene Blatt bleibt, wie es ist. */
+let blattZoom = 1, blattPass = 1, blattPasst = true;
+const BLATT_MAX = 3;
+function blattEinpassen(){
+  const w = $('#blattWrap'); if(!w || current !== 'blatt') return;
+  const pad = parseFloat(getComputedStyle(w).paddingLeft) || 0;
+  w.style.setProperty('--blattZoom', 1);
+  const breit = Math.max(1, w.scrollWidth - 2 * pad), frei = w.clientWidth - 2 * pad;
+  blattPass = Math.min(1, frei / breit);
+  blattZoom = blattPass; blattPasst = true;
+  w.style.setProperty('--blattZoom', blattZoom);
+  w.scrollLeft = 0;
+}
+window.addEventListener('resize', () => { if(current === 'blatt' && blattPasst) blattEinpassen(); });
+(function blattZoomBinden(){
+  const w = $('#blattWrap'); if(!w) return;
+  const abstand = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  const mitte = t => [(t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2];
+  /* Gerechnet wird am ersten Bogen selbst – er steht mal mittig, mal links,
+     der Rahmen allein sagt das nicht. Blätter aus der Historie stecken in
+     einem eigenen Schatten-Baum. */
+  const bogen = () => { const k = w.firstElementChild; if(!k) return null;
+    return (k.shadowRoot && k.shadowRoot.querySelector('.paper')) || (k.classList.contains('paper') ? k : k.querySelector('.paper')) || k; };
+  /* Gemerkt wird die Stelle im Bogen beim Aufsetzen, in Originalgröße – jeder
+     Schritt rechnet von ihr aus. Schritt für Schritt ginge der Anfang verloren,
+     solange der eingepasste Bogen noch nicht rollen kann. */
+  let d0 = 0, anker = null;
+  w.addEventListener('touchstart', e => {
+    const bg = bogen();
+    if(e.touches.length !== 2 || !bg){ anker = null; return; }
+    const t = e.touches, [mx, my] = mitte(t), q = bg.getBoundingClientRect();
+    d0 = abstand(t) || 1;
+    anker = {z0:blattZoom, x:(mx - q.left) / blattZoom, y:(my - q.top) / blattZoom};
+  }, {passive:true});
+  w.addEventListener('touchmove', e => {
+    if(e.touches.length !== 2 || !anker) return;
+    e.preventDefault();
+    const t = e.touches, neu = Math.min(BLATT_MAX, Math.max(blattPass, anker.z0 * abstand(t) / d0));
+    const [mx, my] = mitte(t);
+    blattZoom = neu; blattPasst = Math.abs(neu - blattPass) < .001;
+    w.style.setProperty('--blattZoom', blattZoom);
+    const bg = bogen(); if(!bg) return;
+    const q = bg.getBoundingClientRect();
+    w.scrollLeft += q.left - (mx - anker.x * neu);
+    bildNach(bildY() + q.top - (my - anker.y * neu));
+  }, {passive:false});
+  w.addEventListener('touchend', e => { if(e.touches.length < 2) anker = null; }, {passive:true});
+})();
 function zurueck(){
   if(current === 'home'){ go('settings'); return; }     // Startseite: Einstellungen
   const p = stack.pop();
@@ -14804,7 +14860,7 @@ function blattAusHistorie(e){
   const traeger = document.createElement('div');
   wrap.appendChild(traeger);
   const stil = m[1].replace(/:root/g, ':host')
-    + '\n*{touch-action:pan-x pan-y pinch-zoom}\n.paper + .paper{margin-top:12px}';
+    + '\n.paper + .paper{margin-top:12px}';
   if(traeger.attachShadow) traeger.attachShadow({mode:'open'}).innerHTML = `<style>${stil}</style>${m[2]}`;
   else traeger.innerHTML = m[2];
   go('blatt');
