@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.129 30.09.2026 Grundriss, Marke verschieben: Sie rastet an den Nachbarmarken
+         derselben Art ein – fast gleiche Höhe oder fast senkrecht darüber wird
+         genau gleich, und liegen schon zwei in einer Reihe, auch der gleiche
+         Abstand. Eine orange Linie (auch in der Lupe) zeigt es an. So lassen
+         sich nebeneinander hängende Feuerlöscher sauber aufreihen. Wer
+         woanders hin will, zieht einfach weiter; abschaltbar unter
+         Einstellungen › Grundrisse.
   v1.128 29.09.2026 Akkutypen in den Einstellungen: Pfeile und Löschen stehen
          mit Typ und Jahren in einer Zeile – die Angaben sind kurz, die
          zweite Zeile war nur Platzverbrauch. „Bezeichnung“ heißt dort jetzt
@@ -2499,6 +2506,12 @@ button > .ortIcon:only-child{display:block;margin:auto}
    waren sie unsichtbar). Sie werden mit dem Plan vergrößert (v1.126, so vom
    Nutzer gewünscht) – im selben Verhältnis zum Plan wie außerhalb der Lupe. */
 #planLupe .lupeInnen .marke{pointer-events:none}
+/* Hilfslinie beim Einrasten (v1.129): über den ganzen Plan, unter den Marken. */
+.fangLinie{position:absolute;z-index:2;pointer-events:none;background:#E8590C;opacity:.85}
+.fangLinie.waag{left:0;right:0;height:1px;margin-top:-.5px}
+.fangLinie.senk{top:0;bottom:0;width:1px;margin-left:-.5px}
+#planLupe .fangLinie.waag{height:.5px;margin-top:-.25px}
+#planLupe .fangLinie.senk{width:.5px;margin-left:-.25px}
 #planLupe .kreuz{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px}
 #planLupe .kreuz::before,#planLupe .kreuz::after{content:'';position:absolute;background:#E8590C;box-shadow:0 0 0 1px rgba(255,255,255,.8)}
 #planLupe .kreuz::before{left:12px;top:0;width:2px;height:26px}
@@ -2973,6 +2986,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
         <div class="infozeile"><span class="muted small"></span><button type="button" class="info" aria-label="Erklärung" aria-expanded="false" aria-controls="infPlaene"><span>i</span></button></div>
         <p class="muted small infotext" id="infPlaene" hidden style="margin:-2px 0 12px">Bild oder PDF; eine mehrseitige PDF ergibt einen Plan je Seite, zum Umwandeln ist einmal Netz nötig. Die Reihenfolge folgt der Etage im Namen, mit den Pfeilen legst du sie selbst fest. „Ausrichten“: auf jedem Plan dieselben zwei Stellen antippen, etwa zwei Ecken des Treppenhauses – dann sitzen Aufzugsmarken auf allen Etagen richtig, und am Regler wird zwischen den Plänen überblendet. Die Pläne reisen mit der Sicherung.</p>
         <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="tonHaken"><span>Töne am Regler</span></label>
+        <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="einrastHaken"><span>Marken beim Verschieben einrasten</span></label>
         <button class="btn ghost klein" id="btnPlanNeu" style="margin:0 0 10px">+ Grundriss hinzufügen</button>
         <div id="planListe"><p class="muted small">wird geladen …</p></div>
         <input type="file" id="planFile" accept="image/*,application/pdf,.pdf" hidden>
@@ -3036,8 +3050,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.128';
-const BUILD   = VERSION + ' · 29.09.2026';
+const VERSION = 'v1.129';
+const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -10476,7 +10490,7 @@ function renderSetSub(){
   $('#blockGeraet').hidden = a !== 'geraet';
   $('#blockZugang').hidden = a !== 'zugang';
   dyn.innerHTML = '';
-  if(a === 'plaene'){ $('#tonHaken').checked = tonAn(); renderPlaene(); return; }
+  if(a === 'plaene'){ $('#tonHaken').checked = tonAn(); $('#einrastHaken').checked = einrastenAn(); renderPlaene(); return; }
   if(a === 'geraet'){ sicherStandZeigen(); return; }
   if(a === 'zugang') return;
   if(a === 'obj')   { setObjekt(dyn);   return; }
@@ -12754,6 +12768,8 @@ function tonTick(){
   const rg = $('#planRegler'), h = $('#tonHaken');
   if(rg) ['pointerdown', 'touchend', 'click', 'keydown'].forEach(art =>
     rg.addEventListener(art, tonBereit, {passive:true}));
+  const eh = $('#einrastHaken');
+  if(eh) eh.onchange = e => Store.set('nwEinrasten', e.target.checked);
   if(h) h.onchange = e => {
     Store.set('nwReglerTon', e.target.checked);
     if(e.target.checked){ tonBereit(); setTimeout(tonTick, 60); }   // gleich zum Hören
@@ -12985,6 +13001,60 @@ $('#planBox').oncontextmenu = e => e.preventDefault();
    Plan, nicht in der Überblendung. */
 let planGezogen = false, zug = null;
 const ZUG_FANG = 22, ZUG_START = 8, LUPE = 130, LUPE_FAKTOR = 3;
+/* Einrasten (v1.129, vom Nutzer so gewünscht): Liegt die gezogene Marke fast
+   auf gleicher Höhe oder fast senkrecht über einer Nachbarmarke derselben Art,
+   springt sie genau auf deren Linie; liegen dort schon zwei, rastet sie auch
+   beim gleichen Abstand ein. So entstehen saubere Reihen nebeneinander
+   hängender Feuerlöscher. Der Fang ist klein – wer woanders hin will, zieht
+   einfach weiter. Eine orange Linie zeigt, woran sie hängt. Abschaltbar unter
+   Einstellungen › Grundrisse (nur dieses Gerät). */
+const FANG = 7;
+const einrastenAn = () => Store.get('nwEinrasten', true) !== false;
+function markeFangen(x, y, box, r){
+  const andere = [...box.querySelectorAll('.marke.andere')].map(m => ({
+    x:r.left + parseFloat(m.style.left) / 100 * r.width,
+    y:r.top + parseFloat(m.style.top) / 100 * r.height}));
+  if(!andere.length) return null;
+  /* Je Achse die nächste Linie im Fang: erst die Reihe (gleiche Höhe bzw.
+     gleiche Senkrechte), darin dann der gleiche Abstand zu den Nachbarn. */
+  const achse = (a, b) => {
+    let linie = null, bd = FANG;
+    andere.forEach(o => { const d = Math.abs(o[a] - (a === 'x' ? x : y)); if(d < bd){ bd = d; linie = o[a]; } });
+    return linie;
+  };
+  const ly = achse('y'), lx = achse('x');
+  let nx = lx, ny = ly, abstand = null;
+  /* Gleicher Abstand in der Reihe: an beiden Enden eine Lücke weiter. */
+  const reihe = (a, b, wert, eigen) => {
+    const r2 = andere.filter(o => Math.abs(o[b] - wert) < 1.5).map(o => o[a]).sort((p, q) => p - q);
+    if(r2.length < 2) return null;
+    const ziele = [r2[0] - (r2[1] - r2[0]), r2[r2.length - 1] + (r2[r2.length - 1] - r2[r2.length - 2])];
+    let best = null, bd = FANG;
+    ziele.forEach(z => { const d = Math.abs(z - eigen); if(d < bd){ bd = d; best = z; } });
+    return best;
+  };
+  if(ly != null){ const z = reihe('x', 'y', ly, x); if(z != null){ nx = z; abstand = 'x'; } }
+  if(lx != null && abstand == null){ const z = reihe('y', 'x', lx, y); if(z != null){ ny = z; abstand = 'y'; } }
+  if(nx == null && ny == null) return null;
+  const linien = [];
+  if(ny != null && (ly != null)) linien.push({art:'waag', wert:(ny - r.top) / r.height});
+  if(nx != null && (lx != null || abstand === 'x')) linien.push({art:'senk', wert:(nx - r.left) / r.width, nurMarke: lx == null});
+  return {x:nx != null ? nx : x, y:ny != null ? ny : y, linien};
+}
+/* Die Hilfslinien liegen im Plan und – da die Lupe nur beim Öffnen abkupfert –
+   auch in der Lupe; beide werden bei jedem Schritt neu gesetzt. */
+function fangLinienZeigen(linien){
+  [$('#planBox'), $('#planLupe .lupeInnen')].forEach(ort => {
+    if(!ort) return;
+    ort.querySelectorAll('.fangLinie').forEach(l => l.remove());
+    linien.filter(l => !l.nurMarke).forEach(l => {
+      const d = document.createElement('div');
+      d.className = 'fangLinie ' + l.art;
+      d.style[l.art === 'waag' ? 'top' : 'left'] = (l.wert * 100) + '%';
+      ort.appendChild(d);
+    });
+  });
+}
 function zugZiel(x, y){
   const id = planAktuell, box = $('#planBox');
   if(!id || !box || !$('#planBox .ebenen') || sichtbarePlaene().length > 1) return null;
@@ -13092,8 +13162,13 @@ function zugFolgen(fx, fy){
     if(zug.art !== 'schnitt') zug.el.classList.add('gezogen');
     tippWeg();
   }
-  const x = fx + zug.ox, y = fy + zug.oy;
+  let x = fx + zug.ox, y = fy + zug.oy;
   const box = $('#planBox'), r = box.getBoundingClientRect();
+  /* Einrasten an den Nachbarmarken (v1.129). */
+  const fang = zug.art === 'marke' && einrastenAn() ? markeFangen(x, y, box, r) : null;
+  if(fang){ x = fang.x; y = fang.y; }
+  zug.fang = fang ? {x:(x - r.left) / r.width, y:(y - r.top) / r.height} : null;
+  if(zug.art === 'marke') fangLinienZeigen(fang ? fang.linien : []);
   if(zug.art === 'schnitt'){
     const f = {x:Math.min(1, Math.max(0, (x - r.left) / r.width)), y:Math.min(1, Math.max(0, (y - r.top) / r.height))};
     schnittSetzen(zug.g, ausRahmen(planAktuell, f.x, f.y));
@@ -13110,13 +13185,17 @@ function zugFolgen(fx, fy){
   if(fy < wr.top + rand) w.scrollTop -= schritt; else if(fy > wr.bottom - rand) w.scrollTop += schritt;
 }
 function zugEnden(e){
-  const z = zug; zug = null; lupeWeg();
+  const z = zug; zug = null; lupeWeg(); fangLinienZeigen([]);
   if(!z) return;
   clearTimeout(z.uhr);
   if(z.halten || z.laeuft){ planGezogen = true; setTimeout(() => { planGezogen = false; }, 400); }
   if(!z.laeuft){ z.el.classList.remove('gehoben'); return; }
   if(z.art === 'schnitt'){ planHinweisen(); return; }
-  const id = planAktuell, p = planPunkt({clientX:e.clientX + z.ox, clientY:e.clientY + z.oy});
+  /* Eingerastet: genau dort, wo die Marke zuletzt stand – nicht, wo der
+     Finger beim Abheben ein Stück weitergerutscht ist. */
+  const id = planAktuell, p = z.fang
+    ? (q => ({x:Math.min(1, Math.max(0, q.x)), y:Math.min(1, Math.max(0, q.y))}))(ausRahmen(id, z.fang.x, z.fang.y))
+    : planPunkt({clientX:e.clientX + z.ox, clientY:e.clientY + z.oy});
   if(z.art === 'marke'){
     const key = planZiel.key, vorher = CFG.orte[key] ? Object.assign({}, CFG.orte[key]) : null;
     const etVorher = CFG.etagen && CFG.etagen[key] ? CFG.etagen[key].slice() : null;

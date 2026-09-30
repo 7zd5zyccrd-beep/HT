@@ -171,3 +171,10 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   Marke → Karte zu, Liste oben; sonst Karte offen, gleiche Stelle, gleiche
   Reihenfolge (`objPlanWeg.basis`). Standort-Kacheln rollen nur bei Eingabe
   oder Tipp ins Bild, nie beim Aufbau.
+
+- Einrasten (v1.129): `markeFangen` beim Ziehen einer Marke – gleiche Höhe/
+  Senkrechte wie eine Nachbarmarke (`.marke.andere`, also dieselbe Art) und
+  gleicher Abstand in einer Reihe, Fang `FANG` px auf dem Schirm, Linien
+  `.fangLinie` in Plan und Lupe. Schalter `nwEinrasten` (nur Gerät) unter
+  Einstellungen › Grundrisse. Nächster Schritt nach Rückmeldung: Einrasten an
+  der Wand (dunkle Linie im Planbild suchen).
