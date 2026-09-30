@@ -186,7 +186,10 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   Ausreißer (klappt bei Schraffur und Schräge), Länge ≥ 1,5 R; keine
   Dickeprüfung. Bis 5° wird waagrecht/senkrecht genau. Steht die Marke schon
   auf der Höhe ihrer Reihe (`fang.hatX/hatY`), geht die Reihe vor.
-  Linie `.fangLinie.wand`.
+  Linie `.fangLinie.wand`. v1.134: Schraffur wird geschlossen (zweimal
+  ausweiten/zurücknehmen), Schieberichtung (bis 70°) vor Tiefe; nicht
+  angewählte Marken (`.andere`) so groß wie die angewählte (26 px), damit
+  Bündiges bündig bleibt; in der Reihe rastet sie auch Ring an Ring ein.
 
 - Umschalten (v1.130): langer Druck (`UMSCHALT_MS`) auf eine Nachbarmarke
   beim Verorten → `markeUmschalten` setzt `planZiel` auf sie, danach im
@@ -195,8 +198,9 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   `data-key`. Nicht in der Übersicht (vom Nutzer so entschieden).
 
 - Sammelmarken (v1.132): `sammelnAuffrischen` fasst in der Übersicht
-  Nummernmarken zusammen, die sich bei der aktuellen Zoomstufe berühren
-  (`SAMMEL_NAH`, Schirmpixel) – auch verschiedene Arten. Linie → `.kapsel`
+  Nummernmarken zusammen, sobald eine die Ziffern der anderen verdecken würde
+  (`sammelNoetig`, Schirmpixel, seit v1.134; überlappende Kreise allein
+  reichen nicht) – auch verschiedene Arten. Linie → `.kapsel`
   gedreht (Ziffern über `--gegen` aufrecht), sonst `.kaestchen` mit Zeilen.
   Neu bei Zoom (`planZoomAnwenden`), Überblendung (`markenGewichte`) und
   Aufbau. Tipp nennt alle. Nicht im Blatt (vom Nutzer so entschieden).

@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.134 30.09.2026 Grundriss: Nicht angewählte Marken haben jetzt dieselbe Größe
+         wie die angewählte – was bündig an Wand oder Nachbar gesetzt ist,
+         liegt auch so da, ohne Spalt. Beim Verschieben rastet die Marke in
+         der Reihe auch Ring an Ring am Nachbarn ein. An der Wand gilt die
+         Linie in Schieberichtung vor einer, die nur tiefer berührt wird, und
+         Schraffur wird als volle Wand gelesen – die schräge Wand gewinnt
+         nicht mehr gegen die glatte Linie dahinter. Übersicht: Sammelmarken
+         lösen sich schon, sobald jede Nummer ganz lesbar ist, auch wenn die
+         Kreise sich noch überlappen.
   v1.133 30.09.2026 Anlegen an die Wand überarbeitet: Die Marke rastet nur noch an
          einer Linie ein, die ihr Ring berührt oder überdeckt – man drückt sie
          an die gemeinte Linie, eine entferntere zieht nicht mehr weg. Berührt
@@ -2479,7 +2488,7 @@ button > .ortIcon:only-child{display:block;margin:auto}
   /* --w: wie stark der Plan dieser Marke gerade steht (Überblendung). */
   opacity:var(--w, 1);
 }
-:is(#planBox,#planLupe) .marke.andere{width:20px;height:20px;margin:-10px 0 0 -10px;opacity:calc(.62 * var(--w, 1))}
+:is(#planBox,#planLupe) .marke.andere{opacity:calc(.62 * var(--w, 1))}   /* volle Größe (v1.134): liegt bündig an Wand und Nachbar wie gesetzt */
 /* Die Farbe sagt den Prüfstand: grün geprüft, gelb in dieser Runde noch offen,
    rot offen und die Frist läuft ab. Es sind dieselben drei Farben wie bei den
    Ringen der Startseite – dort steht der Nachweis, hier das einzelne Objekt.
@@ -3091,7 +3100,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.133';
+const VERSION = 'v1.134';
 const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -12112,7 +12121,16 @@ function markenGewichte(){
    Kästchen mit Zeilen von oben nach unten. Hineinzoomen löst sie wieder auf.
    Gerechnet wird in Schirmpixeln, neu bei Zoom, Größe und Überblendung. Nur in
    der Übersicht; beim Verorten braucht man jede Marke einzeln. */
-const SAMMEL_NAH = 26;        // zwei Nummernmarken samt weißem Ring berühren sich
+/* Gesammelt wird erst, wenn eine Marke die Ziffern der anderen verdecken
+   würde (v1.134) – überlappende Kreise allein stören nicht, solange jede
+   Nummer ganz lesbar bleibt. Die Ziffern: je etwa 7 px breit, 9 px hoch. */
+const SAMMEL_RING = 13;       // Kreis 22 px samt weißem Ring
+const zifferHalb = t => ({w:String(t).length * 3.6 + .5, h:4.5});
+const sammelNoetig = (a, b) => {
+  const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || .001, ux = Math.abs(dx / d), uy = Math.abs(dy / d);
+  const ausdehnung = m => { const z = zifferHalb(m.m.textContent); return ux * z.w + uy * z.h; };
+  return d < SAMMEL_RING + Math.max(ausdehnung(a), ausdehnung(b));
+};
 function sammelnAuffrischen(){
   const box = $('#planBox'); if(!box) return;
   box.querySelectorAll('.sammel').forEach(x => x.remove());
@@ -12124,7 +12142,7 @@ function sammelnAuffrischen(){
     w:parseFloat(m.style.getPropertyValue('--w')) || 1}));
   const wurzel = pt.map((p, i) => i), finde = i => wurzel[i] === i ? i : (wurzel[i] = finde(wurzel[i]));
   for(let i = 0; i < pt.length; i++) for(let j = i + 1; j < pt.length; j++)
-    if(Math.hypot(pt[i].x - pt[j].x, pt[i].y - pt[j].y) < SAMMEL_NAH) wurzel[finde(i)] = finde(j);
+    if(sammelNoetig(pt[i], pt[j])) wurzel[finde(i)] = finde(j);
   const gruppen = new Map();
   pt.forEach((p, i) => { const w = finde(i); (gruppen.get(w) || gruppen.set(w, []).get(w)).push(p); });
   gruppen.forEach(g => {
@@ -13134,8 +13152,11 @@ function markeFangen(x, y, box, r){
   /* Gleicher Abstand in der Reihe: an beiden Enden eine Lücke weiter. */
   const reihe = (a, b, wert, eigen) => {
     const r2 = andere.filter(o => Math.abs(o[b] - wert) < 1.5).map(o => o[a]).sort((p, q) => p - q);
-    if(r2.length < 2) return null;
-    const ziele = [r2[0] - (r2[1] - r2[0]), r2[r2.length - 1] + (r2[r2.length - 1] - r2[r2.length - 2])];
+    if(!r2.length) return null;
+    /* Bündig an jeden Nachbarn der Reihe (v1.134), Ring an Ring … */
+    const ziele = r2.flatMap(v => [v - 2 * MARKE_R, v + 2 * MARKE_R]);
+    /* … und der gleiche Abstand an beiden Enden. */
+    if(r2.length >= 2) ziele.push(r2[0] - (r2[1] - r2[0]), r2[r2.length - 1] + (r2[r2.length - 1] - r2[r2.length - 2]));
     let best = null, bd = FANG;
     ziele.forEach(z => { const d = Math.abs(z - eigen); if(d < bd){ bd = d; best = z; } });
     return best;
@@ -13192,7 +13213,25 @@ function wandFangen(x, y, r, richtung, tiefer){
     const o = (cy * cw + cx) * 4;
     dunkel[(j + S) * N + i + S] = d[o] * .3 + d[o + 1] * .59 + d[o + 2] * .11 < WAND_DUNKEL ? 1 : 0;
   }
-  const an = (i, j) => { i = Math.round(i); j = Math.round(j); return Math.abs(i) <= S && Math.abs(j) <= S && dunkel[(j + S) * N + i + S] === 1; };
+  /* Schraffur schließen (v1.134): helle Lücken bis etwa 4 px zwischen dunklen
+     Stellen werden dunkel – zweimal ausweiten, zweimal zurücknehmen. Kanten
+     bleiben, wo sie sind; das Innere einer schraffierten Wand wird voll. */
+  const schritt = (quelle, weiten) => {
+    const aus = new Uint8Array(N * N);
+    for(let j = 0; j < N; j++) for(let i = 0; i < N; i++){
+      let v = weiten ? 0 : 1;
+      for(let b = -1; b <= 1 && (weiten ? !v : v); b++) for(let a = -1; a <= 1; a++){
+        const ii = i + a, jj = j + b;
+        const q = ii < 0 || jj < 0 || ii >= N || jj >= N ? (weiten ? 0 : 1) : quelle[jj * N + ii];
+        if(weiten && q){ v = 1; break; }
+        if(!weiten && !q){ v = 0; break; }
+      }
+      aus[j * N + i] = v;
+    }
+    return aus;
+  };
+  const dicht = schritt(schritt(schritt(schritt(dunkel, true), true), false), false);
+  const an = (i, j) => { i = Math.round(i); j = Math.round(j); return Math.abs(i) <= S && Math.abs(j) <= S && dicht[(j + S) * N + i + S] === 1; };
   /* Steht die Mitte schon auf der Wand: von der nächsten hellen Stelle aus
      noch einmal suchen – die Marke kommt auf die Seite, auf der sie ist. */
   if(an(0, 0)){
@@ -13227,7 +13266,12 @@ function wandFangen(x, y, r, richtung, tiefer){
   if(!beruehrt.length) return null;
   const ri = richtung && Math.hypot(richtung[0], richtung[1]) > .1 ? Math.atan2(richtung[1], richtung[0]) : null;
   const nahe = (a, b) => { let dd = Math.abs(a - b) % (2 * Math.PI); return dd > Math.PI ? 2 * Math.PI - dd : dd; };
-  beruehrt.sort((a, b) => Math.abs(a.t - b.t) > 1.5 || ri == null ? a.t - b.t : nahe(a.w, ri) - nahe(b.w, ri));
+  /* Wohin geschoben wird, das ist gemeint (v1.134): unter den Berührungen in
+     Schieberichtung (bis 70° daneben) die nächstliegende Richtung; sonst die
+     tiefste. Vorher gewann die tiefere – eine glatte Linie hinter der Marke
+     schlug so die schraffierte Wand, gegen die gedrückt wurde. */
+  const vorn = ri == null ? [] : beruehrt.filter(b => nahe(b.w, ri) < 1.22).sort((a, b) => nahe(a.w, ri) - nahe(b.w, ri));
+  if(vorn.length) beruehrt.unshift(vorn[0]); else beruehrt.sort((a, b) => a.t - b.t);
   /* Die Gerade durch die vorderste Kante: ein Fächer von ±75° um die gewählte
      Berührung, so weit, dass eine gerade Wand in jeder Richtung erreicht wird. */
   const b0 = beruehrt[0], pkt = [];
