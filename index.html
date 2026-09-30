@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.137 30.09.2026 Übersicht: Sammelmarken lösen sich früher. Gezählt wird nur,
+         ob der farbige Kreis einer Marke die Ziffern der anderen trifft (der
+         weiße Ring darüber stört nicht), und die Breite der Nummer wird in
+         der echten Schrift gemessen. Vorher blieben Ring an Ring gesetzte
+         Marken gesammelt, obwohl jede Nummer lesbar gewesen wäre.
   v1.136 30.09.2026 Grundriss: Die angewählte Marke ist so groß wie die übrigen.
          Sie hebt sich weiter durch gefüllten Kern, weißen Ring und Puls ab,
          liegt jetzt aber auch selbst bündig an Wand und Nachbar statt
@@ -3112,7 +3117,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.136';
+const VERSION = 'v1.137';
 const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -12135,12 +12140,32 @@ function markenGewichte(){
    der Übersicht; beim Verorten braucht man jede Marke einzeln. */
 /* Gesammelt wird erst, wenn eine Marke die Ziffern der anderen verdecken
    würde (v1.134) – überlappende Kreise allein stören nicht, solange jede
-   Nummer ganz lesbar bleibt. Die Ziffern: je etwa 7 px breit, 9 px hoch. */
-const SAMMEL_RING = 13;       // Kreis 22 px samt weißem Ring
-const zifferHalb = t => ({w:String(t).length * 3.6 + .5, h:4.5});
+   Nummer ganz lesbar bleibt. Verdeckt wird nur vom roten Kreis des Nachbarn
+   (Halbmesser 11) – sein weißer Ring liegt über den weißen Ziffern und stört
+   nicht (v1.137; vorher zählte er mit, dazu grob geschätzte Ziffern, und Marken
+   Ring an Ring blieben gesammelt, obwohl alles lesbar war). Die Breite der
+   Nummer wird in der echten Schrift gemessen, die Höhe der Ziffern ist 9 px. */
+const SAMMEL_RING = 11;
+const zifferMass = new Map();
+let zifferLeinwand = null;
+const zifferHalb = (t, m) => {
+  const s = String(t);
+  if(!zifferMass.has(s)){
+    let w = s.length * 3.6 + .5;
+    try{
+      if(!zifferLeinwand) zifferLeinwand = document.createElement('canvas').getContext('2d');
+      const cs = getComputedStyle(m);
+      zifferLeinwand.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const b = zifferLeinwand.measureText(s).width;
+      if(b > 0) w = b / 2 + .5;
+    }catch(e){}
+    zifferMass.set(s, w);
+  }
+  return {w:zifferMass.get(s), h:4.5};
+};
 const sammelNoetig = (a, b) => {
   const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || .001, ux = Math.abs(dx / d), uy = Math.abs(dy / d);
-  const ausdehnung = m => { const z = zifferHalb(m.m.textContent); return ux * z.w + uy * z.h; };
+  const ausdehnung = m => { const z = zifferHalb(m.m.textContent, m.m); return ux * z.w + uy * z.h; };
   return d < SAMMEL_RING + Math.max(ausdehnung(a), ausdehnung(b));
 };
 function sammelnAuffrischen(){

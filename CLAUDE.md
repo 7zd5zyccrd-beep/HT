@@ -201,7 +201,9 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
 - Sammelmarken (v1.132): `sammelnAuffrischen` fasst in der Übersicht
   Nummernmarken zusammen, sobald eine die Ziffern der anderen verdecken würde
   (`sammelNoetig`, Schirmpixel, seit v1.134; überlappende Kreise allein
-  reichen nicht) – auch verschiedene Arten. Linie → `.kapsel`
+  reichen nicht; seit v1.137 zählt nur der farbige Kreis, Halbmesser 11,
+  und die Nummernbreite wird per `measureText` gemessen) – auch verschiedene
+  Arten. Linie → `.kapsel`
   gedreht (Ziffern über `--gegen` aufrecht), sonst `.kaestchen` mit Zeilen.
   Neu bei Zoom (`planZoomAnwenden`), Überblendung (`markenGewichte`) und
   Aufbau. Tipp nennt alle. Nicht im Blatt (vom Nutzer so entschieden).
