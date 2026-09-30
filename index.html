@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.135 30.09.2026 Grundriss: Nicht angewählte Marken wieder in ihrer kleineren
+         Größe. Angelegt wird jetzt so, dass genau diese kleine Marke bündig
+         an der Wand und Ring an Ring am Nachbarn liegt; die größere
+         angewählte ragt dabei etwas hinein. In der Lupe erscheint die
+         gezogene Marke ebenfalls klein, so wie sie danach im Plan liegt.
   v1.134 30.09.2026 Grundriss: Nicht angewählte Marken haben jetzt dieselbe Größe
          wie die angewählte – was bündig an Wand oder Nachbar gesetzt ist,
          liegt auch so da, ohne Spalt. Beim Verschieben rastet die Marke in
@@ -2488,7 +2493,7 @@ button > .ortIcon:only-child{display:block;margin:auto}
   /* --w: wie stark der Plan dieser Marke gerade steht (Überblendung). */
   opacity:var(--w, 1);
 }
-:is(#planBox,#planLupe) .marke.andere{opacity:calc(.62 * var(--w, 1))}   /* volle Größe (v1.134): liegt bündig an Wand und Nachbar wie gesetzt */
+:is(#planBox,#planLupe) .marke.andere{width:20px;height:20px;margin:-10px 0 0 -10px;opacity:calc(.62 * var(--w, 1))}
 /* Die Farbe sagt den Prüfstand: grün geprüft, gelb in dieser Runde noch offen,
    rot offen und die Frist läuft ab. Es sind dieselben drei Farben wie bei den
    Ringen der Startseite – dort steht der Nachweis, hier das einzelne Objekt.
@@ -3100,7 +3105,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.134';
+const VERSION = 'v1.135';
 const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -13154,7 +13159,7 @@ function markeFangen(x, y, box, r){
     const r2 = andere.filter(o => Math.abs(o[b] - wert) < 1.5).map(o => o[a]).sort((p, q) => p - q);
     if(!r2.length) return null;
     /* Bündig an jeden Nachbarn der Reihe (v1.134), Ring an Ring … */
-    const ziele = r2.flatMap(v => [v - 2 * MARKE_R, v + 2 * MARKE_R]);
+    const ziele = r2.flatMap(v => [v - 2 * ANLAGE_R, v + 2 * ANLAGE_R]);
     /* … und der gleiche Abstand an beiden Enden. */
     if(r2.length >= 2) ziele.push(r2[0] - (r2[1] - r2[0]), r2[r2.length - 1] + (r2[r2.length - 1] - r2[r2.length - 2]));
     let best = null, bd = FANG;
@@ -13182,7 +13187,11 @@ function markeFangen(x, y, box, r){
    Gerade genug und mindestens eine Marke lang muss sie sein, sonst (Schrift,
    Punkte, Rundungen) wird nichts gerastet. Alle Maße in Schirmpixeln, die
    Marke ist dort immer gleich groß. */
-const MARKE_R = 13, WAND_BERUEHRT = 2, WAND_DUNKEL = 110;
+/* Zwei Maße (v1.135, vom Nutzer so gewünscht): Berührt wird mit der gezogenen,
+   größeren Marke (MARKE_R); angelegt wird so, dass die nicht angewählte,
+   kleinere (ANLAGE_R, 20 px) genau an Wand und Nachbar liegt. Die angewählte
+   ragt dann ein wenig hinein – das darf sie. */
+const MARKE_R = 13, ANLAGE_R = 10, WAND_BERUEHRT = 2, WAND_DUNKEL = 110;
 let wandLeinwand = null;
 function wandFangen(x, y, r, richtung, tiefer){
   const v = planVorrat.get(planAktuell), img = v && v.img;
@@ -13310,7 +13319,7 @@ function wandFangen(x, y, r, richtung, tiefer){
   if(dist < 0){ nx = -nx; ny = -ny; }
   const d0 = Math.abs(dist);
   const fx = -nx * d0, fy = -ny * d0;          // Fußpunkt auf der Kante
-  return {x:x + fx + nx * MARKE_R, y:y + fy + ny * MARKE_R, n:[nx, ny],
+  return {x:x + fx + nx * ANLAGE_R, y:y + fy + ny * ANLAGE_R, n:[nx, ny],
     linie:{art:'wand', x:(x + fx - r.left) / r.width, y:(y + fy - r.top) / r.height, winkel:Math.atan2(ty, tx)}};
 }
 /* Die Hilfslinien liegen im Plan und – da die Lupe nur beim Öffnen abkupfert –
@@ -13386,9 +13395,10 @@ function lupeZeigen(x, y){
     box.querySelectorAll('.marke').forEach(m => {
       const k = m.cloneNode(true);
       if(m === (zug && zug.el)){
-        /* Unangewählt, aber in voller Größe (v1.131): so sieht man in der Lupe,
-           dass der Ring die Wand genau berührt. */
-        k.classList.remove('aktiv', 'zieh', 'gezogen', 'gehoben', 'andere');
+        /* Unangewählt und so groß wie dann im Plan (v1.135): so sieht man in
+           der Lupe, dass der Ring Wand und Nachbarn genau berührt. */
+        k.classList.remove('aktiv', 'zieh', 'gezogen', 'gehoben');
+        if(!k.classList.contains('bezug')) k.classList.add('andere');
         k.dataset.lupeZug = '1';
       }
       innen.appendChild(k);
