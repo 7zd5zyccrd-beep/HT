@@ -10,6 +10,10 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.136 30.09.2026 Grundriss: Die angewählte Marke ist so groß wie die übrigen.
+         Sie hebt sich weiter durch gefüllten Kern, weißen Ring und Puls ab,
+         liegt jetzt aber auch selbst bündig an Wand und Nachbar statt
+         hineinzuragen. Greifen geht wie bisher im selben Umkreis.
   v1.135 30.09.2026 Grundriss: Nicht angewählte Marken wieder in ihrer kleineren
          Größe. Angelegt wird jetzt so, dass genau diese kleine Marke bündig
          an der Wand und Ring an Ring am Nachbarn liegt; die größere
@@ -2488,12 +2492,15 @@ button > .ortIcon:only-child{display:block;margin:auto}
    bei jeder Größe. Die eigene pulst langsam, die übrigen der Kategorie stehen
    still, damit man sieht, wo man ist, ohne die anderen zu verlieren. */
 :is(#planBox,#planLupe) .marke{
-  position:absolute;z-index:3;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
+  position:absolute;z-index:3;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;
   border:3px solid;color:#C0392B;background:rgba(192,57,43,.25);pointer-events:none;
   /* --w: wie stark der Plan dieser Marke gerade steht (Überblendung). */
   opacity:var(--w, 1);
 }
-:is(#planBox,#planLupe) .marke.andere{width:20px;height:20px;margin:-10px 0 0 -10px;opacity:calc(.62 * var(--w, 1))}
+/* Alle Marken gleich groß (v1.136, vom Nutzer so gewünscht): die eigene hebt
+   sich durch Kern, weißen Ring und Puls ab, nicht durch Größe – so liegt auch
+   sie bündig an Wand und Nachbar. Gegriffen wird ohnehin im Umkreis ZUG_FANG. */
+:is(#planBox,#planLupe) .marke.andere{opacity:calc(.62 * var(--w, 1))}
 /* Die Farbe sagt den Prüfstand: grün geprüft, gelb in dieser Runde noch offen,
    rot offen und die Frist läuft ab. Es sind dieselben drei Farben wie bei den
    Ringen der Startseite – dort steht der Nachweis, hier das einzelne Objekt.
@@ -3105,7 +3112,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.135';
+const VERSION = 'v1.136';
 const BUILD   = VERSION + ' · 30.09.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -13187,11 +13194,10 @@ function markeFangen(x, y, box, r){
    Gerade genug und mindestens eine Marke lang muss sie sein, sonst (Schrift,
    Punkte, Rundungen) wird nichts gerastet. Alle Maße in Schirmpixeln, die
    Marke ist dort immer gleich groß. */
-/* Zwei Maße (v1.135, vom Nutzer so gewünscht): Berührt wird mit der gezogenen,
-   größeren Marke (MARKE_R); angelegt wird so, dass die nicht angewählte,
-   kleinere (ANLAGE_R, 20 px) genau an Wand und Nachbar liegt. Die angewählte
-   ragt dann ein wenig hinein – das darf sie. */
-const MARKE_R = 13, ANLAGE_R = 10, WAND_BERUEHRT = 2, WAND_DUNKEL = 110;
+/* Berührt (MARKE_R) und angelegt (ANLAGE_R) wird mit derselben Größe, seit alle
+   Marken 20 px haben (v1.136); die beiden Namen bleiben, falls sich das je
+   wieder trennt (v1.135 war die angewählte größer). */
+const MARKE_R = 10, ANLAGE_R = 10, WAND_BERUEHRT = 2, WAND_DUNKEL = 110;
 let wandLeinwand = null;
 function wandFangen(x, y, r, richtung, tiefer){
   const v = planVorrat.get(planAktuell), img = v && v.img;
@@ -13248,7 +13254,7 @@ function wandFangen(x, y, r, richtung, tiefer){
     let best = null, bd = Infinity;
     for(let j = -S; j <= S; j++) for(let i = -S; i <= S; i++)
       if(!an(i, j) && i * i + j * j < bd){ bd = i * i + j * j; best = [i, j]; }
-    if(!best || bd > MARKE_R * MARKE_R) return null;
+    if(!best || bd > 4 * MARKE_R * MARKE_R) return null;
     const l = Math.sqrt(bd);
     return wandFangen(x + best[0] + best[0] / l * 3, y + best[1] + best[1] / l * 3, r, richtung, true);
   }

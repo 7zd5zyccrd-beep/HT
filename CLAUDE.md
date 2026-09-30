@@ -188,10 +188,9 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   auf der Höhe ihrer Reihe (`fang.hatX/hatY`), geht die Reihe vor.
   Linie `.fangLinie.wand`. v1.134: Schraffur wird geschlossen (zweimal
   ausweiten/zurücknehmen), Schieberichtung (bis 70°) vor Tiefe; in der Reihe
-  rastet sie auch Ring an Ring ein. v1.135 (vom Nutzer so gewünscht): nicht
-  angewählte Marken bleiben klein (20 px); angelegt wird für diese Größe
-  (`ANLAGE_R` = 10), berührt wird mit der gezogenen (`MARKE_R` = 13). Die
-  angewählte darf dann überlappen. In der Lupe ist die gezogene klein.
+  rastet sie auch Ring an Ring ein. v1.136 (vom Nutzer so gewünscht): alle
+  Marken 20 px, auch die angewählte (hebt sich nur durch Kern, Ring, Puls
+  ab); `MARKE_R` = `ANLAGE_R` = 10. In der Lupe ist die gezogene unangewählt.
 
 - Umschalten (v1.130): langer Druck (`UMSCHALT_MS`) auf eine Nachbarmarke
   beim Verorten → `markeUmschalten` setzt `planZiel` auf sie, danach im
