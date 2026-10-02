@@ -47,7 +47,12 @@ steht.
   stehen fest, gescrollt wird `#bild`. Bildlauf immer über `bild()`, `bildY()`,
   `bildNach(y)`, `imBild(el)` – nie `window.scrollTo`/`window.scrollY`.
 - **Statusleiste** `black` statt `black-translucent`: sonst legt iOS 27 einen
-  weißen Schleier an die Oberkante. Nicht zurückstellen.
+  weißen Schleier an die Oberkante. Nicht zurückstellen. Dazu gehört: kein
+  `theme-color`, und `header` behält `position:sticky;top:0`, auch wenn im
+  festen Gerüst nichts klebt – Safari färbt den Streifen hinter der Uhrzeit
+  nach dem Element, das oben klebt (im E-Assistenten v1.132 gelernt: ohne
+  `sticky` kam der Schleier zurück). Neu anlegen des Symbols ist dafür nicht
+  nötig.
 - **Speicher unter iOS:** Die App vom Home-Bildschirm hat einen eigenen
   Speicher, getrennt von Safari. Symbol entfernen löscht alle Daten – vorher
   immer über Einstellungen › Sicherung sichern lassen.
