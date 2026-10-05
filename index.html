@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.154 05.10.2026 Störungen mit Arbeitszeit (Wunsch von Jean). Im Feld der
+         Störung steht „Dauer (freiwillig)“, derselbe Wähler wie beim
+         Erledigen. Jede Störung erscheint an ihrem Tag im Arbeitsnachweis,
+         auch ohne Dauer; „Ändern“ dort ändert die Dauer an der Störung. Ein
+         Akkutausch aus einer Störung ist ein Eintrag. Die Zeit zählt nicht in
+         die Durchschnitte der Tätigkeiten – ein geplanter Tausch an mehreren
+         Anlagen geht je Anlage deutlich schneller.
   v1.153 05.10.2026 Störungen je Objekt (Wunsch von Jean, nach einer
          RWA-Störung, die ein Akkutausch behob). Im Verlauf jedes Objekts
          (Uhrsymbol oder Suche) steht oben „Störungen“ mit „Störung
@@ -3286,7 +3293,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.153';
+const VERSION = 'v1.154';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -8296,6 +8303,11 @@ function arbEintraege(){
     raus.push({id:`b:${b.k}:${b.zeitraum}`, quelle:'buch', key, b, datum:b.aus,
                name:n.label + ' · ' + zeitraumText(b.zeitraum), w:taetSchnitt(key), schnitt:true});
   });
+  /* Störungen (v1.154) stehen an ihrem Tag, auch ohne Dauer (Jean). Ihre Zeit
+     zählt nicht in die Durchschnitte – ein geplanter Akkutausch an mehreren
+     Anlagen geht je Anlage deutlich schneller. */
+  STOER.forEach(s => { if(NW(s.k)) raus.push({id:'s:' + s.id, quelle:'stoer', s, datum:s.datum,
+    name:'Störung ' + s.anlage + (s.was ? ': ' + s.was : ''), w:s.dauer ? nurDauer(s.dauer) : null}); });
   TAET.arb.eigen.forEach(x => raus.push({id:'e:' + x.id, quelle:'eigen', x, datum:x.datum, name:x.text, w:nurDauer(x), eigen:true}));
   const weg = new Set(TAET.arb.weg);
   return raus.filter(r => r.datum && !weg.has(r.id));
@@ -8343,7 +8355,7 @@ function renderArbeit(){
   const tage = [];
   liste.forEach(r => { const t = tage[tage.length - 1]; if(t && t.datum === r.datum) t.l.push(r); else tage.push({datum:r.datum, l:[r]}); });
   const gesamt = liste.reduce((sum, r) => sum + min(r), 0), ohne = liste.filter(r => !r.w).length;
-  const i = info('Die Einträge kommen von selbst: erfasste Dauern der Tätigkeiten, erledigte Aufgaben und ausgegebene Nachweise. Wo keine Dauer erfasst ist, steht der Durchschnitt der Tätigkeit („Schnitt“). „Ändern“ ändert den Wert an der Quelle, ein Schnitt wird so zur erfassten Dauer. „Löschen“ nimmt einen Eintrag nur aus dem Arbeitsnachweis – die erfassten Dauern der Tätigkeit bleiben. Ein Tag zählt die Arbeitszeit je Tag.', 'margin:-2px 0 10px');
+  const i = info('Die Einträge kommen von selbst: erfasste Dauern der Tätigkeiten, erledigte Aufgaben, Störungen und ausgegebene Nachweise. Wo keine Dauer erfasst ist, steht der Durchschnitt der Tätigkeit („Schnitt“). „Ändern“ ändert den Wert an der Quelle, ein Schnitt wird so zur erfassten Dauer. „Löschen“ nimmt einen Eintrag nur aus dem Arbeitsnachweis – die erfassten Dauern der Tätigkeit bleiben. Ein Tag zählt die Arbeitszeit je Tag.', 'margin:-2px 0 10px');
   const zeile = r => `<div class="zeile taetDauer" data-id="${esc(r.id)}">
       <span class="etext">${esc(r.name)}<br><span class="muted small">${
         r.w ? esc(dauerText(r.w)) : 'ohne Dauer'}${r.schnitt ? ' · Schnitt' : ''}${r.eigen ? ' · ergänzt' : ''}</span></span>
@@ -8388,6 +8400,8 @@ function renderArbeit(){
           delete r.d.m; delete r.d.t; Object.assign(r.d, {datum}, w); saveTaet();
         }else if(r.quelle === 'aufg'){
           r.a.dauer = w; r.a.erledigt = datum; saveAufg();
+        }else if(r.quelle === 'stoer'){
+          r.s.dauer = nurDauer(w); r.s.datum = datum; saveStoer();
         }else if(r.quelle === 'buch'){
           /* Aus dem Schnitt wird eine erfasste Dauer dieses Zeitraums. */
           const e = TAET.t[r.key] = TAET.t[r.key] || {name:NW(r.b.k).label, dauern:[], utensilien:[], fragen:true};
@@ -16077,7 +16091,7 @@ function stoerZeileText(s){
     : stoerWegText(s.weg);
   const akku = s.akkuAlt ? `Akku nach ${alterText(monateZwischen(s.akkuAlt, s.datum))} getauscht`
     + (s.akkuMonate ? ` (Frist ${monateText(s.akkuMonate)})` : '') : '';
-  return [s.was, weg, s.vermerk, akku].filter(Boolean).join(' · ');
+  return [s.was, weg, s.vermerk, akku, s.dauer ? dauerText(s.dauer) : ''].filter(Boolean).join(' · ');
 }
 function verlaufStoer(v){
   const liste = stoerVon(v.k, v.id), f = stoerForm && stoerForm.ziel === v ? stoerForm : null;
@@ -16090,6 +16104,7 @@ function verlaufStoer(v){
       <div class="field"><span>Behoben durch</span><div class="chips" id="stoerWeg">${
         STOER_WEG.map(([w, t]) => `<button type="button" data-weg="${w}" aria-pressed="${f.weg === w}">${esc(t)}</button>`).join('')}</div></div>
       <label class="field"><span>Vermerk</span><input id="stoerVermerk" value="${esc(f.vermerk)}" placeholder="z. B. Firma, Teil"></label>
+      <div class="field"><span>Dauer (freiwillig)</span><div id="stoerDauer"></div></div>
       <button class="btn primary" id="stoerSpeichern">${f.id ? 'Speichern' : 'Störung vermerken'}</button>
       <button class="btn" id="stoerAbbruch">Abbrechen</button>
       ${f.id ? '<button class="btn ghost" id="stoerWeg2">Störung löschen</button>' : ''}</div>` : '';
@@ -16102,8 +16117,8 @@ function stoerVerdrahten(v){
   const karte = $('#stoerKarte');
   if(!karte) return;
   const neu = (s) => {
-    stoerForm = s ? {ziel:v, id:s.id, datum:s.datum, was:s.was || '', weg:s.weg || '', vermerk:s.vermerk || ''}
-                  : {ziel:v, id:'', datum:heute(), was:'', weg:'', vermerk:''};
+    stoerForm = s ? {ziel:v, id:s.id, datum:s.datum, was:s.was || '', weg:s.weg || '', vermerk:s.vermerk || '', dauer:nurDauer(s.dauer)}
+                  : {ziel:v, id:'', datum:heute(), was:'', weg:'', vermerk:'', dauer:null};
     karte.outerHTML = verlaufStoer(v);
     stoerVerdrahten(v);
     /* Das Feld steht unter der Liste – beim Bearbeiten ins Bild holen. */
@@ -16123,6 +16138,8 @@ function stoerVerdrahten(v){
     f.weg = f.weg === b.dataset.weg ? '' : b.dataset.weg;
     karte.querySelectorAll('[data-weg]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.weg === f.weg)));
   });
+  /* Dauer der Arbeit an der Störung (v1.154) für den Arbeitsnachweis. */
+  dauerWahl($('#stoerDauer'), f.dauer, true, w => { f.dauer = w; });
   const zu = () => { stoerForm = null; karte.outerHTML = verlaufStoer(v); stoerVerdrahten(v); };
   $('#stoerAbbruch').onclick = zu;
   $('#stoerSpeichern').onclick = () => {
@@ -16149,6 +16166,7 @@ function stoerSpeichern(v, f){
   let s = f.id ? STOER.find(x => x.id === f.id) : null;
   if(!s){ s = {id:neueId(), k:v.k, anlage:v.id, angelegt:heute()}; STOER.push(s); }
   Object.assign(s, {datum:f.datum, was:f.was, weg:f.weg, vermerk:f.vermerk});
+  if(f.dauer) s.dauer = nurDauer(f.dauer); else delete s.dauer;
   /* Akkutausch: einmal je Störung ins Tauschdatum, das bisherige bleibt als
      Alter des alten Akkus an der Störung (und wie immer im Akku-Verlauf). */
   if(s.weg === 'akku' && !s.akkuGesetzt && akkuAktiv(s.k)){

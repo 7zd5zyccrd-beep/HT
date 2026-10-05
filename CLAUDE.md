@@ -198,6 +198,10 @@ steht.
   `a.stoerung`; `stoerAusAufgabe` bei erledigt/wieder/löschen.
 - Gehäuft ab `STOER_GEHAEUFT` (2) in 12 Monaten: `stoerHinweis` an den Karten,
   Übersicht › Störungen (`renderStoerungen`). `anlageUmbenennen` zieht mit.
+- Dauer (v1.154): `s.dauer` über `dauerWahl` im Feld; jede Störung steht in
+  `arbEintraege` (Quelle `stoer`), auch ohne Dauer (Jean). Nicht in die
+  Durchschnitte (`TAET`) – geplante Akkuwechsel an Nachbaranlagen gehen je
+  Anlage viel schneller als einer bei einer Störung.
 
 ## Suche (v1.145)
 
