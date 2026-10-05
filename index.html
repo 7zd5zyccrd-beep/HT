@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.146 05.10.2026 Suche: Unter den Objekten stehen jetzt auch „Listen“ und
+         „Grundrisse“ – Werkzeug, Material und Akkutypen nach ihrem Namen
+         (mit „bei 3 Objekten eingetragen“ bzw. dem Tauschabstand), die Pläne
+         nach Name und Kurzname (mit der Zahl ihrer Marken). Ein Tipp öffnet
+         die Liste in den Einstellungen bzw. den Plan.
   v1.145 05.10.2026 Suche (Wunsch von Jean): Sie findet Objekte jetzt auch über
          den Namen ihrer Anlage („Feststellanlage“, „Feuerlöscher“, „RWA“),
          über den Grundriss, auf dem ihre Marke sitzt (Name und Kurzname, beim
@@ -3161,7 +3166,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.145';
+const VERSION = 'v1.146';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -15375,13 +15380,39 @@ const nurZeichen = t => suchNorm(t).replace(/[\s\-–./_,;:]+/g, '');
 /* Die Grundrisse liegen im Bilderspeicher, der nur verzögert antwortet. Die
    Suche merkt sich deren Namen (v1.145) und holt sie bei jedem Antippen des
    Feldes neu – so gelten auch eben umbenannte Pläne. */
-let suchPlaene = null;
+let suchPlaene = null, suchPlanListe = [];
 function suchPlaeneHolen(){
   return Bilder.alle().then(l => {
-    const sortiert = planSortieren((l || []).map(p => ({id:p.id, name:p.name})));
+    const sortiert = planSortieren(l || []);
     const kurz = planKurzNamen(sortiert);
+    suchPlanListe = sortiert.map((p, i) => ({p, kurz:kurz[i]}));   // für die Treffer der Grundrisse (v1.146)
     suchPlaene = new Map(sortiert.map((p, i) => [p.id, [p.name, kurz[i]].filter(Boolean).join(' ')]));
-  }).catch(() => { suchPlaene = new Map(); });
+  }).catch(() => { suchPlaene = new Map(); suchPlanListe = []; });
+}
+/* Listen und Grundrisse als eigene Treffer (v1.146, wie die Einstellungen
+   gegliedert): Werkzeug, Material und Akkutypen nach ihrem Namen, Pläne nach
+   Name und Kurzname. Ein Tipp öffnet die Liste bzw. den Plan. */
+function suchListen(frage){
+  const woerter = suchWoerter(frage);
+  if(!woerter.length) return [];
+  const passt = t => woerter.every(w => wortIn(w, t));
+  /* Bei wie vielen Objekten ein Arbeitsmittel eingetragen ist. */
+  const zahl = (name, feld) => Object.values(CFG.mittel || {}).filter(m =>
+    (m[feld] || []).some(x => (feld === 'ut' ? x : x && x.name) === name)).length;
+  const bei = n => n ? ` · bei ${n} ${n === 1 ? 'Objekt' : 'Objekten'} eingetragen` : '';
+  return TAET.werkzeug.filter(passt).map(name => ({art:'werkmat', titel:name, zeile:'Werkzeug' + bei(zahl(name, 'ut'))}))
+    .concat(TAET.material.filter(m => passt(m.name)).map(m => ({art:'werkmat', titel:m.name, zeile:`Material · ${m.einheit}` + bei(zahl(m.name, 'mat'))})))
+    .concat(akkuTypen().filter(a => passt(a.name)).map(a => ({art:'akkus', titel:a.name,
+      zeile:'Akkutyp' + (a.jahre ? ` · Tausch alle ${a.jahre} ${a.jahre === 1 ? 'Jahr' : 'Jahre'}` : '')})));
+}
+function suchGrundrisse(frage){
+  const woerter = suchWoerter(frage);
+  if(!woerter.length) return [];
+  return suchPlanListe.filter(x => woerter.every(w => wortIn(w, [x.p.name, x.kurz].join(' ')))).map(x => {
+    const marken = Object.keys(CFG.orte || {}).filter(key => ortPlaene(key).includes(x.p.id)).length;
+    return {id:x.p.id, titel:x.p.name || x.kurz,
+      zeile:[x.kurz !== x.p.name ? x.kurz : '', marken ? `${marken} ${marken === 1 ? 'Marke' : 'Marken'}` : 'noch keine Marken'].filter(Boolean).join(' · ')};
+  });
 }
 /* Die Pläne eines Objekts als Suchtext: wo seine Marke sitzt, dazu beim
    Feuerlöscher der beim Standort gewählte Plan. */
@@ -15505,8 +15536,8 @@ function renderSuche(){
   /* Ohne Plannamen erst holen, dann noch einmal (v1.145). */
   if(!suchPlaene){ suchPlaene = new Map(); suchPlaeneHolen().then(renderSuche); }
   suchListe = suchTreffer(q);
-  const aufg = suchAufgaben(q), term = suchTermine(q);
-  if(!suchListe.length && !aufg.length && !term.length){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
+  const aufg = suchAufgaben(q), term = suchTermine(q), listen = suchListen(q), plaene = suchGrundrisse(q);
+  if(!suchListe.length && !aufg.length && !term.length && !listen.length && !plaene.length){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
   /* Aufgaben zuoberst und ohne Kurzinfo: ihre eigene Seite sagt ohnehin alles. */
   box.innerHTML = (aufg.length
     ? `<div class="eyebrow">Aufgaben</div>`
@@ -15517,10 +15548,20 @@ function renderSuche(){
     `<div class="eyebrow">${esc(n.art === 'medien' ? 'Zähler' : n.label)}</div>`
     + suchListe.map((t, i) => t.k !== n.k ? '' :
         `<button class="btn aufgabe eintrag" data-t="${i}"><span class="etext">${esc(t.titel)}<small>${esc(suchStand(t))}</small></span></button>`).join('')
-  ).join('');
+  ).join('')
+  + (listen.length ? `<div class="eyebrow">Listen</div>` + listen.map(x =>
+      `<button class="btn aufgabe eintrag" data-liste="${esc(x.art)}"><span class="etext">${esc(x.titel)}<small>${esc(x.zeile)}</small></span></button>`).join('') : '')
+  + (plaene.length ? `<div class="eyebrow">Grundrisse</div>` + plaene.map(x =>
+      `<button class="btn aufgabe eintrag" data-plan="${esc(x.id)}"><span class="etext">${esc(x.titel)}<small>${esc(x.zeile)}</small></span></button>`).join('') : '');
   box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => kurzinfo(suchListe[+b.dataset.t]));
   box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => aufgabeOeffnen(b.dataset.aufg));
   box.querySelectorAll('[data-termin]').forEach(b => b.onclick = () => terminOeffnen(b.dataset.termin));
+  box.querySelectorAll('[data-liste]').forEach(b => b.onclick = () =>
+    setOeffnen(b.dataset.liste, b.dataset.liste === 'akkus' ? 'rwa' : ''));
+  box.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => {
+    planListe = suchPlanListe.map(x => x.p);  // von hier aus wird geblättert
+    planZeigen(b.dataset.plan, null);
+  });
 }
 $('#suche').oninput = renderSuche;
 $('#suche').addEventListener('focus', () => suchPlaeneHolen().then(renderSuche));

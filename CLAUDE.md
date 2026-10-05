@@ -132,8 +132,10 @@ steht.
   dort steht. Alle Wörter müssen vorkommen, verteilt auf all das.
 - `suchPlaene` kommt verzögert aus `Bilder.alle()`, neu bei jedem Antippen des
   Feldes. Sprinklerpunkte und Checklisten bleiben außen vor (vom Nutzer
-  vorerst so entschieden); Listen und Grundrisse als eigene Treffer stehen
-  noch aus.
+  vorerst so entschieden).
+- Eigene Treffer (v1.146): „Listen“ (`suchListen`: Werkzeug, Material,
+  Akkutypen → `setOeffnen('werkmat'|'akkus')`) und „Grundrisse“
+  (`suchGrundrisse` aus `suchPlanListe` → `planZeigen`), unter den Objekten.
 
 ## Termine (v1.103)
 
