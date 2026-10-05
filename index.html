@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.155 05.10.2026 Eine Störung steht nur noch einmal im Arbeitsnachweis
+         (Jean: doppelt war verwirrend). Die Aufgabe einer offenen Störung
+         erscheint dort nicht mehr eigens; ihre Dauer beim Erledigen zählt zur
+         Störung dazu, die Zeile nennt den Tag der Behebung. Im Verlauf steht
+         ebenfalls die gesamte Dauer.
   v1.154 05.10.2026 Störungen mit Arbeitszeit (Wunsch von Jean). Im Feld der
          Störung steht „Dauer (freiwillig)“, derselbe Wähler wie beim
          Erledigen. Jede Störung erscheint an ihrem Tag im Arbeitsnachweis,
@@ -3293,7 +3298,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.154';
+const VERSION = 'v1.155';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -8288,7 +8293,8 @@ function arbEintraege(){
     raus.push({id:'t:' + d.id, quelle:'taet', key, d, datum:d.datum, name:e.name || key, w:nurDauer(d)});
   }));
   if(neueKennung) saveTaet();
-  AUFG.filter(a => a.erledigt && !a.taetVermerkt).forEach(a => {
+  const stoerIds = new Set(STOER.filter(s => NW(s.k)).map(s => s.id));
+  AUFG.filter(a => a.erledigt && !a.taetVermerkt && !(a.stoerung && stoerIds.has(a.stoerung))).forEach(a => {
     const key = taetSchluessel(a, false), s = !a.dauer && key ? taetSchnitt(key) : null;
     raus.push({id:'a:' + a.id, quelle:'aufg', a, datum:a.erledigt, name:aufgTitel(a),
                w:a.dauer ? nurDauer(a.dauer) : s, schnitt:!a.dauer && !!s});
@@ -8307,7 +8313,9 @@ function arbEintraege(){
      zählt nicht in die Durchschnitte – ein geplanter Akkutausch an mehreren
      Anlagen geht je Anlage deutlich schneller. */
   STOER.forEach(s => { if(NW(s.k)) raus.push({id:'s:' + s.id, quelle:'stoer', s, datum:s.datum,
-    name:'Störung ' + s.anlage + (s.was ? ': ' + s.was : ''), w:s.dauer ? nurDauer(s.dauer) : null}); });
+    name:'Störung ' + s.anlage + (s.was ? ': ' + s.was : '')
+      + (s.weg === 'offen' && s.erledigt && s.erledigt !== s.datum ? ' (behoben am ' + dText(s.erledigt) + ')' : ''),
+    w:stoerDauer(s)}); });
   TAET.arb.eigen.forEach(x => raus.push({id:'e:' + x.id, quelle:'eigen', x, datum:x.datum, name:x.text, w:nurDauer(x), eigen:true}));
   const weg = new Set(TAET.arb.weg);
   return raus.filter(r => r.datum && !weg.has(r.id));
@@ -8401,6 +8409,9 @@ function renderArbeit(){
         }else if(r.quelle === 'aufg'){
           r.a.dauer = w; r.a.erledigt = datum; saveAufg();
         }else if(r.quelle === 'stoer'){
+          /* Die geänderte Dauer gilt für die ganze Störung samt Aufgabe. */
+          const a = stoerAufgVon(r.s);
+          if(a && a.dauer){ delete a.dauer; saveAufg(); }
           r.s.dauer = nurDauer(w); r.s.datum = datum; saveStoer();
         }else if(r.quelle === 'buch'){
           /* Aus dem Schnitt wird eine erfasste Dauer dieses Zeitraums. */
@@ -16085,13 +16096,22 @@ function verlaufAkku(v, liste){
    in die Bearbeitung – nie bei der Eingabe, sonst verrutschte das Datumsfeld
    unter der offenen iOS-Wahl. */
 let stoerForm = null;
+/* Eine Störung ist ein Eintrag (v1.155, Jean): die Dauer ihrer Aufgabe zählt
+   zur Störung, die Aufgabe steht nicht noch einmal im Arbeitsnachweis. */
+const stoerAufgVon = s => s.aufg ? AUFG.find(a => a.id === s.aufg && a.stoerung === s.id) : null;
+function stoerDauer(s){
+  const a = stoerAufgVon(s), x = nurDauer(s.dauer), y = a && a.erledigt ? nurDauer(a.dauer) : null;
+  if(!x || !y) return x || y;
+  return x.t && y.t ? {t:x.t + y.t} : {m:dauerMin(x) + dauerMin(y)};
+}
 function stoerZeileText(s){
   const weg = s.weg === 'offen'
     ? (s.erledigt ? `behoben am ${dText(s.erledigt)}${s.loesung ? ': ' + s.loesung : ''}` : 'noch offen')
     : stoerWegText(s.weg);
   const akku = s.akkuAlt ? `Akku nach ${alterText(monateZwischen(s.akkuAlt, s.datum))} getauscht`
     + (s.akkuMonate ? ` (Frist ${monateText(s.akkuMonate)})` : '') : '';
-  return [s.was, weg, s.vermerk, akku, s.dauer ? dauerText(s.dauer) : ''].filter(Boolean).join(' · ');
+  const d = stoerDauer(s);
+  return [s.was, weg, s.vermerk, akku, d ? dauerText(d) : ''].filter(Boolean).join(' · ');
 }
 function verlaufStoer(v){
   const liste = stoerVon(v.k, v.id), f = stoerForm && stoerForm.ziel === v ? stoerForm : null;

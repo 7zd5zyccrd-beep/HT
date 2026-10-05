@@ -202,6 +202,9 @@ steht.
   `arbEintraege` (Quelle `stoer`), auch ohne Dauer (Jean). Nicht in die
   Durchschnitte (`TAET`) – geplante Akkuwechsel an Nachbaranlagen gehen je
   Anlage viel schneller als einer bei einer Störung.
+- Nur ein Eintrag je Störung (v1.155, Jean): Aufgaben mit `a.stoerung` fehlen
+  in `arbEintraege`, ihre Dauer zählt über `stoerDauer` zur Störung; „Ändern“
+  setzt die Gesamtdauer an die Störung und nimmt sie von der Aufgabe.
 
 ## Suche (v1.145)
 
