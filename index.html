@@ -10,6 +10,18 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.153 05.10.2026 Störungen je Objekt (Wunsch von Jean, nach einer
+         RWA-Störung, die ein Akkutausch behob). Im Verlauf jedes Objekts
+         (Uhrsymbol oder Suche) steht oben „Störungen“ mit „Störung
+         vermerken“: Tag, was war, behoben durch (Akkutausch, Zurückgesetzt,
+         Teil getauscht, Fremdfirma, Noch offen) und Vermerk. Ein Tipp auf
+         eine Störung öffnet sie zum Ändern oder Löschen. „Akkutausch“ trägt
+         den Tausch gleich beim Akku ein und vermerkt, wie alt der alte Akku
+         war. „Noch offen“ wird zur Aufgabe; ist sie erledigt, steht das bei
+         der Störung. Ab zwei Störungen in 12 Monaten zeigt die Karte im
+         Nachweis einen Hinweis. Startseite › Übersicht › Störungen listet
+         alle Objekte mit Störungen, die häufigsten zuerst. Nur in der App
+         und in der Sicherung, nicht auf dem Blatt; nicht bei Zählern.
   v1.152 05.10.2026 Medienverbräuche: Belegfoto je Zähler (Wunsch von Jean).
          In der Ablesung – auch im kombinierten Rundgang – öffnet „Foto“ unter
          dem Stand direkt die Kamera; danach steht dort eine Vorschau, ein
@@ -2902,6 +2914,10 @@ body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-ar
 .vzeile{padding:7px 0}
 .vzeile + .vzeile{border-top:1px solid var(--line)}
 .vzeile .vwann{font-weight:600;font-size:15px}
+/* Störungen (v1.153): jede Zeile öffnet sich zum Bearbeiten. */
+.stoerEintrag{display:block;width:100%;text-align:left;background:none;border:0;font:inherit;color:inherit;cursor:pointer;-webkit-appearance:none;appearance:none}
+.stoerFeld{margin-top:10px}
+.stoerFeld .btn{margin-top:8px}
 /* Auffälliger Zählerstand: die Zeile in der Karte öffnet die Prüfung erneut. */
 .pruefZeile{margin-top:6px}
 .pruefZeile:empty{display:none}
@@ -3107,6 +3123,11 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       <div id="erledigtListe"></div>
     </section>
 
+    <!-- Störungen aller Objekte (v1.153) -->
+    <section class="view" id="view-stoerungen">
+      <div id="stoerListe"></div>
+    </section>
+
     <!-- Historie: die ausgegebenen Blätter, erst je Nachweis, dann die Runden -->
     <section class="view" id="view-historie">
       <div id="histListe"></div>
@@ -3265,7 +3286,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.152';
+const VERSION = 'v1.153';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4579,7 +4600,7 @@ function ring(n, takt){
 }
 
 /* ---------- Ansichten ---------- */
-const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigt', nachweis:'Nachweis', blatt:'Blatt',
+const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigt', stoerungen:'Störungen', nachweis:'Nachweis', blatt:'Blatt',
                historie:'Historie', histnw:'Historie', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregel:'Regel',
@@ -4645,6 +4666,7 @@ function go(name, push = true){
   if(name === 'termine')  renderTermine();
   if(name === 'rundgang') renderRundgang();
   if(name === 'erledigt') renderErledigt();
+  if(name === 'stoerungen') renderStoerungen();
   if(name === 'wetter')   renderWetter();
   if(name === 'taeten')   renderTaeten();
   if(name === 'wplan')    renderWochenplan();
@@ -5039,6 +5061,60 @@ function akkuTypenPruefen(){
 }
 if(!AKKU || typeof AKKU !== 'object' || Array.isArray(AKKU)){ AKKU = akkuAusDat(DAT); Store.set('nwAkku', AKKU); }
 if(akkuTypenPruefen()) Store.set('nwCfg', CFG);
+/* --- Störungen (v1.153) -----------------------------------------------------
+   Was zwischen den Runden passiert: gemeldet, gesucht, behoben. Je Objekt
+   (k|Anlage), eingetragen im Verlauf. Eigener Speicher, nicht in DAT – die
+   Ausgabe leert den Nachweis. „Noch offen“ wird zur Aufgabe, deren Erledigung
+   sich hier einträgt; „Akkutausch“ setzt auch das Tauschdatum. Ab zwei
+   Störungen in zwölf Monaten gilt ein Objekt als gehäuft (Jean, 05.10.2026). */
+let STOER = Store.get('nwStoer', []);
+if(!Array.isArray(STOER)) STOER = [];
+const saveStoer = () => { Store.set('nwStoer', STOER); listeNachziehen(); };
+const STOER_WEG = [['akku', 'Akkutausch'], ['reset', 'Zurückgesetzt'], ['teil', 'Teil getauscht'],
+                   ['firma', 'Fremdfirma'], ['offen', 'Noch offen']];
+const STOER_GEHAEUFT = 2;
+const stoerWegText = w => (STOER_WEG.find(x => x[0] === w) || ['', ''])[1];
+const stoerVon = (k, a) => STOER.filter(s => s.k === k && s.anlage === a)
+  .sort((x, y) => String(y.datum).localeCompare(String(x.datum)));
+/* Störungen der letzten zwölf Monate zu einer Quelle „k|Anlage“. */
+const stoerJahr = quelle => { const ab = tagPlus(heute(), -365);
+  return STOER.filter(s => s.k + '|' + s.anlage === quelle && s.datum > ab).length; };
+const stoerHinweis = quelle => { const n = stoerJahr(quelle);
+  return n >= STOER_GEHAEUFT ? `<div class="mangelHinweis">${n} Störungen in 12 Monaten</div>` : ''; };
+/* Volle Monate zwischen zwei Tagen, als „2 Jahre 3 Monate“. */
+function monateZwischen(von, bis){
+  const [aj, am, at] = String(von).split('-').map(Number), [bj, bm, bt] = String(bis).split('-').map(Number);
+  return Math.max(0, (bj - aj) * 12 + (bm - am) - (bt < at ? 1 : 0));
+}
+function alterText(m){
+  const j = Math.floor(m / 12), r = m % 12;
+  return [j ? `${j} ${j === 1 ? 'Jahr' : 'Jahren'}` : '', r || !j ? `${r} ${r === 1 ? 'Monat' : 'Monaten'}` : '']
+    .filter(Boolean).join(' ');
+}
+/* „Noch offen“ hält eine Aufgabe in der Liste. Wird die Störung auf einen
+   anderen Weg gestellt, ist die Aufgabe damit erledigt. */
+function stoerAufgabe(s){
+  const a = s.aufg && AUFG.find(x => x.id === s.aufg);
+  if(s.weg === 'offen' && !s.erledigt){
+    if(a && !a.erledigt){ a.text = s.was; }
+    else if(!a){
+      const t = {id:neueId(), art:'eigen', quelle:'', k:s.k, anlage:s.anlage, punkt:'',
+        titel:'Störung ' + s.anlage, text:s.was, notiz:'', zeitraum:'', festgestellt:'', angelegt:heute(),
+        frist:tagPlus(heute(), 7), wichtig:wichtigVon(s.k), erneut:[], erledigt:'', vermerk:'', stoerung:s.id};
+      AUFG.push(t); s.aufg = t.id;
+    }
+  }else if(a && !a.erledigt){ a.erledigt = heute(); a.vermerk = stoerWegText(s.weg); }
+  saveAufg();
+}
+/* Die Aufgabe einer offenen Störung wurde erledigt, wieder geöffnet oder gelöscht. */
+function stoerAusAufgabe(a, wie){
+  const s = a && a.stoerung && STOER.find(x => x.id === a.stoerung);
+  if(!s) return;
+  if(wie === 'erledigt'){ s.erledigt = a.erledigt; s.loesung = a.vermerk || ''; }
+  if(wie === 'wieder'){ s.erledigt = ''; s.loesung = ''; }
+  if(wie === 'weg') delete s.aufg;
+  saveStoer();
+}
 function akkuAktiv(k){
   const n = NW(k);
   if(!n || n.art === 'sprinkler' || n.art === 'medien') return false;
@@ -5586,6 +5662,7 @@ function renderHome(){
     + (TERM.length ? `<button class="btn eintrag" data-termine="1"><span>Termine</span><span class="zahl">${termineKommend().length}</span></button>` : '')
     + (taetL.length ? `<button class="btn eintrag" data-taeten="1"><span>Tätigkeiten</span><span class="zahl">${taetL.length}</span></button>` : '')
     + `<button class="btn eintrag" data-arbeit="1"><span>Arbeitsnachweis</span></button>`
+    + (STOER.length ? `<button class="btn eintrag" data-stoer="1"><span>Störungen</span><span class="zahl">${stoerObjekte().length}</span></button>` : '')
     + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigt</span><span class="zahl">${erledigt}</span></button>` : '')
     + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span></button>` : '');
   $('#homeListe').innerHTML = `<div class="row neuZeile"><button class="btn ghost klein" data-neuaufg="1">+ Aufgabe</button>
@@ -5599,6 +5676,8 @@ function renderHome(){
   if(alle) alle.onclick = () => go('alle');
   const erl = $('#homeListe [data-erledigt]');
   if(erl) erl.onclick = () => go('erledigt');
+  const sto = $('#homeListe [data-stoer]');
+  if(sto) sto.onclick = () => go('stoerungen');
   const wet = $('#homeListe [data-wetter]');
   if(wet){ wet.onclick = () => { go('wetter'); wetterAbrufen(); }; wetterStandZeigen(); }
   $('#homeListe [data-neuaufg]').onclick = aufgabeNeu;
@@ -5821,11 +5900,11 @@ function renderRundgang(){
     const klasse = !z.status ? '' : mangel ? ' mangel' : ' fertig';
     if(z.status && !rgOffen.has(w))
       return `<div class="pos${klasse} kompakt" data-w="${esc(w)}">${typ}
-        <div class="name">${esc(o.id)}</div>${mangelHinweis(o.ort)}
+        <div class="name">${esc(o.id)}</div>${mangelHinweis(o.ort)}${stoerHinweis(o.ort)}
         <div class="muted small">${esc(dText(z.datum))}${z.datum ? ' · ' : ''}${esc(z.status)}${z.bem ? ' · ' + esc(z.bem) : ''}</div>
       </div>`;
     return `<div class="pos${klasse}" data-w="${esc(w)}">${typ}
-      ${nameMitVerlauf(esc(o.id), z.status ? ' zu' : '')}${mangelHinweis(o.ort)}
+      ${nameMitVerlauf(esc(o.id), z.status ? ' zu' : '')}${mangelHinweis(o.ort)}${stoerHinweis(o.ort)}
       <div class="kopf">
         <input type="date" data-feld="datum" value="${esc(z.datum)}" aria-label="Datum">
         ${pfeile(w, !istOben)}
@@ -6403,7 +6482,7 @@ function renderAufgabe(){
       zurueck(); tFragen();
       return;
     }
-    saveAufg(); toast('Als erledigt vermerkt'); zurueck(); tFragen();
+    saveAufg(); stoerAusAufgabe(a, 'erledigt'); toast('Als erledigt vermerkt'); zurueck(); tFragen();
   };
   if($('#aufgWieder')) $('#aufgWieder').onclick = () => {
     /* Eine noch unberührte Folgeaufgabe geht mit zurück, sonst stünde der
@@ -6411,13 +6490,13 @@ function renderAufgabe(){
     const f = a.folge && AUFG.find(x => x.id === a.folge);
     if(f && !f.erledigt && !f.notiz && !f.vorbErledigt){ AUFG = AUFG.filter(x => x !== f); }
     delete a.folge;
-    a.erledigt = ''; a.vermerk = ''; saveAufg(); renderAufgabe();
+    a.erledigt = ''; a.vermerk = ''; saveAufg(); stoerAusAufgabe(a, 'wieder'); renderAufgabe();
   };
   /* Nur eigene Aufgaben lassen sich löschen. Ein Mangel gehört zum Nachweis und
      wird erledigt, nicht entfernt. */
   if($('#aufgWeg')) $('#aufgWeg').onclick = () =>
     frage('Aufgabe löschen', `„${a.titel || 'Ohne Titel'}“ wird gelöscht.`, 'Löschen', () => {
-      AUFG = AUFG.filter(x => x !== a); saveAufg(); zurueck();
+      AUFG = AUFG.filter(x => x !== a); saveAufg(); stoerAusAufgabe(a, 'weg'); zurueck();
     });
 }
 /* ---------- Termine (v1.103) ------------------------------------------------
@@ -8530,7 +8609,7 @@ function renderFremd(){
         const klasse = f.offen || f.faellig ? ' mangel' : ' fertig';
         const kenn = offen === 'loescher' ? [loeStandort(a), loeKennung(a), loeZusatz(a)].filter(Boolean).join(' · ') : '';
         return `<div class="pos${klasse}" data-i="${i}">
-          ${nameMitVerlauf(esc(a))}${kenn ? `<div class="muted small" style="margin:-2px 0 6px">${esc(kenn)}</div>` : ''}
+          ${nameMitVerlauf(esc(a))}${stoerHinweis(offen + '|' + a)}${kenn ? `<div class="muted small" style="margin:-2px 0 6px">${esc(kenn)}</div>` : ''}
           <div class="kopf">
             <input type="date" data-feld="datum" value="${esc(z.datum || '')}" aria-label="Prüfdatum">
             <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">${ORT_SVG}</button></span>
@@ -8577,7 +8656,7 @@ function akkuKarte(a, i, k){
   const f = j ? akkuFrist(z) : null;
   const klasse = !f ? '' : (f.offen || f.faellig ? ' mangel' : ' fertig');
   return `<div class="pos${klasse}" data-i="${i}">
-    ${nameMitVerlauf(esc(a))}
+    ${nameMitVerlauf(esc(a))}${stoerHinweis(k + '|' + a)}
     <div class="kopf" style="margin:0">
       <span class="muted small">Getauscht am</span>
       <input type="date" class="dat" data-feld="datum" value="${esc(z.akkuDatum || '')}" aria-label="Tauschdatum">
@@ -8891,7 +8970,7 @@ function renderNachweis(){
        zwischen überblickbar und endlosem Blättern. */
     if(n.kompakt && z.status && !offenKarten.has(a))
       return `<div class="pos${klasse} kompakt" data-i="${i}">
-        <div class="name">${esc(a)}</div>${mangelHinweis(offen + '|' + a)}
+        <div class="name">${esc(a)}</div>${mangelHinweis(offen + '|' + a)}${stoerHinweis(offen + '|' + a)}
         <div class="muted small">${esc(dText(z.datum))}${z.datum ? ' · ' : ''}${esc(z.status)}${
           z.bem ? ' · ' + esc(z.bem) : ''}</div>
       </div>`;
@@ -8900,7 +8979,7 @@ function renderNachweis(){
        Erdgeschoss, Gang neben Treppenhaus" in eine schmale Spalte und brach in
        viele kurze Zeilen um. */
     return `<div class="pos${klasse}" data-i="${i}">
-      ${nameMitVerlauf(esc(a), n.kompakt ? ' zu' : '')}${mangelHinweis(offen + '|' + a)}
+      ${nameMitVerlauf(esc(a), n.kompakt ? ' zu' : '')}${mangelHinweis(offen + '|' + a)}${stoerHinweis(offen + '|' + a)}
       <div class="kopf">
         <input type="date" data-feld="datum" value="${esc(z.datum)}" aria-label="Datum">
         ${pfeile}
@@ -12480,6 +12559,10 @@ function anlageUmbenennen(k, alt, neu){
   });
   matAnlassUmbenennen(akkuAnlassVor(k, alt), akkuAnlassVor(k, neu));
   if(AKKU[va]){ AKKU[vb] = AKKU[va]; delete AKKU[va]; saveAkku(); }    // Akkus je Objekt (v1.149)
+  /* Störungen (v1.153) folgen dem Namen wie Akku und Aufgaben. */
+  if(STOER.some(x => x.k === k && x.anlage === alt)){
+    STOER.forEach(x => { if(x.k === k && x.anlage === alt) x.anlage = neu; }); saveStoer();
+  }
   if(d && d.zeilen && d.zeilen[alt]){
     d.zeilen[neu] = d.zeilen[alt]; delete d.zeilen[alt];
     zeitUmhaengen(d, alt, neu); saveDat();
@@ -14838,7 +14921,7 @@ async function dateiSichernLauf(){
   const paket = {format:CFG_FORMAT, stand:heute(),
                  cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB, termine:TERM,
                  regelstand:REGELSTAND, hinweise:HINWEISE, frost:+Store.get('nwFrost', 0) || 0,
-                 taet:TAET, mat:MAT, akku:AKKU,
+                 taet:TAET, mat:MAT, akku:AKKU, stoerungen:STOER,
                  plaene, quellen, historie};
   const name = `Nachweise ${heute().slice(2)}.json`;
   void plaene;
@@ -14882,6 +14965,9 @@ async function paketUebernehmen(paket){
   AKKU = paket.akku && typeof paket.akku === 'object' && !Array.isArray(paket.akku) ? paket.akku : akkuAusDat(paket.dat || {});
   Store.set('nwAkku', AKKU);
   if(akkuTypenPruefen()) saveCfg();
+  /* Störungen (v1.153); ältere Sicherungen kennen sie nicht – dann bleiben die
+     vorhandenen stehen. */
+  if(Array.isArray(paket.stoerungen)){ STOER = paket.stoerungen; Store.set('nwStoer', STOER); }
   if(Array.isArray(paket.aufg)){ AUFG = paket.aufg; saveAufg(); }
   /* Termine (v1.103); ältere Sicherungen kennen sie nicht – dann bleiben die
      vorhandenen stehen. */
@@ -15890,7 +15976,11 @@ async function renderVerlauf(){
               : art === 'bestand' ? ''
               : verlaufAnlage(v, liste);
   const akku = akkuAktiv(v.k) ? verlaufAkku(v, liste) : '';
-  box.innerHTML = kopf + (v.vorn === 'akku' ? akku + pruef : pruef + akku);
+  /* Störungen (v1.153) obenan – dort wird auch eingetragen. Nicht bei Zählern. */
+  if(stoerForm && stoerForm.ziel !== v) stoerForm = null;
+  const stoer = art !== 'medien' ? verlaufStoer(v) : '';
+  box.innerHTML = kopf + stoer + (v.vorn === 'akku' ? akku + pruef : pruef + akku);
+  stoerVerdrahten(v);
   /* Belegfotos des Zählers (v1.152): laufende und vorige Ablesung. */
   if(art === 'medien'){
     let l = [];
@@ -15975,6 +16065,131 @@ function verlaufAkku(v, liste){
     .concat(liste.filter(e => e.art === 'akku' && e.k === v.k && e.anlage === v.id)
       .sort(nachDatum).map(e => vZeile(dText(e.datum), e.typ ? `${e.anzahl || 1} × ${e.typ}` : '')));
   return vAbschnitt('Akkutausch', az, 'Noch kein Tausch vermerkt.');
+}
+/* Störungen eines Objekts (v1.153): oben im Verlauf, mit dem Feld zum
+   Eintragen. Gebaut wird die Karte nur beim Öffnen, Speichern und Wechseln
+   in die Bearbeitung – nie bei der Eingabe, sonst verrutschte das Datumsfeld
+   unter der offenen iOS-Wahl. */
+let stoerForm = null;
+function stoerZeileText(s){
+  const weg = s.weg === 'offen'
+    ? (s.erledigt ? `behoben am ${dText(s.erledigt)}${s.loesung ? ': ' + s.loesung : ''}` : 'noch offen')
+    : stoerWegText(s.weg);
+  const akku = s.akkuAlt ? `Akku nach ${alterText(monateZwischen(s.akkuAlt, s.datum))} getauscht`
+    + (s.akkuMonate ? ` (Frist ${monateText(s.akkuMonate)})` : '') : '';
+  return [s.was, weg, s.vermerk, akku].filter(Boolean).join(' · ');
+}
+function verlaufStoer(v){
+  const liste = stoerVon(v.k, v.id), f = stoerForm && stoerForm.ziel === v ? stoerForm : null;
+  const n = stoerJahr(v.k + '|' + v.id);
+  const zeilen = liste.map(s => `<button type="button" class="vzeile stoerEintrag" data-sid="${esc(s.id)}">
+      <div class="vwann">${esc(dText(s.datum))}</div><div class="small">${esc(stoerZeileText(s))}</div></button>`);
+  const feld = f ? `<div class="gruppe stoerFeld">
+      <label class="field"><span>Am</span><input type="date" id="stoerDatum" class="schmal" value="${esc(f.datum)}"></label>
+      <label class="field"><span>Was war</span><input id="stoerWas" value="${esc(f.was)}" placeholder="z. B. Störmeldung, Klappe öffnete nicht"></label>
+      <div class="field"><span>Behoben durch</span><div class="chips" id="stoerWeg">${
+        STOER_WEG.map(([w, t]) => `<button type="button" data-weg="${w}" aria-pressed="${f.weg === w}">${esc(t)}</button>`).join('')}</div></div>
+      <label class="field"><span>Vermerk</span><input id="stoerVermerk" value="${esc(f.vermerk)}" placeholder="z. B. Firma, Teil"></label>
+      <button class="btn primary" id="stoerSpeichern">${f.id ? 'Speichern' : 'Störung vermerken'}</button>
+      <button class="btn" id="stoerAbbruch">Abbrechen</button>
+      ${f.id ? '<button class="btn ghost" id="stoerWeg2">Störung löschen</button>' : ''}</div>` : '';
+  return `<div class="card" id="stoerKarte">
+    <div class="eyebrow" style="margin:0 0 4px">Störungen${n >= STOER_GEHAEUFT ? ` · ${n} in 12 Monaten` : ''}</div>
+    ${zeilen.length ? zeilen.join('') : f ? '' : '<p class="muted small" style="margin:0">Noch keine Störung vermerkt.</p>'}
+    ${feld || '<button class="btn" id="stoerNeu" style="margin-top:10px">Störung vermerken</button>'}</div>`;
+}
+function stoerVerdrahten(v){
+  const karte = $('#stoerKarte');
+  if(!karte) return;
+  const neu = (s) => {
+    stoerForm = s ? {ziel:v, id:s.id, datum:s.datum, was:s.was || '', weg:s.weg || '', vermerk:s.vermerk || ''}
+                  : {ziel:v, id:'', datum:heute(), was:'', weg:'', vermerk:''};
+    karte.outerHTML = verlaufStoer(v);
+    stoerVerdrahten(v);
+    /* Das Feld steht unter der Liste – beim Bearbeiten ins Bild holen. */
+    const feld = $('#stoerKarte .stoerFeld');
+    if(s && feld) bildNach(imBild(feld) - 60);
+  };
+  const nb = $('#stoerNeu');
+  if(nb) nb.onclick = () => neu(null);
+  karte.querySelectorAll('[data-sid]').forEach(b => b.onclick = () => {
+    const s = STOER.find(x => x.id === b.dataset.sid);
+    if(s) neu(s);
+  });
+  if(!stoerForm || stoerForm.ziel !== v) return;
+  const f = stoerForm;
+  /* Die Kacheln schalten an Ort und Stelle um. */
+  karte.querySelectorAll('[data-weg]').forEach(b => b.onclick = () => {
+    f.weg = f.weg === b.dataset.weg ? '' : b.dataset.weg;
+    karte.querySelectorAll('[data-weg]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.weg === f.weg)));
+  });
+  const zu = () => { stoerForm = null; karte.outerHTML = verlaufStoer(v); stoerVerdrahten(v); };
+  $('#stoerAbbruch').onclick = zu;
+  $('#stoerSpeichern').onclick = () => {
+    f.datum = $('#stoerDatum').value || heute();
+    f.was = $('#stoerWas').value.trim();
+    f.vermerk = $('#stoerVermerk').value.trim();
+    if(!f.was && !f.weg){ toast('Bitte eintragen, was war'); return; }
+    const akkuVorher = f.weg === 'akku';
+    stoerSpeichern(v, f);
+    toast(akkuVorher && akkuAktiv(v.k) ? 'Vermerkt · Akkutausch eingetragen' : 'Vermerkt');
+    stoerForm = null;
+    renderVerlauf();
+  };
+  const weg = $('#stoerWeg2');
+  if(weg) weg.onclick = () => frage('Störung löschen', `Die Störung vom ${dText(f.datum)} wird gelöscht.`, 'Löschen', () => {
+    const s = STOER.find(x => x.id === f.id);
+    const a = s && s.aufg && AUFG.find(x => x.id === s.aufg);
+    if(a && !a.erledigt){ AUFG = AUFG.filter(x => x !== a); saveAufg(); }
+    STOER = STOER.filter(x => x.id !== f.id); saveStoer();
+    stoerForm = null; renderVerlauf();
+  });
+}
+function stoerSpeichern(v, f){
+  let s = f.id ? STOER.find(x => x.id === f.id) : null;
+  if(!s){ s = {id:neueId(), k:v.k, anlage:v.id, angelegt:heute()}; STOER.push(s); }
+  Object.assign(s, {datum:f.datum, was:f.was, weg:f.weg, vermerk:f.vermerk});
+  /* Akkutausch: einmal je Störung ins Tauschdatum, das bisherige bleibt als
+     Alter des alten Akkus an der Störung (und wie immer im Akku-Verlauf). */
+  if(s.weg === 'akku' && !s.akkuGesetzt && akkuAktiv(s.k)){
+    const z = akkuZ(s.k, s.anlage);
+    if(!z.akkuDatum || s.datum > z.akkuDatum){
+      if(z.akkuDatum){ s.akkuAlt = z.akkuDatum; s.akkuMonate = akkuMonate(z.akkuTyp) || 0; }
+      datumAbloesen('akku', s.k, s.anlage, z, 'akkuDatum', 'akkuSeit', s.datum);
+      saveAkku();
+    }
+    s.akkuGesetzt = true;
+  }
+  stoerAufgabe(s);
+  saveStoer();
+}
+/* Alle Objekte mit Störungen, die häufigsten der letzten zwölf Monate zuerst. */
+function stoerObjekte(){
+  const m = new Map();
+  STOER.forEach(s => {
+    if(!NW(s.k)) return;
+    const q = s.k + '|' + s.anlage;
+    const o = m.get(q) || {k:s.k, anlage:s.anlage, alle:0, jahr:0, zuletzt:''};
+    o.alle++;
+    if(s.datum > o.zuletzt) o.zuletzt = s.datum;
+    m.set(q, o);
+  });
+  const l = [...m.values()];
+  l.forEach(o => { o.jahr = stoerJahr(o.k + '|' + o.anlage); });
+  return l.sort((a, b) => b.jahr - a.jahr || b.alle - a.alle || String(b.zuletzt).localeCompare(String(a.zuletzt)));
+}
+function renderStoerungen(){
+  const l = stoerObjekte();
+  $('#stoerListe').innerHTML = l.length
+    ? `<p class="muted small" style="margin-top:0">Je Objekt, die häufigsten der letzten 12 Monate zuerst.</p>` + l.map((o, i) =>
+      `<button class="btn eintrag" data-si="${i}"><span class="etext">${esc(o.anlage)}<small>${esc([NW(o.k).label,
+        o.jahr ? `${o.jahr} in 12 Monaten` : '', o.jahr >= STOER_GEHAEUFT ? 'gehäuft' : '',
+        'zuletzt ' + dText(o.zuletzt)].filter(Boolean).join(' · '))}</small></span><span class="zahl">${o.alle}</span></button>`).join('')
+    : `<p class="muted small">Noch keine Störung vermerkt. Eingetragen wird im Verlauf eines Objekts.</p>`;
+  $$('#stoerListe [data-si]').forEach(b => b.onclick = () => {
+    const o = l[+b.dataset.si];
+    verlaufOeffnen(o.k, o.anlage, o.anlage);
+  });
 }
 /* Titelzeile einer Karte mit dem Uhrsymbol rechts. Der Text kommt fertig
    maskiert herein. */

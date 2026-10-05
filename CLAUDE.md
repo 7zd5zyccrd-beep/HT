@@ -185,6 +185,20 @@ steht.
 - Ein Tipp auf Foto/Vorschau klappt die Karte nicht zu (`belegTipp` über
   pointerdown vor dem blur).
 
+## Störungen (v1.153)
+
+- `STOER` (Store `nwStoer`, Sicherung `stoerungen`): {id, k, anlage, datum,
+  was, weg ('akku'|'reset'|'teil'|'firma'|'offen'), vermerk, aufg, erledigt,
+  loesung, akkuAlt, akkuMonate, akkuGesetzt}. Nicht in DAT (Ausgabe leert es).
+- Eingetragen nur im Verlauf (`verlaufStoer`/`stoerVerdrahten`, Karte obenan,
+  nicht bei Zählern); erreichbar über Uhrsymbol oder Suche (vom Nutzer so
+  entschieden, kein eigener Weg von der Startseite). Nicht auf dem Blatt.
+- „Akkutausch“ setzt einmal je Störung das Tauschdatum (`datumAbloesen`) und
+  merkt das Alter des alten Akkus. „Noch offen“ → eigene Aufgabe mit
+  `a.stoerung`; `stoerAusAufgabe` bei erledigt/wieder/löschen.
+- Gehäuft ab `STOER_GEHAEUFT` (2) in 12 Monaten: `stoerHinweis` an den Karten,
+  Übersicht › Störungen (`renderStoerungen`). `anlageUmbenennen` zieht mit.
+
 ## Suche (v1.145)
 
 - `suchObjekte`: Text je Objekt = Name (+ Löscherangaben) + Name der Anlage
