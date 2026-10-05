@@ -114,6 +114,14 @@ steht.
   und in Mängel; `mittelUmhaengen` beim Umbenennen. Gelöschte Objekte
   behalten ihre Angaben wie ihre Grundrissmarke.
 
+- Künftige Sprinklergänge (v1.143, vom Nutzer so entschieden):
+  `sprinklerVorschau(bis)` liefert listenartige Einträge (`vorschau:true`)
+  für jeden späteren Wochengang (an seinem Freitag, bei Feiertag/Abwesenheit
+  `wirksamerTag` davor) und jede spätere Monatskontrolle (letzter Arbeitstag).
+  Sie zählen in den Gruppensummen (Zeile „dazu Sprinkler-…“), in
+  `planPruefen` und `wochenplanRechnen`, stehen aber nicht als Zeilen in der
+  Liste. Gruppen entstehen dafür eigens nur bis nächste Woche/Monatsende.
+
 ## Termine (v1.103)
 
 - `TERM` (`nwTermine`, in der Sicherung als `termine`): Verabredungen mit

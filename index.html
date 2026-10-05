@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.143 05.10.2026 Zeitschätzung (Wunsch von Jean): Die künftigen Gänge am
+         Sprinkler zählen jetzt mit. Jede Woche bringt einen Wochengang, er
+         gehört in den Monat, auf den ihr Freitag fällt – ist der Freitag ein
+         Feiertag, zählt der Arbeitstag davor. Jeder Monat bringt seine
+         Monatskontrolle. Die Zeit steht in der Summe von „Nächste Woche“ und
+         der Monate, darunter klein „dazu Sprinkler-Wochengang 3× ≈ …“; der
+         Rest des laufenden Monats steht dafür auch ohne andere Zeilen da.
+         Auslastung und Wochenplan rechnen die Gänge ebenso ein, im
+         Wochenplan steht der Wochengang auf seinem Freitag. Die Zeitsumme
+         an der Überschrift bricht nicht mehr vor dem „h“ um.
   v1.142 30.09.2026 Grundriss: Zoomen mit zwei Fingern ohne Wackeln. Größe und
          Lage des Plans werden nicht mehr auf ganze Pixel gerundet, und was das
          iPhone beim Rollen abschneidet, gleicht die App aus. Der Ablauf bleibt
@@ -2192,6 +2202,8 @@ button > .ortIcon:only-child{display:block;margin:auto}
 .neuZeile{margin:0 0 12px}
 /* Heute auf einen Blick (v1.114): kleine Zeile unter der Überschrift „Heute“,
    ein Tipp öffnet den Wochenplan. */
+/* Künftige Sprinklergänge unter der Gruppenüberschrift (v1.143). */
+.vorschauZeile{margin:0 0 10px;font-size:14px;color:var(--ink-soft)}
 .heuteZeile{display:block;width:100%;margin:0 0 10px;padding:4px 0;border:0;background:none;text-align:left;
   font:inherit;font-size:14px;color:var(--ink-soft);cursor:pointer;-webkit-appearance:none;appearance:none}
 /* Termin oder Zeitraum einer eigenen Aufgabe (v1.51): die Zeilen „von“ und
@@ -3141,8 +3153,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.142';
-const BUILD   = VERSION + ' · 30.09.2026';
+const VERSION = 'v1.143';
+const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -5120,13 +5132,37 @@ function renderHome(){
     || (x.istTermin && y.istTermin ? x.schl.localeCompare(y.schl) : 0));
   folge.forEach(a => {
     const g = gruppen[gruppen.length - 1];
-    if(g && g.g === a.gruppe) g.teil.push(a); else gruppen.push({g:a.gruppe, titel:a.gTitel, teil:[a]});
+    if(g && g.g === a.gruppe) g.teil.push(a); else gruppen.push({g:a.gruppe, nr:a.gNr, titel:a.gTitel, teil:[a], vor:[]});
   });
   /* „Heute“ steht immer da (v1.114), notfalls leer – ihre Zeile sagt, wie der
      Tag aussieht. Unter dem Überfälligen, sonst zuoberst. */
   if(!gruppen.some(x => x.g === 'heute'))
     gruppen.splice(gruppen.length && gruppen[0].g === 'ueber' ? 1 : 0, 0,
-      {g:'heute', titel:listenGruppe(tagAnfang(new Date())).titel, teil:[]});
+      {g:'heute', nr:1, titel:listenGruppe(tagAnfang(new Date())).titel, teil:[], vor:[]});
+  /* Künftige Sprinklergänge (v1.143) zählen in der Zeitsumme ihrer Gruppe mit.
+     Fehlt die Gruppe, entsteht sie bis zur nächsten Woche und bis Monatsende
+     eigens dafür; spätere Monate bekommen nur dazu, wenn sie ohnehin dastehen. */
+  {
+    const h0 = tagAnfang(new Date()), monatLetzter = new Date(h0.getFullYear(), h0.getMonth() + 1, 0);
+    /* Mindestens bis Ende nächster Woche – deren Freitag kann schon im
+       nächsten Monat liegen. */
+    const w = wochenBeginn(h0), naechsterSonntag = new Date(w.getFullYear(), w.getMonth(), w.getDate() + 13);
+    const letzt = liste.reduce((m, a) => a.tag && a.tag > m ? a.tag : m,
+      naechsterSonntag > monatLetzter ? naechsterSonntag : monatLetzter);
+    /* Steht ein späterer Monat da, dann ganz – mit seiner Monatskontrolle. */
+    const spaet = letzt > monatLetzter ? new Date(letzt.getFullYear(), letzt.getMonth() + 1, 0) : letzt;
+    sprinklerVorschau(spaet).forEach(a => {
+      const lg = listenGruppe(a.tag);
+      let g = gruppen.find(x => x.g === lg.g);
+      if(!g){
+        if(lg.g !== 'woche' && lg.g !== 'nwoche' && a.tag > monatLetzter) return;
+        g = {g:lg.g, nr:lg.nr, titel:lg.titel, teil:[], vor:[]};
+        const i = gruppen.findIndex(x => x.nr > lg.nr);
+        gruppen.splice(i < 0 ? gruppen.length : i, 0, g);
+      }
+      g.vor.push(a);
+    });
+  }
   const gelegen = gelegenheitKarte(gelegenheiten(liste));
   /* „Zeit übrig? Vorziehen“ (v1.100) steht am Ende von „Heute“; ohne Heute
      unter dem Überfälligen, sonst vor der ersten Gruppe. */
@@ -5134,13 +5170,21 @@ function renderHome(){
   const vorzNach = gruppen.some(x => x.g === 'heute') ? 'heute' : gruppen.some(x => x.g === 'ueber') ? 'ueber' : '';
   let inhalt = abwesenheitsKarte(liste) + (gruppen.length && gruppen[0].g === 'ueber' ? '' : gelegen)
     + (vorzNach ? '' : vorz)
-    + gruppen.map(({g, titel, teil}) => {
+    + gruppen.map(({g, titel, teil, vor}) => {
     /* Was die Gruppe an Zeit braucht (v1.63), aus den Erfahrungswerten. */
-    const summe = teil.reduce((sum, a) => { const m = !a.istTermin && eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
-    if(g === 'heute') return `<div class="eyebrow" style="margin-bottom:2px">${esc(titel)}</div>` + heuteZeile(liste)
+    /* „≈ 0:30 h“ bricht nicht mehr vor dem „h“ um (v1.143). */
+    const dauerFest = m => ('≈ ' + dauerText({m})).replace(/ /g, '\u00a0');
+    const minVon = l => l.reduce((sum, a) => { const m = !a.istTermin && eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
+    const vorMin = minVon(vor), summe = minVon(teil) + vorMin;
+    /* Woher die Zeit über die Zeilen hinaus kommt (v1.143). */
+    const wZahl = vor.filter(a => a.ziel === 'woch').length, mZahl = vor.length - wZahl;
+    const vorText = !vorMin ? '' : 'dazu ' + (wZahl && mZahl ? `Sprinkler: Wochengang${wZahl > 1 ? ' ' + wZahl + '×' : ''}, Monatskontrolle`
+      : wZahl ? `Sprinkler-Wochengang${wZahl > 1 ? ' ' + wZahl + '×' : ''}` : 'Sprinkler-Monatskontrolle') + ' ' + dauerFest(vorMin);
+    const vorZeile = vorText ? `<p class="muted small vorschauZeile">${esc(vorText)}</p>` : '';
+    if(g === 'heute') return `<div class="eyebrow" style="margin-bottom:2px">${esc(titel)}</div>` + heuteZeile(liste) + vorZeile
         + teil.map(a => a.istTermin ? terminKnopf(a.o, true) : aufgabeKnopf(a)).join('') + (g === vorzNach ? vorz : '');
-    return `<div class="eyebrow">${esc(titel)}${summe ? ` <span class="summe">· ≈ ${esc(dauerText({m:summe}))}</span>` : ''}</div>`
-        + teil.map(a => a.istTermin ? terminKnopf(a.o, g === 'heute' || g === 'morgen') : aufgabeKnopf(a)).join('') + (g === 'ueber' ? gelegen : '') + (g === vorzNach ? vorz : '');
+    return `<div class="eyebrow"${vorZeile ? ' style="margin-bottom:2px"' : ''}>${esc(titel)}${summe ? ` <span class="summe">· ${esc(dauerFest(summe))}</span>` : ''}</div>`
+        + vorZeile + teil.map(a => a.istTermin ? terminKnopf(a.o, g === 'heute' || g === 'morgen') : aufgabeKnopf(a)).join('') + (g === 'ueber' ? gelegen : '') + (g === vorzNach ? vorz : '');
   }).join('');
   if(!liste.length && !term.length) inhalt += gibt
     ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Alle Nachweise“.</p>`
@@ -7401,6 +7445,45 @@ function restAnteil(k){
   if(!alle) return 1;
   return (alle - zeilenJetzt(k).filter(z => z.status).length) / alle;
 }
+/* Künftige Sprinklergänge (v1.143, Wunsch von Jean): in der Liste steht nur
+   der Gang der laufenden Woche und die laufende Monatsrunde, Zeit brauchen
+   aber auch alle späteren. Je Woche ein Wochengang, gezählt an ihrem Freitag –
+   ist er Feiertag (oder abwesend), am Arbeitstag davor, so dass etwa der
+   Feiertag Freitag, 1. Mai, die Woche dem April zuschlägt. Je Monat eine
+   Monatskontrolle an seinem letzten Arbeitstag; die des laufenden Monats nur,
+   wenn noch die des Vormonats offen in der Liste steht. Die Einträge sehen aus
+   wie Zeilen der Liste (vorschau:true) und fließen in die Zeitsummen der
+   Gruppen, die Auslastung und den Wochenplan – nicht in die Liste selbst.
+   Im Wochenplan kommt der Wochengang frühestens an seinem Freitag unter. */
+function sprinklerVorschau(bis){
+  const n = NACHWEISE.find(x => x.art === 'sprinkler' && !x.spaeter);
+  if(!n || !bis) return [];
+  const h0 = tagAnfang(new Date()), raus = [];
+  const posten = (teil, tag, frueh, titel) => raus.push({k:n.k, ziel:teil, akku:false, begonnen:false,
+    wichtig:wichtigVon(n.k), pos:NACHWEISE.indexOf(n), sprTeile:[teil], vorschau:true,
+    titel:n.label + ' · ' + titel, faellig:tag, frueh, tag, tage:Math.round((tag - h0) / TAG_MS)});
+  if(hatEintraege(n, 'woche')){
+    const w0 = wochenBeginn(h0);
+    for(let i = 1; i < 60; i++){
+      const mo = new Date(w0.getFullYear(), w0.getMonth(), w0.getDate() + 7 * i);
+      const fr = new Date(mo.getFullYear(), mo.getMonth(), mo.getDate() + 4);
+      const tag = wirksamerTag(fr, mo).tag || fr;
+      if(tag > bis) break;
+      posten('woch', tag, tag, `Wochengang KW ${kalenderwoche(mo)}`);
+    }
+  }
+  if(hatEintraege(n, 'monat')){
+    const m = sprinklerMonat(n);
+    for(let i = m && m.ueber ? 0 : 1; i < 15; i++){
+      const erster = new Date(h0.getFullYear(), h0.getMonth() + i, 1);
+      const letzter = new Date(erster.getFullYear(), erster.getMonth() + 1, 0);
+      const tag = wirksamerTag(letzter, erster).tag || letzter;
+      if(tag > bis) break;
+      posten('mon', tag, erster, 'Monatskontrolle ' + MONATE[erster.getMonth()]);
+    }
+  }
+  return raus;
+}
 function eintragMinuten(a){
   const teil = (key, anteil) => {
     const s = key && taetSchnitt(key);
@@ -7450,6 +7533,10 @@ function verfuegbarBis(bis){
    Überfälliges zählt so, als wäre es heute fällig. */
 function planPruefen(liste){
   const h0 = tagAnfang(new Date());
+  /* Künftige Sprinklergänge (v1.143) bis zur spätesten Frist der Liste,
+     mindestens bis Monatsende. */
+  const spaet = liste.reduce((m, a) => a.faellig && a.faellig > m ? a.faellig : m, new Date(h0.getFullYear(), h0.getMonth() + 1, 0));
+  liste = liste.concat(sprinklerVorschau(spaet));
   const posten = liste.map(a => ({a, m:eintragMinuten(a)})).filter(x => x.m && x.m.min > 0)
     .map(x => Object.assign(x, {bis: x.a.faellig && x.a.faellig > h0 ? x.a.faellig : h0}))
     .sort((p, q) => p.bis - q.bis);
@@ -7493,6 +7580,8 @@ function wochenplanRechnen(liste){
     const cap = tagKap(t), iso = isoTag(t);
     tage.push({t:new Date(t), iso, cap, frei:cap, posten:[], termine:termineAm(iso)});
   }
+  /* Künftige Sprinklergänge (v1.143) auf ihre Woche bzw. ihren Monat. */
+  if(tage.length) liste = liste.concat(sprinklerVorschau(tage[tage.length - 1].t));
   const posten = liste.map(a => ({a, m:eintragMinuten(a)})).filter(x => x.m && x.m.min > 0).map(x => {
     const von = x.a.fenster && x.a.fenster.von ? x.a.fenster.von : x.a.frueh;
     const aufg = x.a.aufg && AUFG.find(y => y.id === x.a.aufg);
@@ -7658,7 +7747,9 @@ function gelegenheitKarte(liste){
 }
 const planKnopf = p => {
   const a = p.a;
-  const ziel = a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${esc(a.aufg)}"`
+  /* Ein künftiger Sprinklergang (v1.143) lässt sich noch nicht erfassen –
+     er öffnet nichts. */
+  const ziel = a.vorschau ? '' : a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${esc(a.aufg)}"`
              : `data-nw="${esc(a.k)}" data-ziel="${esc(a.ziel || '')}"${a.akku ? ' data-akku="1"' : ''}`;
   return `<button class="btn eintrag" ${ziel}><span class="etext">${esc(a.titel)}<small>${
     esc(['≈ ' + dauerText({m:p.min})].concat(p.noten).join(' · '))}</small></span></button>`;
