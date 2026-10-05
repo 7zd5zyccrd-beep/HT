@@ -163,6 +163,9 @@ steht.
   Tätigkeit/Material-Schlüssel `akkuTaet(k)` und Anlass-IDs `akkuAnlassVor`:
   die RWA behält ihre alten (`akku`, `akku:<Objekt>@`), sonst mit Typ.
 - Markenfarbe: `ortStatus` = knappere Lage aus `ortStatus0` und Akkufrist.
+- Prüfabstand der Fremdprüfungen seit v1.151 in Monaten: `teilCfg(k).monate`
+  (aus altem `jahre` umgerechnet), Fristen über `fristM`, Gruppen über
+  `monateTitel`. `frist(datum, jahre)` gibt es nur noch für Altes.
 
 ## Suche (v1.145)
 

@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.151 05.10.2026 Fremdprüfungen: Der Prüfabstand steht jetzt in Monaten wie
+         beim Akkutausch (Wunsch von Jean) – unter Einstellungen bei
+         Feuerlöscher, RWA und im Baukasten. Bisherige Abstände werden
+         umgerechnet (2 Jahre = 24 Monate), auch aus älteren Sicherungen. In
+         „Alle Nachweise“ heißen die Gruppen danach „Halbjährlich“,
+         „Jährlich“, „Zweijährlich“, „Alle 18 Monate“ usw.
   v1.150 05.10.2026 Sprinkler: stand seit v1.148 als überfällig in der Liste,
          obwohl der Wochengang erledigt war. Die neue Rechnung der Abstände
          nahm beim Sprinkler den ersten seiner Takte (die Woche) als Runde –
@@ -3234,7 +3240,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.150';
+const VERSION = 'v1.151';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3663,13 +3669,13 @@ const VORLAGEN = [
      Vorgabe – geändert wird er in den Einstellungen. */
   {
     k:'loescher', label:'Feuerlöscher', datei:'Prüfung Feuerlöscher',
-    art:'fremd', jahre:2,
+    art:'fremd', jahre:2, monate:24,
     titel:'Prüfung Feuerlöscher',
     anlagen:['Feuerlöscher 1']
   },
   {
     k:'rwa', label:'RWA', datei:'Prüfung RWA',
-    art:'fremd', jahre:1, akku:true,
+    art:'fremd', jahre:1, monate:12, akku:true,
     titel:'Prüfung Rauch- und Wärmeabzugsanlagen',
     anlagen:['RWA 1'],
     /* Den Akkutausch machen wir selbst; wie oft, hängt an der Kapazität. */
@@ -3741,6 +3747,9 @@ const teilCfg = k => {
   if(n.art === 'fremd'){
     /* Der Abstand zwischen zwei Prüfungen, in Jahren. */
     if(!(t.jahre > 0)) t.jahre = n.jahre;
+    /* Seit v1.150 in Monaten (Wunsch von Jean); ein Abstand in Jahren von
+       früher (auch aus älteren Sicherungen) wird umgerechnet. */
+    if(!(t.monate > 0)) t.monate = t.jahre > 0 ? Math.round(t.jahre * 12) : (n.monate > 0 ? n.monate : 12);
     if(n.akku && !Array.isArray(t.akkus))
       t.akkus = (n.akkus || []).map(a => ({name:a.name, jahre:a.jahre}));
     return t;
@@ -4309,7 +4318,7 @@ function frist(datum, jahre){
 const VORWARN = 56;
 const zeileVon = (k, a) => { const d = DAT[k]; return (d && d.zeilen && d.zeilen[a]) || {}; };
 const fristen = k => { const t = teilCfg(k);
-  return t.anlagen.map(a => frist(zeileVon(k, a).datum, t.jahre)); };
+  return t.anlagen.map(a => fristM(zeileVon(k, a).datum, t.monate)); };
 function fremdRing(k){
   const fr = fristen(k);
   if(!fr.length) return '';
@@ -4877,6 +4886,9 @@ const TAKTE = [['woche','Wöchentlich'], ['monat','Monatlich'], ['quartal','Quar
 /* Fremdprüfungen ordnen sich nach ihrem eingestellten Abstand ein. Wird der in
    den Einstellungen geändert, wandert der Knopf in die andere Gruppe. */
 const jahrTitel = j => j === 1 ? 'Jährlich' : j === 2 ? 'Zweijährlich' : `Alle ${j} Jahre`;
+/* Dasselbe für den Abstand in Monaten (v1.150). */
+const monateTitel = m => m % 12 === 0 ? jahrTitel(m / 12)
+  : m === 1 ? 'Monatlich' : m === 3 ? 'Vierteljährlich' : m === 6 ? 'Halbjährlich' : `Alle ${m} Monate`;
 /* --- Der Akkutausch ---------------------------------------------------------
    Er hängt nicht am Prüfabstand der Firma, sondern am Typ des eingebauten
    Akkus: je nach Kapazität alle drei oder vier Jahre. Der Typ wird je Anlage
@@ -7525,7 +7537,7 @@ function matAnlaesse(){
     (t.anlagen || []).forEach(a => {
       const mat = mittelVon(`${n.k}|${a}`).mat;
       if(!mat.length) return;
-      const f = frist(zeileVon(n.k, a).datum, t.jahre);
+      const f = fristM(zeileVon(n.k, a).datum, t.monate);
       const faellig = f.ziel ? alsDatum(f.ziel) : tagAnfang(jetzt);
       if(faellig > grenze) return;
       raus.push({id:`fremd:${n.k}|${a}@${f.ziel || 'ohne'}`, key:'', nw:n.k, name:n.label, anlage:a,
@@ -8305,9 +8317,9 @@ function renderAlle(){
   });
   /* Die Fremdprüfungen nach Abstand gebündelt, der kürzere zuerst. */
   const fremd = NACHWEISE.filter(n => n.art === 'fremd' && hatEintraege(n, ''));
-  [...new Set(fremd.map(n => teilCfg(n.k).jahre))].sort((a, b) => a - b).forEach(j =>
-    gruppen.push([jahrTitel(j),
-      fremd.filter(n => teilCfg(n.k).jahre === j).map(n => knopf(n, '')).join('')]));
+  [...new Set(fremd.map(n => teilCfg(n.k).monate))].sort((a, b) => a - b).forEach(m =>
+    gruppen.push([monateTitel(m),
+      fremd.filter(n => teilCfg(n.k).monate === m).map(n => knopf(n, '')).join('')]));
   /* Der Akkutausch ist keine Prüfung und keine Runde: er hat je Anlagentyp
      seinen eigenen Knopf (v1.149), solange es dort Objekte gibt. */
   const akkus = akkuTypenMit();
@@ -8394,7 +8406,7 @@ function renderFremd(){
      </div>`
     + fremdFolge(offen).map(i => {
         const a = t.anlagen[i];
-        const z = d.zeilen[a], f = frist(z.datum, t.jahre);
+        const z = d.zeilen[a], f = fristM(z.datum, t.monate);
         const klasse = f.offen || f.faellig ? ' mangel' : ' fertig';
         const kenn = offen === 'loescher' ? [loeStandort(a), loeKennung(a), loeZusatz(a)].filter(Boolean).join(' · ') : '';
         return `<div class="pos${klasse}" data-i="${i}">
@@ -8571,7 +8583,7 @@ function vorbAnstehend(art){
   if(!NW(art)) return raus;
   const t = teilCfg(art);
   t.anlagen.forEach(a => {
-    const f = frist(zeileVon(art, a).datum, t.jahre);
+    const f = fristM(zeileVon(art, a).datum, t.monate);
     if(f.offen || f.tage <= VORWARN) raus[a] = f.ziel;
   });
   return raus;
@@ -11083,7 +11095,7 @@ function typStd(){
   const belegt = eigeneTypen().map(n => n.farbe);
   return {k:'', eigen:true, label:'', art:'', takt:['monat'], titelEigen:'', dateiEigen:'',
     status:['In Ordnung', 'Mangel'], mangel:['Mangel'], checkliste:'', vorschlaege:[],
-    sortierbar:false, kompakt:false, etagen:false, akku:false, jahre:1, anlagen:[],
+    sortierbar:false, kompakt:false, etagen:false, akku:false, monate:12, anlagen:[],
     farbe:TYP_FARBEN.find(f => !belegt.includes(f)) || TYP_FARBEN[0]};
 }
 /* Abgeleitetes nachziehen: Überschrift, Dateiname, Kennzeichen der Liste. */
@@ -11094,7 +11106,7 @@ function typAbleiten(n){
   n.datei = String(n.dateiEigen || '').trim() || `Prüfung ${name}`;
   n.kompakt = !!n.sortierbar;
   n.mangel = (n.mangel || []).filter(st => n.status.includes(st));
-  if(n.art === 'fremd') n.jahre = Math.max(1, Math.round(+n.jahre || 1));
+  if(n.art === 'fremd') n.monate = Math.max(1, Math.round(+n.monate || (+n.jahre || 1) * 12));
   return n;
 }
 let typEntwurf = null;
@@ -11138,8 +11150,9 @@ function setTypBau(box, k){
           <input id="tbDatei" value="${esc(n.dateiEigen || '')}" placeholder="${esc(typAbleiten(Object.assign({}, n, {dateiEigen:''})).datei)}"></label>
         <label class="haken"><input type="checkbox" id="tbWeg"${n.sortierbar ? ' checked' : ''}> Reihenfolge ist der Laufweg, Geprüftes schrumpft</label>`
       : fremd ? `
-        <label class="field"><span>Prüfabstand in Jahren</span>
-          <input id="tbJahre" type="number" inputmode="numeric" min="1" max="10" value="${esc(String(n.jahre || 1))}"></label>` : ''}
+        <label class="field"><span>Prüfabstand in Monaten</span>
+          <input id="tbJahre" type="number" inputmode="numeric" min="1" max="240" value="${esc(String(n.monate || (n.jahre || 1) * 12))}"></label>
+        <p class="muted small" style="margin:-6px 0 10px">12 = jährlich, 24 = alle zwei Jahre.</p>` : ''}
       <label class="haken"><input type="checkbox" id="tbEtagen"${n.etagen ? ' checked' : ''}> Ein Objekt liegt auf mehreren Etagen (wie Aufzüge)</label>
       <label class="haken"><input type="checkbox" id="tbAkku"${n.akku ? ' checked' : ''}> Akkutausch (Akkutyp je Objekt, eigener Tauschtermin)</label>
       <div class="eyebrow">Markenfarbe im Grundriss</div>
@@ -11155,8 +11168,8 @@ function setTypBau(box, k){
     feld('#tbTakt', e => { n.takt = [e.value]; zeichnen(); });
     feld('#tbEtagen', e => { n.etagen = e.checked; });
     feld('#tbAkku', e => { n.akku = e.checked; });
-    feld('#tbJahre', e => { n.jahre = Math.max(1, Math.min(10, Math.round(+e.value || 1))); e.value = n.jahre;
-      if(!neu){ teilCfg(n.k).jahre = n.jahre; } });
+    feld('#tbJahre', e => { n.monate = Math.max(1, Math.min(240, Math.round(+e.value || 12))); e.value = n.monate;
+      if(!neu){ teilCfg(n.k).monate = n.monate; } });
     box.querySelectorAll('[data-seg] [data-w]').forEach(b => b.onclick = () => {
       const f = b.closest('[data-seg]').dataset.seg;
       n[f] = b.dataset.w;
@@ -11210,7 +11223,7 @@ function setTypBau(box, k){
       while(NW(n.k) || CFG.teile[n.k]);
       typAbleiten(n);
       CFG.eigen = eigeneTypen().concat(n);
-      CFG.teile[n.k] = n.art === 'fremd' ? {anlagen:[], jahre:n.jahre} : {anlagen:[], checkliste:''};
+      CFG.teile[n.k] = n.art === 'fremd' ? {anlagen:[], monate:n.monate} : {anlagen:[], checkliste:''};
       CFG.typen = (CFG.typen || []).concat(n.k);
       typEntwurf = null;
       typenAnwenden(); saveCfg();
@@ -11600,19 +11613,19 @@ function setSprinkler(box, k){
    Art und ändert sich höchstens, wenn sich die Vorschrift ändert. */
 function setFremd(box, k){
   const n = NW(k), t = teilCfg(k);
-  const iAbst = info('Aus dem letzten Prüfdatum und diesem Abstand ergibt sich der nächste Termin – und unter welcher Überschrift der Nachweis in „Alle Nachweise“ steht.', 'margin:-6px 0 14px');
+  const iAbst = info('Aus dem letzten Prüfdatum und diesem Abstand ergibt sich der nächste Termin – und unter welcher Überschrift der Nachweis in „Alle Nachweise“ steht. 12 = jährlich, 24 = alle zwei Jahre.', 'margin:-6px 0 14px');
   const iObj = info('Neue Objekte hängen sich hinten an. Das Grundriss-Symbol (Plan mit Stecknadel) zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge.'
     + (akkuAktiv(k) ? ' Unter dem Namen wählst du den Akkutyp, rechts in der Knopfreihe die Anzahl.' : ''), 'margin:-4px 0 6px');
   box.innerHTML =
-    `<label class="field"><span class="mitInfo">Prüfabstand in Jahren ${iAbst.knopf}</span>
-       <input type="number" id="setJahre" class="schmal" min="1" max="20" step="1" inputmode="numeric" value="${t.jahre}"></label>${iAbst.text}`
+    `<label class="field"><span class="mitInfo">Prüfabstand in Monaten ${iAbst.knopf}</span>
+       <input type="number" id="setJahre" class="schmal" min="1" max="240" step="1" inputmode="numeric" value="${t.monate}"></label>${iAbst.text}`
     + (akkuAktiv(k) ? `<button class="btn eintrag" id="setZuAkkus"><span>Akkutypen</span><span class="zahl">${akkuTypen().length}</span></button>` : '')
     + `<div class="eyebrow mitInfo">Objekte ${iObj.knopf}</div>${iObj.text}
        <div id="setListe"></div>`;
   $('#setJahre').onchange = e => {
-    const j = Math.round(+e.target.value);
-    if(!(j > 0 && j <= 20)){ e.target.value = t.jahre; return; }
-    t.jahre = j; saveCfg();
+    const m = Math.round(+e.target.value);
+    if(!(m > 0 && m <= 240)){ e.target.value = t.monate; return; }
+    t.monate = m; saveCfg();
   };
   if(akkuAktiv(k)) $('#setZuAkkus').onclick = () => setOeffnen('akkus', '');
   objektKarten($('#setListe'), k);
@@ -12981,7 +12994,7 @@ function ortStatus0(key){
   const nf = NW(t[0]);
   if(nf && nf.art === 'fremd'){
     const a = t.slice(1).join('|'), z = zeileVon(nf.k, a);
-    const fr = [frist(z.datum, teilCfg(nf.k).jahre)];
+    const fr = [fristM(z.datum, teilCfg(nf.k).monate)];
     if(fr.some(f => f.offen || f.faellig)) return 'rot';
     return fr.some(f => f.tage <= VORWARN) ? 'gelb' : 'gruen';
   }
@@ -16083,7 +16096,7 @@ function suchStand0(o){
   }
   if(n.art === 'bestand') return '';
   const z = zeileVon(o.k, o.id);
-  if(n.art === 'fremd') return [o.zusatz, z.datum ? fristText(frist(z.datum, teilCfg(o.k).jahre)) : 'noch nicht geprüft'].filter(Boolean).join(' · ');
+  if(n.art === 'fremd') return [o.zusatz, z.datum ? fristText(fristM(z.datum, teilCfg(o.k).monate)) : 'noch nicht geprüft'].filter(Boolean).join(' · ');
   const m = offenerMangel(o.ort);
   return [z.status ? `${dText(z.datum)} · ${z.status}` : 'in dieser Runde noch offen',
           m ? `Mangel seit ${dText(m.festgestellt)}` : ''].filter(Boolean).join(' · ');
@@ -16160,7 +16173,7 @@ async function kurzinfo(o){
   }else if(n.art === 'bestand'){
     /* Ohne Prüfung gibt es nichts weiter zu sagen (v1.148). */
   }else if(n.art === 'fremd'){
-    const z = zeileVon(o.k, o.id), f = frist(z.datum, teilCfg(o.k).jahre);
+    const z = zeileVon(o.k, o.id), f = fristM(z.datum, teilCfg(o.k).monate);
     zeilen.push(z.datum ? `Zuletzt geprüft am ${dText(z.datum)} · ${fristText(f)}` : 'Noch nicht geprüft');
     if(z.bem) zeilen.push(`Bemerkung: ${z.bem}`);
   }else{
