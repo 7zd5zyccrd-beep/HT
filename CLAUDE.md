@@ -118,7 +118,8 @@ steht.
   `sprinklerVorschau(bis)` liefert listenartige Einträge (`vorschau:true`)
   für jeden späteren Wochengang (an seinem Freitag, bei Feiertag/Abwesenheit
   `wirksamerTag` davor) und jede spätere Monatskontrolle (letzter Arbeitstag).
-  Sie zählen in den Gruppensummen (Zeile „dazu Sprinkler-…“), in
+  Sie zählen still in den Gruppensummen (die Zeile „dazu Sprinkler-…“
+  darunter hat der Nutzer in v1.144 abgelehnt), in
   `planPruefen` und `wochenplanRechnen`, stehen aber nicht als Zeilen in der
   Liste. Gruppen entstehen dafür eigens nur bis nächste Woche/Monatsende.
 

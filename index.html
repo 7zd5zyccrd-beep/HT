@@ -10,6 +10,9 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.144 05.10.2026 Aufgabenliste: Die kleine Zeile „dazu Sprinkler-Wochengang …“
+         unter den Überschriften ist wieder weg, sie störte. Die künftigen
+         Sprinklergänge zählen weiter in der Zeitsumme an der Überschrift mit.
   v1.143 05.10.2026 Zeitschätzung (Wunsch von Jean): Die künftigen Gänge am
          Sprinkler zählen jetzt mit. Jede Woche bringt einen Wochengang, er
          gehört in den Monat, auf den ihr Freitag fällt – ist der Freitag ein
@@ -2202,8 +2205,6 @@ button > .ortIcon:only-child{display:block;margin:auto}
 .neuZeile{margin:0 0 12px}
 /* Heute auf einen Blick (v1.114): kleine Zeile unter der Überschrift „Heute“,
    ein Tipp öffnet den Wochenplan. */
-/* Künftige Sprinklergänge unter der Gruppenüberschrift (v1.143). */
-.vorschauZeile{margin:0 0 10px;font-size:14px;color:var(--ink-soft)}
 .heuteZeile{display:block;width:100%;margin:0 0 10px;padding:4px 0;border:0;background:none;text-align:left;
   font:inherit;font-size:14px;color:var(--ink-soft);cursor:pointer;-webkit-appearance:none;appearance:none}
 /* Termin oder Zeitraum einer eigenen Aufgabe (v1.51): die Zeilen „von“ und
@@ -3153,7 +3154,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.143';
+const VERSION = 'v1.144';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5175,16 +5176,13 @@ function renderHome(){
     /* „≈ 0:30 h“ bricht nicht mehr vor dem „h“ um (v1.143). */
     const dauerFest = m => ('≈ ' + dauerText({m})).replace(/ /g, '\u00a0');
     const minVon = l => l.reduce((sum, a) => { const m = !a.istTermin && eintragMinuten(a); return sum + (m ? m.min : 0); }, 0);
-    const vorMin = minVon(vor), summe = minVon(teil) + vorMin;
-    /* Woher die Zeit über die Zeilen hinaus kommt (v1.143). */
-    const wZahl = vor.filter(a => a.ziel === 'woch').length, mZahl = vor.length - wZahl;
-    const vorText = !vorMin ? '' : 'dazu ' + (wZahl && mZahl ? `Sprinkler: Wochengang${wZahl > 1 ? ' ' + wZahl + '×' : ''}, Monatskontrolle`
-      : wZahl ? `Sprinkler-Wochengang${wZahl > 1 ? ' ' + wZahl + '×' : ''}` : 'Sprinkler-Monatskontrolle') + ' ' + dauerFest(vorMin);
-    const vorZeile = vorText ? `<p class="muted small vorschauZeile">${esc(vorText)}</p>` : '';
-    if(g === 'heute') return `<div class="eyebrow" style="margin-bottom:2px">${esc(titel)}</div>` + heuteZeile(liste) + vorZeile
+    /* Künftige Sprinklergänge (v1.143) zählen still mit – die Zeile
+       „dazu Sprinkler-…“ darunter störte (v1.144, Jean). */
+    const summe = minVon(teil) + minVon(vor);
+    if(g === 'heute') return `<div class="eyebrow" style="margin-bottom:2px">${esc(titel)}</div>` + heuteZeile(liste)
         + teil.map(a => a.istTermin ? terminKnopf(a.o, true) : aufgabeKnopf(a)).join('') + (g === vorzNach ? vorz : '');
-    return `<div class="eyebrow"${vorZeile ? ' style="margin-bottom:2px"' : ''}>${esc(titel)}${summe ? ` <span class="summe">· ${esc(dauerFest(summe))}</span>` : ''}</div>`
-        + vorZeile + teil.map(a => a.istTermin ? terminKnopf(a.o, g === 'heute' || g === 'morgen') : aufgabeKnopf(a)).join('') + (g === 'ueber' ? gelegen : '') + (g === vorzNach ? vorz : '');
+    return `<div class="eyebrow">${esc(titel)}${summe ? ` <span class="summe">· ${esc(dauerFest(summe))}</span>` : ''}</div>`
+        + teil.map(a => a.istTermin ? terminKnopf(a.o, g === 'heute' || g === 'morgen') : aufgabeKnopf(a)).join('') + (g === 'ueber' ? gelegen : '') + (g === vorzNach ? vorz : '');
   }).join('');
   if(!liste.length && !term.length) inhalt += gibt
     ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Alle Nachweise“.</p>`
