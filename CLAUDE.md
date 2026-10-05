@@ -123,6 +123,18 @@ steht.
   `planPruefen` und `wochenplanRechnen`, stehen aber nicht als Zeilen in der
   Liste. Gruppen entstehen dafür eigens nur bis nächste Woche/Monatsende.
 
+## Suche (v1.145)
+
+- `suchObjekte`: Text je Objekt = Name (+ Löscherangaben) + Name der Anlage
+  (`n.label`) + Grundrisse seiner Marke (`suchPlanText`: Name und Kurzname aus
+  `suchPlaene`, beim Löscher auch `info.plan`). Arbeitsmittel (`o.mittel`) und
+  Bemerkung zählen mit und erscheinen in der kleinen Zeile, wenn ein Wort nur
+  dort steht. Alle Wörter müssen vorkommen, verteilt auf all das.
+- `suchPlaene` kommt verzögert aus `Bilder.alle()`, neu bei jedem Antippen des
+  Feldes. Sprinklerpunkte und Checklisten bleiben außen vor (vom Nutzer
+  vorerst so entschieden); Listen und Grundrisse als eigene Treffer stehen
+  noch aus.
+
 ## Termine (v1.103)
 
 - `TERM` (`nwTermine`, in der Sicherung als `termine`): Verabredungen mit

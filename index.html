@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.145 05.10.2026 Suche (Wunsch von Jean): Sie findet Objekte jetzt auch über
+         den Namen ihrer Anlage („Feststellanlage“, „Feuerlöscher“, „RWA“),
+         über den Grundriss, auf dem ihre Marke sitzt (Name und Kurzname, beim
+         Feuerlöscher auch der beim Standort gewählte Plan), und über ihre
+         Arbeitsmittel – dann steht „Arbeitsmittel: …“ in der kleinen Zeile.
+         Mehrere Wörter dürfen sich auf all das verteilen: „RWA Erdgeschoss“
+         findet die RWA auf dem Plan Erdgeschoss.
   v1.144 05.10.2026 Aufgabenliste: Die kleine Zeile „dazu Sprinkler-Wochengang …“
          unter den Überschriften ist wieder weg, sie störte. Die künftigen
          Sprinklergänge zählen weiter in der Zeitsumme an der Überschrift mit.
@@ -3154,7 +3161,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.144';
+const VERSION = 'v1.145';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -15358,9 +15365,34 @@ function plausEinstellungen(box){
    nicht, mehrere Wörter müssen alle vorkommen. Bei Wörtern mit Ziffern werden
    Leerzeichen, Striche und Punkte übergangen – „214711“ findet „21-4711“.
    Ein Treffer öffnet eine Kurzinfo mit den Wegen zur Karte, in den Grundriss
-   (nur mit gesetzter Marke) und in den Verlauf. */
+   (nur mit gesetzter Marke) und in den Verlauf.
+   Seit v1.145 (Jean: „Feststellanlage“ und „RWA Erdgeschoss“ fanden nichts)
+   gehören zu jedem Objekt auch der Name seiner Anlage und die Grundrisse, auf
+   denen es liegt (Name und Kurzname), dazu seine Arbeitsmittel. Die Wörter
+   dürfen sich auf all das verteilen. */
 const suchNorm = t => String(t || '').toLocaleLowerCase('de');
 const nurZeichen = t => suchNorm(t).replace(/[\s\-–./_,;:]+/g, '');
+/* Die Grundrisse liegen im Bilderspeicher, der nur verzögert antwortet. Die
+   Suche merkt sich deren Namen (v1.145) und holt sie bei jedem Antippen des
+   Feldes neu – so gelten auch eben umbenannte Pläne. */
+let suchPlaene = null;
+function suchPlaeneHolen(){
+  return Bilder.alle().then(l => {
+    const sortiert = planSortieren((l || []).map(p => ({id:p.id, name:p.name})));
+    const kurz = planKurzNamen(sortiert);
+    suchPlaene = new Map(sortiert.map((p, i) => [p.id, [p.name, kurz[i]].filter(Boolean).join(' ')]));
+  }).catch(() => { suchPlaene = new Map(); });
+}
+/* Die Pläne eines Objekts als Suchtext: wo seine Marke sitzt, dazu beim
+   Feuerlöscher der beim Standort gewählte Plan. */
+function suchPlanText(ort, k, id){
+  if(!suchPlaene) return '';
+  const ids = ortPlaene(ort).slice();
+  if(k === 'loescher' && loeInfo(id).plan) ids.push(loeInfo(id).plan);
+  return [...new Set(ids)].map(pid => suchPlaene.get(pid) || '').join(' ');
+}
+/* Arbeitsmittel eines Objekts (v1.145): Werkzeug und Material. */
+const suchMittel = key => { const m = mittelVon(key); return m.ut.concat(m.mat.map(x => x.name)).join(', '); };
 function suchObjekte(){
   const l = [];
   NACHWEISE.forEach(n => {
@@ -15370,15 +15402,16 @@ function suchObjekte(){
       stellen().forEach(z => l.push({k:'medien', id:z.key, ort:z.key, einheit:z.einheit,
         titel:`${z.partei} · ${namen[z.key] || z.medium}`,
         zusatz:`Nr. ${z.nr}${z.ort ? ' · ' + z.ort : ''}`,
-        text:[z.partei, z.medium, namen[z.key], z.nr, z.ort].join(' '),
-        bem:bestaetigGrund(z.key)}));
+        text:[z.partei, z.medium, namen[z.key], z.nr, z.ort, 'Zähler', n.label, suchPlanText(z.key, 'medien', z.key)].join(' '),
+        bem:bestaetigGrund(z.key), mittel:suchMittel('medien|' + z.key)}));
       return;
     }
     (teilCfg(n.k).anlagen || []).forEach(a =>
       l.push({k:n.k, id:a, ort:`${n.k}|${a}`, titel:a,
         zusatz:n.k === 'loescher' ? [loeStandort(a), loeKennung(a)].filter(Boolean).join(' · ') : '',
-        text:n.k === 'loescher' ? [a, loeStandort(a), loeKennung(a), loeZusatz(a)].join(' ') : a,
-        bem:String(zeileVon(n.k, a).bem || '').trim()}));
+        text:[n.k === 'loescher' ? [a, loeStandort(a), loeKennung(a), loeZusatz(a)].join(' ') : a,
+              n.label, suchPlanText(`${n.k}|${a}`, n.k, a)].join(' '),
+        bem:String(zeileVon(n.k, a).bem || '').trim(), mittel:suchMittel(`${n.k}|${a}`)}));
   });
   return l;
 }
@@ -15398,10 +15431,12 @@ function suchTreffer(frage){
   const woerter = suchWoerter(frage);
   if(!woerter.length) return [];
   return suchObjekte().filter(o => {
-    if(!woerter.every(w => wortIn(w, o.text) || (o.bem && wortIn(w, o.bem)))) return false;
-    /* Erst über die Bemerkung gefunden: dann gehört sie in die kleine Zeile,
-       sonst sieht man nicht, warum der Treffer dasteht. */
-    o.ueberBem = !woerter.every(w => wortIn(w, o.text));
+    if(!woerter.every(w => wortIn(w, o.text) || (o.bem && wortIn(w, o.bem)) || (o.mittel && wortIn(w, o.mittel)))) return false;
+    /* Erst über Bemerkung oder Arbeitsmittel gefunden: dann gehört das in die
+       kleine Zeile, sonst sieht man nicht, warum der Treffer dasteht. */
+    const rest = woerter.filter(w => !wortIn(w, o.text));
+    o.ueberBem = rest.some(w => o.bem && wortIn(w, o.bem));
+    o.ueberMittel = rest.some(w => o.mittel && wortIn(w, o.mittel));
     return true;
   });
 }
@@ -15442,7 +15477,7 @@ function suchAufgStand(a){
 function suchStand(o){
   const bem = o.ueberBem && o.bem
     ? (NW(o.k).art === 'medien' ? 'Bestätigt: ' : 'Bemerkung: ') + kurz(o.bem) : '';
-  return [suchStand0(o), bem].filter(Boolean).join(' · ');
+  return [suchStand0(o), bem, o.ueberMittel ? 'Arbeitsmittel: ' + o.mittel : ''].filter(Boolean).join(' · ');
 }
 function suchStand0(o){
   const n = NW(o.k);
@@ -15467,6 +15502,8 @@ function renderSuche(){
   box.hidden = !q;
   $('#homeListe').hidden = !!q;
   if(!q){ box.innerHTML = ''; suchListe = []; return; }
+  /* Ohne Plannamen erst holen, dann noch einmal (v1.145). */
+  if(!suchPlaene){ suchPlaene = new Map(); suchPlaeneHolen().then(renderSuche); }
   suchListe = suchTreffer(q);
   const aufg = suchAufgaben(q), term = suchTermine(q);
   if(!suchListe.length && !aufg.length && !term.length){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
@@ -15486,6 +15523,7 @@ function renderSuche(){
   box.querySelectorAll('[data-termin]').forEach(b => b.onclick = () => terminOeffnen(b.dataset.termin));
 }
 $('#suche').oninput = renderSuche;
+$('#suche').addEventListener('focus', () => suchPlaeneHolen().then(renderSuche));
 $('#suche').addEventListener('search', renderSuche);
 /* Die Eingabetaste schließt nur die Tastatur – gesucht wird ohnehin beim Tippen. */
 $('#suche').onkeydown = e => { if(e.key === 'Enter') e.target.blur(); };
