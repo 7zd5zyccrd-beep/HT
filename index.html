@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.152 05.10.2026 Medienverbräuche: Belegfoto je Zähler (Wunsch von Jean).
+         In der Ablesung – auch im kombinierten Rundgang – öffnet „Foto“ unter
+         dem Stand direkt die Kamera; danach steht dort eine Vorschau, ein
+         Tipp zeigt das Foto groß (mit zwei Fingern vergrößern). Ein neues
+         Foto ersetzt das alte, die zugeklappte Karte zeigt ein
+         Kamerazeichen. Aufbewahrt werden je Zähler die Fotos der laufenden
+         und der vorigen Ablesung, nur auf dem Gerät (nicht in der
+         Sicherung); im Verlauf des Zählers stehen sie bei ihrem Quartal.
+         Unter Einstellungen › Medienverbräuche gibt „Zählerfotos ausgeben“
+         alle Fotos mit einer Liste der eingetragenen Stände ans
+         Teilen-Menü – als Testbilder für eine spätere Erkennung.
   v1.151 05.10.2026 Fremdprüfungen: Der Prüfabstand steht jetzt in Monaten wie
          beim Akkutausch (Wunsch von Jean) – unter Einstellungen bei
          Feuerlöscher, RWA und im Baukasten. Bisherige Abstände werden
@@ -2223,6 +2234,20 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .pos .punkt .ptext{font-size:14px;margin-bottom:6px}
 .pos .punkt input.bar{width:120px}
 .pos .pfeile{flex:0 0 auto;display:flex;gap:6px}
+/* Belegfoto des Zählers (v1.152): Knopf und Vorschau unter dem Stand. */
+.belegZeile{display:flex;align-items:center;gap:10px;margin-top:8px}
+.belegZeile [data-foto]{display:inline-flex;align-items:center;gap:6px}
+.belegZeile [data-foto] svg{flex:0 0 20px}
+.belegBild{display:flex;align-items:center;gap:8px;cursor:pointer}
+.belegBild img{width:56px;height:42px;object-fit:cover;border-radius:6px;border:1px solid var(--field-border)}
+.belegMarke svg{width:14px;height:14px;vertical-align:-2px}
+.belegVoll{position:fixed;inset:0;z-index:200;background:#000;display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.belegLeiste{display:flex;align-items:center;gap:10px;padding:10px 14px;color:#fff;font-size:15px}
+.belegLeiste span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.belegLeiste .btn{flex:0 0 auto;width:auto;margin:0}
+.belegFlaeche{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none}
+.belegFlaeche img{max-width:100%;max-height:100%;transform-origin:center center;will-change:transform}
 /* Dieselben Maße wie ⌖ ↑ ↓ in den Einstellungen (v1.38). */
 .pos .pfeile button{
   width:var(--feld-h);height:var(--feld-h);border:1px solid var(--field-border);border-radius:12px;padding:0;
@@ -3240,7 +3265,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.151';
+const VERSION = 'v1.152';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3254,6 +3279,7 @@ const ORT_SVG = '<svg class="ortIcon" viewBox="0 0 24 24" width="22" height="22"
   + '<path d="M9.5 9H4.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-4"/><path d="M3.5 15.5h6v5.5M12.5 21v-3"/>'
   + '<path d="M17 2.5a4 4 0 0 0-4 4c0 3 4 6.5 4 6.5s4-3.5 4-6.5a4 4 0 0 0-4-4z"/><circle cx="17" cy="6.5" r="1.3" fill="currentColor" stroke="none"/></svg>';
 /* Uhr für den Verlauf einer Karte. */
+const KAMERA_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.6l1.6-2.2h6.6L16.9 7h2.6A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.8" r="3.6"/></svg>';
 const UHR_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
 const $  = s => document.querySelector(s);
@@ -3282,11 +3308,12 @@ const Bilder = {
     return new Promise((ok, fehl) => {
       /* Fassung 2: neben den Bildern liegen jetzt die PDF-Quellen (für das
          scharfe Nachzeichnen) und pdf.js selbst (damit es ohne Netz geht).
-         Fassung 3: dazu die Historie. */
-      const r = indexedDB.open('nwBilder', 3);
+         Fassung 3: dazu die Historie. Fassung 4 (v1.152): die Belegfotos der
+         Zähler. */
+      const r = indexedDB.open('nwBilder', 4);
       r.onupgradeneeded = () => {
         const db = r.result;
-        ['plaene', 'quellen', 'lib', 'historie'].forEach(n => {
+        ['plaene', 'quellen', 'lib', 'historie', 'belege'].forEach(n => {
           if(!db.objectStoreNames.contains(n)) db.createObjectStore(n, {keyPath:'id'});
         });
       };
@@ -3323,6 +3350,96 @@ const Bilder = {
   alle(){  return this.lauf('readonly',  st => st.getAll()); },
   weg(id){ return this.lauf('readwrite', st => st.delete(id)); }
 };
+/* --- Belegfotos der Zähler (v1.152, Wunsch von Jean) -------------------------
+   Je Zähler und Ablesung ein Foto als Beleg – und als Testbild für eine
+   spätere Erkennung. Ein Eintrag {id, key, quartal, datum, daten, typ}: key ist
+   der Schlüssel der Zählstelle, quartal bleibt leer, solange die Ablesung
+   läuft, und wird beim Ausgeben gesetzt. Aufbewahrt werden die laufende und die
+   vorige Ablesung (so von Jean entschieden); nur auf dem Gerät, nicht in der
+   Sicherung – sonst würde die Datei sehr groß. Bytes statt Blob wie bei den
+   Plänen (Safari). */
+const Belege = {
+  put(o){  return Bilder.lauf('readwrite', st => st.put(o),     'belege'); },
+  alle(){  return Bilder.lauf('readonly',  st => st.getAll(),   'belege').then(l => l || []); },
+  weg(id){ return Bilder.lauf('readwrite', st => st.delete(id), 'belege'); }
+};
+const belegBlob = b => b ? new Blob([b.daten], {type:b.typ || 'image/jpeg'}) : null;
+const BELEG_LANG = 2400;               // Punkte an der langen Seite (Jean: groß genug für Testbilder)
+async function belegVerkleinern(datei){
+  let bmp;
+  try{ bmp = await createImageBitmap(datei, {imageOrientation:'from-image'}); }
+  catch(e){ bmp = await createImageBitmap(datei); }
+  const f = Math.min(1, BELEG_LANG / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * f); c.height = Math.round(bmp.height * f);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  if(bmp.close) bmp.close();
+  const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.85));
+  return {daten:await blob.arrayBuffer(), typ:'image/jpeg'};
+}
+/* Das Foto der laufenden Ablesung eines Zählers ersetzen. */
+async function belegAblegen(key, datei){
+  const bild = await belegVerkleinern(datei);
+  const alt = (await Belege.alle()).filter(b => b.key === key && !b.quartal);
+  for(const b of alt) await Belege.weg(b.id);
+  await Belege.put(Object.assign({id:neueId(), key, quartal:'', datum:heute()}, bild));
+}
+/* Beim Ausgeben: die laufenden Fotos bekommen ihr Quartal, älter als das
+   vorige fällt weg. */
+async function belegeAusgeben(quartal){
+  const [j, q] = quartal.split('-Q').map(Number);
+  const vorher = q > 1 ? `${j}-Q${q - 1}` : `${j - 1}-Q4`;
+  for(const b of await Belege.alle()){
+    if(!b.quartal){ b.quartal = quartal; await Belege.put(b); }
+    else if(b.quartal < vorher) await Belege.weg(b.id);
+  }
+}
+/* Zählstelle umbenannt oder getauscht: die Fotos ziehen mit. */
+async function belegeUmhaengen(alt, neu){
+  for(const b of await Belege.alle()) if(b.key === alt){ b.key = neu; await Belege.put(b); }
+}
+/* Großansicht mit eigenem Zoom (Safaris Kneifen ist in der App aus): zwei
+   Finger vergrößern um ihre Mitte, ein Finger schiebt, „Schließen“ beendet. */
+function belegZeigen(blob, titel){
+  const url = URL.createObjectURL(blob);
+  const box = document.createElement('div');
+  box.className = 'belegVoll';
+  box.innerHTML = `<div class="belegLeiste"><span></span><button class="btn klein">Schließen</button></div>
+    <div class="belegFlaeche"><img alt=""></div>`;
+  box.querySelector('span').textContent = titel;
+  const img = box.querySelector('img'), fl = box.querySelector('.belegFlaeche');
+  img.src = url;
+  let s = 1, x = 0, y = 0, start = null;
+  const setzen = () => { img.style.transform = `translate(${x}px, ${y}px) scale(${s})`; };
+  const punkte = e => [...e.touches].map(t => ({x:t.clientX, y:t.clientY}));
+  /* Beim Aufsetzen und wenn ein Finger dazukommt oder geht, neu ansetzen. */
+  const anfang = e => {
+    const p = punkte(e);
+    start = !p.length ? null : {s, x, y, p, d:p.length > 1 ? Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) : 0,
+             m:p.length > 1 ? {x:(p[0].x + p[1].x) / 2, y:(p[0].y + p[1].y) / 2} : p[0]};
+  };
+  fl.addEventListener('touchstart', e => { anfang(e); e.preventDefault(); }, {passive:false});
+  fl.addEventListener('touchmove', e => {
+    if(!start) return;
+    const p = punkte(e);
+    if(p.length > 1 && start.d){
+      const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y), m = {x:(p[0].x + p[1].x) / 2, y:(p[0].y + p[1].y) / 2};
+      const r = fl.getBoundingClientRect(), ns = Math.max(1, Math.min(8, start.s * d / start.d));
+      /* Der Punkt unter der Fingermitte bleibt stehen. */
+      const ax = start.m.x - r.left - r.width / 2, ay = start.m.y - r.top - r.height / 2;
+      x = m.x - r.left - r.width / 2 - (ax - start.x) * ns / start.s;
+      y = m.y - r.top - r.height / 2 - (ay - start.y) * ns / start.s;
+      s = ns;
+    }else if(p.length === 1 && start.p.length === 1){
+      x = start.x + p[0].x - start.p[0].x; y = start.y + p[0].y - start.p[0].y;
+    }
+    setzen(); e.preventDefault();
+  }, {passive:false});
+  fl.addEventListener('touchend', anfang);
+  fl.addEventListener('touchcancel', anfang);
+  box.querySelector('button').onclick = () => { box.remove(); URL.revokeObjectURL(url); };
+  document.body.appendChild(box);
+}
 /* --- Historie ---------------------------------------------------------------
    Im selben Speicher wie die Pläne, in einem eigenen Bereich – der gewöhnliche
    Speicher fasst bei Safari nur wenige Megabyte, und ein Blatt mit Unterschrift
@@ -5696,6 +5813,7 @@ function renderRundgang(){
           alt ? `Vorquartal ${esc(zahlText(zahl(alt.stand)))} ${esc(z.einheit)}${v ? ` · Verbrauch ${esc(v)} ${esc(z.einheit)}` : ''}`
               : 'Keine Ablesung aus dem Vorquartal'}</div>
         <div class="pruefZeile" data-pz="${esc(o.id)}">${pruefZeileHtml(d, o.id)}</div>
+        <div class="belegZeile" data-beleg="${esc(o.id)}"><button type="button" class="btn ghost klein" data-foto="1">${KAMERA_SVG}<span>Foto</span></button><span class="belegBild"></span></div>
       </div>`;
     }
     const z = zeile(o);
@@ -5720,6 +5838,7 @@ function renderRundgang(){
     </div>`;
   };
   $('#rgListe').innerHTML = [...fertig, ...offene].map(karte).join('');
+  belegeEinsetzen($('#rgListe'));                    // Belegfotos der Zähler (v1.152)
 
   /* Am Ende: je Nachweis sein Stand und der Weg zur Ausgabe. */
   const iAus = info('Ausgegeben wird je Nachweis, mit Unterschrift, wo sie verlangt ist.', 'margin:-4px 0 8px');
@@ -5789,6 +5908,7 @@ function renderRundgang(){
       }
       const kopfZu = box.querySelector('.name.zu');
       if(kopfZu) kopfZu.onclick = () => { const top = box.getBoundingClientRect().top; rgOffen.delete(w); neuUndHalten(top, w); };
+      box.querySelector('[data-foto]').onclick = () => belegAufnehmen(o.id, () => belegeEinsetzen(box));
       const feld = box.querySelector('[data-stand]');
       feld.oninput = e => {
         d.stand[o.id] = e.target.value.trim();
@@ -8874,7 +8994,49 @@ function renderNachweis(){
    Ein Datum für die ganze Runde: 26 Ablesungen an einem Tag brauchen nicht 26
    Datumsfelder. Welche Karten aufgeklappt sind, merkt offenKarten (beim
    Öffnen des Nachweises geleert – dann ist alles Abgelesene zu). */
+/* Belegfotos in die Karten setzen: Vorschau in der offenen Karte, ein
+   Kamerazeichen in der zugeklappten (v1.152). Die Fotos kommen verzögert aus
+   dem Bilderspeicher; die Vorschau-Adressen werden beim nächsten Mal frei. */
+let belegUrls = [];
+const zaehlerTitel = z => `${z.partei} · ${medienNamen()[z.key] || z.medium}`;
+async function belegeEinsetzen(box, titel = zaehlerTitel){
+  let l;
+  try{ l = (await Belege.alle()).filter(b => !b.quartal); }catch(e){ return; }
+  if(!box.isConnected) return;
+  const je = new Map(l.map(b => [b.key, b]));
+  box.querySelectorAll('[data-bm]').forEach(m => { m.innerHTML = je.has(m.dataset.bm) ? ' · ' + KAMERA_SVG : ''; });
+  box.querySelectorAll('[data-beleg]').forEach(z => {
+    const b = je.get(z.dataset.beleg), platz = z.querySelector('.belegBild');
+    z.querySelector('[data-foto] span').textContent = b ? 'Neues Foto' : 'Foto';
+    if(!b){ platz.innerHTML = ''; return; }
+    const url = URL.createObjectURL(belegBlob(b));
+    belegUrls.push(url);
+    platz.innerHTML = `<img src="${url}" alt="Belegfoto"><span class="muted small">${esc(dText(b.datum))}</span>`;
+    const st = stellen().find(x => x.key === b.key);
+    platz.onclick = () => belegZeigen(belegBlob(b), st ? titel(st) : '');
+  });
+}
+/* Ein verstecktes Dateifeld mit capture: iOS öffnet so gleich die Kamera
+   (nur aus einem Tipp heraus – deshalb wird es im Klick selbst ausgelöst). */
+let belegEingabe = null;
+function belegAufnehmen(key, danach){
+  if(!belegEingabe){
+    belegEingabe = document.createElement('input');
+    Object.assign(belegEingabe, {type:'file', accept:'image/*', hidden:true});
+    belegEingabe.setAttribute('capture', 'environment');
+    document.body.appendChild(belegEingabe);
+  }
+  belegEingabe.value = '';
+  belegEingabe.onchange = async () => {
+    const f = belegEingabe.files && belegEingabe.files[0];
+    if(!f) return;
+    try{ await belegAblegen(key, f); toast('Foto gespeichert'); if(danach) danach(); }
+    catch(e){ toast('Foto nicht gespeichert'); }
+  };
+  belegEingabe.click();
+}
 function renderMedien(){
+  belegUrls.forEach(u => URL.revokeObjectURL(u)); belegUrls = [];
   const d = datenFuer('medien'), liste = stellenSortiert(), namen = medienNamen();
   /* Abgelesen heißt: ein Stand steht da und ist nicht unbestätigt auffällig.
      Ein auffälliger Wert bleibt offen – dort wird korrigiert. */
@@ -8890,7 +9052,7 @@ function renderMedien(){
     return `<div class="pos fertig kompakt" data-i="${i}">
       <div class="name">${esc(titel(z))}</div>
       <div class="muted small">Stand ${esc(d.stand[z.key])} ${esc(z.einheit)}${
-        v ? ` · Verbrauch ${esc(v)} ${esc(z.einheit)}` : ''}${best ? ' · bestätigt' : ''}</div>
+        v ? ` · Verbrauch ${esc(v)} ${esc(z.einheit)}` : ''}${best ? ' · bestätigt' : ''}<span class="belegMarke" data-bm="${esc(z.key)}"></span></div>
     </div>`;
   };
   const vollHtml = (z, i) => {
@@ -8912,6 +9074,7 @@ function renderMedien(){
                 v ? ` · Verbrauch ${esc(v)} ${esc(z.einheit)}` : ''}`
             : 'Keine Ablesung aus dem Vorquartal'}</div>
       <div class="pruefZeile" data-pz="${esc(z.key)}">${pruefZeileHtml(d, z.key)}</div>
+      <div class="belegZeile" data-beleg="${esc(z.key)}"><button type="button" class="btn ghost klein" data-foto="1">${KAMERA_SVG}<span>Foto</span></button><span class="belegBild"></span></div>
       ${mittelZeile('medien|' + z.key, titel(z))}
     </div>`;
   };
@@ -8920,6 +9083,7 @@ function renderMedien(){
     <div class="eyebrow">Ablesereihenfolge</div>`;
   $('#nwListe').innerHTML = kopf + liste.map((z, i) =>
     steht(z) && !offenKarten.has(z.key) ? kompaktHtml(z, i) : vollHtml(z, i)).join('');
+  belegeEinsetzen($('#nwListe'), titel);
 
   /* Auf- und Zuklappen per Neuaufbau; die Karte bleibt an ihrem Platz auf dem
      Schirm. */
@@ -8934,6 +9098,8 @@ function renderMedien(){
     if(box.classList.contains('kompakt')){ box.onclick = () => umschalten(box, i, true); return; }
     const kopfZu = box.querySelector('.name.zu');
     if(kopfZu) kopfZu.onclick = () => umschalten(box, i, false);
+    /* Belegfoto (v1.152): direkt die Kamera, danach nur diese Karte auffrischen. */
+    box.querySelector('[data-foto]').onclick = () => belegAufnehmen(z.key, () => belegeEinsetzen(box, titel));
     const feld = box.querySelector('[data-stand]');
     feld.oninput = e => {
       d.stand[z.key] = e.target.value.trim();
@@ -8954,11 +9120,18 @@ function renderMedien(){
       const kl = hilfe.firstElementChild;
       box.replaceWith(kl);
       verdrahten(kl);
+      belegeEinsetzen(kl, titel);
       if(nach) lageHalten(top, () => nach);
     };
     /* Erst prüfen, dann zuklappen: ein auffälliger Wert bleibt offen, bis er
        bestätigt ist. */
-    feld.onblur = () => standPruefen(d, z.key, box, zuklappen);
+    /* Ein Tipp auf Foto-Knopf oder Vorschau (v1.152) verlässt zwar das Feld,
+       soll die Karte aber nicht zuklappen – sonst verschwände das Ziel unter
+       dem Finger. Safari gibt Knöpfen keinen Fokus, deshalb über pointerdown,
+       das vor dem blur kommt. */
+    let belegTipp = 0;
+    box.querySelector('.belegZeile').addEventListener('pointerdown', () => { belegTipp = Date.now(); });
+    feld.onblur = () => standPruefen(d, z.key, box, () => { if(Date.now() - belegTipp > 600) zuklappen(); });
     pruefVerdrahten(d, z.key, box, zuklappen);
     /* Ein Schritt im Laufweg, gleich ob die Nachbarkarte offen oder zu ist. */
     const tausch = j => {
@@ -11984,8 +12157,55 @@ function akkuTypUmbenennen(alt, neu){
    Grundriss mit. Eine Nummer hier zu berichtigen kostet also nichts; der
    wirkliche Zählertausch (mit Aus- und Einbaustand) hat seine eigene Seite. */
 const MEDIEN = ['Kaltwasser', 'Warmwasser', 'Wärme', 'Strom'];
+/* Alle aufbewahrten Zählerfotos ausgeben (v1.152, Wunsch von Jean: Testbilder
+   für eine spätere Erkennung). Dateiname mit Quartal und Zähler, dazu eine
+   Liste mit dem eingetragenen Stand je Foto – zugleich die Musterlösung für
+   die Werkstatt. Übergeben wird über das Teilen-Menü. */
+async function belegeTeilen(){
+  let l = [];
+  try{ l = await Belege.alle(); }catch(e){ toast('Fotos nicht lesbar'); return; }
+  if(!l.length){ toast('Noch keine Zählerfotos'); return; }
+  let hist = [];
+  try{ hist = historieOrdnen(await Historie.alle()).filter(e => e.k === 'medien' && !e.ersetzt); }catch(e){}
+  const d = DAT.medien || {}, laufQ = quartalVon(d.datum || heute()), zz = stellen(), namen = medienNamen();
+  const quartalVonBeleg = b => b.quartal || laufQ;
+  l.sort((a, b) => quartalVonBeleg(a).localeCompare(quartalVonBeleg(b)) || String(a.key).localeCompare(String(b.key)));
+  const dateien = [], zeilen = [], vergeben = new Set();
+  l.forEach(b => {
+    const [partei, medium, nr] = String(b.key).split('|');
+    const z = zz.find(x => x.key === b.key) || {partei, medium, nr, einheit:''};
+    const q = quartalVonBeleg(b);
+    const stand = b.quartal
+      ? ((hist.find(e => e.zeitraum === b.quartal && e.ergebnisse && e.ergebnisse[b.key]) || {}).ergebnisse || {})[b.key]
+      : null;
+    const wert = b.quartal ? (stand && stand.stand) || '' : String((d.stand || {})[b.key] ?? '').trim();
+    let name = nameTeil(`${q.slice(2)} ${z.partei} ${namen[b.key] || z.medium} ${z.nr}`);
+    for(let i = 2; vergeben.has(name); i++) name = nameTeil(`${q.slice(2)} ${z.partei} ${namen[b.key] || z.medium} ${z.nr} (${i})`);
+    vergeben.add(name);
+    dateien.push(new File([b.daten], name + '.jpg', {type:b.typ || 'image/jpeg'}));
+    zeilen.push([name + '.jpg', `${z.partei} · ${namen[b.key] || z.medium}`, 'Nr. ' + (z.nr || '–'),
+      'Stand: ' + (wert || '–') + (z.einheit ? ' ' + z.einheit : ''), 'Foto vom ' + dText(b.datum),
+      b.quartal ? zeitraumVoll(b.quartal) : 'laufende Ablesung'].join(' | '));
+  });
+  const kopf = `Zählerfotos ${CFG.objekt || ''} · ausgegeben am ${dText(heute())}\nDatei | Zähler | Nummer | Stand | Foto | Ablesung\n`;
+  dateien.push(new File([kopf + zeilen.join('\n') + '\n'], `Zählerstände ${heute().slice(2)}.txt`, {type:'text/plain'}));
+  try{
+    if(navigator.canShare && navigator.canShare({files:dateien})){
+      try{ await navigator.share({files:dateien}); }catch(e){ if(e && e.name === 'AbortError') return; throw e; }
+    }else{
+      /* Ohne Teilen-Menü (Rechner): jede Datei einzeln herunterladen. */
+      dateien.forEach((f, i) => setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(f); a.download = f.name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      }, i * 300));
+    }
+  }catch(e){ toast('Ausgeben nicht möglich'); }
+}
 function setStellen(box){
   const iSt = info('Partei, Medium und Zählernummer bilden den Schlüssel eines Zählers. Wird einer davon geändert, wandern Vorquartalsstand, laufender Wert, Ableseplatz und Stelle im Grundriss mit – Tippfehler lassen sich gefahrlos berichtigen. Wasser rechnet immer in m³.', 'margin:-4px 0 6px');
+  const iFo = info('Die Belegfotos aus der Ablesung – je Zähler die der laufenden und der vorigen Ablesung. Sie liegen nur auf diesem Gerät, nicht in der Sicherung. Ausgegeben werden alle mit einer Liste der eingetragenen Stände.', 'margin:-4px 0 10px');
   const iTa = info('Für einen wirklich getauschten Zähler: neue Nummer, Wechseldatum, Aus- und Einbaustand. Der Stand des Vorquartals wird dabei verworfen.', 'margin:-4px 0 10px');
   box.innerHTML =
     `<div class="eyebrow mitInfo">Zählstellen ${iSt.knopf}</div>${iSt.text}
@@ -11994,12 +12214,17 @@ function setStellen(box){
      <div id="setPlaus"></div>
      <div class="eyebrow mitInfo" style="margin-top:20px">Zählertausch ${iTa.knopf}</div>${iTa.text}
      <button class="btn eintrag" id="setZuTausch"><span>Zähler getauscht</span></button>
+     <div class="eyebrow mitInfo" style="margin-top:20px">Zählerfotos ${iFo.knopf}</div>${iFo.text}
+     <button class="btn eintrag" id="setBelege"><span>Zählerfotos ausgeben</span><span class="zahl" id="setBelegeZahl">…</span></button>
      <div class="eyebrow" style="margin-top:20px">Alles zurücksetzen</div>
      <button class="btn ghost klein" id="btnMedReset">Ablesewerte zurücksetzen</button>
      <p class="muted small" style="margin:8px 0 0">Löscht die laufende Ablesung und die gemerkten Stände aller Zähler. Für einen einzelnen Tausch den Knopf darüber nehmen.</p>`;
   plausEinstellungen($('#setPlaus'));
   $('#setZuTausch').onclick = () => setOeffnen('tausch');
   $('#btnMedReset').onclick = medienZuruecksetzen;
+  $('#setBelege').onclick = belegeTeilen;
+  Belege.alle().then(l => { const z = $('#setBelegeZahl'); if(z) z.textContent = l.length; })
+    .catch(() => { const z = $('#setBelegeZahl'); if(z) z.textContent = '–'; });
   stellenBasis = teilCfg('medien').stellen.length;
   $('#setStellePlus').onclick = () => {
     stellenZeichnen(true);
@@ -12281,6 +12506,7 @@ function stelleUmbenennen(alt, neu){
   aufgabenUmhaengen('medien', alt, neu);
   wegUmhaengen('medien', alt, neu);
   historieUmhaengen('medien', alt, neu);
+  belegeUmhaengen(alt, neu).catch(() => {});        // Belegfotos (v1.152)
 }
 
 /* --- Reihenfolge der Grundrisse --------------------------------------------
@@ -15665,6 +15891,25 @@ async function renderVerlauf(){
               : verlaufAnlage(v, liste);
   const akku = akkuAktiv(v.k) ? verlaufAkku(v, liste) : '';
   box.innerHTML = kopf + (v.vorn === 'akku' ? akku + pruef : pruef + akku);
+  /* Belegfotos des Zählers (v1.152): laufende und vorige Ablesung. */
+  if(art === 'medien'){
+    let l = [];
+    try{ l = (await Belege.alle()).filter(b => b.key === v.id); }catch(e){}
+    if(l.length && verlaufZiel === v){
+      l.sort((a, b) => String(b.quartal || '9').localeCompare(String(a.quartal || '9')));
+      const karte = document.createElement('div');
+      karte.className = 'card';
+      karte.innerHTML = `<div class="eyebrow" style="margin:0 0 6px">Belegfotos</div>` + l.map((b, i) =>
+        `<div class="belegBild" data-i="${i}" style="margin:6px 0"><img alt="Belegfoto"><span class="small">${
+          esc(b.quartal ? zeitraumVoll(b.quartal) : 'Laufende Ablesung')} · ${esc(dText(b.datum))}</span></div>`).join('');
+      karte.querySelectorAll('.belegBild').forEach(el => {
+        const b = l[+el.dataset.i], url = URL.createObjectURL(belegBlob(b));
+        el.querySelector('img').src = url; belegUrls.push(url);
+        el.onclick = () => belegZeigen(belegBlob(b), v.titel + ' · ' + (b.quartal ? zeitraumVoll(b.quartal) : 'laufend'));
+      });
+      box.appendChild(karte);
+    }
+  }
 }
 function verlaufAnlage(v, liste){
   const runden = historieOrdnen(liste)
@@ -16320,6 +16565,7 @@ async function ausgeben(){
       if(v) MED_ALT[z.key] = {stand:v, datum:d0.datum};
     });
     saveAlt();
+    belegeAusgeben(zeitraum).catch(() => {});      // Belegfotos (v1.152)
   }
   EXP[offen] = zeitraum;
   saveExp();
