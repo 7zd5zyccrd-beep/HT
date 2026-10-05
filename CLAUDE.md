@@ -135,9 +135,19 @@ steht.
   Auch in `paketUebernehmen` für ältere Sicherungen.
 - `typWahl`/`typHinzufuegen` (nie benutzt → leer starten, `typFrisch` öffnet
   das Feld fürs erste Objekt), `typEntfernen` (Daten bleiben).
-- Etappe 2 (Baukasten) vom Nutzer beauftragt: eigene Typen mit Art (eigene
-  Kontrolle / Fremdprüfung / ggf. nur Bestand), alle Abstände (nicht nur
-  monatlich), eigene Zustände. Sprinkler und Medien nur als Vorlage.
+- Baukasten (v1.148): eigene Typen in `CFG.eigen` (`eigen:true`, Kennung
+  `e…` aus Uhrzeit + Zufall), `setTypBau` (Seite `typbau`), `typAbleiten`
+  leitet Überschrift/Dateiname ab (`titelEigen`/`dateiEigen` = eigene
+  Eingabe). Arten: '' (eigene Kontrolle), 'fremd', 'bestand'. „Nur Bestand“
+  steht in `BESTAND`, nicht in `NACHWEISE` (keine Aufgaben/Nachweise); Liste
+  aller aktiven: `TYPEN_AKTIV` (Menü, Suche). Etagen über `n.etagen`.
+- Zustände: `n.status` frei, `n.mangel` = Zustände, die als Mangel zählen;
+  `istMangel(n, st)` (Vorlagen ohne `n.mangel`: Wort „Mangel/defekt“).
+- Abstände (v1.148): `taktVon(n)`, Zeiträume `zrVon/zrAnfang/zeitraumEnde/
+  zeitraumText/zeitraumVoll` für `2026-W41`, `-10`, `-Q4`, `-H2`, `-J`;
+  `expZr`, `restZr`, `TAKT_ROT`. Sprinkler rechnet weiter für sich.
+- Nicht im Baukasten: Akkutausch (hängt fest an RWA), Rundgang (nur die
+  Vorlagen in `RUNDGANG_TYPEN`).
 
 ## Suche (v1.145)
 

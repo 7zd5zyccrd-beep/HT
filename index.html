@@ -10,6 +10,23 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.148 05.10.2026 Anlagentypen, Etappe 2 – der Baukasten (Wunsch von Jean):
+         „+ Neuer Anlagentyp“ › „Eigenen Anlagentyp anlegen …“. Name, Art
+         (eigene Kontrolle mit Blatt und Unterschrift, Fremdprüfung mit
+         Prüfdatum und Abstand in Jahren, oder „Nur Bestand“ – Objekte mit
+         Grundrissmarke und Suche, ohne Prüfung), bei eigener Kontrolle wie
+         oft (wöchentlich, monatlich, vierteljährlich, halbjährlich,
+         jährlich), eigene Zustände mit Haken „Mangel“ (wird beim Ausgeben
+         zum Mangel in der Aufgabenliste), Kacheln für die Bemerkung,
+         Überschrift und Dateiname, Laufweg-Reihenfolge, Etagen wie bei den
+         Aufzügen und die Markenfarbe. Nach „Anlegen“ öffnet sich der Typ mit
+         dem Feld für das erste Objekt; die Checkliste steht wie gewohnt auf
+         seiner Seite, „Typ bearbeiten“ führt zurück in den Baukasten. Ein
+         entfernter eigener Typ steht danach in der Auswahl. Fristen, Ringe,
+         Aufgabenliste, Wochenplan, Blatt und Dateiname rechnen nach dem
+         gewählten Abstand („KW 41 2026“, „2. Halbjahr 2026“, „2026“).
+         Nebenbei: ein nicht hinzugefügter Sprinkler erscheint bei einer
+         Abwesenheit nicht mehr unter „Vertretung klären“.
   v1.147 05.10.2026 Anlagentypen, Etappe 1 (Wunsch von Jean): Eine neue
          Installation beginnt ohne Anlagentypen. Unter Einstellungen › Anlagen
          und Prüfumfang fügt „+ Neuer Anlagentyp“ eine unserer fertigen
@@ -1983,6 +2000,17 @@ input[type=checkbox]{-webkit-appearance:none;appearance:none;flex:0 0 22px;width
 input[type=checkbox]:checked{background-color:var(--strong);border-color:var(--strong);
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3L13 4.5' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
 .haken{display:flex;align-items:center;gap:10px;font-size:16px;margin:0 0 6px}
+/* Baukasten für eigene Anlagentypen (v1.148). */
+.tbZustand{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+.tbZustand input[data-f="st"]{flex:1;min-width:0}
+.tbMangel{display:flex;align-items:center;gap:6px;font-size:14px;white-space:nowrap}
+.tbMangel input{width:20px;height:20px;margin:0}
+#setSubDyn .haken{margin-top:14px}
+.tbFarben{display:flex;flex-wrap:wrap;gap:10px}
+.tbFarben button{width:36px;height:36px;border-radius:50%;border:3px solid var(--surface);background:var(--f);
+  box-shadow:0 0 0 1px var(--field-border);cursor:pointer;padding:0}
+.tbFarben button[aria-pressed="true"]{box-shadow:0 0 0 3px var(--strong)}
+.segfeld .seg button{line-height:1.2;padding:4px 6px}
 .haken input{flex:0 0 22px;width:22px;height:22px;padding:0;margin:0}
 /* Im Rundgang steht über jeder Karte, zu welchem Nachweis sie gehört. */
 .pos .typ{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 2px}
@@ -3179,7 +3207,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.147';
+const VERSION = 'v1.148';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3503,6 +3531,7 @@ function planVerkleinern(datei){
 const VORLAGEN = [
   {
     k:'aufzuege', label:'Aufzüge', datei:'Prüfung Aufzüge', takt:['monat'],
+    etagen:true,                       // ein Aufzug liegt auf mehreren Etagenplänen (v1.148 als Eigenschaft)
     titel:'Monatliche Kontrolle Personenaufzüge',
     status:['In Ordnung','Mangel'],
     anlagen:['Aufzug 1'],
@@ -3620,9 +3649,14 @@ const VORLAGEN = [
     akkus:[{name:'7 Ah', jahre:4}]
   }
 ];
-const NW = k => VORLAGEN.find(n => n.k === k);
-const NACHWEISE = [];
-const aktiv = k => NACHWEISE.some(n => n.k === k);
+/* Eigene Anlagentypen aus dem Baukasten (v1.148) liegen in CFG.eigen und reisen
+   so mit der Sicherung. Typen der Art „Nur Bestand“ prüfen nichts: sie stehen
+   nicht in NACHWEISE (keine Aufgaben, kein Nachweis), sondern in BESTAND – mit
+   Objektliste, Grundrissmarken und Suche. */
+const eigeneTypen = () => (typeof CFG !== 'undefined' && Array.isArray(CFG.eigen)) ? CFG.eigen : [];
+const NW = k => VORLAGEN.find(n => n.k === k) || eigeneTypen().find(n => n.k === k);
+const NACHWEISE = [], BESTAND = [], TYPEN_AKTIV = [];
+const aktiv = k => TYPEN_AKTIV.some(n => n.k === k);
 
 /* ---------- Einstellungen und Daten ---------- */
 /* Wo etwas im Haus sitzt: Schlüssel der Zählstelle bzw. Name der Anlage auf
@@ -3845,8 +3879,12 @@ function typenPruefen(neu){
 }
 function typenAnwenden(){
   const an = Array.isArray(CFG.typen) ? CFG.typen : [];
-  NACHWEISE.length = 0;
-  VORLAGEN.forEach(n => { if(an.includes(n.k)) NACHWEISE.push(n); });
+  NACHWEISE.length = 0; BESTAND.length = 0; TYPEN_AKTIV.length = 0;
+  VORLAGEN.concat(eigeneTypen()).forEach(n => {
+    if(!an.includes(n.k)) return;
+    TYPEN_AKTIV.push(n);
+    (n.art === 'bestand' ? BESTAND : NACHWEISE).push(n);
+  });
 }
 if(typenPruefen(Store.get('nwCfg', null) === null)) Store.set('nwCfg', CFG);
 typenAnwenden();
@@ -3914,6 +3952,9 @@ const saveVorb = () => { Store.set('nwVorb', VORB); listeNachziehen(); };
 const isoTag = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const tagPlus = (iso, tage) => { const d = alsDatum(iso); d.setDate(d.getDate() + tage); return isoTag(d); };
 const neueId = () => 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+/* Welcher Zustand ein Mangel ist (v1.148): eigene Typen sagen es je Zustand
+   (n.mangel), die Vorlagen erkennen es am Wort wie bisher. */
+const istMangel = (n, st) => !!st && (n && Array.isArray(n.mangel) ? n.mangel.includes(st) : /mangel|defekt/i.test(st));
 const offenerMangel = quelle => AUFG.find(a => a.art === 'mangel' && !a.erledigt && a.quelle === quelle);
 /* Aufgaben hängen an Anlage bzw. Zähler. Ändert sich deren Name oder Schlüssel,
    ziehen sie mit – auch die Quelle eines Mangels, sonst erkennte die nächste
@@ -3954,7 +3995,7 @@ function maengelUebernehmen(k, d, zeitraum){
   }else if(n.art !== 'medien' && n.art !== 'fremd'){
     t.anlagen.forEach(a => {
       const z = ((d && d.zeilen) || {})[a];
-      if(z && /mangel|defekt/i.test(z.status || ''))
+      if(z && istMangel(n, z.status))
         funde.push({quelle:`${k}|${a}`, anlage:a, punkt:'', tag:z.datum || heute(), text:String(z.bem || '').trim()});
     });
   }
@@ -4000,6 +4041,45 @@ const quartalVon = iso => { const [j, m] = String(iso || '').split('-');
 /* Ältere Vermerke tragen noch ein volles Datum – sie werden umgerechnet. */
 const expMonat   = k => { const v = EXP[k] || ''; return v.length >= 10 ? monatVon(v) : v; };
 const expQuartal = k => { const v = EXP[k] || ''; return v.length >= 10 ? quartalVon(v) : v; };
+/* --- Zeiträume aller Abstände (v1.148) --------------------------------------
+   Eigene Anlagentypen prüfen wöchentlich bis jährlich. Ein Zeitraum steht als
+   Text, der sich innerhalb eines Abstands vergleichen lässt: "2026-W41",
+   "2026-10", "2026-Q4", "2026-H2", "2026-J". Die Woche zählt nach ISO wie die
+   Kalenderwoche (Montag bis Sonntag, das Jahr ihres Donnerstags). */
+const TAKT_ALLE = ['woche', 'monat', 'quartal', 'halbjahr', 'jahr'];
+function zrVon(takt, iso){
+  const [j, m, d] = String(iso || '').split('-').map(Number);
+  if(takt === 'woche'){
+    const t = new Date(Date.UTC(j, m - 1, d)), wt = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - wt);
+    const kw = Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 86400000 + 1) / 7);
+    return `${t.getUTCFullYear()}-W${String(kw).padStart(2, '0')}`;
+  }
+  if(takt === 'quartal') return `${j}-Q${Math.floor((m - 1) / 3) + 1}`;
+  if(takt === 'halbjahr') return `${j}-H${m <= 6 ? 1 : 2}`;
+  if(takt === 'jahr') return `${j}-J`;
+  return `${j}-${String(m).padStart(2, '0')}`;
+}
+/* Erster Tag eines Zeitraums. */
+function zrAnfang(z){
+  const [j, r] = String(z).split('-'), jj = +j;
+  if(r[0] === 'W'){
+    const t = new Date(jj, 0, 4), wt = (t.getDay() + 6) % 7;     // der 4. Januar liegt immer in KW 1
+    return new Date(jj, 0, 4 - wt + (+r.slice(1) - 1) * 7);
+  }
+  if(r[0] === 'Q') return new Date(jj, (+r.slice(1) - 1) * 3, 1);
+  if(r[0] === 'H') return new Date(jj, r[1] === '1' ? 0 : 6, 1);
+  if(r[0] === 'J') return new Date(jj, 0, 1);
+  return new Date(jj, +r - 1, 1);
+}
+const expZr = (k, takt) => { const v = EXP[k] || ''; return v.length >= 10 ? zrVon(takt, v) : v; };
+/* Der Abstand der Runden eines Nachweises: Medien je Quartal, eigene Typen nach
+   Wahl, die übrigen monatlich. Der Sprinkler hat zwei und rechnet für sich. */
+const taktVon = n => n.art === 'medien' ? 'quartal' : (n.takt && TAKT_ALLE.includes(n.takt[0]) ? n.takt[0] : 'monat');
+/* Ab wie vielen Tagen vor dem Ende eine nie begonnene Runde rot wird. */
+const TAKT_ROT = {woche:2, monat:7, quartal:14, halbjahr:21, jahr:30};
+const restZr = (takt, j = new Date()) => { const z = zrVon(takt, isoVonDatum(j));
+  return restBis(zeitraumEnde(z), zrAnfang(z)); };
 const heute = () => { const d = new Date(), z = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; };
 const dText = t => { if(!t) return ''; const [j, m, d] = t.split('-'); return `${d}.${m}.${j}`; };
@@ -4029,6 +4109,9 @@ function alleDaten(k){
    Datum würde sie fälschlich in den neuen Monat schieben. */
 function monatText(k){
   const t = alleDaten(k).sort().shift();
+  /* Eigene Typen mit anderem Abstand (v1.148): „KW 41 2026“, „2. Halbjahr 2026“, „2026“. */
+  const n = NW(k);
+  if(n && n.art !== 'sprinkler' && taktVon(n) !== 'monat') return zeitraumVoll(zrVon(taktVon(n), t || heute()));
   const [j, m] = (t || heute()).split('-');
   return `${MONATE[+m - 1]} ${j}`;
 }
@@ -4213,24 +4296,31 @@ function begonnen(n){
    Beginn (wie Überschrift und Dateiname), sonst der laufende Monat bzw. das
    laufende Quartal. Zeiträume stehen als "2026-08" und "2026-Q3" – so lassen sie
    sich als Text vergleichen. */
-const jetztZeitraum = quartal => quartal ? quartalVon(heute()) : monatVon(heute());
+/* Seit v1.148 auch mit dem Abstand selbst ('woche' … 'jahr'); true und false
+   stehen weiter für Quartal und Monat. */
+const jetztZeitraum = q => zrVon(q === true ? 'quartal' : typeof q === 'string' ? q : 'monat', heute());
 function rundeVon(n){
-  const quartal = n.art === 'medien';
+  const takt = taktVon(n);
   const t = begonnen(n) ? alleDaten(n.k).sort().shift() : '';
-  return t ? (quartal ? quartalVon(t) : monatVon(t)) : jetztZeitraum(quartal);
+  return t ? zrVon(takt, t) : jetztZeitraum(takt);
 }
 /* Überfällig ist eine angefangene Runde, deren Zeitraum vorbei ist. Eine nie
    begonnene verfällt dagegen wie bisher mit ihrem Monat. */
 const rundeUeberfaellig = n => n.art !== 'fremd' && begonnen(n)
-  && rundeVon(n) < jetztZeitraum(n.art === 'medien');
+  && rundeVon(n) < jetztZeitraum(taktVon(n));
 /* Letzter Tag eines Zeitraums und seine Bezeichnung ("August", "3. Quartal"). */
 function zeitraumEnde(z){
   const [j, r] = String(z).split('-');
+  if(r[0] === 'W'){ const a = zrAnfang(z); return new Date(a.getFullYear(), a.getMonth(), a.getDate() + 6); }
+  if(r[0] === 'H') return new Date(+j, r[1] === '1' ? 6 : 12, 0);
+  if(r[0] === 'J') return new Date(+j, 12, 0);
   return new Date(+j, r[0] === 'Q' ? +r.slice(1) * 3 : +r, 0);
 }
 function zeitraumText(z){
   const [j, r] = String(z).split('-');
-  const text = r[0] === 'Q' ? `${r.slice(1)}. Quartal` : MONATE[+r - 1];
+  if(r[0] === 'J') return j;
+  const text = r[0] === 'Q' ? `${r.slice(1)}. Quartal` : r[0] === 'H' ? `${r.slice(1)}. Halbjahr`
+             : r[0] === 'W' ? `KW ${+r.slice(1)}` : MONATE[+r - 1];
   return +j === new Date().getFullYear() ? text : `${text} ${j}`;
 }
 /* --- Sprinkler: Wochengang und Monatsrunde getrennt betrachtet ------------
@@ -4258,7 +4348,7 @@ async function sprWocheNachholen(){
   if(sprNachgeholt) return;
   sprNachgeholt = true;
   const n = NW('sprinkler'), jetzt = new Date(), d = DAT.sprinkler;
-  if(!n || sprWocheAus(jetzt) || ((d && d.woch) || []).some(g => inWoche(g.datum, jetzt))) return;
+  if(!n || !aktiv('sprinkler') || sprWocheAus(jetzt) || ((d && d.woch) || []).some(g => inWoche(g.datum, jetzt))) return;
   let l;
   try{ l = await Historie.alle(); }catch(e){ return; }
   const punkte = teilCfg('sprinkler').woch;
@@ -4300,7 +4390,7 @@ function sprinklerMonat(n, jetzt = new Date(), wocheOffen = false){
 function ring(n, takt){
   if(n.art === 'fremd') return fremdRing(n.k);
   const jetzt = new Date();
-  if(takt === 'woche'){
+  if(takt === 'woche' && n.art === 'sprinkler'){
     /* Die wöchentliche Runde des Sprinklers: sie geht erst am Monatsende mit
        hinaus, deshalb zählt hier der Kontrollgang dieser Woche selbst. */
     const d = DAT[n.k], gaenge = (d && d.woch || []).filter(g => inWoche(g.datum, jetzt));
@@ -4319,10 +4409,12 @@ function ring(n, takt){
     const m = sprinklerMonat(n, jetzt, !!sprinklerWoche(n, jetzt));
     return m && m.offen ? m.ring : '';
   }
-  if(takt === 'monat'){
-    if(expMonat(n.k) === jetztMonat) return 'gruen';
+  /* Eigene Kontrollen und die Vorlagen: nach ihrem Abstand (v1.148). */
+  if(n.art !== 'medien'){
+    const t = taktVon(n);
+    if(expZr(n.k, t) === jetztZeitraum(t)) return 'gruen';
     if(begonnen(n)) return rundeUeberfaellig(n) ? 'rot' : 'gelb';
-    return restMonat(jetzt) <= 7 ? 'rot' : '';
+    return restZr(t, jetzt) <= TAKT_ROT[t] ? 'rot' : '';
   }
   if(expQuartal(n.k) === jetztQuartal) return 'gruen';
   if(begonnen(n)) return rundeUeberfaellig(n) ? 'rot' : 'gelb';
@@ -4650,7 +4742,7 @@ function vorschlagVerdrahten(box, n, z){
   box.querySelectorAll('[data-vorschlag]').forEach(b => b.onclick = () => {
     z.bem = vorschlagSetzen(z.bem, n.vorschlaege, b.dataset.vorschlag);
     if(feld) feld.value = z.bem;
-    const io = n.status.find(st => !/mangel|defekt/i.test(st));
+    const io = n.status.find(st => !istMangel(n, st));
     const knopf = io && box.querySelector(`[data-status="${io}"]`);
     if(!z.status && vorschlagIn(z.bem, n.vorschlaege) && knopf){ knopf.click(); return; }
     saveDat();
@@ -4748,7 +4840,8 @@ function homeStand(n){
    Aufgabenliste steht sie seit v1.31 nur einmal. Der monatliche
    Eintrag springt in der Ansicht gleich zum passenden Abschnitt, sonst müsste
    man an bis zu fünf Wochenkarten vorbeiblättern. */
-const TAKTE = [['woche','Wöchentlich'], ['monat','Monatlich'], ['quartal','Quartalsweise']];
+const TAKTE = [['woche','Wöchentlich'], ['monat','Monatlich'], ['quartal','Quartalsweise'],
+               ['halbjahr','Halbjährlich'], ['jahr','Jährlich']];   // die letzten beiden für eigene Typen (v1.148)
 /* Fremdprüfungen ordnen sich nach ihrem eingestellten Abstand ein. Wird der in
    den Einstellungen geändert, wandert der Knopf in die andere Gruppe. */
 const jahrTitel = j => j === 1 ? 'Jährlich' : j === 2 ? 'Zweijährlich' : `Alle ${j} Jahre`;
@@ -4904,12 +4997,12 @@ function aufgaben(){
               begonnen: begonnen(n), stand: texte.concat(nwVorbText(n.k, anl) || []).join(' · ')});
       return;
     }
-    const quartal = n.art === 'medien';
-    if(!hatEintraege(n, quartal ? 'quartal' : 'monat')) return;
+    const quartal = n.art === 'medien', takt = taktVon(n);
+    if(!hatEintraege(n, takt)) return;
     /* Erledigt heißt wie beim grünen Ring: der laufende Zeitraum ist ausgegeben. */
-    if((quartal ? expQuartal(n.k) : expMonat(n.k)) === jetztZeitraum(quartal)) return;
+    if(expZr(n.k, takt) === jetztZeitraum(takt)) return;
     const runde = rundeVon(n), los = begonnen(n);
-    const ueber = runde < jetztZeitraum(quartal);
+    const ueber = runde < jetztZeitraum(takt);
     let stand;
     if(n.art === 'medien'){
       const l = stellen();
@@ -4928,10 +5021,9 @@ function aufgaben(){
     }
     neu(n, {titel: n.label + (ueber ? ' · ' + zeitraumText(runde) : ''),
             ziel: '',
-            ring: ring(n, quartal ? 'quartal' : 'monat'),
+            ring: ring(n, takt),
             faellig: zeitraumEnde(runde), begonnen: los, stand: [stand, nwVorbText(n.k, anl)].filter(Boolean).join(' · '),
-            frueh: (() => { const e = zeitraumEnde(runde);
-                            return new Date(e.getFullYear(), e.getMonth() - (quartal ? 2 : 0), 1); })()});
+            frueh: zrAnfang(runde)});
   });
   /* Kombinierter Rundgang: sind mindestens zwei integrierte Nachweise offen,
      ersetzt eine Zeile ihre Einzelzeilen. Termin ist der früheste, Ring und
@@ -5133,7 +5225,7 @@ function abwesenheitsKarte(liste){
   const von = alsDatum(ab.von), bis = alsDatum(ab.bis);
   const vorher = liste.filter(a => a.ab === ab && !a.vertretung).map(a => a.titel);
   const vertretung = liste.filter(a => a.ab === ab && a.vertretung).map(a => a.titel);
-  const sp = NW('sprinkler');
+  const sp = aktiv('sprinkler') ? NW('sprinkler') : null;
   if(sp && hatEintraege(sp, 'woche'))
     for(let mo = wochenBeginn(von); mo <= bis; mo = new Date(mo.getFullYear(), mo.getMonth(), mo.getDate() + 7)){
       const so = new Date(mo.getFullYear(), mo.getMonth(), mo.getDate() + 6);
@@ -5141,14 +5233,23 @@ function abwesenheitsKarte(liste){
       const text = `Sprinkler-Kontrollgang KW ${kalenderwoche(mo)}`;
       if(!wirksamerTag(so, mo).tag && !vertretung.includes(text)) vertretung.push(text);
     }
-  for(let m = new Date(von.getFullYear(), von.getMonth(), 1); m <= bis; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)){
-    if(wirksamerTag(new Date(m.getFullYear(), m.getMonth() + 1, 0), m).tag) continue;
-    NACHWEISE.filter(n => !n.spaeter && n.art !== 'fremd' && n.art !== 'medien' && hatEintraege(n, 'monat'))
-      .forEach(n => {
-        const text = `${n.label} · ${MONATE[m.getMonth()]}`;
-        if(!vertretung.some(v => v.startsWith(n.label))) vertretung.push(text);
-      });
-  }
+  /* Runden ohne einen Arbeitstag – je Typ nach seinem Abstand (v1.148). */
+  NACHWEISE.filter(n => !n.spaeter && n.art !== 'fremd' && n.art !== 'medien' && n.art !== 'sprinkler' && hatEintraege(n, taktVon(n)))
+    .forEach(n => {
+      const takt = taktVon(n);
+      for(let z = zrVon(takt, ab.von); zrAnfang(z) <= bis; ){
+        const ende = zeitraumEnde(z);
+        if(!wirksamerTag(ende, zrAnfang(z)).tag && !vertretung.some(v => v.startsWith(n.label)))
+          vertretung.push(`${n.label} · ${zeitraumText(z)}`);
+        z = zrVon(takt, isoTag(new Date(ende.getFullYear(), ende.getMonth(), ende.getDate() + 1)));
+      }
+    });
+  /* Die Monatsrunde des Sprinklers wie bisher. */
+  if(sp && hatEintraege(sp, 'monat'))
+    for(let m = new Date(von.getFullYear(), von.getMonth(), 1); m <= bis; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)){
+      if(wirksamerTag(new Date(m.getFullYear(), m.getMonth() + 1, 0), m).tag) continue;
+      if(!vertretung.some(v => v.startsWith(sp.label))) vertretung.push(`${sp.label} · ${MONATE[m.getMonth()]}`);
+    }
   const zeilen = (titel, l) => l.length
     ? `<p class="muted small" style="margin:8px 0 2px">${titel}</p><p style="margin:0">${l.map(esc).join('<br>')}</p>` : '';
   return `<div class="card">
@@ -5349,7 +5450,7 @@ function rundgangTeile(){
       teile.push({k, n, objekte:rgEigene(k).map(o => Object.assign(o,
         {offen:!d || String((d.stand || {})[o.id] ?? '').trim() === '' || unbestaetigt(d, o.id)}))});
     }else{
-      if(expMonat(k) === jetztZeitraum(false)) return;
+      if(expZr(k, taktVon(n)) === jetztZeitraum(taktVon(n))) return;
       teile.push({k, n, objekte:rgEigene(k).map(o => Object.assign(o,
         {offen:!(d && d.zeilen && d.zeilen[o.id] && d.zeilen[o.id].status)}))});
     }
@@ -5495,7 +5596,7 @@ function renderRundgang(){
       </div>`;
     }
     const z = zeile(o);
-    const mangel = z.status && /mangel|defekt/i.test(z.status);
+    const mangel = istMangel(n, z.status);
     const klasse = !z.status ? '' : mangel ? ' mangel' : ' fertig';
     if(z.status && !rgOffen.has(w))
       return `<div class="pos${klasse} kompakt" data-w="${esc(w)}">${typ}
@@ -5644,7 +5745,7 @@ function renderRundgang(){
       z.status = z.status === b.dataset.status ? '' : b.dataset.status;
       if(z.status && !z.datum) z.datum = heute();
       if(z.status) zeitMerken(d, o.id);               // fürs Tätigkeitsbuch
-      const mangel = /mangel|defekt/i.test(z.status || '');
+      const mangel = istMangel(n, z.status);
       if(z.status && mangel){ rgOffen.add(w); }
       else{ rgOffen.delete(w); if(z.status) rgGeprueft.add(w); }
       saveDat();
@@ -7292,13 +7393,13 @@ function matAnlaesse(){
      aktuellen Zeitraums und die nächste. Ausgegebenes fällt heraus, ebenso die
      laufende, wenn sie schon vollständig erfasst ist. */
   const runden = (n, quartal, fertig) => {
-    const aus = quartal ? expQuartal(n.k) : expMonat(n.k), r0 = rundeVon(n);
-    const naechst = quartal ? quartalVon(isoTag(new Date(jetzt.getFullYear(), jetzt.getMonth() + 3, 1)))
-                            : monatVon(isoTag(new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 1)));
-    return [...new Set([r0, jetztZeitraum(quartal), naechst])]
+    const takt = n.art === 'sprinkler' ? 'monat' : taktVon(n);
+    const aus = expZr(n.k, takt), r0 = rundeVon(n), jz = jetztZeitraum(takt);
+    const e = zeitraumEnde(jz), naechst = zrVon(takt, isoTag(new Date(e.getFullYear(), e.getMonth(), e.getDate() + 1)));
+    return [...new Set([r0, jz, naechst])]
       .filter(z => !(aus && aus >= z) && !(z === r0 && fertig));
   };
-  const faelligIm = z => { const e = zeitraumEnde(z); return new Date(e.getFullYear(), e.getMonth(), 1); };
+  const faelligIm = z => zrAnfang(z);
   NACHWEISE.filter(n => !n.spaeter && n.art !== 'fremd').forEach(n => {
     if(n.art === 'sprinkler'){
       const km = 'nw:sprinkler:mon', kw = 'nw:sprinkler:woch';
@@ -7319,7 +7420,7 @@ function matAnlaesse(){
     }
     const quartal = n.art === 'medien', key = 'nw:' + n.k;
     const mat = matMitObjekten(matVon(key), mittelSchluessel(n.k));
-    if(!mat.length || !hatEintraege(n, quartal ? 'quartal' : 'monat')) return;
+    if(!mat.length || !hatEintraege(n, taktVon(n))) return;
     const fertig = quartal ? medienVoll(DAT.medien || {stand:{}})
                  : (() => { const z = zeilenJetzt(n.k); return z.length > 0 && z.length >= teilCfg(n.k).anlagen.length && z.every(x => x.status); })();
     runden(n, quartal, fertig).forEach(z => dazu({id:key + '@' + z, key, nw:n.k,
@@ -8545,7 +8646,7 @@ function renderNachweis(){
   $('#nwListe').innerHTML = reihe.map(i => {
     const a = t.anlagen[i];
     const z = d.zeilen[a];
-    const mangel = z.status && /mangel|defekt/i.test(z.status);
+    const mangel = istMangel(n, z.status);
     const klasse = !z.status ? '' : mangel ? ' mangel' : ' fertig';
     /* Bei langen Listen lässt sich die Reihenfolge wie bei den Zählern
        verschieben – bei 42 Türen ist der Weg durchs Haus wichtiger als die
@@ -8621,7 +8722,7 @@ function renderNachweis(){
       /* "In Ordnung" ist der Regelfall und braucht keine Bemerkung – die Karte
          schrumpft sofort. Bei einem Mangel bleibt sie offen, dort will man in
          aller Regel etwas dazuschreiben. Aufklappen geht jederzeit wieder. */
-      const mangel = /mangel|defekt/i.test(z.status || '');
+      const mangel = istMangel(n, z.status);
       if(z.status && mangel) offenKarten.add(a); else offenKarten.delete(a);
       const wandert = !!n.kompakt && !!z.status && !mangel && !z.n;
       /* Die Leiste zählt mit („x Anlagen ohne Zustand“) – bis v1.59 stand sie
@@ -10746,9 +10847,10 @@ function renderSettings(){
     + knopf('abwesend', '', 'Arbeitszeit')
     + knopf('wetter', '', 'Wetter')
     + '<div class="eyebrow">Anlagen und Prüfumfang</div>'
-    + NACHWEISE.filter(n => !n.spaeter).map(n => knopf('nw', n.k, n.label, anzahl(n))).join('')
-    /* Anlagentypen kommen nur noch auf Wunsch dazu (v1.147). */
-    + (VORLAGEN.some(n => !aktiv(n.k)) ? `<button class="btn ghost klein" id="setTypNeu" style="margin:4px 0 0">+ Neuer Anlagentyp</button>` : '')
+    + TYPEN_AKTIV.filter(n => !n.spaeter).map(n => knopf('nw', n.k, n.label, anzahl(n))).join('')
+    /* Anlagentypen kommen nur noch auf Wunsch dazu (v1.147), seit v1.148 auch
+       eigene aus dem Baukasten – deshalb steht der Knopf immer da. */
+    + `<button class="btn ghost klein" id="setTypNeu" style="margin:4px 0 0">+ Neuer Anlagentyp</button>`
     /* Stammlisten für alles (v1.76); die Akkutypen stehen zusätzlich unter RWA. */
     + '<div class="eyebrow">Listen</div>'
     + knopf('werkmat', '', 'Arbeitsmittel', TAET.werkzeug.length + TAET.material.length)
@@ -10782,6 +10884,7 @@ function setOeffnen(art, k){
            : art === 'check'  ? 'Checkliste'
            : art === 'akkus'  ? 'Akkutypen'
            : art === 'werkmat' ? 'Arbeitsmittel'
+           : art === 'typbau' ? (k && NW(k) ? NW(k).label : 'Neuer Typ')
            : art === 'tausch' ? 'Zählertausch'
            : art === 'plaene' ? 'Grundrisse'
            : art === 'geraet' ? 'Sicherung'
@@ -10804,11 +10907,14 @@ function renderSetSub(){
   if(a === 'tausch'){ setTausch(dyn);   return; }
   if(a === 'akkus') { setAkkus(dyn);     return; }
   if(a === 'werkmat'){ setWerkMat(dyn); return; }
+  if(a === 'typbau'){ setTypBau(dyn, k); return; }
   const n = NW(k);
   /* Oben die Wichtigkeit für die Aufgabenliste, darunter wie gehabt die Seite
      des Nachweises in einem eigenen Behälter. */
-  dyn.innerHTML = '<div id="setWichtig"></div><div id="setRundgang"></div><div id="setNwInhalt"></div>';
-  wichtigWahl($('#setWichtig'), k);
+  dyn.innerHTML = (n.eigen ? `<button class="btn eintrag" id="setTypBearb"><span>Typ bearbeiten</span></button>` : '')
+    + '<div id="setWichtig"></div><div id="setRundgang"></div><div id="setNwInhalt"></div>';
+  if(n.eigen) $('#setTypBearb').onclick = () => setOeffnen('typbau', k);
+  if(n.art !== 'bestand') wichtigWahl($('#setWichtig'), k);
   if(RUNDGANG_TYPEN.includes(k)) rundgangWahl($('#setRundgang'), k);
   const box = $('#setNwInhalt');
   if(n.art === 'medien')         setStellen(box);
@@ -10833,21 +10939,183 @@ function renderSetSub(){
    einer, der schon einmal da war, bringt seine Objekte wieder mit. */
 let typFrisch = null;
 function typWahl(){
-  const frei = VORLAGEN.filter(n => !aktiv(n.k));
+  const frei = VORLAGEN.filter(n => !aktiv(n.k)), eigen = eigeneTypen().filter(n => !aktiv(n.k));
+  const knopf = n => `<button class="btn eintrag" data-typ="${esc(n.k)}" style="margin-top:8px"><span>${esc(n.label)}</span></button>`;
   dlgZuruecksetzen();
   $('#dlgTitel').textContent = 'Neuer Anlagentyp';
-  $('#dlgText').textContent = 'Fertige Vorlagen mit Checkliste und allem, was dazugehört:';
+  $('#dlgText').textContent = frei.length ? 'Fertige Vorlagen mit Checkliste und allem, was dazugehört:' : 'Alle fertigen Vorlagen sind schon hinzugefügt.';
   $('#dlgKnoepfe').hidden = true;
   const liste = $('#dlgListe');
   liste.hidden = false;
-  liste.innerHTML = frei.map(n => `<button class="btn eintrag" data-typ="${esc(n.k)}" style="margin-top:8px"><span>${esc(n.label)}</span></button>`).join('')
-    + `<button class="btn ghost" data-typ="" style="margin-top:14px">Abbrechen</button>`;
+  /* Eigene Typen, die einmal entfernt wurden, stehen darunter (v1.148). */
+  liste.innerHTML = frei.map(knopf).join('')
+    + (eigen.length ? `<p class="muted small" style="margin:16px 0 0">Eigene, früher angelegt:</p>` + eigen.map(knopf).join('') : '')
+    + `<button class="btn" data-typ="*" style="margin-top:16px">Eigenen Anlagentyp anlegen …</button>`
+    + `<button class="btn ghost" data-typ="" style="margin-top:8px">Abbrechen</button>`;
   $('#dlg').hidden = false;
   liste.querySelectorAll('[data-typ]').forEach(b => b.onclick = () => {
     $('#dlg').hidden = true;
     dlgZuruecksetzen();
-    if(b.dataset.typ) typHinzufuegen(b.dataset.typ);
+    if(b.dataset.typ === '*') setOeffnen('typbau', '');
+    else if(b.dataset.typ) typHinzufuegen(b.dataset.typ);
   });
+}
+/* --- Baukasten für eigene Anlagentypen (v1.148, Wunsch von Jean) -------------
+   Drei Arten: eigene Kontrolle (Zustand je Objekt, Checkliste, Blatt mit
+   Unterschrift, wöchentlich bis jährlich), Fremdprüfung (Prüfdatum je Objekt,
+   Abstand in Jahren) und „Nur Bestand“ (Objekte mit Grundrissmarke, ohne
+   Prüfung). Zustände sind frei; je Zustand wird festgelegt, ob er als Mangel
+   zählt – dann entsteht beim Ausgeben wie gewohnt ein Mangel. Überschrift und
+   Dateiname ergeben sich aus Name und Abstand, solange sie nicht eigens
+   eingetragen sind. Ein neuer Typ entsteht erst mit „Anlegen“; ein bestehender
+   übernimmt jede Änderung sofort. Die Art lässt sich nur ändern, solange der
+   Typ noch keine Objekte hat. */
+const TYP_ARTEN = [['', 'Eigene Kontrolle'], ['fremd', 'Fremdprüfung'], ['bestand', 'Nur Bestand']];
+const TAKT_WAHL = [['woche', 'Wöchentlich'], ['monat', 'Monatlich'], ['quartal', 'Vierteljährlich'], ['halbjahr', 'Halbjährlich'], ['jahr', 'Jährlich']];
+const TAKT_ADJ = {woche:'Wöchentliche', monat:'Monatliche', quartal:'Vierteljährliche', halbjahr:'Halbjährliche', jahr:'Jährliche'};
+/* Markenfarben abseits der Vorlagen und der Prüffarben. */
+const TYP_FARBEN = ['#3949AB', '#00897B', '#6D4C41', '#AD1457', '#5E35B1', '#2E7D32', '#546E7A', '#F9A825'];
+function typStd(){
+  const belegt = eigeneTypen().map(n => n.farbe);
+  return {k:'', eigen:true, label:'', art:'', takt:['monat'], titelEigen:'', dateiEigen:'',
+    status:['In Ordnung', 'Mangel'], mangel:['Mangel'], checkliste:'', vorschlaege:[],
+    sortierbar:false, kompakt:false, etagen:false, jahre:1, anlagen:[],
+    farbe:TYP_FARBEN.find(f => !belegt.includes(f)) || TYP_FARBEN[0]};
+}
+/* Abgeleitetes nachziehen: Überschrift, Dateiname, Kennzeichen der Liste. */
+function typAbleiten(n){
+  const name = String(n.label || '').trim() || 'Eigener Typ';
+  n.titel = String(n.titelEigen || '').trim()
+    || (n.art === 'fremd' ? `Prüfung ${name}` : n.art === 'bestand' ? name : `${TAKT_ADJ[taktVon(n)]} Kontrolle ${name}`);
+  n.datei = String(n.dateiEigen || '').trim() || `Prüfung ${name}`;
+  n.kompakt = !!n.sortierbar;
+  n.mangel = (n.mangel || []).filter(st => n.status.includes(st));
+  if(n.art === 'fremd') n.jahre = Math.max(1, Math.round(+n.jahre || 1));
+  return n;
+}
+let typEntwurf = null;
+function setTypBau(box, k){
+  const vorhanden = k ? NW(k) : null;
+  if(!vorhanden || !vorhanden.eigen){ if(!typEntwurf || typEntwurf.k) typEntwurf = typStd(); }
+  const n = vorhanden && vorhanden.eigen ? vorhanden : typEntwurf;
+  const neu = !n.k;
+  const hatObjekte = !neu && ((teilCfg(n.k).anlagen || []).length > 0 || typInGebrauch(n.k));
+  const sichern = () => { if(neu) return; typAbleiten(n); typenAnwenden(); saveCfg(); };
+  const seg = (feld, liste, wert, aus) => `<div class="segfeld"><div class="seg" data-seg="${feld}">${liste.map(([w, t]) =>
+    `<button type="button" data-w="${esc(w)}" aria-pressed="${w === wert}"${aus ? ' disabled' : ''}>${esc(t)}</button>`).join('')}</div></div>`;
+  const zeichnen = () => {
+    const kontrolle = !n.art, fremd = n.art === 'fremd';
+    box.innerHTML = `
+      <label class="field"><span>Name des Anlagentyps</span>
+        <input id="tbName" value="${esc(n.label)}" placeholder="z. B. Erste-Hilfe-Kästen"></label>
+      <div class="eyebrow">Art</div>
+      ${seg('art', TYP_ARTEN, n.art, hatObjekte)}
+      <p class="muted small" style="margin:6px 0 0">${
+        kontrolle ? 'Du prüfst selbst: Zustand je Objekt, Checkliste, Blatt zum Ausgeben mit Unterschrift.'
+        : fremd ? 'Eine Firma prüft: je Objekt das Datum der letzten Prüfung, daraus der nächste Termin.'
+        : 'Keine Prüfung: die Objekte stehen in der Liste, im Grundriss und in der Suche.'}${
+        hatObjekte ? ' Die Art lässt sich nicht mehr ändern, weil der Typ schon Objekte hat.' : ''}</p>
+      ${kontrolle ? `
+        <label class="field" style="margin-top:14px"><span>Wie oft</span>
+          <select id="tbTakt">${TAKT_WAHL.map(([w, t]) => `<option value="${w}"${w === taktVon(n) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+        <div class="eyebrow">Zustände</div>
+        <p class="muted small" style="margin:-4px 0 8px">Je Objekt wird einer davon gewählt. Was als Mangel zählt, wird beim Ausgeben zum Mangel in der Aufgabenliste.</p>
+        <div id="tbZustaende">${n.status.map((st, i) => `<div class="row tbZustand" data-i="${i}">
+            <input data-f="st" value="${esc(st)}" aria-label="Zustand">
+            <label class="tbMangel"><input type="checkbox" data-f="mangel"${n.mangel.includes(st) ? ' checked' : ''}> Mangel</label>
+            <button type="button" class="btn ghost klein quadrat" data-weg="${i}" aria-label="Zustand löschen"${n.status.length <= 1 ? ' disabled' : ''}>×</button></div>`).join('')}</div>
+        <button type="button" class="btn ghost klein" id="tbZustandPlus" style="margin-top:6px">+ Zustand</button>
+        <label class="field" style="margin-top:14px"><span>Kacheln für die Bemerkung</span>
+          <input id="tbKacheln" value="${esc((n.vorschlaege || []).join(', '))}" placeholder="z. B. Gereinigt, Nachgefüllt"></label>
+        <p class="muted small" style="margin:-6px 0 10px">Durch Komma getrennt. Erscheinen als Kacheln unter dem Bemerkungsfeld, höchstens eine gilt.</p>
+        <label class="field"><span>Überschrift des Blatts</span>
+          <input id="tbTitel" value="${esc(n.titelEigen || '')}" placeholder="${esc(typAbleiten(Object.assign({}, n, {titelEigen:''})).titel)}"></label>
+        <label class="field"><span>Dateiname</span>
+          <input id="tbDatei" value="${esc(n.dateiEigen || '')}" placeholder="${esc(typAbleiten(Object.assign({}, n, {dateiEigen:''})).datei)}"></label>
+        <label class="haken"><input type="checkbox" id="tbWeg"${n.sortierbar ? ' checked' : ''}> Reihenfolge ist der Laufweg, Geprüftes schrumpft</label>`
+      : fremd ? `
+        <label class="field"><span>Prüfabstand in Jahren</span>
+          <input id="tbJahre" type="number" inputmode="numeric" min="1" max="10" value="${esc(String(n.jahre || 1))}"></label>` : ''}
+      <label class="haken"><input type="checkbox" id="tbEtagen"${n.etagen ? ' checked' : ''}> Ein Objekt liegt auf mehreren Etagen (wie Aufzüge)</label>
+      <div class="eyebrow">Markenfarbe im Grundriss</div>
+      <div class="tbFarben">${TYP_FARBEN.map(f => `<button type="button" data-farbe="${f}" aria-pressed="${f === n.farbe}" aria-label="Farbe" style="--f:${f}"></button>`).join('')}</div>
+      ${neu ? `<button class="btn primary" id="tbAnlegen" style="margin-top:20px">Anlegen</button>`
+            : `<p class="muted small" style="margin:16px 0 0">Änderungen gelten sofort. Die Checkliste bearbeitest du auf der Seite des Typs.</p>`}`;
+    const feld = (id, fn) => { const e = box.querySelector(id); if(e) e.onchange = () => { fn(e); sichern(); }; };
+    feld('#tbName', e => { n.label = e.value.replace(/\s+/g, ' ').trim(); if(!neu && n.label){ setTitel = n.label; $("#titel").textContent = setTitel; } });
+    feld('#tbKacheln', e => { n.vorschlaege = e.value.split(',').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean); });
+    feld('#tbTitel', e => { n.titelEigen = e.value.trim(); });
+    feld('#tbDatei', e => { n.dateiEigen = e.value.trim(); });
+    feld('#tbWeg', e => { n.sortierbar = e.checked; });
+    feld('#tbTakt', e => { n.takt = [e.value]; zeichnen(); });
+    feld('#tbEtagen', e => { n.etagen = e.checked; });
+    feld('#tbJahre', e => { n.jahre = Math.max(1, Math.min(10, Math.round(+e.value || 1))); e.value = n.jahre;
+      if(!neu){ teilCfg(n.k).jahre = n.jahre; } });
+    box.querySelectorAll('[data-seg] [data-w]').forEach(b => b.onclick = () => {
+      const f = b.closest('[data-seg]').dataset.seg;
+      n[f] = b.dataset.w;
+      sichern(); zeichnen();
+    });
+    box.querySelectorAll('.tbZustand').forEach(r => {
+      const i = +r.dataset.i, ein = r.querySelector('[data-f="st"]'), ha = r.querySelector('[data-f="mangel"]');
+      ein.onchange = () => {
+        const alt = n.status[i], wert = ein.value.replace(/\s+/g, ' ').trim();
+        if(!wert || (wert !== alt && n.status.includes(wert))){ ein.value = alt; if(wert) toast('Diesen Zustand gibt es schon'); return; }
+        n.status[i] = wert;
+        n.mangel = n.mangel.map(x => x === alt ? wert : x);
+        /* Schon erfasste Zeilen der laufenden Runde behalten ihren Zustand. */
+        if(!neu && DAT[n.k] && DAT[n.k].zeilen) Object.values(DAT[n.k].zeilen).forEach(z => { if(z && z.status === alt) z.status = wert; });
+        if(!neu) saveDat();
+        sichern();
+      };
+      ha.onchange = () => {
+        const st = n.status[i];
+        n.mangel = ha.checked ? [...new Set(n.mangel.concat(st))] : n.mangel.filter(x => x !== st);
+        sichern();
+      };
+      r.querySelector('[data-weg]').onclick = () => {
+        if(n.status.length <= 1) return;
+        const st = n.status[i];
+        n.status.splice(i, 1); n.mangel = n.mangel.filter(x => x !== st);
+        sichern(); zeichnen();
+      };
+    });
+    const plus = box.querySelector('#tbZustandPlus');
+    if(plus) plus.onclick = () => {
+      let name = 'Neuer Zustand', z = 2;
+      while(n.status.includes(name)) name = 'Neuer Zustand ' + z++;
+      n.status.push(name); sichern(); zeichnen();
+      const f = box.querySelector(`.tbZustand[data-i="${n.status.length - 1}"] [data-f="st"]`);
+      if(f){ f.focus(); f.select(); }
+    };
+    box.querySelectorAll('[data-farbe]').forEach(b => b.onclick = () => {
+      n.farbe = b.dataset.farbe; sichern();
+      box.querySelectorAll('[data-farbe]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    });
+    const an = box.querySelector('#tbAnlegen');
+    if(an) an.onclick = () => {
+      const name = box.querySelector('#tbName').value.replace(/\s+/g, ' ').trim();
+      if(!name){ toast('Bitte einen Namen eingeben'); box.querySelector('#tbName').focus(); return; }
+      if(TYPEN_AKTIV.concat(VORLAGEN, eigeneTypen()).some(x => x.label.toLowerCase() === name.toLowerCase())){ toast('Diesen Namen gibt es schon'); return; }
+      n.label = name;
+      /* Die Kennung bleibt für immer (Daten, Marken, Mängel hängen daran) und
+         muss eindeutig sein – Uhrzeit plus Zufall, notfalls neu gewürfelt. */
+      do n.k = 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      while(NW(n.k) || CFG.teile[n.k]);
+      typAbleiten(n);
+      CFG.eigen = eigeneTypen().concat(n);
+      CFG.teile[n.k] = n.art === 'fremd' ? {anlagen:[], jahre:n.jahre} : {anlagen:[], checkliste:''};
+      CFG.typen = (CFG.typen || []).concat(n.k);
+      typEntwurf = null;
+      typenAnwenden(); saveCfg();
+      toast(name + ' angelegt');
+      /* Statt des Baukastens die Seite des neuen Typs, gleich mit dem Feld für
+         das erste Objekt – der Zurück-Pfeil führt dann ins Menü. */
+      setSeite = {art:'nw', k:n.k}; setTitel = n.label; typFrisch = n.k;
+      renderSetSub(); $("#titel").textContent = setTitel;
+    };
+  };
+  zeichnen();
 }
 function typHinzufuegen(k){
   const n = NW(k);
@@ -11105,21 +11373,22 @@ function listeBauen(box, opt){
 }
 
 function setAnlagen(box, k){
-  const i = info('Die Reihenfolge stellst du beim Prüfen mit den Pfeilen ein; neue Anlagen hängen sich hinten an.'
-    + (k === 'aufzuege' ? ' Unter jedem Aufzug wählst du seine Etagen. Die Marke gilt auf allen und wandert beim Verschieben mit. Sind die Etagenpläne unterschiedlich geschnitten, richte sie unter Grundrisse aus.' : ''), 'margin:-4px 0 6px');
+  const n = NW(k), mitEtagen = !!n.etagen, bestand = n.art === 'bestand';
+  const i = info((bestand ? 'Neue Objekte hängen sich hinten an.' : 'Die Reihenfolge stellst du beim Prüfen mit den Pfeilen ein; neue Anlagen hängen sich hinten an.')
+    + (mitEtagen ? ' Unter jedem Objekt wählst du seine Etagen. Die Marke gilt auf allen und wandert beim Verschieben mit. Sind die Etagenpläne unterschiedlich geschnitten, richte sie unter Grundrisse aus.' : ''), 'margin:-4px 0 6px');
   box.innerHTML =
-    `<button class="btn eintrag" id="setZuCheck"><span>Checkliste bearbeiten</span></button>
-     <div class="eyebrow mitInfo">Anlagen ${i.knopf}</div>${i.text}
+    (bestand ? '' : `<button class="btn eintrag" id="setZuCheck"><span>Checkliste bearbeiten</span></button>`)
+    + `<div class="eyebrow mitInfo">${bestand ? 'Objekte' : 'Anlagen'} ${i.knopf}</div>${i.text}
      <div id="setListe"></div>`;
-  $('#setZuCheck').onclick = () => setOeffnen('check', k);
+  if(!bestand) $('#setZuCheck').onclick = () => setOeffnen('check', k);
   const liste = $('#setListe');
   /* Die Pläne kommen aus dem Bilderspeicher und damit verzögert. Bis dahin
      stehen die Zeilen ohne Etagen da; danach werden sie nur ergänzt, nicht neu
      gebaut – ein Feld, in dem gerade getippt wird, bleibt unberührt. */
   let plaene = null;
-  const etagen = b => { if(k === 'aufzuege' && plaene) etagenKnoepfe(b, plaene); };
+  const etagen = b => { if(mitEtagen && plaene) etagenKnoepfe(b, plaene, k); };
   listeBauen(liste, {
-    wort:'Anlage',
+    wort:bestand ? 'Objekt' : 'Anlage',
     liste:() => teilCfg(k).anlagen,
     nachZeichnen:etagen,
     nachher:() => etagen(liste),               // nach Umbenennen: Knöpfe am neuen Namen
@@ -11127,7 +11396,7 @@ function setAnlagen(box, k){
     loeschHinweis:'Das bisher Erfasste und die Stelle im Grundriss bleiben gespeichert – '
       + 'wer die Anlage mit demselben Namen wieder anlegt, findet beides wieder.'
   });
-  if(k === 'aufzuege') Bilder.alle().then(l => {
+  if(mitEtagen) Bilder.alle().then(l => {
     plaene = planSortieren(l || []);
     if(liste.isConnected) etagen(liste);
   }).catch(() => {});
@@ -11138,13 +11407,13 @@ function setAnlagen(box, k){
    gesetzt wurde, zieht sie auf die erste gewählte um – die Stelle selbst
    bleibt. Die Etage mit der Marke lässt sich nicht als letzte abwählen: ohne
    sie hätte die Marke keinen Plan. */
-function etagenKnoepfe(box, plaene){
+function etagenKnoepfe(box, plaene, k = 'aufzuege'){
   box.querySelectorAll('.etagen').forEach(e => e.remove());
   if(!plaene.length) return;
-  const anlagen = teilCfg('aufzuege').anlagen;
+  const anlagen = teilCfg(k).anlagen;
   box.querySelectorAll('.zeile').forEach(r => {
     const i = +r.dataset.i; if(i < 0 || anlagen[i] == null) return;
-    const key = 'aufzuege|' + anlagen[i];
+    const key = k + '|' + anlagen[i];
     const an = etagenAuswahl(key), kurz = planKurzNamen(plaene);
     /* Dieselben Kurzbezeichnungen wie am Regler; der volle Planname steht in der
        Beschreibung des Knopfes. */
@@ -12573,8 +12842,10 @@ function ortStatus(key){
   const d = DAT[t[0]], z = d && d.zeilen && d.zeilen[t.slice(1).join('|')];
   if(z && z.status) return 'gruen';
   const n = NW(t[0]);
-  if(n && rundeUeberfaellig(n)) return 'rot';      // Runde eines vergangenen Monats
-  return restMonat(jetzt) <= 7 ? 'rot' : 'gelb';
+  if(n && rundeUeberfaellig(n)) return 'rot';      // Runde eines vergangenen Zeitraums
+  if(n && n.art === 'bestand') return '';             // ohne Prüfung keine Prüffarbe (v1.148)
+  const tk = n ? taktVon(n) : 'monat';
+  return restZr(tk, jetzt) <= TAKT_ROT[tk] ? 'rot' : 'gelb';
 }
 /* --- Etagen -----------------------------------------------------------------
    Ein Aufzug reicht über mehrere Geschosse. Er hat trotzdem nur eine Stelle
@@ -12675,7 +12946,8 @@ const KATEGORIEN = [
   {k:'rwa',       farbe:'#E8710A'}           // Orange
 ];
 /* Nur, was als Anlagentyp hinzugefügt ist (v1.147: abhängig von CFG.typen). */
-const kategorien = () => KATEGORIEN.filter(kat => aktiv(kat.k));
+const kategorien = () => KATEGORIEN.concat(eigeneTypen().map(n => ({k:n.k, farbe:n.farbe || TYP_FARBEN[0]})))
+  .filter(kat => aktiv(kat.k));
 const katWahl = () => kategorien().filter(kat => (CFG.planWahl || []).includes(kat.k));
 /* Die Objekte einer Kategorie in der Reihenfolge ihrer Liste – also des Weges. */
 const katSchluessel = k => k === 'medien'
@@ -14925,6 +15197,9 @@ async function planBlattZeigen(ids){
 const zeitraumVoll = z => {
   const [j, r] = String(z || '').split('-');
   if(!r) return String(z || '');
+  if(r[0] === 'J') return j;
+  if(r[0] === 'H') return `${r.slice(1)}. Halbjahr ${j}`;
+  if(r[0] === 'W') return `KW ${+r.slice(1)} ${j}`;
   return r[0] === 'Q' ? `${r.slice(1)}. Quartal ${j}` : `${MONATE[+r - 1] || r} ${j}`;
 };
 const rund3 = v => v == null ? null : Math.round(v * 1000) / 1000;
@@ -15159,7 +15434,7 @@ function zurueckGrund(e, runden){
   if(!e.roh) return 'Für diese Runde liegen keine Daten zum Zurückholen vor.';
   if(begonnen(n))
     return 'Die nächste Runde ist schon begonnen. Sie würde beim Zurückholen überschrieben.';
-  const vermerk = n.art === 'medien' ? expQuartal(e.k) : expMonat(e.k);
+  const vermerk = n.art === 'medien' ? expQuartal(e.k) : n.art === 'sprinkler' ? expMonat(e.k) : expZr(e.k, taktVon(n));
   if(vermerk !== e.zeitraum)
     return 'Der Ausgabevermerk passt nicht mehr zu dieser Runde – vermutlich wurden die Ablesewerte zurückgesetzt.';
   if(n.art === 'medien' && e.tauschAnzahl != null && e.tauschAnzahl !== TAUSCH.length)
@@ -15557,7 +15832,7 @@ function suchPlanText(ort, k, id){
 const suchMittel = key => { const m = mittelVon(key); return m.ut.concat(m.mat.map(x => x.name)).join(', '); };
 function suchObjekte(){
   const l = [];
-  NACHWEISE.forEach(n => {
+  TYPEN_AKTIV.forEach(n => {                       // auch „Nur Bestand“ (v1.148)
     if(n.spaeter || n.art === 'sprinkler') return;
     if(n.art === 'medien'){
       const namen = medienNamen();
@@ -15650,6 +15925,7 @@ function suchStand0(o){
       st ? `abgelesen ${zahlText(zahl(st))} ${o.einheit}` : alt ? `Vorquartal ${zahlText(zahl(alt.stand))} ${o.einheit}` : ''
     ].filter(Boolean).join(' · ');
   }
+  if(n.art === 'bestand') return '';
   const z = zeileVon(o.k, o.id);
   if(n.art === 'fremd') return [o.zusatz, z.datum ? fristText(frist(z.datum, teilCfg(o.k).jahre)) : 'noch nicht geprüft'].filter(Boolean).join(' · ');
   const m = offenerMangel(o.ort);
@@ -15675,7 +15951,7 @@ function renderSuche(){
       + aufg.map(a => `<button class="btn aufgabe eintrag" data-aufg="${esc(a.id)}"><span class="etext">${esc(aufgTitel(a))}<small>${esc(suchAufgStand(a))}</small></span></button>`).join('')
     : '')
   + (term.length ? `<div class="eyebrow">Termine</div>` + term.map(o => terminKnopf(o, false)).join('') : '')
-  + NACHWEISE.filter(n => suchListe.some(t => t.k === n.k)).map(n =>
+  + TYPEN_AKTIV.filter(n => suchListe.some(t => t.k === n.k)).map(n =>
     `<div class="eyebrow">${esc(n.art === 'medien' ? 'Zähler' : n.label)}</div>`
     + suchListe.map((t, i) => t.k !== n.k ? '' :
         `<button class="btn aufgabe eintrag" data-t="${i}"><span class="etext">${esc(t.titel)}<small>${esc(suchStand(t))}</small></span></button>`).join('')
@@ -15720,6 +15996,8 @@ async function kurzinfo(o){
     if(alt) zeilen.push(`Vorquartal: ${zahlText(zahl(alt.stand))} ${z.einheit}${alt.datum ? ' (' + dText(alt.datum) + ')' : ''}`);
     if(letzte && letzte.ergebnisse[o.id].verbrauch != null)
       zeilen.push(`Verbrauch ${zeitraumVoll(letzte.zeitraum)}: ${zahlText(letzte.ergebnisse[o.id].verbrauch)} ${z.einheit}`);
+  }else if(n.art === 'bestand'){
+    /* Ohne Prüfung gibt es nichts weiter zu sagen (v1.148). */
   }else if(n.art === 'fremd'){
     const z = zeileVon(o.k, o.id), f = frist(z.datum, teilCfg(o.k).jahre);
     zeilen.push(z.datum ? `Zuletzt geprüft am ${dText(z.datum)} · ${fristText(f)}` : 'Noch nicht geprüft');
@@ -15748,15 +16026,20 @@ async function kurzinfo(o){
   $('#dlgKnoepfe').hidden = true;
   const liste = $('#dlgListe');
   liste.hidden = false;
-  liste.innerHTML = `<button class="btn primary" data-w="karte" style="margin-top:14px">Zur Karte</button>`
+  /* „Nur Bestand“ hat keine Karte und keinen Verlauf – der Weg führt in die
+     Objektliste der Einstellungen (v1.148). */
+  const bestand = n.art === 'bestand';
+  liste.innerHTML = (bestand ? `<button class="btn primary" data-w="liste" style="margin-top:14px">Zur Objektliste</button>`
+                             : `<button class="btn primary" data-w="karte" style="margin-top:14px">Zur Karte</button>`)
     + (plan ? `<button class="btn" data-w="plan">${ORT_SVG}Grundriss</button>` : '')
-    + `<button class="btn" data-w="verlauf">Verlauf</button>`
+    + (bestand ? '' : `<button class="btn" data-w="verlauf">Verlauf</button>`)
     + `<button class="btn ghost" data-w="zu" style="margin-top:14px">Schließen</button>`;
   $('#dlg').hidden = false;
   liste.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
     $('#dlg').hidden = true;
     dlgZuruecksetzen();
     if(b.dataset.w === 'karte')   zurKarte(o);
+    if(b.dataset.w === 'liste')   setOeffnen('nw', o.k);
     if(b.dataset.w === 'plan')    verorten(o.ort, o.titel);
     if(b.dataset.w === 'verlauf') verlaufOeffnen(o.k, o.id, o.titel);
   });
@@ -15838,16 +16121,18 @@ async function ausgeben(){
   /* Maßgeblich ist wie in der Überschrift der Beginn der Runde, nicht der Tag
      des Abschlusses – sonst rutschte eine überzogene Runde in den neuen Monat. */
   const stichtag = (alleDaten(offen).sort().shift() || heute());
+  /* Eigene Typen nach ihrem Abstand (v1.148): „26-W41“, „26-H2“, „26“. */
   const teil = n.art === 'medien'
     ? stichtag.slice(2, 4) + '-Q' + (Math.floor((+stichtag.slice(5, 7) - 1) / 3) + 1)
-    : stichtag.slice(2, 7);
+    : n.art === 'sprinkler' ? stichtag.slice(2, 7)
+    : zrVon(taktVon(n), stichtag).slice(2).replace(/-J$/, '');
   const name = `${teil} ${nameTeil(n.datei || n.label)}.html`;
   const html = exportHtml(offen);
   if(!await dateiTeilen(name, html)) return;
   /* Die Historie nimmt die Runde auf, bevor irgendetwas geleert wird: sie
      braucht auch die Stände des Vorquartals, wie sie VOR dieser Ausgabe
      standen – ein Zurückholen stellt sie wieder her. */
-  const zeitraum = n.art === 'medien' ? quartalVon(stichtag) : monatVon(stichtag);
+  const zeitraum = n.art === 'medien' ? quartalVon(stichtag) : n.art === 'sprinkler' ? monatVon(stichtag) : zrVon(taktVon(n), stichtag);
   let histOk = true;
   try{ await Historie.put(rundeFuerHistorie(offen, d0, zeitraum, name, html)); }
   catch(e){ histOk = false; }
