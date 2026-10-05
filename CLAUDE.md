@@ -146,8 +146,23 @@ steht.
 - Abstände (v1.148): `taktVon(n)`, Zeiträume `zrVon/zrAnfang/zeitraumEnde/
   zeitraumText/zeitraumVoll` für `2026-W41`, `-10`, `-Q4`, `-H2`, `-J`;
   `expZr`, `restZr`, `TAKT_ROT`. Sprinkler rechnet weiter für sich.
-- Nicht im Baukasten: Akkutausch (hängt fest an RWA), Rundgang (nur die
-  Vorlagen in `RUNDGANG_TYPEN`).
+- Nicht im Baukasten: Rundgang (nur die Vorlagen in `RUNDGANG_TYPEN`).
+
+## Akkutausch (v1.149, allgemein)
+
+- Akkutypen: `CFG.akkuTypen` = [{name, monate}] (gemeinsam; `akkuTypenPruefen`
+  übernimmt die alten RWA-Typen in Jahren). `akkuMonate`, `fristM`,
+  `monateText`.
+- Je Objekt: `AKKU` (Store `nwAkku`, Sicherung `akku`) unter `k|Objekt` mit
+  `akkuTyp/akkuAnzahl/akkuDatum/akkuSeit`; `akkuZeile` liest, `akkuZ` legt an.
+  `akkuAusDat` holt die alten Felder aus `DAT.rwa.zeilen` (Update und alte
+  Sicherungen). Nicht in DAT, weil die Ausgabe eigener Kontrollen DAT leert.
+- `akkuAktiv(k)`: eigene Typen `n.akku`, Vorlagen `CFG.teile[k].akku`
+  (Schalter auf der Typseite) oder Vorgabe `n.akku` (RWA). Nie Sprinkler/Medien.
+- Ansicht `akku` je Typ (`akkuK`, `akkuOeffnen(k)`, Titel `akkuTitel`).
+  Tätigkeit/Material-Schlüssel `akkuTaet(k)` und Anlass-IDs `akkuAnlassVor`:
+  die RWA behält ihre alten (`akku`, `akku:<Objekt>@`), sonst mit Typ.
+- Markenfarbe: `ortStatus` = knappere Lage aus `ortStatus0` und Akkufrist.
 
 ## Suche (v1.145)
 

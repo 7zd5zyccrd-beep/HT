@@ -10,6 +10,20 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.149 05.10.2026 Akkutausch für alle Anlagentypen (Wunsch von Jean): Die
+         Akkutypen sind eine gemeinsame Liste unter Einstellungen › Listen ›
+         Akkutypen, der Tauschabstand steht jetzt in Monaten (die bisherigen
+         RWA-Typen werden übernommen, 4 Jahre = 48 Monate). Jeder Anlagentyp
+         außer Sprinkler und Medien kann den Akkutausch haben – die Vorlagen
+         über den Haken „Akkutausch“ auf ihrer Seite (RWA ab Werk an), eigene
+         Typen im Baukasten, auch „Nur Bestand“. Dann wählt man je Objekt
+         Akkutyp und Anzahl, der Typ bekommt seine eigene Akku-Ansicht und
+         Zeile wie „Notleuchten-Akkus“ (Tauschdatum, „Alle getauscht“,
+         Vorbereiten, Verlauf), und die Markenfarbe richtet sich nach der
+         knapperen Frist. Die Akkudaten haben einen eigenen Speicher, damit
+         sie die Ausgabe einer eigenen Kontrolle überstehen; die der RWA
+         ziehen beim Update dorthin um, reisen mit der Sicherung, und ältere
+         Sicherungen werden weiter gelesen.
   v1.148 05.10.2026 Anlagentypen, Etappe 2 – der Baukasten (Wunsch von Jean):
          „+ Neuer Anlagentyp“ › „Eigenen Anlagentyp anlegen …“. Name, Art
          (eigene Kontrolle mit Blatt und Unterschrift, Fremdprüfung mit
@@ -2120,15 +2134,15 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .pos .kopf input{flex:0 0 auto;width:165px;padding:8px 10px;font-size:16px}
 /* Dieselbe Segmentwahl in beiden Kartenarten: .pos traegt sie im Nachweis,
    .stelle in den Einstellungen (Objektkarten). */
-.pos .seg,.stelle .seg,.wichtig .seg,.segfeld .seg,.dauerWahl .seg,.seg.arbArt{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
-.pos .seg button,.stelle .seg button,.wichtig .seg button,.segfeld .seg button,.dauerWahl .seg button,.seg.arbArt button{
+.pos .seg,.stelle .seg,.wichtig .seg,.segfeld .seg,.akkuReihe .seg,.dauerWahl .seg,.seg.arbArt{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
+.pos .seg button,.stelle .seg button,.wichtig .seg button,.segfeld .seg button,.akkuReihe .seg button,.dauerWahl .seg button,.seg.arbArt button{
   flex:1;padding:0 6px;border:0;background:var(--surface);color:var(--ink);
   font:inherit;font-size:14px;cursor:pointer;border-left:1px solid var(--line);
   /* So hoch wie die Felder (v1.111); der Rahmen der Reihe zählt mit. */
   min-height:calc(var(--feld-h) - 2px);
 }
-.pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child,.segfeld .seg button:first-child,.dauerWahl .seg button:first-child,.seg.arbArt button:first-child{border-left:0}
-.pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"],.segfeld .seg button[aria-pressed="true"],.dauerWahl .seg button[aria-pressed="true"],.seg.arbArt button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
+.pos .seg button:first-child,.stelle .seg button:first-child,.wichtig .seg button:first-child,.segfeld .seg button:first-child,.akkuReihe .seg button:first-child,.dauerWahl .seg button:first-child,.seg.arbArt button:first-child{border-left:0}
+.pos .seg button[aria-pressed="true"],.stelle .seg button[aria-pressed="true"],.wichtig .seg button[aria-pressed="true"],.segfeld .seg button[aria-pressed="true"],.akkuReihe .seg button[aria-pressed="true"],.dauerWahl .seg button[aria-pressed="true"],.seg.arbArt button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
 .pos .bem{margin-top:8px}
 /* Arbeitsmittel je Objekt (v1.101): eine zurückhaltende Zeile unten an der Karte. */
 .mittelZeile{display:block;width:100%;margin:8px 0 0;padding:4px 0;border:0;background:none;
@@ -2287,6 +2301,8 @@ button > .ortIcon:only-child{display:block;margin:auto}
 .stelle .knopfreihe .seg.anz{flex:0 0 88px;margin-left:auto;height:var(--feld-h)}
 /* Akkutyp und Anzahl in einer Zeile (v1.118). */
 .akkuZeile{display:flex;gap:8px;margin-top:8px}
+.akkuReihe{margin:-2px 0 10px}                  /* unter einer Objektzeile (v1.149) */
+.akkuReihe .akkuZeile{margin-top:0}
 /* Akkutyp in einer Zeile (v1.128): „1,2 Ah“ und eine Ziffer brauchen wenig
    Platz, Pfeile und Löschen stehen dahinter auf Höhe der Felder. */
 .akkuTypZeile{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
@@ -3207,7 +3223,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.148';
+const VERSION = 'v1.149';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4451,6 +4467,7 @@ function go(name, push = true){
   current = name;
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   $('#titel').textContent = name === 'nachweis' && offen ? NW(offen).label
+                          : name === 'akku' ? akkuTitel(akkuK)
                           : name === 'histnw' && histK ? NW(histK).label
                           : name === 'setsub' ? setTitel
                           : name === 'taet' && taetAktiv ? taetAktiv.name
@@ -4849,9 +4866,65 @@ const jahrTitel = j => j === 1 ? 'Jährlich' : j === 2 ? 'Zweijährlich' : `Alle
    Er hängt nicht am Prüfabstand der Firma, sondern am Typ des eingebauten
    Akkus: je nach Kapazität alle drei oder vier Jahre. Der Typ wird je Anlage
    gewählt, sein Zyklus steht in den Einstellungen. */
-const akkuTypen = () => NW('rwa') ? (teilCfg('rwa').akkus || []) : [];
-const akkuJahre = name => { const a = akkuTypen().find(x => x.name === name); return a ? a.jahre : 0; };
-const akkuAn = () => aktiv('rwa') && teilCfg('rwa').anlagen.length > 0;
+/* Seit v1.149 allgemein (Wunsch von Jean: auch andere Akkus als die der RWA):
+   - Akkutypen sind eine gemeinsame Liste (CFG.akkuTypen, Einstellungen ›
+     Listen), der Tauschabstand steht in Monaten. Die RWA-Typen von früher
+     (in Jahren) werden einmal übernommen.
+   - Jeder Anlagentyp außer Sprinkler und Medien kann den Akkutausch haben:
+     die Vorlagen über einen Schalter auf ihrer Seite (RWA ab Werk an), eigene
+     Typen über den Baukasten.
+   - Typ, Anzahl und Tauschdatum je Objekt liegen in einem eigenen Speicher
+     (AKKU, Schlüssel Typ|Objekt): die Ausgabe einer eigenen Kontrolle leert
+     deren Daten, der Akkutausch muss das überstehen. Die Angaben der RWA aus
+     DAT.rwa ziehen beim ersten Start einmal um. */
+let AKKU = Store.get('nwAkku', null);
+const saveAkku = () => { Store.set('nwAkku', AKKU); listeNachziehen(); };
+function akkuAusDat(dat){
+  const raus = {}, z = dat && dat.rwa && dat.rwa.zeilen;
+  if(z) Object.entries(z).forEach(([a, x]) => {
+    if(!x || !(x.akkuTyp || x.akkuDatum || x.akkuAnzahl)) return;
+    raus['rwa|' + a] = {akkuTyp:x.akkuTyp || '', akkuAnzahl:x.akkuAnzahl, akkuDatum:x.akkuDatum || '', akkuSeit:x.akkuSeit || ''};
+  });
+  return raus;
+}
+function akkuTypenPruefen(){
+  if(Array.isArray(CFG.akkuTypen)) return false;
+  const alt = CFG.teile && CFG.teile.rwa && Array.isArray(CFG.teile.rwa.akkus) ? CFG.teile.rwa.akkus : [{name:'7 Ah', jahre:4}];
+  CFG.akkuTypen = alt.filter(x => x && x.name).map(x => ({name:x.name, monate:Math.max(1, Math.round((+x.jahre || 4) * 12))}));
+  return true;
+}
+if(!AKKU || typeof AKKU !== 'object' || Array.isArray(AKKU)){ AKKU = akkuAusDat(DAT); Store.set('nwAkku', AKKU); }
+if(akkuTypenPruefen()) Store.set('nwCfg', CFG);
+function akkuAktiv(k){
+  const n = NW(k);
+  if(!n || n.art === 'sprinkler' || n.art === 'medien') return false;
+  if(n.eigen) return !!n.akku;
+  const t = CFG.teile[k];
+  return t && typeof t.akku === 'boolean' ? t.akku : !!n.akku;
+}
+const akkuTypen = () => Array.isArray(CFG.akkuTypen) ? CFG.akkuTypen : [];
+const akkuMonate = name => { const a = akkuTypen().find(x => x.name === name); return a ? +a.monate || 0 : 0; };
+/* Lesen ohne anzulegen; akkuZ legt den Eintrag an, wenn etwas gesetzt wird. */
+const akkuZeile = (k, a) => AKKU[k + '|' + a] || {};
+const akkuZ = (k, a) => AKKU[k + '|' + a] || (AKKU[k + '|' + a] = {});
+const akkuAn = k => aktiv(k) && akkuAktiv(k) && (teilCfg(k).anlagen || []).length > 0;
+const akkuTypenMit = () => TYPEN_AKTIV.filter(n => akkuAn(n.k));
+const akkuTitel = k => (NW(k) ? NW(k).label : '') + '-Akkus';
+/* Schlüssel für Tätigkeit und Material; die RWA behält ihren alten. */
+const akkuTaet = k => k === 'rwa' ? 'akku' : 'akku:' + k;
+const akkuAnlassVor = (k, a) => k === 'rwa' ? `akku:${a}@` : `akku:${k}|${a}@`;
+const monateText = m => m % 12 ? `${m} Monate` : m === 12 ? '1 Jahr' : `${m / 12} Jahre`;
+const naechsteMonISO = (datum, mon) => {
+  const [j, m, t] = String(datum || '').split('-').map(Number);
+  if(!j) return '';
+  return isoTag(new Date(j, m - 1 + mon, t));
+};
+function fristM(datum, monate){
+  if(!datum || !(monate > 0)) return {offen:true, faellig:true, tage:0, ziel:''};
+  const ziel = naechsteMonISO(datum, monate);
+  return {offen:false, faellig:tageBis(alsDatum(ziel)) < 0, tage:tageBis(alsDatum(ziel)), ziel};
+}
+const akkuFrist = z => fristM(z.akkuDatum, akkuMonate(z.akkuTyp));
 /* Wie viele Akkus in einer Anlage stecken – einer, solange nichts anderes
    eingestellt ist. Beide haben denselben Typ und werden gemeinsam getauscht,
    die Zahl ändert an der Frist also nichts; sie sagt, wie viele mitzunehmen
@@ -4860,12 +4933,12 @@ const akkuAn = () => aktiv('rwa') && teilCfg('rwa').anlagen.length > 0;
 const akkuAnzahl = z => (z && z.akkuAnzahl === 2) ? 2 : 1;
 /* Ohne gewählten Typ ist nichts zu rechnen – solche Anlagen bleiben außen vor,
    statt als überfällig zu gelten. */
-const akkuFristen = () => teilCfg('rwa').anlagen
-  .map(a => zeileVon('rwa', a))
-  .filter(z => akkuJahre(z.akkuTyp) > 0)
-  .map(z => frist(z.akkuDatum, akkuJahre(z.akkuTyp)));
-function akkuRing(){
-  const fr = akkuFristen();
+const akkuFristen = k => (teilCfg(k).anlagen || [])
+  .map(a => akkuZeile(k, a))
+  .filter(z => akkuMonate(z.akkuTyp) > 0)
+  .map(akkuFrist);
+function akkuRing(k){
+  const fr = akkuFristen(k);
   if(!fr.length) return '';
   if(fr.some(f => f.offen || f.faellig)) return 'rot';
   return fr.some(f => f.tage <= VORWARN) ? 'gelb' : 'gruen';
@@ -4877,8 +4950,8 @@ function fristGrund(fr, wort){
   const ohne = fr.filter(f => f.offen).length, ueber = fr.filter(f => !f.offen && f.faellig).length;
   return ohne ? `${ohne} von ${fr.length} ohne ${wort}` : ueber ? `${ueber} von ${fr.length} überfällig` : '';
 }
-function akkuStand(){
-  const alle = teilCfg('rwa').anlagen.length, fr = akkuFristen();
+function akkuStand(k){
+  const alle = teilCfg(k).anlagen.length, fr = akkuFristen(k);
   if(!fr.length) return alle ? ' · kein Akkutyp gewählt' : '';
   const grund = fristGrund(fr, 'Tauschdatum');
   if(grund) return ' · ' + grund;
@@ -4964,7 +5037,7 @@ function aufgaben(){
     const grund = fristGrund(fr, wort) || `${bald} von ${fr.length} fällig`;
     neu(n, {titel, ring:rg, akku,
       faellig: ohne ? null : alsDatum(mit[0].ziel),
-      stand:[grund, vorbZusatz(akku ? 'akku' : n.k)].filter(Boolean).join(' · ')});
+      stand:[grund, vorbZusatz(akku ? 'akku:' + n.k : n.k)].filter(Boolean).join(' · ')});
   };
   const anl = matAnlaesse();                 // für „Vorbereiten“ der Nachweise (v1.74)
   NACHWEISE.filter(n => !n.spaeter).forEach(n => {
@@ -4972,7 +5045,6 @@ function aufgaben(){
     if(n.art === 'fremd'){
       if(!hatEintraege(n, '')) return;
       fristAufgabe(n, fristen(n.k), n.label, fremdRing(n.k), 'Prüfdatum', false);
-      if(n.akku && akkuAn()) fristAufgabe(n, akkuFristen(), 'RWA-Akkus', akkuRing(), 'Tauschdatum', true);
       return;
     }
     if(n.art === 'sprinkler'){
@@ -5025,6 +5097,9 @@ function aufgaben(){
             faellig: zeitraumEnde(runde), begonnen: los, stand: [stand, nwVorbText(n.k, anl)].filter(Boolean).join(' · '),
             frueh: zrAnfang(runde)});
   });
+  /* Akkutausch je Anlagentyp (v1.149) – auch bei eigenen Kontrollen und „Nur
+     Bestand“, eine Zeile wie „RWA-Akkus“. */
+  akkuTypenMit().forEach(n => fristAufgabe(n, akkuFristen(n.k), akkuTitel(n.k), akkuRing(n.k), 'Tauschdatum', true));
   /* Kombinierter Rundgang: sind mindestens zwei integrierte Nachweise offen,
      ersetzt eine Zeile ihre Einzelzeilen. Termin ist der früheste, Ring und
      Wichtigkeit die dringlichsten der beteiligten. */
@@ -5204,10 +5279,11 @@ function nachweisOeffnen(k, ziel){
   spAuf = new Set();                  // abgeschlossene Kontrollgänge stehen zugeklappt
   go('nachweis');
 }
-function akkuOeffnen(){ datenFuer('rwa'); go('akku'); }
+let akkuK = 'rwa';                             // welcher Anlagentyp in der Akku-Ansicht steht (v1.149)
+function akkuOeffnen(k){ akkuK = k && NW(k) ? k : 'rwa'; go('akku'); }
 const knoepfeVerdrahten = box => {
   box.querySelectorAll('[data-nw]').forEach(b => b.onclick = () =>
-    b.dataset.akku ? akkuOeffnen() : nachweisOeffnen(b.dataset.nw, b.dataset.ziel));
+    b.dataset.akku ? akkuOeffnen(b.dataset.nw) : nachweisOeffnen(b.dataset.nw, b.dataset.ziel));
   box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => aufgabeOeffnen(b.dataset.aufg));
   box.querySelectorAll('[data-rundgang]').forEach(b => b.onclick = rundgangOeffnen);
   box.querySelectorAll('[data-termin]').forEach(b => b.onclick = () => terminOeffnen(b.dataset.termin));
@@ -7007,7 +7083,7 @@ function eigenText(a, voll){
   return ut.length ? `<p style="margin:0">Werkzeug: ${esc(ut.join(', '))}</p>` : '';
 }
 function erfFuerEintrag(a){
-  if(a.akku) return erfText(['akku']);                 // v1.79
+  if(a.akku) return erfText([akkuTaet(a.k)]);          // v1.79, je Anlagentyp seit v1.149
   if(a.rundgang) return erfText((a.teilK || []).map(k => k === 'sprinkler' ? 'nw:sprinkler:woch' : 'nw:' + k),
     false, (a.teilK || []).flatMap(k => mittelSchluessel(k)));
   if(a.aufg){
@@ -7024,7 +7100,7 @@ function erfFuerEintrag(a){
   return erfText(['nw:' + a.k], false, mittelSchluessel(a.k));
 }
 /* Tätigkeiten ohne Dauer – der Akkutausch hat nur Werkzeug und Material (v1.79). */
-const OHNE_DAUER = new Set(['akku']);
+const OHNE_DAUER = {has:key => key === 'akku' || String(key).startsWith('akku:')};   // je Anlagentyp (v1.149)
 /* Die Karte „Dauer, Werkzeug und Material“ für Tätigkeiten ohne Aufgabe (v1.79):
    am Nachweis und beim Akkutausch. zeilen = [[Schlüssel, Überschrift, Name]];
    ein Tipp auf „Bearbeiten“ öffnet die Tätigkeit. Das Material steht wie an der
@@ -7326,25 +7402,26 @@ const matVon = key => ((TAET.t[key] || {}).material || []).filter(m => m && m.na
    Tauschdatum rückt der Termin weit weg – der Anlass fällt heraus. Das ersetzt
    den früheren Knopf „Akkus vorhanden“. */
 const akkuName = typ => /akku/i.test(typ) ? typ : 'Akku ' + typ;
-function akkuAnlaesse(){
-  if(!akkuAn()) return [];
-  const an = vorbAnstehend('akku'), raus = [];
+function akkuAnlaesse(k){
+  if(!k) return akkuTypenMit().flatMap(n => akkuAnlaesse(n.k));   // alle Anlagentypen (v1.149)
+  if(!akkuAn(k)) return [];
+  const an = vorbAnstehend('akku:' + k), raus = [], titel = akkuTitel(k), key = akkuTaet(k);
   Object.keys(an).forEach(a => {
-    const z = zeileVon('rwa', a);
+    const z = akkuZeile(k, a);
     if(!z.akkuTyp) return;
     const ziel = an[a] || '';
-    raus.push({id:`akku:${a}@${ziel || 'ohne'}`, key:'akku', nw:'akku', name:'RWA-Akkus', anlage:a, ziel,
+    raus.push({id:akkuAnlassVor(k, a) + (ziel || 'ohne'), key, nw:'akku:' + k, name:titel, anlage:a, ziel,
       wann:a, faellig:ziel ? alsDatum(ziel) : tagAnfang(new Date()),
       mat:[{name:akkuName(z.akkuTyp), menge:akkuAnzahl(z)}]});
   });
-  akkuVermerkUebernehmen(raus);
+  if(k === 'rwa') akkuVermerkUebernehmen(raus);
   /* Zusätzliches Material des Akkutauschs (v1.79), einmal je Tausch und nicht
      je Anlage. Der Anlass heißt nach dem frühesten Termin: steht ein neues
      Tauschdatum, beginnt die nächste Runde mit leeren Haken. */
-  const extra = matVon('akku');
+  const extra = matVon(key);
   if(raus.length && extra.length){
     const ziele = raus.map(o => o.ziel).filter(Boolean).sort();
-    raus.push({id:'akku:zusatz@' + (ziele[0] || 'ohne'), key:'akku', nw:'akku', name:'RWA-Akkus', anlage:'', ziel:ziele[0] || '',
+    raus.push({id:(k === 'rwa' ? 'akku:zusatz@' : `akku:${k}:zusatz@`) + (ziele[0] || 'ohne'), key, nw:'akku:' + k, name:titel, anlage:'', ziel:ziele[0] || '',
       wann:'Akkutausch', faellig:raus.reduce((m, o) => o.faellig < m ? o.faellig : m, raus[0].faellig), mat:extra});
   }
   return raus;
@@ -7516,20 +7593,20 @@ function matStartVerdrahten(){
 }
 /* Die Akku-Ansicht (v1.70): je Akkutyp zusammengezählt wie auf der
    Startseite, darunter die Anlagen. Ein Haken deckt alle Anlagen der Zeile. */
-function akkuMatKarte(box){
+function akkuMatKarte(box, k = akkuK){
   if(!box) return;
-  const liste = akkuVorbListe();
+  const liste = akkuVorbListe(k);
   vorbKarteZeigen(box, liste.map(x => {
     const bereit = x.posten.every(p => p.bereit) ? x.posten.map(p => p.bereit).sort().pop() : '';
     return {an:!!bereit, html:mengeHtml(x.name, x.menge),
             unten:[x.posten.map(p => p.o.anlage).filter(Boolean).join(', '), bereit ? 'erledigt ' + dText(bereit) : ''].filter(Boolean).join(' · '),
-            setzen:an => { matSetzen(x.posten, an); akkuMatKarte(box); }};
+            setzen:an => { matSetzen(x.posten, an); akkuMatKarte(box, k); }};
   }), `<p class="muted small" style="margin:0 0 2px">Für alles, was bis Ende ${esc(naechsterMonatText())} zu tauschen ist oder noch kein Tauschdatum hat.</p>`);
 }
 /* Je Akkutyp zusammengezählt, abgehakte eingeschlossen. */
-function akkuVorbListe(){
+function akkuVorbListe(k){
   const je = new Map();
-  matPosten(akkuAnlaesse()).forEach(p => {
+  matPosten(akkuAnlaesse(k)).forEach(p => {
     const x = je.get(p.name) || {name:p.name, menge:0, posten:[]};
     x.menge += p.menge; x.posten.push(p); je.set(p.name, x);
   });
@@ -8216,14 +8293,14 @@ function renderAlle(){
   [...new Set(fremd.map(n => teilCfg(n.k).jahre))].sort((a, b) => a - b).forEach(j =>
     gruppen.push([jahrTitel(j),
       fremd.filter(n => teilCfg(n.k).jahre === j).map(n => knopf(n, '')).join('')]));
-  /* Der Akkutausch ist keine Prüfung und keine Runde: er hat seinen eigenen
-     Knopf, solange es RWA-Anlagen gibt. */
-  if(akkuAn()){
-    const r = akkuRing();
-    gruppen.push(['Eigene Wartung',
-      `<button class="btn eintrag${r ? ' ring-' + r : ''}" data-nw="rwa" data-ziel="" data-akku="1"><span class="etext">RWA-Akkus${
-        akkuStand() ? `<small>${esc(akkuStand().replace(/^ · /, ''))}</small>` : ''}</span></button>`]);
-  }
+  /* Der Akkutausch ist keine Prüfung und keine Runde: er hat je Anlagentyp
+     seinen eigenen Knopf (v1.149), solange es dort Objekte gibt. */
+  const akkus = akkuTypenMit();
+  if(akkus.length) gruppen.push(['Eigene Wartung', akkus.map(n => {
+    const r = akkuRing(n.k), st = akkuStand(n.k);
+    return `<button class="btn eintrag${r ? ' ring-' + r : ''}" data-nw="${esc(n.k)}" data-ziel="" data-akku="1"><span class="etext">${esc(akkuTitel(n.k))}${
+      st ? `<small>${esc(st.replace(/^ · /, ''))}</small>` : ''}</span></button>`;
+  }).join('')]);
   const inhalt = gruppen.map(([titel, knoepfe]) =>
     `<div class="eyebrow">${esc(titel)}</div>` + knoepfe).join('');
   $('#alleListe').innerHTML = (inhalt || `<p class="muted small">Noch nichts eingetragen. Über die Einstellungen legst du je Nachweis an, was im Haus steht.</p>`)
@@ -8348,9 +8425,9 @@ function renderFremd(){
 /* In der Ansicht wird nur noch getauscht: Datum eintragen, fertig. Welcher Typ
    in welcher Anlage steckt und wie viele, steht in den Einstellungen – das
    ändert sich höchstens beim Umbau, nicht bei jedem Tausch. */
-function akkuKarte(a, i, d){
-  const z = d.zeilen[a], j = akkuJahre(z.akkuTyp);
-  const f = j ? frist(z.akkuDatum, j) : null;
+function akkuKarte(a, i, k){
+  const z = akkuZeile(k, a), j = akkuMonate(z.akkuTyp);
+  const f = j ? akkuFrist(z) : null;
   const klasse = !f ? '' : (f.offen || f.faellig ? ' mangel' : ' fertig');
   return `<div class="pos${klasse}" data-i="${i}">
     ${nameMitVerlauf(esc(a))}
@@ -8367,7 +8444,7 @@ function akkuText(z, j, f){
   const anz = akkuAnzahl(z);
   if(!j) return (anz > 1 ? anz + ' Akkus · ' : '') + 'kein Akkutyp gewählt – das steht in den Einstellungen';
   return `${anz} × ${z.akkuTyp} · `
-    + (f.offen   ? `noch kein Tausch vermerkt · alle ${j} Jahre`
+    + (f.offen   ? `noch kein Tausch vermerkt · alle ${monateText(j)}`
      : f.faellig ? 'überfällig seit ' + dText(f.ziel)
                  : 'nächster Tausch ' + dText(f.ziel));
 }
@@ -8377,9 +8454,9 @@ function akkuText(z, j, f){
    gleichem Stand entscheidet die Reihenfolge aus den Einstellungen – die hat
    Jean dort selbst gelegt, sie sagt mehr als der Name. */
 function akkuOrdnung(z){
-  const j = akkuJahre(z.akkuTyp);
+  const j = akkuMonate(z.akkuTyp);
   if(!j) return [2, 0];
-  const f = frist(z.akkuDatum, j);
+  const f = akkuFrist(z);
   return f.offen ? [0, 0] : [1, f.tage];
 }
 function akkuVergleich(za, ia, zb, ib){
@@ -8391,31 +8468,31 @@ function akkuVergleich(za, ia, zb, ib){
    (dieselbe Lehre wie bei der Ablesung, v0.88). Ersetzt wird hier überhaupt
    nichts – Zustand, Knöpfe und Text werden an Ort und Stelle nachgezogen. */
 function akkuFrischen(box){
-  const t = teilCfg('rwa'), d = datenFuer('rwa');
-  const z = d.zeilen[t.anlagen[+box.dataset.i]], j = akkuJahre(z.akkuTyp);
-  const f = j ? frist(z.akkuDatum, j) : null;
+  const k = akkuK, t = teilCfg(k);
+  const z = akkuZeile(k, t.anlagen[+box.dataset.i]), j = akkuMonate(z.akkuTyp);
+  const f = j ? akkuFrist(z) : null;
   box.classList.toggle('mangel', !!f && (f.offen || f.faellig));
   box.classList.toggle('fertig', !!f && !f.offen && !f.faellig);
   box.querySelector('.stand').textContent = akkuText(z, j, f);
 }
 function akkuVerdrahten(box){
-  const t = teilCfg('rwa'), d = datenFuer('rwa');
-  const a = t.anlagen[+box.dataset.i], z = d.zeilen[a];
+  const k = akkuK, t = teilCfg(k);
+  const a = t.anlagen[+box.dataset.i];
   /* Derselbe Schlüssel wie in der Prüfansicht und in den Einstellungen: es ist
      dieselbe Anlage im Haus, also derselbe Punkt im Plan – gleich, von wo aus
      er gesetzt wurde. */
-  box.querySelector('[data-ort]').onclick = () => verorten('rwa|' + a, a);
-  box.querySelector('[data-verlauf]').onclick = () => verlaufOeffnen('rwa', a, a, 'akku');
+  box.querySelector('[data-ort]').onclick = () => verorten(k + '|' + a, a);
+  box.querySelector('[data-verlauf]').onclick = () => verlaufOeffnen(k, a, a, 'akku');
   box.querySelector('[data-feld="datum"]').onchange = e => {
-    datumAbloesen('akku', 'rwa', a, z, 'akkuDatum', 'akkuSeit', e.target.value);
-    saveDat(); akkuFrischen(box); akkuVorbFrisch();
+    datumAbloesen('akku', k, a, akkuZ(k, a), 'akkuDatum', 'akkuSeit', e.target.value);
+    saveAkku(); akkuFrischen(box); akkuVorbFrisch();
   };
 }
 function renderAkku(){
-  const t = teilCfg('rwa'), d = datenFuer('rwa'), typen = akkuTypen();
+  const k = akkuK, t = teilCfg(k), typen = akkuTypen();
   const iAlle = info('Setzt das Tauschdatum für alle Anlagen mit gewähltem Akkutyp auf denselben Tag.', 'margin:0 0 10px');
   $('#akkuListe').innerHTML =
-    (typen.length ? '' : `<p class="muted small">Noch kein Akkutyp angelegt – das geht in den Einstellungen unter RWA.</p>`)
+    (typen.length ? '' : `<p class="muted small">Noch kein Akkutyp angelegt – das geht unter Einstellungen › Listen › Akkutypen.</p>`)
     + `<div id="akkuWerk"></div><div id="vorbPlatz"></div>`
     + `<div class="card">
        <div class="eyebrow mitInfo" style="margin:0 0 6px">Alle getauscht ${iAlle.knopf}</div>${iAlle.text}
@@ -8430,23 +8507,23 @@ function renderAkku(){
        beim nächsten Öffnen an ihrem neuen Platz. Der Platz in der Liste der
        Einstellungen (data-i) bleibt dabei erhalten. */
     + t.anlagen.map((a, i) => ({a, i}))
-        .sort((x, y) => akkuVergleich(d.zeilen[x.a], x.i, d.zeilen[y.a], y.i))
-        .map(({a, i}) => akkuKarte(a, i, d)).join('');
+        .sort((x, y) => akkuVergleich(akkuZeile(k, x.a), x.i, akkuZeile(k, y.a), y.i))
+        .map(({a, i}) => akkuKarte(a, i, k)).join('');
   $('#akkuAlleSetzen').onclick = () => {
     const tag = $('#akkuAlleDatum').value;
     if(!tag){ toast('Kein Datum gewählt'); return; }
-    const betroffen = t.anlagen.filter(a => akkuJahre(d.zeilen[a].akkuTyp) > 0);
+    const betroffen = t.anlagen.filter(a => akkuMonate(akkuZeile(k, a).akkuTyp) > 0);
     if(!betroffen.length){ toast('Keine Anlage mit Akkutyp'); return; }
     frage('Für alle übernehmen',
       `${betroffen.length === 1 ? 'Eine Anlage bekommt' : betroffen.length + ' Anlagen bekommen'} den ${dText(tag)} als Tauschdatum.\n\n`
       + 'Anlagen ohne gewählten Akkutyp bleiben unberührt.',
       'Übernehmen', () => {
-        betroffen.forEach(a => datumAbloesen('akku', 'rwa', a, d.zeilen[a], 'akkuDatum', 'akkuSeit', tag));
-        saveDat(); toast('Übernommen'); renderAkku();
+        betroffen.forEach(a => datumAbloesen('akku', k, a, akkuZ(k, a), 'akkuDatum', 'akkuSeit', tag));
+        saveAkku(); toast('Übernommen'); renderAkku();
       });
   };
   $$('#akkuListe .pos').forEach(akkuVerdrahten);
-  taetKarteZeigen($('#akkuWerk'), [['akku', '', 'RWA-Akkutausch']]);
+  taetKarteZeigen($('#akkuWerk'), [[akkuTaet(k), '', NW(k).label + '-Akkutausch']]);
   akkuMatKarte($('#vorbPlatz'));
   lageZurueck();
 }
@@ -8464,13 +8541,14 @@ function akkuVorbFrisch(){
 const naechsterMonatText = () => MONATE[(new Date().getMonth() + 1) % 12];
 function vorbAnstehend(art){
   const raus = {};
-  if(art === 'akku'){
-    if(!akkuAn()) return raus;
+  if(String(art).startsWith('akku:')){
+    const k = art.slice(5);
+    if(!akkuAn(k)) return raus;
     const jetzt = new Date(), ende = new Date(jetzt.getFullYear(), jetzt.getMonth() + 2, 0);
-    teilCfg('rwa').anlagen.forEach(a => {
-      const z = zeileVon('rwa', a), j = akkuJahre(z.akkuTyp);
-      if(!j) return;
-      const f = frist(z.akkuDatum, j);
+    teilCfg(k).anlagen.forEach(a => {
+      const z = akkuZeile(k, a);
+      if(!akkuMonate(z.akkuTyp)) return;
+      const f = akkuFrist(z);
       if(f.offen || alsDatum(f.ziel) <= ende) raus[a] = f.ziel;
     });
     return raus;
@@ -8492,8 +8570,8 @@ function vorbStand(art){
 /* Kurzform für die Aufgabenliste (v1.74): „Vorbereiten: n offen“ bzw.
    „vorbereitet“ – bei den Akkus je Akkutyp, bei der Fremdprüfung die Firma. */
 function vorbZusatz(art){
-  if(art === 'akku'){
-    const l = akkuVorbListe();
+  if(String(art).startsWith('akku:')){
+    const l = akkuVorbListe(art.slice(5));
     return vorbWort(l.length, l.filter(x => x.posten.some(p => !p.bereit)).length);
   }
   const s = vorbStand(art);
@@ -10851,10 +10929,11 @@ function renderSettings(){
     /* Anlagentypen kommen nur noch auf Wunsch dazu (v1.147), seit v1.148 auch
        eigene aus dem Baukasten – deshalb steht der Knopf immer da. */
     + `<button class="btn ghost klein" id="setTypNeu" style="margin:4px 0 0">+ Neuer Anlagentyp</button>`
-    /* Stammlisten für alles (v1.76); die Akkutypen stehen zusätzlich unter RWA. */
+    /* Stammlisten für alles (v1.76); die Akkutypen gelten seit v1.149 für alle
+       Anlagentypen mit Akkutausch. */
     + '<div class="eyebrow">Listen</div>'
     + knopf('werkmat', '', 'Arbeitsmittel', TAET.werkzeug.length + TAET.material.length)
-    + (aktiv('rwa') ? knopf('akkus', 'rwa', 'Akkutypen', akkuTypen().length) : '')
+    + knopf('akkus', '', 'Akkutypen', akkuTypen().length)
     + '<div class="eyebrow">Gerät</div>'
     + knopf('plaene', '', 'Grundrisse', '…')
     + knopf('geraet', '', 'Sicherung')
@@ -10915,6 +10994,16 @@ function renderSetSub(){
     + '<div id="setWichtig"></div><div id="setRundgang"></div><div id="setNwInhalt"></div>';
   if(n.eigen) $('#setTypBearb').onclick = () => setOeffnen('typbau', k);
   if(n.art !== 'bestand') wichtigWahl($('#setWichtig'), k);
+  /* Akkutausch bei den Vorlagen einschaltbar (v1.149); eigene Typen stellen
+     ihn im Baukasten ein, Sprinkler und Medien haben keinen. */
+  if(!n.eigen && n.art !== 'sprinkler' && n.art !== 'medien'){
+    $('#setRundgang').insertAdjacentHTML('beforebegin', `<label class="haken" style="margin:0 0 14px"><input type="checkbox" id="setAkkuHaken"${akkuAktiv(k) ? ' checked' : ''}>
+      <span>Akkutausch (Akkutyp je Objekt, eigener Tauschtermin)</span></label>`);
+    $('#setAkkuHaken').onchange = e => {
+      teilCfg(k).akku = e.target.checked; saveCfg();
+      const y = bildY(); renderSetSub(); bildNach(y);
+    };
+  }
   if(RUNDGANG_TYPEN.includes(k)) rundgangWahl($('#setRundgang'), k);
   const box = $('#setNwInhalt');
   if(n.art === 'medien')         setStellen(box);
@@ -10979,7 +11068,7 @@ function typStd(){
   const belegt = eigeneTypen().map(n => n.farbe);
   return {k:'', eigen:true, label:'', art:'', takt:['monat'], titelEigen:'', dateiEigen:'',
     status:['In Ordnung', 'Mangel'], mangel:['Mangel'], checkliste:'', vorschlaege:[],
-    sortierbar:false, kompakt:false, etagen:false, jahre:1, anlagen:[],
+    sortierbar:false, kompakt:false, etagen:false, akku:false, jahre:1, anlagen:[],
     farbe:TYP_FARBEN.find(f => !belegt.includes(f)) || TYP_FARBEN[0]};
 }
 /* Abgeleitetes nachziehen: Überschrift, Dateiname, Kennzeichen der Liste. */
@@ -11037,6 +11126,7 @@ function setTypBau(box, k){
         <label class="field"><span>Prüfabstand in Jahren</span>
           <input id="tbJahre" type="number" inputmode="numeric" min="1" max="10" value="${esc(String(n.jahre || 1))}"></label>` : ''}
       <label class="haken"><input type="checkbox" id="tbEtagen"${n.etagen ? ' checked' : ''}> Ein Objekt liegt auf mehreren Etagen (wie Aufzüge)</label>
+      <label class="haken"><input type="checkbox" id="tbAkku"${n.akku ? ' checked' : ''}> Akkutausch (Akkutyp je Objekt, eigener Tauschtermin)</label>
       <div class="eyebrow">Markenfarbe im Grundriss</div>
       <div class="tbFarben">${TYP_FARBEN.map(f => `<button type="button" data-farbe="${f}" aria-pressed="${f === n.farbe}" aria-label="Farbe" style="--f:${f}"></button>`).join('')}</div>
       ${neu ? `<button class="btn primary" id="tbAnlegen" style="margin-top:20px">Anlegen</button>`
@@ -11049,6 +11139,7 @@ function setTypBau(box, k){
     feld('#tbWeg', e => { n.sortierbar = e.checked; });
     feld('#tbTakt', e => { n.takt = [e.value]; zeichnen(); });
     feld('#tbEtagen', e => { n.etagen = e.checked; });
+    feld('#tbAkku', e => { n.akku = e.checked; });
     feld('#tbJahre', e => { n.jahre = Math.max(1, Math.min(10, Math.round(+e.value || 1))); e.value = n.jahre;
       if(!neu){ teilCfg(n.k).jahre = n.jahre; } });
     box.querySelectorAll('[data-seg] [data-w]').forEach(b => b.onclick = () => {
@@ -11230,7 +11321,7 @@ function wichtigWahl(box, k){
   const zeichnen = () => {
     const w = wichtigVon(k);
     const i = info('Ordnet die Aufgabenliste bei gleichem Tag; unter „Überfällig“ zählt sie vor dem Datum.'
-      + (NW(k).akku ? ' Gilt auch für den Akkutausch.' : ''), 'margin:-6px 0 14px');
+      + (akkuAktiv(k) ? ' Gilt auch für den Akkutausch.' : ''), 'margin:-6px 0 14px');
     box.innerHTML =
       `<div class="field wichtig"><span class="mitInfo">Wichtigkeit ${i.knopf}</span><div class="seg">${
         WICHTIG.map(([s, t]) => `<button type="button" data-w="${s}" aria-pressed="${w === s}">${t}</button>`).join('')
@@ -11378,15 +11469,18 @@ function setAnlagen(box, k){
     + (mitEtagen ? ' Unter jedem Objekt wählst du seine Etagen. Die Marke gilt auf allen und wandert beim Verschieben mit. Sind die Etagenpläne unterschiedlich geschnitten, richte sie unter Grundrisse aus.' : ''), 'margin:-4px 0 6px');
   box.innerHTML =
     (bestand ? '' : `<button class="btn eintrag" id="setZuCheck"><span>Checkliste bearbeiten</span></button>`)
+    + (akkuAktiv(k) ? `<button class="btn eintrag" id="setZuAkkus"><span>Akkutypen</span><span class="zahl">${akkuTypen().length}</span></button>` : '')
     + `<div class="eyebrow mitInfo">${bestand ? 'Objekte' : 'Anlagen'} ${i.knopf}</div>${i.text}
      <div id="setListe"></div>`;
   if(!bestand) $('#setZuCheck').onclick = () => setOeffnen('check', k);
+  if(akkuAktiv(k)) $('#setZuAkkus').onclick = () => setOeffnen('akkus', '');
   const liste = $('#setListe');
   /* Die Pläne kommen aus dem Bilderspeicher und damit verzögert. Bis dahin
      stehen die Zeilen ohne Etagen da; danach werden sie nur ergänzt, nicht neu
      gebaut – ein Feld, in dem gerade getippt wird, bleibt unberührt. */
   let plaene = null;
-  const etagen = b => { if(mitEtagen && plaene) etagenKnoepfe(b, plaene, k); };
+  /* Akkutyp und Anzahl je Objekt (v1.149), unter der Zeile wie die Etagen. */
+  const etagen = b => { if(akkuAktiv(k)) akkuReihen(b, k); if(mitEtagen && plaene) etagenKnoepfe(b, plaene, k); };
   listeBauen(liste, {
     wort:bestand ? 'Objekt' : 'Anlage',
     liste:() => teilCfg(k).anlagen,
@@ -11400,6 +11494,33 @@ function setAnlagen(box, k){
     plaene = planSortieren(l || []);
     if(liste.isConnected) etagen(liste);
   }).catch(() => {});
+}
+/* Akkus je Objekt in der einfachen Objektliste (v1.149): unter jeder
+   gespeicherten Zeile die Akkutypen und die Anzahl, wie bei Feuerlöscher und
+   RWA in der Karte. Gesichert beim Antippen, aufgefrischt nur die Knöpfe. */
+function akkuReihen(box, k){
+  box.querySelectorAll('.akkuReihe').forEach(e => e.remove());
+  const anlagen = teilCfg(k).anlagen, typen = akkuTypen();
+  box.querySelectorAll('.zeile').forEach(r => {
+    const i = +r.dataset.i; if(i < 0 || anlagen[i] == null) return;
+    const a = anlagen[i], z = akkuZeile(k, a);
+    r.insertAdjacentHTML('afterend', `<div class="akkuReihe">${!typen.length
+      ? '<p class="muted small" style="margin:0">Für den Akkutausch erst einen Akkutyp anlegen.</p>'
+      : `<div class="akkuZeile"><span class="seg">${typen.map(x =>
+          `<button type="button" data-typ="${esc(x.name)}" aria-pressed="${x.name === z.akkuTyp}">${esc(x.name)}</button>`).join('')}</span>
+        <span class="seg anz" role="group" aria-label="Akkus je Objekt">${[1, 2].map(m =>
+          `<button type="button" data-anz="${m}" aria-pressed="${akkuAnzahl(z) === m}">${m} ×</button>`).join('')}</span></div>`}</div>`);
+    const zeile = r.nextElementSibling;
+    zeile.querySelectorAll('[data-typ]').forEach(b => b.onclick = () => {
+      const zz = akkuZ(k, a);
+      zz.akkuTyp = zz.akkuTyp === b.dataset.typ ? '' : b.dataset.typ; saveAkku();
+      zeile.querySelectorAll('[data-typ]').forEach(x => x.setAttribute('aria-pressed', x.dataset.typ === zz.akkuTyp));
+    });
+    zeile.querySelectorAll('[data-anz]').forEach(b => b.onclick = () => {
+      akkuZ(k, a).akkuAnzahl = +b.dataset.anz; saveAkku();
+      zeile.querySelectorAll('[data-anz]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    });
+  });
 }
 /* Etagen je Aufzug: unter jeder gespeicherten Zeile die Grundrisse als
    Umschaltknöpfe. Ein Tipp nimmt die Etage auf oder heraus; aufgefrischt werden
@@ -11466,11 +11587,11 @@ function setFremd(box, k){
   const n = NW(k), t = teilCfg(k);
   const iAbst = info('Aus dem letzten Prüfdatum und diesem Abstand ergibt sich der nächste Termin – und unter welcher Überschrift der Nachweis in „Alle Nachweise“ steht.', 'margin:-6px 0 14px');
   const iObj = info('Neue Objekte hängen sich hinten an. Das Grundriss-Symbol (Plan mit Stecknadel) zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge.'
-    + (n.akku ? ' Unter dem Namen wählst du den Akkutyp, rechts in der Knopfreihe die Anzahl.' : ''), 'margin:-4px 0 6px');
+    + (akkuAktiv(k) ? ' Unter dem Namen wählst du den Akkutyp, rechts in der Knopfreihe die Anzahl.' : ''), 'margin:-4px 0 6px');
   box.innerHTML =
     `<label class="field"><span class="mitInfo">Prüfabstand in Jahren ${iAbst.knopf}</span>
        <input type="number" id="setJahre" class="schmal" min="1" max="20" step="1" inputmode="numeric" value="${t.jahre}"></label>${iAbst.text}`
-    + (n.akku ? `<button class="btn eintrag" id="setZuAkkus"><span>Akkutypen</span><span class="zahl">${akkuTypen().length}</span></button>` : '')
+    + (akkuAktiv(k) ? `<button class="btn eintrag" id="setZuAkkus"><span>Akkutypen</span><span class="zahl">${akkuTypen().length}</span></button>` : '')
     + `<div class="eyebrow mitInfo">Objekte ${iObj.knopf}</div>${iObj.text}
        <div id="setListe"></div>`;
   $('#setJahre').onchange = e => {
@@ -11478,7 +11599,7 @@ function setFremd(box, k){
     if(!(j > 0 && j <= 20)){ e.target.value = t.jahre; return; }
     t.jahre = j; saveCfg();
   };
-  if(n.akku) $('#setZuAkkus').onclick = () => setOeffnen('akkus', k);
+  if(akkuAktiv(k)) $('#setZuAkkus').onclick = () => setOeffnen('akkus', '');
   objektKarten($('#setListe'), k);
 }
 /* --- Die Objekte der Fremdprüfungen ----------------------------------------
@@ -11625,8 +11746,8 @@ function objektKarten(box, k){
      Eine frisch angelegte Karte zeigt beides noch nicht: solange der Name nicht
      gesichert ist, gibt es keinen Eintrag, an dem es hängen könnte. */
   const akkuWahl = (name, i) => {
-    if(!NW(k).akku || i < 0) return '';
-    const z = datenFuer(k).zeilen[name] || {}, typen = akkuTypen();
+    if(!akkuAktiv(k) || i < 0) return '';
+    const z = akkuZeile(k, name), typen = akkuTypen();
     if(!typen.length)
       return `<p class="muted small" style="margin:10px 0 0">Erst einen Akkutyp anlegen.</p>`;
     /* Die Anzahl steht seit v1.118 in derselben Zeile wie der Typ – in der
@@ -11635,8 +11756,8 @@ function objektKarten(box, k){
       `<button type="button" data-typ="${esc(x.name)}" aria-pressed="${x.name === z.akkuTyp}">${esc(x.name)}</button>`).join('')}</span>${anzWahl(name, i)}</div>`;
   };
   const anzWahl = (name, i) => {
-    if(!NW(k).akku || i < 0 || !akkuTypen().length) return '';
-    const z = datenFuer(k).zeilen[name] || {};
+    if(!akkuAktiv(k) || i < 0 || !akkuTypen().length) return '';
+    const z = akkuZeile(k, name);
     return `<span class="seg anz" role="group" aria-label="Akkus je Anlage">${[1, 2].map(m =>
       `<button type="button" data-anz="${m}" aria-pressed="${akkuAnzahl(z) === m}">${m} ×</button>`).join('')}</span>`;
   };
@@ -11699,15 +11820,15 @@ function objektKarten(box, k){
       };
       /* Typ und Anzahl: die Karte wird nie ersetzt, nur die Knöpfe nachgezogen –
          ein zweiter Tipp auf den gewählten Typ nimmt ihn zurück. */
-      if(!neu && NW(k).akku){
-        const z = datenFuer(k).zeilen[teilCfg(k).anlagen[i]];
+      if(!neu && akkuAktiv(k)){
+        const z = akkuZ(k, teilCfg(k).anlagen[i]);
         r.querySelectorAll('[data-typ]').forEach(b => b.onclick = () => {
-          z.akkuTyp = z.akkuTyp === b.dataset.typ ? '' : b.dataset.typ; saveDat();
+          z.akkuTyp = z.akkuTyp === b.dataset.typ ? '' : b.dataset.typ; saveAkku();
           r.querySelectorAll('[data-typ]').forEach(x =>
             x.setAttribute('aria-pressed', x.dataset.typ === z.akkuTyp));
         });
         r.querySelectorAll('[data-anz]').forEach(b => b.onclick = () => {
-          z.akkuAnzahl = +b.dataset.anz; saveDat();
+          z.akkuAnzahl = +b.dataset.anz; saveAkku();
           r.querySelectorAll('[data-anz]').forEach(x => x.setAttribute('aria-pressed', x === b));
         });
       }
@@ -11748,10 +11869,10 @@ function objektKarten(box, k){
    während man noch darin tippt (wie bei den Zählstellen). */
 function setAkkus(box){
   box.innerHTML =
-    infoZeile('Je nach Kapazität wird alle drei oder vier Jahre getauscht; hier stehen die Typen mit ihrem Zyklus. Welcher Typ in welcher Anlage steckt und wie viele, stellst du unter Einstellungen › RWA bei den Objekten ein.')
+    infoZeile('Die Akkutypen gelten für alle Anlagentypen mit Akkutausch, der Abstand steht in Monaten (48 = vier Jahre). Welcher Typ in welchem Objekt steckt und wie viele, stellst du auf der Seite des Anlagentyps bei den Objekten ein.')
     + `<button class="btn ghost klein" id="akkuTypPlus" style="margin:0 0 10px">+ Akkutyp hinzufügen</button>
      <div id="akkuTypListe"></div>`;
-  akkuTypBasis = teilCfg('rwa').akkus.length;
+  akkuTypBasis = akkuTypen().length;
   $('#akkuTypPlus').onclick = () => {
     akkuTypZeichnen(true);
     const f = $('#akkuTypListe .stelle[data-i="-1"] [data-f="name"]');
@@ -11762,18 +11883,18 @@ function setAkkus(box){
 let akkuTypBasis = 0;
 function akkuTypZeichnen(mitNeuer){
   const box = $('#akkuTypListe'); if(!box) return;
-  const t = teilCfg('rwa');
+  const t = {akkus:CFG.akkuTypen = akkuTypen()};      // gemeinsame Liste (v1.149)
   let verworfen = false;
   const karte = (x, i, n) => `<div class="stelle" data-i="${i}">
       <div class="akkuTypZeile">
         <label class="field"><span>Typ</span><input data-f="name" value="${esc(x.name)}"${
           i < 0 ? ' placeholder="12 Ah"' : ''}></label>
-        <label class="field"><span>Jahre</span><input data-f="jahre" type="number" min="1" max="20" step="1" inputmode="numeric" value="${x.jahre}"></label>
+        <label class="field"><span>Monate</span><input data-f="monate" type="number" min="1" max="240" step="1" inputmode="numeric" value="${x.monate}"></label>
         <span class="akkuTypKnoepfe"><button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= akkuTypBasis ? ' disabled' : ''}>↑</button>
         <button class="btn ghost klein quadrat" data-runter="1" aria-label="nach unten"${i < 0 || i >= akkuTypBasis - 1 ? ' disabled' : ''}>↓</button>
         <button class="btn danger klein" data-weg="1">Löschen</button></span>
     </div></div>`;
-  box.innerHTML = (mitNeuer ? karte({name:'', jahre:4}, -1, t.akkus.length) : '')
+  box.innerHTML = (mitNeuer ? karte({name:'', monate:48}, -1, t.akkus.length) : '')
     + anzeigeFolge(t.akkus.length, akkuTypBasis).map(i => karte(t.akkus[i], i, t.akkus.length)).join('');
   /* Die Reihenfolge bestimmt, in welcher Folge die Typknöpfe unter "Akkus je
      Anlage" stehen. Die bewegte Karte bleibt dabei auf dem Schirm stehen. */
@@ -11789,19 +11910,19 @@ function akkuTypZeichnen(mitNeuer){
     const feld = f => r.querySelector(`[data-f="${f}"]`);
     const sichern = () => {
       const name = (feld('name').value || '').trim();
-      const jahre = Math.round(+feld('jahre').value) || 0;
+      const monate = Math.min(240, Math.round(+feld('monate').value) || 0);
       if(neu){
-        if(!name || !(jahre > 0)) return;
-        t.akkus.push({name, jahre}); saveCfg(); toast('Hinzugefügt'); akkuTypZeichnen(false);
+        if(!name || !(monate > 0)) return;
+        t.akkus.push({name, monate}); saveCfg(); toast('Hinzugefügt'); akkuTypZeichnen(false);
         return;
       }
-      if(!name || !(jahre > 0)){                 // leeren geht nur über Löschen
-        feld('name').value = t.akkus[i].name; feld('jahre').value = t.akkus[i].jahre; return;
+      if(!name || !(monate > 0)){                // leeren geht nur über Löschen
+        feld('name').value = t.akkus[i].name; feld('monate').value = t.akkus[i].monate; return;
       }
       /* Der Name verbindet Typ und Anlage: wird er geändert, ziehen die
          Anlagen mit, sonst stünden sie plötzlich ohne Typ da. */
       if(name !== t.akkus[i].name) akkuTypUmbenennen(t.akkus[i].name, name);
-      t.akkus[i] = {name, jahre}; saveCfg();
+      t.akkus[i] = {name, monate}; saveCfg();
     };
     if(neu) r.addEventListener('focusout', () => setTimeout(() => {
       if(!r.contains(document.activeElement) && !verworfen) sichern();
@@ -11814,7 +11935,7 @@ function akkuTypZeichnen(mitNeuer){
       if(neu){ akkuTypZeichnen(false); return; }
       frage('Akkutyp löschen',
         `„${t.akkus[i].name}“ verschwindet aus der Auswahl.\n\n`
-        + 'Anlagen, in denen dieser Typ steckt, stehen danach ohne Typ da und bekommen erst wieder eine Frist, wenn ein anderer gewählt ist.',
+        + 'Objekte, in denen dieser Typ steckt, stehen danach ohne Typ da und bekommen erst wieder eine Frist, wenn ein anderer gewählt ist.',
         'Löschen', () => {
           t.akkus.splice(i, 1); if(i < akkuTypBasis) akkuTypBasis--; saveCfg(); toast('Gelöscht'); akkuTypZeichnen(false);
         });
@@ -11822,11 +11943,10 @@ function akkuTypZeichnen(mitNeuer){
   });
 }
 function akkuTypUmbenennen(alt, neu){
-  const d = DAT.rwa; if(!d || !d.zeilen) return;
   let etwas = false;
-  Object.values(d.zeilen).forEach(z => { if(z.akkuTyp === alt){ z.akkuTyp = neu; etwas = true; } });
+  Object.values(AKKU).forEach(z => { if(z && z.akkuTyp === alt){ z.akkuTyp = neu; etwas = true; } });
   matUmbenennen(akkuName(alt), akkuName(neu));        // die Haken wandern mit (v1.70)
-  if(etwas) saveDat();
+  if(etwas) saveAkku();
 }
 
 /* --- Zählstellen ------------------------------------------------------------
@@ -12105,7 +12225,8 @@ function anlageUmbenennen(k, alt, neu){
     const z = VORB[art] && VORB[art].ziele;
     if(z && alt in z){ z[neu] = z[alt]; delete z[alt]; saveVorb(); }
   });
-  if(k === 'rwa') matAnlassUmbenennen(`akku:${alt}@`, `akku:${neu}@`);
+  matAnlassUmbenennen(akkuAnlassVor(k, alt), akkuAnlassVor(k, neu));
+  if(AKKU[va]){ AKKU[vb] = AKKU[va]; delete AKKU[va]; saveAkku(); }    // Akkus je Objekt (v1.149)
   if(d && d.zeilen && d.zeilen[alt]){
     d.zeilen[neu] = d.zeilen[alt]; delete d.zeilen[alt];
     zeitUmhaengen(d, alt, neu); saveDat();
@@ -12819,7 +12940,18 @@ function markenAuffrischen(){
    Nach der Ausgabe löscht die App die Runde – damit stehen alle Marken von
    selbst wieder gelb, und das ist genau "im laufenden Zyklus noch nicht
    geprüft". */
+/* Mit Akkutausch (v1.149, für jeden Anlagentyp) gibt die knappere Lage die
+   Farbe: rot vor gelb vor grün. */
 function ortStatus(key){
+  const st = ortStatus0(key), t = String(key).split('|'), k = t[0];
+  if(t.length < 2 || !akkuAktiv(k)) return st;
+  const z = akkuZeile(k, t.slice(1).join('|'));
+  if(!akkuMonate(z.akkuTyp)) return st;
+  const f = akkuFrist(z), af = f.offen || f.faellig ? 'rot' : f.tage <= VORWARN ? 'gelb' : 'gruen';
+  const rang = x => ['rot', 'gelb', 'gruen', ''].indexOf(x || '');
+  return rang(af) < rang(st) ? af : st;
+}
+function ortStatus0(key){
   const jetzt = new Date();
   if(stellen().some(z => z.key === key)){
     const d = DAT.medien;
@@ -12835,7 +12967,6 @@ function ortStatus(key){
   if(nf && nf.art === 'fremd'){
     const a = t.slice(1).join('|'), z = zeileVon(nf.k, a);
     const fr = [frist(z.datum, teilCfg(nf.k).jahre)];
-    if(nf.akku && akkuJahre(z.akkuTyp) > 0) fr.push(frist(z.akkuDatum, akkuJahre(z.akkuTyp)));
     if(fr.some(f => f.offen || f.faellig)) return 'rot';
     return fr.some(f => f.tage <= VORWARN) ? 'gelb' : 'gruen';
   }
@@ -14453,7 +14584,7 @@ async function dateiSichernLauf(){
   const paket = {format:CFG_FORMAT, stand:heute(),
                  cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB, termine:TERM,
                  regelstand:REGELSTAND, hinweise:HINWEISE, frost:+Store.get('nwFrost', 0) || 0,
-                 taet:TAET, mat:MAT,
+                 taet:TAET, mat:MAT, akku:AKKU,
                  plaene, quellen, historie};
   const name = `Nachweise ${heute().slice(2)}.json`;
   void plaene;
@@ -14493,6 +14624,10 @@ async function paketUebernehmen(paket){
      was in ihnen in Gebrauch ist. */
   if(typenPruefen(false)) saveCfg();
   typenAnwenden();
+  /* Akkus je Objekt (v1.149); ältere Sicherungen tragen sie noch bei der RWA. */
+  AKKU = paket.akku && typeof paket.akku === 'object' && !Array.isArray(paket.akku) ? paket.akku : akkuAusDat(paket.dat || {});
+  Store.set('nwAkku', AKKU);
+  if(akkuTypenPruefen()) saveCfg();
   if(Array.isArray(paket.aufg)){ AUFG = paket.aufg; saveAufg(); }
   /* Termine (v1.103); ältere Sicherungen kennen sie nicht – dann bleiben die
      vorhandenen stehen. */
@@ -15496,9 +15631,12 @@ async function renderVerlauf(){
   try{ liste = await Historie.alle(); }catch(e){ /* dann eben nur der laufende Stand */ }
   if(current !== 'verlauf' || verlaufZiel !== v) return;
   const art = NW(v.k).art;
-  box.innerHTML = kopf + (art === 'fremd'  ? verlaufFremd(v, liste)
-                        : art === 'medien' ? verlaufZaehler(v, liste)
-                        : verlaufAnlage(v, liste));
+  const pruef = art === 'fremd'  ? verlaufFremd(v, liste)
+              : art === 'medien' ? verlaufZaehler(v, liste)
+              : art === 'bestand' ? ''
+              : verlaufAnlage(v, liste);
+  const akku = akkuAktiv(v.k) ? verlaufAkku(v, liste) : '';
+  box.innerHTML = kopf + (v.vorn === 'akku' ? akku + pruef : pruef + akku);
 }
 function verlaufAnlage(v, liste){
   const runden = historieOrdnen(liste)
@@ -15553,14 +15691,17 @@ function verlaufFremd(v, liste){
   const pz = (z.datum ? [vZeile(dText(z.datum), ['aktuell', z.bem].filter(Boolean).join(' · '))] : [])
     .concat(liste.filter(e => e.art === 'pruefung' && e.k === v.k && e.anlage === v.id)
       .sort(nachDatum).map(e => vZeile(dText(e.datum), e.bem || '')));
-  const pruef = vAbschnitt('Prüfungen', pz, 'Noch kein Prüfdatum eingetragen.');
-  if(v.k !== 'rwa') return pruef;
+  return vAbschnitt('Prüfungen', pz, 'Noch kein Prüfdatum eingetragen.');
+}
+/* Der Akkutausch eines Objekts (v1.149 für jeden Anlagentyp mit Akkutausch). */
+function verlaufAkku(v, liste){
+  const z = akkuZeile(v.k, v.id);
+  const nachDatum = (a, b) => String(b.datum).localeCompare(String(a.datum));
   const az = (z.akkuDatum ? [vZeile(dText(z.akkuDatum),
       ['aktuell', z.akkuTyp ? `${akkuAnzahl(z)} × ${z.akkuTyp}` : ''].filter(Boolean).join(' · '))] : [])
-    .concat(liste.filter(e => e.art === 'akku' && e.k === 'rwa' && e.anlage === v.id)
+    .concat(liste.filter(e => e.art === 'akku' && e.k === v.k && e.anlage === v.id)
       .sort(nachDatum).map(e => vZeile(dText(e.datum), e.typ ? `${e.anzahl || 1} × ${e.typ}` : '')));
-  const akku = vAbschnitt('Akkutausch', az, 'Noch kein Tausch vermerkt.');
-  return v.vorn === 'akku' ? akku + pruef : pruef + akku;
+  return vAbschnitt('Akkutausch', az, 'Noch kein Tausch vermerkt.');
 }
 /* Titelzeile einer Karte mit dem Uhrsymbol rechts. Der Text kommt fertig
    maskiert herein. */
@@ -15809,7 +15950,7 @@ function suchListen(frage){
   return TAET.werkzeug.filter(passt).map(name => ({art:'werkmat', titel:name, zeile:'Werkzeug' + bei(zahl(name, 'ut'))}))
     .concat(TAET.material.filter(m => passt(m.name)).map(m => ({art:'werkmat', titel:m.name, zeile:`Material · ${m.einheit}` + bei(zahl(m.name, 'mat'))})))
     .concat(akkuTypen().filter(a => passt(a.name)).map(a => ({art:'akkus', titel:a.name,
-      zeile:'Akkutyp' + (a.jahre ? ` · Tausch alle ${a.jahre} ${a.jahre === 1 ? 'Jahr' : 'Jahre'}` : '')})));
+      zeile:'Akkutyp' + (a.monate ? ` · Tausch alle ${monateText(a.monate)}` : '')})));
 }
 function suchGrundrisse(frage){
   const woerter = suchWoerter(frage);
@@ -15964,7 +16105,7 @@ function renderSuche(){
   box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => aufgabeOeffnen(b.dataset.aufg));
   box.querySelectorAll('[data-termin]').forEach(b => b.onclick = () => terminOeffnen(b.dataset.termin));
   box.querySelectorAll('[data-liste]').forEach(b => b.onclick = () =>
-    setOeffnen(b.dataset.liste, b.dataset.liste === 'akkus' ? 'rwa' : ''));
+    setOeffnen(b.dataset.liste, ''));
   box.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => {
     planListe = suchPlanListe.map(x => x.p);  // von hier aus wird geblättert
     planZeigen(b.dataset.plan, null);
@@ -16002,10 +16143,6 @@ async function kurzinfo(o){
     const z = zeileVon(o.k, o.id), f = frist(z.datum, teilCfg(o.k).jahre);
     zeilen.push(z.datum ? `Zuletzt geprüft am ${dText(z.datum)} · ${fristText(f)}` : 'Noch nicht geprüft');
     if(z.bem) zeilen.push(`Bemerkung: ${z.bem}`);
-    if(o.k === 'rwa' && z.akkuTyp){
-      const j = akkuJahre(z.akkuTyp);
-      zeilen.push('Akkus: ' + akkuText(z, j, j ? frist(z.akkuDatum, j) : null));
-    }
   }else{
     const z = zeileVon(o.k, o.id);
     if(z.status) zeilen.push(`Diese Runde: ${[dText(z.datum), z.status, z.bem].filter(Boolean).join(' · ')}`);
@@ -16015,6 +16152,11 @@ async function kurzinfo(o){
     }else zeilen.push('In dieser Runde noch nicht geprüft');
     const m = offenerMangel(o.ort);
     if(m) zeilen.push(`Offener Mangel seit ${dText(m.festgestellt)}`);
+  }
+  /* Akkus des Objekts, bei jedem Anlagentyp mit Akkutausch (v1.149). */
+  if(akkuAktiv(o.k)){
+    const za = akkuZeile(o.k, o.id), j = akkuMonate(za.akkuTyp);
+    if(za.akkuTyp) zeilen.push('Akkus: ' + akkuText(za, j, j ? akkuFrist(za) : null));
   }
   const marke = CFG.orte[o.ort];
   const plan = marke && plaene.find(p => p.id === marke.plan);
