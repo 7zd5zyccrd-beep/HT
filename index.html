@@ -10,6 +10,19 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.147 05.10.2026 Anlagentypen, Etappe 1 (Wunsch von Jean): Eine neue
+         Installation beginnt ohne Anlagentypen. Unter Einstellungen › Anlagen
+         und Prüfumfang fügt „+ Neuer Anlagentyp“ eine unserer fertigen
+         Vorlagen hinzu (Aufzüge, Rollbandfilter, Feststellanlagen, Sprinkler,
+         Medienverbräuche, Feuerlöscher, RWA) – leer, ohne Beispielobjekt, das
+         Feld für das erste Objekt ist gleich offen. Unten auf der Seite eines
+         Typs entfernt „Anlagentyp entfernen“ ihn wieder; Objekte, Erfasstes
+         und Marken bleiben gespeichert und kommen beim erneuten Hinzufügen
+         zurück. Bei diesem Update bleiben die Typen, die in Gebrauch sind
+         (eigene Objekte, erfasste Werte, Ausgaben, Marken); die übrigen
+         stehen in der Auswahl. Ältere Sicherungen werden genauso gelesen.
+         Nebenbei: Eine Anlage wird beim Hinzufügen nicht mehr doppelt
+         angelegt, wenn das Feld seine Eingabe zweimal meldet.
   v1.146 05.10.2026 Suche: Unter den Objekten stehen jetzt auch „Listen“ und
          „Grundrisse“ – Werkzeug, Material und Akkutypen nach ihrem Namen
          (mit „bei 3 Objekten eingetragen“ bzw. dem Tauschabstand), die Pläne
@@ -3166,7 +3179,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.146';
+const VERSION = 'v1.147';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3483,7 +3496,11 @@ function planVerkleinern(datei){
    Alle vier stehen hier beisammen. Anlagenliste und Checkliste sind nur
    Startwerte – geändert wird beides in den Einstellungen, weil Anlagen
    dazukommen und der Prüfumfang sich ändert. */
-const NACHWEISE = [
+/* Alle fertigen Anlagentypen (Vorlagen). Welche davon in Gebrauch sind, steht
+   seit v1.147 in CFG.typen; NACHWEISE enthält nur diese, in dieser Reihenfolge.
+   NW(k) findet weiterhin jede Vorlage – eine Aufgabe oder ein Mangel eines
+   entfernten Typs soll seinen Namen behalten. */
+const VORLAGEN = [
   {
     k:'aufzuege', label:'Aufzüge', datei:'Prüfung Aufzüge', takt:['monat'],
     titel:'Monatliche Kontrolle Personenaufzüge',
@@ -3603,7 +3620,9 @@ const NACHWEISE = [
     akkus:[{name:'7 Ah', jahre:4}]
   }
 ];
-const NW = k => NACHWEISE.find(n => n.k === k);
+const NW = k => VORLAGEN.find(n => n.k === k);
+const NACHWEISE = [];
+const aktiv = k => NACHWEISE.some(n => n.k === k);
 
 /* ---------- Einstellungen und Daten ---------- */
 /* Wo etwas im Haus sitzt: Schlüssel der Zählstelle bzw. Name der Anlage auf
@@ -3794,6 +3813,43 @@ const saveExp = () => { Store.set('nwExp', EXP); listeNachziehen(); };
 let BUCH = Store.get('nwBuch', []);
 if(!Array.isArray(BUCH)) BUCH = [];
 const saveBuch = () => Store.set('nwBuch', BUCH);
+/* --- Anlagentypen (v1.147, Wunsch von Jean) ---------------------------------
+   Eine neue Installation beginnt ohne Anlagentypen; sie werden unter
+   Einstellungen › „+ Neuer Anlagentyp“ hinzugefügt und lassen sich wieder
+   entfernen (die Daten bleiben gespeichert). Bei einem Gerät von früher (und
+   einer älteren Sicherung) bleibt, was in Gebrauch ist: eigene Objekte, die
+   nicht nur das Beispiel ab Werk sind, erfasste Werte, Ausgaben, Marken. */
+const gleicheListe = (a, b) => JSON.stringify(a || []) === JSON.stringify(b || []);
+function typInGebrauch(k){
+  const n = NW(k), t = CFG.teile[k] || {};
+  if(!n) return false;
+  const d = DAT[k];
+  if(d && typeof d === 'object' && Object.keys(d).length) return true;
+  if(EXP[k] || BUCH.some(b => b.k === k)) return true;
+  if(n.art === 'medien'){
+    const st = Array.isArray(t.stellen) ? t.stellen : [];
+    return st.length > 0 && !gleicheListe(st, n.stellen);
+  }
+  if(n.art === 'sprinkler')
+    return (Array.isArray(t.woch) && !gleicheListe(t.woch, n.woch)) || (Array.isArray(t.mon) && !gleicheListe(t.mon, n.mon));
+  if(Object.keys(CFG.orte || {}).some(key => key.startsWith(k + '|'))) return true;
+  const an = Array.isArray(t.anlagen) ? t.anlagen : [];
+  return an.length > 0 && !gleicheListe(an, n.anlagen);
+}
+/* Fehlt der Vermerk, wird er einmal festgelegt: ohne gespeicherte Einstellungen
+   (neue Installation) leer, sonst nach dem Gebrauch. */
+function typenPruefen(neu){
+  if(Array.isArray(CFG.typen)) return false;
+  CFG.typen = neu ? [] : VORLAGEN.filter(n => typInGebrauch(n.k)).map(n => n.k);
+  return true;
+}
+function typenAnwenden(){
+  const an = Array.isArray(CFG.typen) ? CFG.typen : [];
+  NACHWEISE.length = 0;
+  VORLAGEN.forEach(n => { if(an.includes(n.k)) NACHWEISE.push(n); });
+}
+if(typenPruefen(Store.get('nwCfg', null) === null)) Store.set('nwCfg', CFG);
+typenAnwenden();
 const PAUSE_MS = 30 * 60000;
 const zeitMerken = (o, s) => { o.zt = o.zt || {}; if(!o.zt[s]) o.zt[s] = Date.now(); };
 /* --- Aufgaben ---------------------------------------------------------------
@@ -4702,7 +4758,7 @@ const jahrTitel = j => j === 1 ? 'Jährlich' : j === 2 ? 'Zweijährlich' : `Alle
    gewählt, sein Zyklus steht in den Einstellungen. */
 const akkuTypen = () => NW('rwa') ? (teilCfg('rwa').akkus || []) : [];
 const akkuJahre = name => { const a = akkuTypen().find(x => x.name === name); return a ? a.jahre : 0; };
-const akkuAn = () => !!NW('rwa') && teilCfg('rwa').anlagen.length > 0;
+const akkuAn = () => aktiv('rwa') && teilCfg('rwa').anlagen.length > 0;
 /* Wie viele Akkus in einer Anlage stecken – einer, solange nichts anderes
    eingestellt ist. Beide haben denselben Typ und werden gemeinsam getauscht,
    die Zahl ändert an der Frist also nichts; sie sagt, wie viele mitzunehmen
@@ -5198,7 +5254,7 @@ function renderHome(){
   }).join('');
   if(!liste.length && !term.length) inhalt += gibt
     ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Alle Nachweise“.</p>`
-    : `<p class="muted small">Noch nichts eingetragen. Über das Zahnrad oben links geht es in die Einstellungen – dort legst du je Nachweis an, was im Haus steht.</p>`;
+    : `<p class="muted small">Noch nichts eingetragen. Über das Zahnrad oben links geht es in die Einstellungen – dort fügst du unter „Neuer Anlagentyp“ hinzu, was im Haus geprüft wird.</p>`;
   /* Darunter der Weg zu allem Übrigen. Die Grundrisse hängen sich nach, sobald
      der Bilderspeicher geantwortet hat. */
   const erledigt = AUFG.filter(a => a.erledigt).length;
@@ -5746,7 +5802,7 @@ function renderAufgabe(){
         <input id="aufgTitel" value="${esc(a.titel)}" placeholder="Was ist zu tun?"></label>
       ${gerahmt(anlagen.length, `<label class="field"><span>Nachweis</span>
         <select id="aufgNw"><option value="">– ohne Bezug –</option>${
-          NACHWEISE.filter(x => !x.spaeter).map(x =>
+          VORLAGEN.filter(x => aktiv(x.k) || x.k === a.k).map(x =>
             `<option value="${x.k}"${x.k === a.k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
       ${anlagen.length ? `<label class="field"><span>${a.k === 'medien' ? 'Zähler' : 'Anlage'}</span>
         <select id="aufgAnlage"><option value="">– ohne –</option>${
@@ -6216,7 +6272,7 @@ function renderTermin(){
     <label class="field"><span>Mit wem</span><input id="tmMit" value="${esc(t.mit)}" placeholder="z. B. Herr Schmidt, Firma Müller"></label></div>
     ${gerahmt(anlagen.length, `<label class="field"><span>Nachweis</span>
       <select id="tmNw"><option value="">– ohne Bezug –</option>${
-        NACHWEISE.filter(x => !x.spaeter).map(x =>
+        VORLAGEN.filter(x => aktiv(x.k) || x.k === t.k).map(x =>
           `<option value="${x.k}"${x.k === t.k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
     ${anlagen.length ? `<label class="field"><span>${t.k === 'medien' ? 'Zähler' : 'Anlage'}</span>
       <select id="tmAnlage"><option value="">– ohne –</option>${
@@ -10691,16 +10747,19 @@ function renderSettings(){
     + knopf('wetter', '', 'Wetter')
     + '<div class="eyebrow">Anlagen und Prüfumfang</div>'
     + NACHWEISE.filter(n => !n.spaeter).map(n => knopf('nw', n.k, n.label, anzahl(n))).join('')
+    /* Anlagentypen kommen nur noch auf Wunsch dazu (v1.147). */
+    + (VORLAGEN.some(n => !aktiv(n.k)) ? `<button class="btn ghost klein" id="setTypNeu" style="margin:4px 0 0">+ Neuer Anlagentyp</button>` : '')
     /* Stammlisten für alles (v1.76); die Akkutypen stehen zusätzlich unter RWA. */
     + '<div class="eyebrow">Listen</div>'
     + knopf('werkmat', '', 'Arbeitsmittel', TAET.werkzeug.length + TAET.material.length)
-    + (NW('rwa') ? knopf('akkus', 'rwa', 'Akkutypen', akkuTypen().length) : '')
+    + (aktiv('rwa') ? knopf('akkus', 'rwa', 'Akkutypen', akkuTypen().length) : '')
     + '<div class="eyebrow">Gerät</div>'
     + knopf('plaene', '', 'Grundrisse', '…')
     + knopf('geraet', '', 'Sicherung')
     + knopf('zugang', '', 'Zugang');
   $$('#setMenue [data-art]').forEach(b =>
     b.onclick = () => setOeffnen(b.dataset.art, b.dataset.k));
+  if($('#setTypNeu')) $('#setTypNeu').onclick = typWahl;
   /* Die Zahl der Grundrisse liegt im Bilderspeicher und kommt erst später. */
   Bilder.alle().then(l => {
     const z = $('#setZahlPlaene'); if(z) z.textContent = (l || []).length;
@@ -10756,6 +10815,67 @@ function renderSetSub(){
   else if(n.art === 'fremd')     setFremd(box, k);
   else if(n.art === 'sprinkler') setSprinkler(box, k);
   else                           setAnlagen(box, k);
+  /* Ganz unten: den Typ wieder entfernen (v1.147). */
+  dyn.insertAdjacentHTML('beforeend', `<div class="eyebrow" style="margin-top:24px">Anlagentyp</div>
+    <button class="btn danger klein" id="setTypWeg">Anlagentyp entfernen</button>
+    <p class="muted small" style="margin:8px 0 0">Verschwindet aus Aufgabenliste, Nachweisen und Grundrissen. Objekte, Erfasstes und Marken bleiben gespeichert – wer den Typ wieder hinzufügt, findet alles wieder.</p>`);
+  $('#setTypWeg').onclick = () => typEntfernen(k);
+  /* Eben hinzugefügt: gleich das Feld für das erste Objekt öffnen. */
+  if(typFrisch === k){
+    typFrisch = null;
+    const plus = n.art === 'sprinkler' ? null : box.querySelector('[data-plus], #setStellePlus');
+    if(plus) plus.click();
+  }
+}
+/* --- Anlagentyp hinzufügen und entfernen (v1.147) ---------------------------
+   Die Auswahl zeigt die Vorlagen, die noch nicht hinzugefügt sind. Ein Typ,
+   der nie in Gebrauch war, beginnt leer – ohne das Beispielobjekt ab Werk;
+   einer, der schon einmal da war, bringt seine Objekte wieder mit. */
+let typFrisch = null;
+function typWahl(){
+  const frei = VORLAGEN.filter(n => !aktiv(n.k));
+  dlgZuruecksetzen();
+  $('#dlgTitel').textContent = 'Neuer Anlagentyp';
+  $('#dlgText').textContent = 'Fertige Vorlagen mit Checkliste und allem, was dazugehört:';
+  $('#dlgKnoepfe').hidden = true;
+  const liste = $('#dlgListe');
+  liste.hidden = false;
+  liste.innerHTML = frei.map(n => `<button class="btn eintrag" data-typ="${esc(n.k)}" style="margin-top:8px"><span>${esc(n.label)}</span></button>`).join('')
+    + `<button class="btn ghost" data-typ="" style="margin-top:14px">Abbrechen</button>`;
+  $('#dlg').hidden = false;
+  liste.querySelectorAll('[data-typ]').forEach(b => b.onclick = () => {
+    $('#dlg').hidden = true;
+    dlgZuruecksetzen();
+    if(b.dataset.typ) typHinzufuegen(b.dataset.typ);
+  });
+}
+function typHinzufuegen(k){
+  const n = NW(k);
+  if(!n || aktiv(k)) return;
+  if(!typInGebrauch(k)){
+    const t = CFG.teile[k] = CFG.teile[k] || {};
+    if(n.art === 'medien') t.stellen = [];
+    else if(n.art !== 'sprinkler') t.anlagen = ausErfasstem(k);
+  }
+  CFG.typen = (CFG.typen || []).concat(k);
+  typenAnwenden();
+  saveCfg();
+  toast(n.label + ' hinzugefügt');
+  typFrisch = k;
+  setOeffnen('nw', k);
+}
+function typEntfernen(k){
+  const n = NW(k);
+  frage('Anlagentyp entfernen',
+    `„${n.label}“ verschwindet aus Aufgabenliste, Nachweisen und Grundrissen.\n\n`
+    + 'Objekte, Erfasstes und Marken bleiben gespeichert – wer den Typ wieder hinzufügt, findet alles wieder.',
+    'Entfernen', () => {
+      CFG.typen = (CFG.typen || []).filter(x => x !== k);
+      typenAnwenden();
+      saveCfg();
+      toast('Entfernt');
+      zurueck();
+    });
 }
 /* Abwesenheiten und Bundesland. Sortiert wird beim Betreten der Seite, nicht
    bei jeder Eingabe – sonst spränge die gerade bearbeitete Karte weg. Vergangene
@@ -10943,7 +11063,12 @@ function listeBauen(box, opt){
         /* Ein Eintrag ist eine Zeile: Umbrüche aus dem Einfügen fallen weg. */
         const wert = ta.value.replace(/\s+/g, ' ').trim(), liste = opt.liste();
         if(neu){
+          /* Eine zweite Meldung derselben Eingabe legt nichts doppelt an – wie
+             bei den Fremdprüfungen seit v1.115 (v1.147). */
+          if(ta.dataset.fertig) return;
           if(!wert || verworfen){ zeichnen(false); return; }
+          if(liste.includes(wert)){ toast('Diese Bezeichnung gibt es schon'); return; }
+          ta.dataset.fertig = '1';
           liste.push(wert); saveCfg(); toast('Hinzugefügt');
           zeichnen(false); menueAuffrischen();
           if(opt.nachher) opt.nachher();
@@ -12534,7 +12659,7 @@ function loeKennung(name){
 }
 const loeZusatz = name => { const i = loeInfo(name);
   return [i.nr ? 'Nr. ' + i.nr : '', i.hersteller || '', +i.baujahr ? `Baujahr ${i.baujahr} (${new Date().getFullYear() - i.baujahr} Jahre)` : ''].filter(Boolean).join(' · '); };
-const loeSumme = () => NW('loescher') ? teilCfg('loescher').anlagen.length : 0;
+const loeSumme = () => aktiv('loescher') ? teilCfg('loescher').anlagen.length : 0;
 /* --- Kategorien der Übersicht ----------------------------------------------
    Objekte mit einer Stelle im Grundriss gibt es in sechs Listen; der Sprinkler
    hat keine. Die Farben liegen abseits von Grün, Gelb und Rot, wo es geht: dort
@@ -12548,8 +12673,10 @@ const KATEGORIEN = [
   {k:'medien',    farbe:'#8A5A2B'},          // Braun
   {k:'loescher',  farbe:'#C1121F'},          // Signalrot
   {k:'rwa',       farbe:'#E8710A'}           // Orange
-].filter(kat => NW(kat.k));                  // nur, was es als Nachweis gibt
-const katWahl = () => KATEGORIEN.filter(kat => (CFG.planWahl || []).includes(kat.k));
+];
+/* Nur, was als Anlagentyp hinzugefügt ist (v1.147: abhängig von CFG.typen). */
+const kategorien = () => KATEGORIEN.filter(kat => aktiv(kat.k));
+const katWahl = () => kategorien().filter(kat => (CFG.planWahl || []).includes(kat.k));
 /* Die Objekte einer Kategorie in der Reihenfolge ihrer Liste – also des Weges. */
 const katSchluessel = k => k === 'medien'
   ? stellenSortiert().map(z => z.key)
@@ -13324,7 +13451,7 @@ $('#btnPlanRichtNeu').onclick = () => {
   planRicht = 1; planRichtP1 = null; planRichtWahl = null; markenZeichnen(planAktuell, false); planHinweisen();
 };
 $('#btnPlanObjekte').onclick = () => {
-  const eintraege = KATEGORIEN.map(kat => ({
+  const eintraege = kategorien().map(kat => ({
     k:kat.k, farbe:kat.farbe,
     an:(CFG.planWahl || []).includes(kat.k),
     text:`${NW(kat.k).label} (${katOrte(kat.k, planAktuell).length})`
@@ -14090,6 +14217,10 @@ async function paketUebernehmen(paket){
   /* Ältere Sicherungen kennen das Tätigkeitsbuch nicht – dann bleibt das
      vorhandene stehen, statt geleert zu werden. */
   if(Array.isArray(paket.buch)){ BUCH = paket.buch; saveBuch(); }
+  /* Ältere Sicherungen kennen die Anlagentypen nicht (v1.147): dann zählt,
+     was in ihnen in Gebrauch ist. */
+  if(typenPruefen(false)) saveCfg();
+  typenAnwenden();
   if(Array.isArray(paket.aufg)){ AUFG = paket.aufg; saveAufg(); }
   /* Termine (v1.103); ältere Sicherungen kennen sie nicht – dann bleiben die
      vorhandenen stehen. */

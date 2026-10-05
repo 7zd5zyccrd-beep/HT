@@ -123,6 +123,22 @@ steht.
   `planPruefen` und `wochenplanRechnen`, stehen aber nicht als Zeilen in der
   Liste. Gruppen entstehen dafür eigens nur bis nächste Woche/Monatsende.
 
+## Anlagentypen (v1.147, Etappe 1 von 2)
+
+- `VORLAGEN` = alle fertigen Typen; `NACHWEISE` enthält nur die in
+  `CFG.typen` (Reihenfolge der Vorlagen), neu gefüllt von `typenAnwenden`.
+  `NW(k)` findet jede Vorlage (auch entfernte), `aktiv(k)` sagt, ob sie in
+  Gebrauch ist – für Existenzprüfungen (`akkuAn`, `loeSumme`, Kategorien
+  über `kategorien()`) immer `aktiv` nehmen.
+- `typenPruefen`: fehlt `CFG.typen`, neue Installation → leer, sonst
+  `typInGebrauch` (Daten, EXP, BUCH, Marken, Objekte ≠ Beispiel ab Werk).
+  Auch in `paketUebernehmen` für ältere Sicherungen.
+- `typWahl`/`typHinzufuegen` (nie benutzt → leer starten, `typFrisch` öffnet
+  das Feld fürs erste Objekt), `typEntfernen` (Daten bleiben).
+- Etappe 2 (Baukasten) vom Nutzer beauftragt: eigene Typen mit Art (eigene
+  Kontrolle / Fremdprüfung / ggf. nur Bestand), alle Abstände (nicht nur
+  monatlich), eigene Zustände. Sprinkler und Medien nur als Vorlage.
+
 ## Suche (v1.145)
 
 - `suchObjekte`: Text je Objekt = Name (+ Löscherangaben) + Name der Anlage
