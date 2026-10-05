@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.150 05.10.2026 Sprinkler: stand seit v1.148 als überfällig in der Liste,
+         obwohl der Wochengang erledigt war. Die neue Rechnung der Abstände
+         nahm beim Sprinkler den ersten seiner Takte (die Woche) als Runde –
+         die Monatskontrolle galt so schon nach der ersten Woche als fällig.
+         Seine Runde ist wieder der Monat. Suche: rechts im Feld ein ×, das
+         den Suchbegriff leert; die Tastatur bleibt dabei offen.
   v1.149 05.10.2026 Akkutausch für alle Anlagentypen (Wunsch von Jean): Die
          Akkutypen sind eine gemeinsame Liste unter Einstellungen › Listen ›
          Akkutypen, der Tauschabstand steht jetzt in Monaten (die bisherigen
@@ -2874,7 +2880,12 @@ body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-ar
    Tipps an, das Feld darunter bleibt überall antippbar. */
 .suchfeld .lupe{position:absolute;left:13px;top:50%;width:18px;height:18px;margin-top:-9px;
   color:var(--placeholder);pointer-events:none}
-.suchfeld input{padding-left:40px}
+.suchfeld input{padding-left:40px;padding-right:44px}
+/* Eigenes × zum Leeren (v1.150): Safari zeigt seines in der App vom
+   Home-Bildschirm nicht verlässlich, Chromium seines kleiner – beides aus. */
+.suchfeld input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;display:none}
+#sucheLeeren{position:absolute;right:4px;top:50%;width:36px;height:36px;margin-top:-18px;padding:0;border:0;
+  border-radius:50%;background:none;color:var(--ink-soft);font:inherit;font-size:24px;line-height:36px;cursor:pointer}
 /* Ein Grau für alle Platzhalter (v1.41) – ohne feste Angabe wählte jeder
    Browser sein eigenes. opacity:1, weil Firefox den Platzhalter sonst noch
    zusätzlich abschwächt. */
@@ -2999,7 +3010,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       <!-- Das Suchfeld steht außerhalb der Liste: die baut sich nach jeder
            Speicherung neu auf und nähme Feld und Tastatur sonst mit. -->
       <div class="suchfeld"><svg class="lupe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><input type="search" id="suche" placeholder="Anlage, Tür, Zähler suchen"
-        enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+        enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button type="button" id="sucheLeeren" aria-label="Suche leeren" hidden>×</button></div>
       <div id="sucheListe" hidden></div>
       <!-- Die Überschriften kommen aus den Taktgruppen selbst, eine gemeinsame
            gäbe es nicht mehr richtig: es sind nicht mehr nur monatliche. -->
@@ -3223,7 +3234,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.149';
+const VERSION = 'v1.150';
 const BUILD   = VERSION + ' · 05.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4091,7 +4102,11 @@ function zrAnfang(z){
 const expZr = (k, takt) => { const v = EXP[k] || ''; return v.length >= 10 ? zrVon(takt, v) : v; };
 /* Der Abstand der Runden eines Nachweises: Medien je Quartal, eigene Typen nach
    Wahl, die übrigen monatlich. Der Sprinkler hat zwei und rechnet für sich. */
-const taktVon = n => n.art === 'medien' ? 'quartal' : (n.takt && TAKT_ALLE.includes(n.takt[0]) ? n.takt[0] : 'monat');
+/* Der Sprinkler führt 'woche' zuerst in seinen Takten – seine Runde ist aber
+   die Monatsrunde (v1.150: v1.148/149 nahmen die Woche, die Monatsrunde galt
+   dadurch nach der ersten Woche als überfällig). */
+const taktVon = n => n.art === 'medien' ? 'quartal' : n.art === 'sprinkler' ? 'monat'
+  : (n.takt && TAKT_ALLE.includes(n.takt[0]) ? n.takt[0] : 'monat');
 /* Ab wie vielen Tagen vor dem Ende eine nie begonnene Runde rot wird. */
 const TAKT_ROT = {woche:2, monat:7, quartal:14, halbjahr:21, jahr:30};
 const restZr = (takt, j = new Date()) => { const z = zrVon(takt, isoVonDatum(j));
@@ -16078,6 +16093,7 @@ function renderSuche(){
   const feld = $('#suche'), box = $('#sucheListe');
   if(!feld || !box) return;
   const q = feld.value.trim();
+  $('#sucheLeeren').hidden = !feld.value;
   box.hidden = !q;
   $('#homeListe').hidden = !!q;
   if(!q){ box.innerHTML = ''; suchListe = []; return; }
@@ -16112,6 +16128,10 @@ function renderSuche(){
   });
 }
 $('#suche').oninput = renderSuche;
+/* Das × leert und lässt die Tastatur offen – wer leert, sucht meist gleich
+   etwas anderes (v1.150). */
+$('#sucheLeeren').onpointerdown = e => e.preventDefault();      // Fokus bleibt im Feld
+$('#sucheLeeren').onclick = () => { const f = $('#suche'); f.value = ''; renderSuche(); f.focus(); };
 $('#suche').addEventListener('focus', () => suchPlaeneHolen().then(renderSuche));
 $('#suche').addEventListener('search', renderSuche);
 /* Die Eingabetaste schließt nur die Tastatur – gesucht wird ohnehin beim Tippen. */
