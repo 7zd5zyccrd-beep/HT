@@ -196,33 +196,34 @@ steht.
   in `arbEintraege`, ihre Dauer zählt über `stoerDauer` zur Störung; „Ändern“
   setzt die Gesamtdauer an die Störung und nimmt sie von der Aufgabe.
 
-## Ablauf an Aufgaben (v1.157, Etappe 1 von 2)
+## Abläufe: Pläne aus Stufen (v1.159, vorher v1.157/158)
 
-- `a.ablauf = {schritte:[{id, art ('link'|'tel'|'mail'|'haken'), text, url |
-  nummer | an/betreff/inhalt}], folge:{titel, tage, wichtig, text, ablauf} |
-  null, folgeNach:'' | Schritt-id}`; Stand je Aufgabe `a.ablaufStand`,
-  angelegte Folgeaufgabe `a.ablaufFolge` (id oder 'nein'). Liegt in AUFG,
-  reist also mit der Sicherung.
-- Karte auf der Aufgabe (`ablaufKarteHtml`/`ablaufVerdrahten`): Link, Anruf,
-  E-Mail sind echte `<a href>` (iOS öffnet nur aus dem Tipp), ein Tipp hakt
-  ab. Platzhalter {Datum} {Objekt} {Titel} (`ablaufEinsetzen`). Liste:
-  „Ablauf 1 von 3“ in `aufgStand`.
-- Folgeaufgabe (`ablaufFolgeFragen`): Rückfrage mit änderbarem Datum (Jean),
-  beim Erledigen oder nach dem gewählten Schritt; ihr Ablauf wird kopiert →
-  Kette. Wiederkehrende geben den Ablauf an die nächste weiter.
-- Seite `ablauf` (`ablaufOeffnen`, `renderAblauf`); Folgeaufgaben öffnen
-  ihren Ablauf auf derselben Seite, `ablaufStapel` + `zurueck` gehen hoch.
-- Zweige (v1.158, Jean): Schritt `art:'frage'` mit `antworten:[{id, text,
-  folgen:[Folge]}]`, Folge = `{id, titel, tage, wichtig, text, ablauf}`.
-  Gewählt: `a.ablaufAntwort[Schritt-id]`, je Zweig-Folge `a.ablaufFolgen[id]`
-  (id | 'nein'). `antwortSetzen`/`zweigFragen`/`folgeAnlegenFragen`;
-  `ablaufErledigen` fragt offene Entscheidungen (`wahlFenster`, „Offen
-  lassen“), dann Zweige, dann die Folge „die immer gilt“ (`ab.folge`).
-  Mehrere Entscheidungen je Ablauf, mehrere Folgen je Antwort; Zweige laufen
-  nicht zusammen (Jean). Folge eines Zweigs bearbeitet `ablaufTiefer` (oben
-  ihre Angaben, `z.f`/`z.weg`). Selbsttätige Bedingungen kommen mit Etappe 2.
+- Jean: Aufgabe prüfen → Ergebnis wählen → je Ergebnis eine Folge, auch
+  zurück („in Ordnung → in 90 Tagen erneut prüfen“, „Handlungsbedarf →
+  Firma beauftragen“ …). Darum zentrale Pläne in `CFG.ablaeufe` (reist mit
+  der Sicherung): `{id, name, stufen:[{id, titel, wichtig, notiz,
+  schritte:[{id, art 'link'|'tel'|'mail'|'haken', text, url|nummer|an/
+  betreff/inhalt}], ergebnisse:[{id, text, ziele:[{stufe, tage}]}]}]}`; erste
+  Stufe = Anfang, Ergebnis ohne Ziele = Ende. Änderungen gelten ab der
+  nächsten Stufe (Jean).
+- An der Aufgabe: `a.plan`, `a.stufe`, `a.kette` (id der ersten Aufgabe),
+  `a.ablaufStand`, `a.ergebnis`/`a.ergebnisText`, `a.planFolgen` {Ziel-Nr:
+  id|'nein'}. Verlauf der Kette = ihre erledigten Aufgaben (`ketteVon`).
+- Karte auf der Aufgabe (`ablaufKarteHtml`/`ablaufVerdrahten`): „Ablauf
+  starten“ (`ablaufStarten`: Plan wählen oder neuen aus der Aufgabe), Schritte
+  als echte `<a href>` (iOS), „Beim Erledigen“, „Bisher“. Platzhalter
+  {Datum} {Objekt} {Titel}.
+- Erledigen: `ablaufErledigen` – Ergebnis per `wahlFenster` (eines → direkt,
+  „Ohne Folge“), je Ziel `folgeStufeFragen` mit Rückfrage und Datum (Jean);
+  Objekt und Kette reisen mit. Wiederkehrende behalten Plan und Stufe.
+- Seiten `ablaeufe` (Übersicht › Abläufe), `plan`, `stufe`; „+ neue Stufe …“
+  in der Zielwahl öffnet sie gleich (`stufeVorher` + `zurueck`).
+- Verlauf des Objekts: Abschnitt „Abläufe“ (`verlaufAblauf`).
+- `ablaufUmwandeln`: alte `a.ablauf` (v1.157/158) → Plan (erste Frage →
+  Ergebnisse, „immer“-Folge zu jedem Ergebnis), beim Start und in
+  `paketUebernehmen`.
 - Etappe 2 (vereinbart): Runden der Nachweise, Sprinkler, Akkutausch,
-  Wetterregeln; dann gehört der Ablauf an die Tätigkeit (`TAET.t[key]`).
+  Wetterregeln; selbsttätige Bedingungen (z. B. Mangel in der Runde).
 
 ## Suche (v1.145)
 
