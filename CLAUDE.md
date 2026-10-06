@@ -167,23 +167,13 @@ steht.
   (aus altem `jahre` umgerechnet), Fristen über `fristM`, Gruppen über
   `monateTitel`. `frist(datum, jahre)` gibt es nur noch für Altes.
 
-## Belegfotos der Zähler (v1.152)
+## Belegfotos der Zähler – entfernt (v1.156)
 
-- IndexedDB `nwBilder` Fassung 4, Bereich `belege` (`Belege.put/alle/weg`):
-  {id, key (Zählstelle), quartal ('' solange die Ablesung läuft), datum,
-  daten, typ}, 2400 px JPEG (`belegVerkleinern`). Nicht in der Sicherung
-  (vom Nutzer so entschieden).
-- `belegAufnehmen` (verstecktes Dateifeld mit `capture`, iOS öffnet die
-  Kamera nur aus dem Tipp), `belegeEinsetzen` (Vorschau/Kamerazeichen in
-  Ablesung und Rundgang), `belegZeigen` (Großansicht mit eigenem Zoom).
-- `belegeAusgeben(quartal)` in `ausgeben`: laufende bekommen das Quartal,
-  älter als das vorige fällt weg. `belegeUmhaengen` in `stelleUmbenennen`.
-- `belegeTeilen`: alle Fotos + `Zählerstände JJ-MM-TT.txt` (Stand aus DAT
-  bzw. Historie) übers Teilen-Menü – Testbilder für die Werkstatt
-  (`sam-werkstatt`, zaehler-test.html). Eine Erkennung gibt es in der App
-  noch nicht (Probe ergab: Rollenzähler mit Rahmen machbar, LCD nicht).
-- Ein Tipp auf Foto/Vorschau klappt die Karte nicht zu (`belegTipp` über
-  pointerdown vor dem blur).
+- v1.152 brachte ein Belegfoto je Zähler, v1.156 nahm es wieder heraus (Jean:
+  Ablesung per Kamera vorerst ausgesetzt, Aufwand zu hoch). Die IndexedDB
+  `nwBilder` bleibt auf Fassung 4 mit dem leeren Bereich `belege` – eine
+  niedrigere Fassung ließe sich auf den Geräten nicht mehr öffnen.
+  `belegeLeeren` löscht einmal, was noch darin liegt.
 
 ## Störungen (v1.153)
 
