@@ -196,6 +196,25 @@ steht.
   in `arbEintraege`, ihre Dauer zählt über `stoerDauer` zur Störung; „Ändern“
   setzt die Gesamtdauer an die Störung und nimmt sie von der Aufgabe.
 
+## Ablauf an Aufgaben (v1.157, Etappe 1 von 2)
+
+- `a.ablauf = {schritte:[{id, art ('link'|'tel'|'mail'|'haken'), text, url |
+  nummer | an/betreff/inhalt}], folge:{titel, tage, wichtig, text, ablauf} |
+  null, folgeNach:'' | Schritt-id}`; Stand je Aufgabe `a.ablaufStand`,
+  angelegte Folgeaufgabe `a.ablaufFolge` (id oder 'nein'). Liegt in AUFG,
+  reist also mit der Sicherung.
+- Karte auf der Aufgabe (`ablaufKarteHtml`/`ablaufVerdrahten`): Link, Anruf,
+  E-Mail sind echte `<a href>` (iOS öffnet nur aus dem Tipp), ein Tipp hakt
+  ab. Platzhalter {Datum} {Objekt} {Titel} (`ablaufEinsetzen`). Liste:
+  „Ablauf 1 von 3“ in `aufgStand`.
+- Folgeaufgabe (`ablaufFolgeFragen`): Rückfrage mit änderbarem Datum (Jean),
+  beim Erledigen oder nach dem gewählten Schritt; ihr Ablauf wird kopiert →
+  Kette. Wiederkehrende geben den Ablauf an die nächste weiter.
+- Seite `ablauf` (`ablaufOeffnen`, `renderAblauf`); Folgeaufgaben öffnen
+  ihren Ablauf auf derselben Seite, `ablaufStapel` + `zurueck` gehen hoch.
+- Etappe 2 (vereinbart): Runden der Nachweise, Sprinkler, Akkutausch,
+  Wetterregeln; dann gehört der Ablauf an die Tätigkeit (`TAET.t[key]`).
+
 ## Suche (v1.145)
 
 - `suchObjekte`: Text je Objekt = Name (+ Löscherangaben) + Name der Anlage

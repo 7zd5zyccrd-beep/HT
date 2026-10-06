@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.157 06.10.2026 Ablauf an Aufgaben, Etappe 1 (Wunsch von Jean). Jede
+         eigene Aufgabe kann einen Ablauf bekommen: Schritte in fester
+         Reihenfolge – Link öffnen, Anrufen, E-Mail schreiben (Empfänger,
+         Betreff und Text vorbelegt, mit {Datum}, {Objekt}, {Titel}) oder
+         einfach abhaken. Auf der Aufgabe steht je Schritt ein Knopf, ein
+         Tipp führt ihn aus und hakt ihn ab; die Liste zeigt „Ablauf 1 von 3“.
+         Dazu eine Folgeaufgabe (Titel, fällig nach X Tagen, Wichtigkeit,
+         Notiz und wieder ein eigener Ablauf mit Folgeaufgabe – eine Kette).
+         Sie entsteht beim Erledigen oder schon nach einem gewählten Schritt,
+         jeweils mit Rückfrage, in der sich das Datum ändern lässt. Bei einer
+         wiederkehrenden Aufgabe reist der Ablauf zur nächsten mit.
   v1.156 06.10.2026 Belegfoto der Zähler wieder entfernt (Jean: die Ablesung
          per Kamera ist vorerst ausgesetzt, der Aufwand rechtfertigt den
          Nutzen nicht). Kein „Foto“ mehr in Ablesung und Rundgang, keine
@@ -2918,6 +2929,13 @@ body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-ar
 .vzeile{padding:7px 0}
 .vzeile + .vzeile{border-top:1px solid var(--line)}
 .vzeile .vwann{font-weight:600;font-size:15px}
+/* Ablauf (v1.157): Schritte als Knöpfe, erledigte gedämpft. */
+a.ablaufSchritt{display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:8px}
+.ablaufSchritt.fertig{color:var(--ink-soft)}
+.ablaufHaken{margin:8px 0 0}
+.ablaufReihe{align-items:center;margin-top:4px}
+.ablaufReihe .btn{margin-top:0}
+.ablaufReihe .danger{width:auto;margin-left:auto}
 /* Störungen (v1.153): jede Zeile öffnet sich zum Bearbeiten. */
 .stoerEintrag{display:block;width:100%;text-align:left;background:none;border:0;font:inherit;color:inherit;cursor:pointer;-webkit-appearance:none;appearance:none}
 .stoerFeld{margin-top:10px}
@@ -3084,6 +3102,10 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
     <!-- Eine Aufgabe: Mangel oder eigene -->
     <section class="view" id="view-aufgabe">
       <div id="aufgBox"></div>
+    </section>
+    <!-- Ablauf einer Aufgabe bearbeiten (v1.157) -->
+    <section class="view" id="view-ablauf">
+      <div id="ablaufBox"></div>
     </section>
 
     <!-- Ein Termin und die Übersicht der Termine (v1.103) -->
@@ -3290,7 +3312,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.156';
+const VERSION = 'v1.157';
 const BUILD   = VERSION + ' · 06.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4522,7 +4544,7 @@ function ring(n, takt){
 }
 
 /* ---------- Ansichten ---------- */
-const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', erledigt:'Erledigt', stoerungen:'Störungen', nachweis:'Nachweis', blatt:'Blatt',
+const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', ablauf:'Ablauf', erledigt:'Erledigt', stoerungen:'Störungen', nachweis:'Nachweis', blatt:'Blatt',
                historie:'Historie', histnw:'Historie', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregel:'Regel',
@@ -4584,6 +4606,7 @@ function go(name, push = true){
   if(name === 'home')     renderHome();
   if(name === 'alle')     renderAlle();
   if(name === 'aufgabe')  renderAufgabe();
+  if(name === 'ablauf')   renderAblauf();
   if(name === 'termin')   renderTermin();
   if(name === 'termine')  renderTermine();
   if(name === 'rundgang') renderRundgang();
@@ -4660,6 +4683,8 @@ window.addEventListener('resize', () => { if(current === 'blatt' && blattPasst) 
 })();
 function zurueck(){
   if(current === 'home'){ go('settings'); return; }     // Startseite: Einstellungen
+  /* Im Ablauf einer Folgeaufgabe erst eine Stufe hoch (v1.157). */
+  if(current === 'ablauf' && ablaufStapel.length){ ablaufZiel = ablaufStapel.pop(); renderAblauf(); bildNach(0); return; }
   const p = stack.pop();
   /* Führt der Weg auf eine Unterseite der Einstellungen zurück, muss auch deren
      Zustand zurück – sonst stünde dort die zuletzt geöffnete Seite. */
@@ -5401,7 +5426,7 @@ function aufgStand(a){
     return [kurz(a.text) || 'ohne Bemerkung', (a.erneut || []).length ? 'erneut festgestellt' : '']
       .filter(Boolean).join(' · ');
   const n = a.k && NW(a.k);
-  return [n ? n.label + (a.anlage ? ' · ' + anlageName(a) : '') : '', aufgVorbText(a) || kurz(a.notiz)]
+  return [n ? n.label + (a.anlage ? ' · ' + anlageName(a) : '') : '', ablaufListenText(a), aufgVorbText(a) || kurz(a.notiz)]
     .filter(Boolean).join(' · ');
 }
 const aufgabeKnopf = a =>
@@ -5988,6 +6013,191 @@ function renderRundgang(){
   bildNach(imBild(karten[i - 1]) - 8);
 }
 
+/* ---------- Ablauf an einer Aufgabe (v1.157, Etappe 1) ---------------------
+   Wunsch von Jean: in einer Tätigkeit bei Bedarf eine Funktion ausführen
+   (einen Link öffnen, anrufen, eine E-Mail schreiben, einen Schritt abhaken)
+   und daraus eine festgelegte Folgeaufgabe entstehen lassen, die wieder einen
+   Ablauf und eine Folgeaufgabe haben kann – so entsteht eine Kette.
+   a.ablauf = {schritte:[{id, art, text, url | nummer | an, betreff, inhalt}],
+               folge:{titel, tage, wichtig, text, ablauf} | null,
+               folgeNach:'' (beim Erledigen) | Schritt-id};
+   a.ablaufStand = {Schritt-id: Tag}; a.ablaufFolge = id der angelegten
+   Folgeaufgabe oder 'nein'. Die Folgeaufgabe entsteht mit Rückfrage (Datum
+   änderbar), spätestens beim Erledigen. Etappe 1: eigene Aufgaben; die
+   Nachweise, Sprinkler, Akkutausch und Wetterregeln folgen in Etappe 2. */
+const ABLAUF_ARTEN = [['link', 'Link'], ['tel', 'Anruf'], ['mail', 'E-Mail'], ['haken', 'Abhaken']];
+const ABLAUF_VORGABE = {link:'Link öffnen', tel:'Anrufen', mail:'E-Mail schreiben', haken:'Schritt'};
+const ablaufHat = ab => !!ab && (((ab.schritte || []).length > 0) || !!ab.folge);
+const ablaufKopie = ab => ab ? JSON.parse(JSON.stringify(ab)) : null;
+const schrittText = st => String(st.text || '').trim() || ABLAUF_VORGABE[st.art] || 'Schritt';
+/* Platzhalter in Adresse, Betreff und Text: {Datum}, {Objekt}, {Titel}. */
+const ablaufEinsetzen = (t, a) => String(t || '').replace(/\{(Datum|Objekt|Titel)\}/g, (_, w) =>
+  w === 'Datum' ? dText(heute()) : w === 'Objekt' ? (a.anlage ? anlageName(a) : '') : (a.titel || ''));
+function schrittZiel(st, a){
+  if(st.art === 'link'){
+    let u = ablaufEinsetzen(st.url, a).trim();
+    if(!u) return '';
+    if(!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u;
+    return /^(https?|tel|mailto|sms|maps):/i.test(u) ? u : '';      // nichts Ausführbares
+  }
+  if(st.art === 'tel'){ const n = String(st.nummer || '').replace(/[^\d+]/g, ''); return n ? 'tel:' + n : ''; }
+  if(st.art === 'mail') return 'mailto:' + String(st.an || '').replace(/\s+/g, '')
+    + '?subject=' + encodeURIComponent(ablaufEinsetzen(st.betreff, a))
+    + '&body=' + encodeURIComponent(ablaufEinsetzen(st.inhalt, a));
+  return '';
+}
+function ablaufZahl(a){
+  const l = (a.ablauf && a.ablauf.schritte) || [], st = a.ablaufStand || {};
+  return {alle:l.length, fertig:l.filter(x => st[x.id]).length};
+}
+const ablaufListenText = a => { const z = ablaufZahl(a); return z.alle && !a.erledigt ? `Ablauf ${z.fertig} von ${z.alle}` : ''; };
+/* Die Karte auf der Seite der Aufgabe: ein Knopf je Schritt. Link, Anruf und
+   E-Mail sind echte Verweise – iOS öffnet sie nur aus dem Tipp selbst. */
+function ablaufKarteHtml(a){
+  const ab = a.ablauf;
+  if(!ablaufHat(ab)) return `<button class="btn ghost klein" id="ablaufBearb" style="margin:0 0 12px">+ Ablauf</button>`;
+  const st = a.ablaufStand || {}, l = ab.schritte || [];
+  const zeile = (x, i) => {
+    const fertig = !!st[x.id], vor = (fertig ? '✓ ' : `${i + 1}. `);
+    if(x.art === 'haken' || a.entwurf)
+      return `<label class="haken ablaufHaken"><input type="checkbox" data-sid="${esc(x.id)}"${fertig ? ' checked' : ''}${a.entwurf ? ' disabled' : ''}>
+        <span>${esc(schrittText(x))}</span></label>`;
+    const ziel = schrittZiel(x, a);
+    return ziel ? `<a class="btn ablaufSchritt${fertig ? ' fertig' : ''}" href="${esc(ziel)}" target="_blank" rel="noopener" data-sid="${esc(x.id)}">${esc(vor + schrittText(x))}</a>`
+      : `<button class="btn ablaufSchritt" disabled>${esc(vor + schrittText(x))} – Angabe fehlt</button>`;
+  };
+  const f = ab.folge, nach = ab.folgeNach ? l.findIndex(x => x.id === ab.folgeNach) : -1;
+  const folge = !f ? '' : `<p class="muted small" style="margin:10px 0 0">Danach: „${esc(f.titel || 'Folgeaufgabe')}“, fällig ${
+      esc(+f.tage ? `${+f.tage} ${+f.tage === 1 ? 'Tag' : 'Tage'} später` : 'am selben Tag')} – ${
+      nach >= 0 ? `nach Schritt ${nach + 1}` : 'beim Erledigen'}${
+      a.ablaufFolge && a.ablaufFolge !== 'nein' ? ' · angelegt' : a.ablaufFolge === 'nein' ? ' · nicht angelegt' : ''}</p>`;
+  return `<div class="card" id="ablaufKarte"><div class="eyebrow" style="margin:0 0 6px">Ablauf</div>
+    ${l.map(zeile).join('')}${folge}
+    <button class="btn ghost klein" id="ablaufBearb" style="margin-top:10px">Ablauf bearbeiten</button></div>`;
+}
+function ablaufVerdrahten(a, neuZeichnen){
+  const b = $('#ablaufBearb');
+  if(b) b.onclick = () => ablaufOeffnen(a);
+  const karte = $('#ablaufKarte');
+  if(!karte || a.entwurf) return;
+  const erledigt = (id, an) => {
+    a.ablaufStand = a.ablaufStand || {};
+    if(an) a.ablaufStand[id] = heute(); else delete a.ablaufStand[id];
+    saveAufg();
+    /* Folgeaufgabe nach diesem Schritt – erst wenn man aus Safari zurück ist. */
+    if(an && a.ablauf.folgeNach === id && !a.ablaufFolge) setTimeout(() => ablaufFolgeFragen(a, heute(), neuZeichnen), 700);
+  };
+  karte.querySelectorAll('a[data-sid]').forEach(el => el.addEventListener('click', () => {
+    erledigt(el.dataset.sid, true);
+    el.classList.add('fertig');
+    const x = a.ablauf.schritte.find(y => y.id === el.dataset.sid);
+    if(x) el.textContent = '✓ ' + schrittText(x);
+  }));
+  karte.querySelectorAll('input[data-sid]').forEach(el => el.onchange = () => erledigt(el.dataset.sid, el.checked));
+}
+/* Die Folgeaufgabe: Rückfrage mit änderbarem Datum. „Nicht anlegen“ wird
+   gemerkt, damit beim Erledigen nicht noch einmal gefragt wird. */
+function ablaufFolgeFragen(a, basis, danach){
+  const f = a.ablauf && a.ablauf.folge, weiter = () => { if(danach) danach(); };
+  if(!f || a.ablaufFolge){ weiter(); return; }
+  const vorschlag = tagPlus(basis || heute(), Math.max(0, Math.round(+f.tage || 0)));
+  frage('Folgeaufgabe anlegen?', `„${f.titel || 'Folgeaufgabe'}“`, 'Anlegen', () => {
+    const frist = ($('#folgeFrist') && $('#folgeFrist').value) || vorschlag;
+    const n = {id:neueId(), art:'eigen', quelle:'', k:a.k || '', anlage:a.anlage || '', anlageText:a.anlageText || '',
+      punkt:'', titel:f.titel || 'Folgeaufgabe', text:'', notiz:f.text || '', zeitraum:'', festgestellt:'',
+      angelegt:heute(), frist, wichtig:f.wichtig || 'normal', erneut:[], erledigt:'', vermerk:'', vorgaenger:a.id};
+    if(ablaufHat(f.ablauf)) n.ablauf = ablaufKopie(f.ablauf);
+    AUFG.push(n); a.ablaufFolge = n.id; saveAufg();
+    toast('Folgeaufgabe angelegt · fällig ' + dText(frist));
+    weiter();
+  });
+  $('#dlgNein').textContent = 'Nicht anlegen';
+  $('#dlgNein').onclick = () => { $('#dlg').hidden = true; a.ablaufFolge = 'nein'; saveAufg(); weiter(); };
+  const box = $('#dlgListe');
+  box.hidden = false;
+  box.innerHTML = `<label class="field" style="margin:12px 0 0"><span>Fällig am</span>
+    <input type="date" id="folgeFrist" class="schmal" value="${esc(vorschlag)}"></label>`;
+}
+
+/* Die Seite zum Bearbeiten. ablaufZiel = {a, ab, titel}; eine Folgeaufgabe
+   öffnet ihren Ablauf auf derselben Seite, „Zurück“ geht eine Stufe hoch. */
+let ablaufZiel = null, ablaufStapel = [];
+function ablaufOeffnen(a){
+  if(!a.ablauf) a.ablauf = {schritte:[], folge:null, folgeNach:''};
+  ablaufStapel = [];
+  ablaufZiel = {a, ab:a.ablauf, titel:a.titel || 'Aufgabe'};
+  go('ablauf');
+}
+function renderAblauf(){
+  const box = $('#ablaufBox'), z = ablaufZiel;
+  if(!box || !z) return;
+  const {a, ab} = z, l = ab.schritte = ab.schritte || [];
+  const sichern = () => { if(!a.entwurf) saveAufg(); };
+  const iPl = info('In Adresse, Betreff und Text werden {Datum}, {Objekt} und {Titel} beim Ausführen ersetzt.', 'margin:-4px 0 10px');
+  const feld = (i, f, titel, wert, extra = '') => `<label class="field"><span>${titel}</span><input data-i="${i}" data-f="${f}" value="${esc(wert || '')}" ${extra}></label>`;
+  const karte = (x, i) => `<div class="card schrittKarte">
+      <div class="eyebrow" style="margin:0 0 6px">Schritt ${i + 1}</div>
+      <div class="field segfeld"><div class="seg">${ABLAUF_ARTEN.map(([w, t]) =>
+        `<button type="button" data-i="${i}" data-art="${w}" aria-pressed="${x.art === w}">${t}</button>`).join('')}</div></div>
+      ${feld(i, 'text', 'Beschriftung', x.text, `placeholder="${esc(ABLAUF_VORGABE[x.art])}"`)}
+      ${x.art === 'link' ? feld(i, 'url', 'Adresse', x.url, 'inputmode="url" autocapitalize="off" placeholder="z. B. portal.beispiel.de"') : ''}
+      ${x.art === 'tel' ? feld(i, 'nummer', 'Nummer', x.nummer, 'type="tel"') : ''}
+      ${x.art === 'mail' ? feld(i, 'an', 'An', x.an, 'type="email" autocapitalize="off"') + feld(i, 'betreff', 'Betreff', x.betreff)
+        + `<label class="field"><span>Text</span><textarea data-i="${i}" data-f="inhalt" style="min-height:90px">${esc(x.inhalt || '')}</textarea></label>` : ''}
+      <div class="row ablaufReihe">
+        <button type="button" class="btn quadrat" data-hoch="${i}" aria-label="nach oben"${i ? '' : ' disabled'}>↑</button>
+        <button type="button" class="btn quadrat" data-runter="${i}" aria-label="nach unten"${i < l.length - 1 ? '' : ' disabled'}>↓</button>
+        <button type="button" class="btn danger klein" data-weg="${i}">Entfernen</button></div></div>`;
+  const f = ab.folge;
+  const folge = !f ? `<button class="btn" id="folgeNeu">+ Folgeaufgabe</button>`
+    : `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Folgeaufgabe</div>
+      <label class="field"><span>Titel</span><input id="folgeTitel" value="${esc(f.titel || '')}" placeholder="Was ist danach zu tun?"></label>
+      <label class="field"><span>Fällig nach (Tagen)</span><input id="folgeTage" type="number" inputmode="numeric" min="0" class="schmal" value="${esc(f.tage ?? 7)}"></label>
+      <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
+        WICHTIG.map(([w, t]) => `<button type="button" data-fw="${w}" aria-pressed="${(f.wichtig || 'normal') === w}">${t}</button>`).join('')}</div></div>
+      <label class="field"><span>Notiz</span><textarea id="folgeText" style="min-height:70px">${esc(f.text || '')}</textarea></label>
+      <label class="field"><span>Entsteht</span><select id="folgeNach">
+        <option value="">beim Erledigen</option>${l.map((x, i) =>
+          `<option value="${esc(x.id)}"${ab.folgeNach === x.id ? ' selected' : ''}>nach Schritt ${i + 1}: ${esc(schrittText(x))}</option>`).join('')}</select></label>
+      <button class="btn" id="folgeAblauf">${ablaufHat(f.ablauf) ? `Ablauf der Folgeaufgabe (${(f.ablauf.schritte || []).length} ${
+        (f.ablauf.schritte || []).length === 1 ? 'Schritt' : 'Schritte'}${f.ablauf.folge ? ', mit Folgeaufgabe' : ''})` : '+ Ablauf der Folgeaufgabe'}</button>
+      <button class="btn ghost klein" id="folgeWeg" style="margin-top:10px">Folgeaufgabe entfernen</button></div>`;
+  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">${esc(z.titel)} ${iPl.knopf}</div>${iPl.text}`
+    + (ablaufStapel.length ? `<p class="muted small" style="margin:-4px 0 10px">Folgeaufgabe von „${esc(ablaufStapel[ablaufStapel.length - 1].titel)}“</p>` : '')
+    + l.map(karte).join('')
+    + `<button class="btn" id="schrittNeu" style="margin-bottom:14px">+ Schritt</button>` + folge;
+  const neu = () => { renderAblauf(); };
+  box.querySelectorAll('[data-f]').forEach(el => el.oninput = () => { l[+el.dataset.i][el.dataset.f] = el.value; sichern(); });
+  box.querySelectorAll('[data-art]').forEach(b => b.onclick = () => { l[+b.dataset.i].art = b.dataset.art; sichern(); neu(); });
+  box.querySelectorAll('[data-hoch]').forEach(b => b.onclick = () => { const i = +b.dataset.hoch; [l[i - 1], l[i]] = [l[i], l[i - 1]]; sichern(); neu(); });
+  box.querySelectorAll('[data-runter]').forEach(b => b.onclick = () => { const i = +b.dataset.runter; [l[i + 1], l[i]] = [l[i], l[i + 1]]; sichern(); neu(); });
+  box.querySelectorAll('[data-weg]').forEach(b => b.onclick = () => {
+    const x = l.splice(+b.dataset.weg, 1)[0];
+    if(x && ab.folgeNach === x.id) ab.folgeNach = '';
+    sichern(); neu();
+  });
+  $('#schrittNeu').onclick = () => { l.push({id:neueId(), art:'link', text:''}); sichern(); neu(); };
+  if($('#folgeNeu')) $('#folgeNeu').onclick = () => { ab.folge = {titel:'', tage:7, wichtig:'normal', text:'', ablauf:null}; sichern(); neu(); };
+  if(!f) return;
+  $('#folgeTitel').oninput = e => { f.titel = e.target.value; sichern(); };
+  $('#folgeTage').oninput = e => { f.tage = Math.max(0, Math.round(+e.target.value || 0)); sichern(); };
+  $('#folgeText').oninput = e => { f.text = e.target.value; sichern(); };
+  $('#folgeNach').onchange = e => { ab.folgeNach = e.target.value; sichern(); };
+  box.querySelectorAll('[data-fw]').forEach(b => b.onclick = () => {
+    f.wichtig = b.dataset.fw;
+    box.querySelectorAll('[data-fw]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    sichern();
+  });
+  $('#folgeAblauf').onclick = () => {
+    if(!f.ablauf) f.ablauf = {schritte:[], folge:null, folgeNach:''};
+    ablaufStapel.push(z);
+    ablaufZiel = {a, ab:f.ablauf, titel:f.titel || 'Folgeaufgabe'};
+    renderAblauf(); bildNach(0);
+  };
+  $('#folgeWeg').onclick = () => frage('Folgeaufgabe entfernen',
+    `„${f.titel || 'Folgeaufgabe'}“ und ihr Ablauf werden entfernt.`, 'Entfernen', () => { ab.folge = null; ab.folgeNach = ''; sichern(); neu(); });
+}
+
 /* ---------- Eine Aufgabe ----------------------------------------------------
    Dieselbe Seite für Mängel, eigene Aufgaben und den Entwurf einer neuen. Der
    Entwurf liegt nur im Speicher der Seite und kommt erst mit „Aufgabe anlegen“
@@ -6217,10 +6427,12 @@ function renderAufgabe(){
      Erledigen –, darunter Dauer und Werkzeug, die Angaben zugeklappt. Der
      Entwurf einer neuen Aufgabe hat noch nichts zusammenzufassen: dort stehen
      die Felder offen wie bisher. */
-  box.innerHTML = neu ? felder + erledigung
+  /* Ablauf (v1.157): eigene Aufgaben, offen oder als Entwurf. */
+  const ablauf = !mangel && !a.erledigt ? ablaufKarteHtml(a) : '';
+  box.innerHTML = neu ? felder + ablauf + erledigung
     : `<div id="aufgKopf"></div>`
     + (!mangel && !a.erledigt && a.wetter ? `<div id="aufgWetterKarte">${aufgWetterKarteHtml(a)}</div>` : '')
-    + '<div id="aufgVorb"></div>' + erledigung + erfKarte + eigenKarte
+    + '<div id="aufgVorb"></div>' + ablauf + erledigung + erfKarte + eigenKarte
     + `<details class="angaben" id="aufgAngaben"${angabenAuf === a.id ? ' open' : ''}><summary>Angaben bearbeiten</summary>${felder}</details>`
     + (!mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '');
   aufgKopfZeigen(a, mangelKopf);
@@ -6231,6 +6443,7 @@ function renderAufgabe(){
 
   /* Vorbereiten (v1.74) – nur die offene, gespeicherte Aufgabe. */
   if(!neu && !a.erledigt) aufgVorbKarte($('#aufgVorb'), a);
+  if(ablauf) ablaufVerdrahten(a, () => { if(current === 'aufgabe' && aufgAktiv === a) renderAufgabe(); });
   if(!mangel){
     $('#aufgTitel').oninput = e => { a.titel = e.target.value; sichern(); };
     $('#aufgTitel').onchange = () => kopfNeu();
@@ -6393,15 +6606,18 @@ function renderAufgabe(){
         wdh:Object.assign({}, a.wdh), vorb:a.vorb ? Object.assign({}, a.vorb) : undefined,
         vorbErledigt:'', vorbVermerk:''};
       if(fz) folge.von = fz.von;
+      if(ablaufHat(a.ablauf)) folge.ablauf = ablaufKopie(a.ablauf);   // Ablauf reist mit, der Stand nicht (v1.157)
       if(a.wetter) folge.wetter = a.wetter;
       if(a.reihe) folge.reihe = a.reihe;
       AUFG.push(folge); a.folge = folge.id;
       saveAufg();
       toast(fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · wieder fällig ${dText(folge.frist)}`);
-      zurueck(); tFragen();
+      zurueck(); ablaufFolgeFragen(a, a.erledigt, tFragen);
       return;
     }
-    saveAufg(); stoerAusAufgabe(a, 'erledigt'); toast('Als erledigt vermerkt'); zurueck(); tFragen();
+    saveAufg(); stoerAusAufgabe(a, 'erledigt'); toast('Als erledigt vermerkt'); zurueck();
+    /* Folgeaufgabe aus dem Ablauf (v1.157) – spätestens beim Erledigen. */
+    ablaufFolgeFragen(a, a.erledigt, tFragen);
   };
   if($('#aufgWieder')) $('#aufgWieder').onclick = () => {
     /* Eine noch unberührte Folgeaufgabe geht mit zurück, sonst stünde der
@@ -6409,6 +6625,7 @@ function renderAufgabe(){
     const f = a.folge && AUFG.find(x => x.id === a.folge);
     if(f && !f.erledigt && !f.notiz && !f.vorbErledigt){ AUFG = AUFG.filter(x => x !== f); }
     delete a.folge;
+    if(a.ablaufFolge === 'nein') delete a.ablaufFolge;   // dann darf wieder gefragt werden (v1.157)
     a.erledigt = ''; a.vermerk = ''; saveAufg(); stoerAusAufgabe(a, 'wieder'); renderAufgabe();
   };
   /* Nur eigene Aufgaben lassen sich löschen. Ein Mangel gehört zum Nachweis und
