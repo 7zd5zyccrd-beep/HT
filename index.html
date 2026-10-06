@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.158 06.10.2026 Ablauf mit Zweigen (Wunsch von Jean). Neuer Schritt
+         „Frage“: eine Entscheidung mit Antworten (ab Werk Ja und Nein,
+         beliebig erweiterbar). Jede Antwort hat ihre eigenen Folgeaufgaben –
+         keine, eine oder mehrere, jede wieder mit eigenem Ablauf. Auf der
+         Aufgabe stehen die Antworten als Kacheln; ein Tipp wählt und fragt
+         nach den Folgeaufgaben dieses Zweigs (Datum änderbar). Ist beim
+         Erledigen noch eine Entscheidung offen, fragt die App zuerst sie.
+         Mehrere Entscheidungen in einem Ablauf sind möglich; die bisherige
+         Folgeaufgabe heißt jetzt „Folgeaufgabe, die immer gilt“.
   v1.157 06.10.2026 Ablauf an Aufgaben, Etappe 1 (Wunsch von Jean). Jede
          eigene Aufgabe kann einen Ablauf bekommen: Schritte in fester
          Reihenfolge – Link öffnen, Anrufen, E-Mail schreiben (Empfänger,
@@ -2936,6 +2945,11 @@ a.ablaufSchritt{display:flex;align-items:center;justify-content:center;text-deco
 .ablaufReihe{align-items:center;margin-top:4px}
 .ablaufReihe .btn{margin-top:0}
 .ablaufReihe .danger{width:auto;margin-left:auto}
+/* Entscheidung (v1.158): Frage, Antworten als Kacheln, Zweige darunter. */
+.ablaufFrage{margin:10px 0 0}
+.ablaufFrageText{font-weight:600;margin:0 0 6px}
+.ablaufAntworten .gruppe{margin-top:8px}
+.ablaufAntworten .ablaufReihe input{flex:1;min-width:0}
 /* Störungen (v1.153): jede Zeile öffnet sich zum Bearbeiten. */
 .stoerEintrag{display:block;width:100%;text-align:left;background:none;border:0;font:inherit;color:inherit;cursor:pointer;-webkit-appearance:none;appearance:none}
 .stoerFeld{margin-top:10px}
@@ -3312,7 +3326,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.157';
+const VERSION = 'v1.158';
 const BUILD   = VERSION + ' · 06.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6013,23 +6027,31 @@ function renderRundgang(){
   bildNach(imBild(karten[i - 1]) - 8);
 }
 
-/* ---------- Ablauf an einer Aufgabe (v1.157, Etappe 1) ---------------------
+/* ---------- Ablauf an einer Aufgabe (v1.157, Etappe 1; Zweige v1.158) -------
    Wunsch von Jean: in einer Tätigkeit bei Bedarf eine Funktion ausführen
    (einen Link öffnen, anrufen, eine E-Mail schreiben, einen Schritt abhaken)
    und daraus eine festgelegte Folgeaufgabe entstehen lassen, die wieder einen
-   Ablauf und eine Folgeaufgabe haben kann – so entsteht eine Kette.
-   a.ablauf = {schritte:[{id, art, text, url | nummer | an, betreff, inhalt}],
-               folge:{titel, tage, wichtig, text, ablauf} | null,
-               folgeNach:'' (beim Erledigen) | Schritt-id};
-   a.ablaufStand = {Schritt-id: Tag}; a.ablaufFolge = id der angelegten
-   Folgeaufgabe oder 'nein'. Die Folgeaufgabe entsteht mit Rückfrage (Datum
-   änderbar), spätestens beim Erledigen. Etappe 1: eigene Aufgaben; die
-   Nachweise, Sprinkler, Akkutausch und Wetterregeln folgen in Etappe 2. */
-const ABLAUF_ARTEN = [['link', 'Link'], ['tel', 'Anruf'], ['mail', 'E-Mail'], ['haken', 'Abhaken']];
-const ABLAUF_VORGABE = {link:'Link öffnen', tel:'Anrufen', mail:'E-Mail schreiben', haken:'Schritt'};
+   Ablauf und Folgeaufgaben haben kann – so entsteht eine Kette. Seit v1.158
+   verzweigt sie: eine Entscheidung (Frage mit Antworten) ist ein Schritt, jede
+   Antwort hat eigene Folgeaufgaben (keine, eine oder mehrere). Zweige laufen
+   nicht wieder zusammen (Jean: dieselbe Aufgabe lieber in beiden anlegen).
+   a.ablauf = {schritte:[{id, art, text, url | nummer | an, betreff, inhalt |
+                          antworten:[{id, text, folgen:[Folge]}]}],
+               folge:Folge | null (gilt immer), folgeNach:'' | Schritt-id};
+   Folge = {id, titel, tage, wichtig, text, ablauf}.
+   Je Aufgabe: a.ablaufStand = {Schritt-id: Tag}, a.ablaufAntwort =
+   {Schritt-id: Antwort-id}, a.ablaufFolge (Folgeaufgabe „immer“: id oder
+   'nein'), a.ablaufFolgen = {Folge-id: id oder 'nein'} für die Zweige.
+   Jede Folgeaufgabe entsteht mit Rückfrage (Datum änderbar). Etappe 1:
+   eigene Aufgaben; Nachweise, Sprinkler, Akkutausch und Wetterregeln samt
+   selbsttätiger Bedingungen folgen in Etappe 2. */
+const ABLAUF_ARTEN = [['link', 'Link'], ['tel', 'Anruf'], ['mail', 'Mail'], ['haken', 'Haken'], ['frage', 'Frage']];
+const ABLAUF_VORGABE = {link:'Link öffnen', tel:'Anrufen', mail:'E-Mail schreiben', haken:'Schritt', frage:'Entscheidung'};
 const ablaufHat = ab => !!ab && (((ab.schritte || []).length > 0) || !!ab.folge);
 const ablaufKopie = ab => ab ? JSON.parse(JSON.stringify(ab)) : null;
 const schrittText = st => String(st.text || '').trim() || ABLAUF_VORGABE[st.art] || 'Schritt';
+const folgeNeu = () => ({id:neueId(), titel:'', tage:7, wichtig:'normal', text:'', ablauf:null});
+const folgeKurz = f => `„${f.titel || 'Folgeaufgabe'}“${+f.tage ? ` in ${+f.tage} ${+f.tage === 1 ? 'Tag' : 'Tagen'}` : ' sofort'}`;
 /* Platzhalter in Adresse, Betreff und Text: {Datum}, {Objekt}, {Titel}. */
 const ablaufEinsetzen = (t, a) => String(t || '').replace(/\{(Datum|Objekt|Titel)\}/g, (_, w) =>
   w === 'Datum' ? dText(heute()) : w === 'Objekt' ? (a.anlage ? anlageName(a) : '') : (a.titel || ''));
@@ -6056,9 +6078,17 @@ const ablaufListenText = a => { const z = ablaufZahl(a); return z.alle && !a.erl
 function ablaufKarteHtml(a){
   const ab = a.ablauf;
   if(!ablaufHat(ab)) return `<button class="btn ghost klein" id="ablaufBearb" style="margin:0 0 12px">+ Ablauf</button>`;
-  const st = a.ablaufStand || {}, l = ab.schritte || [];
+  const st = a.ablaufStand || {}, antw = a.ablaufAntwort || {}, l = ab.schritte || [];
   const zeile = (x, i) => {
     const fertig = !!st[x.id], vor = (fertig ? '✓ ' : `${i + 1}. `);
+    if(x.art === 'frage'){
+      const gewaehlt = antw[x.id];
+      return `<div class="ablaufFrage"><div class="ablaufFrageText">${esc(vor + schrittText(x))}</div>
+        <div class="chips">${(x.antworten || []).map(o => `<button type="button" data-fid="${esc(x.id)}" data-aid="${esc(o.id)}"
+          aria-pressed="${gewaehlt === o.id}"${a.entwurf ? ' disabled' : ''}>${esc(o.text || 'Antwort')}</button>`).join('')}</div>
+        <p class="muted small" style="margin:4px 0 0">${esc((x.antworten || []).map(o =>
+          `${o.text || 'Antwort'} → ${(o.folgen || []).length ? o.folgen.map(f => f.titel || 'Folgeaufgabe').join(', ') : 'Ende'}`).join(' · '))}</p></div>`;
+    }
     if(x.art === 'haken' || a.entwurf)
       return `<label class="haken ablaufHaken"><input type="checkbox" data-sid="${esc(x.id)}"${fertig ? ' checked' : ''}${a.entwurf ? ' disabled' : ''}>
         <span>${esc(schrittText(x))}</span></label>`;
@@ -6075,6 +6105,11 @@ function ablaufKarteHtml(a){
     ${l.map(zeile).join('')}${folge}
     <button class="btn ghost klein" id="ablaufBearb" style="margin-top:10px">Ablauf bearbeiten</button></div>`;
 }
+/* Mehreres nacheinander fragen: jede Stufe ruft weiter(), wenn sie fertig ist. */
+const nacheinander = (stufen, ende) => {
+  const los = i => i < stufen.length ? stufen[i](() => los(i + 1)) : (ende && ende());
+  los(0);
+};
 function ablaufVerdrahten(a, neuZeichnen){
   const b = $('#ablaufBearb');
   if(b) b.onclick = () => ablaufOeffnen(a);
@@ -6094,12 +6129,34 @@ function ablaufVerdrahten(a, neuZeichnen){
     if(x) el.textContent = '✓ ' + schrittText(x);
   }));
   karte.querySelectorAll('input[data-sid]').forEach(el => el.onchange = () => erledigt(el.dataset.sid, el.checked));
+  /* Entscheidung (v1.158): die Antwort setzt ihren Zweig in Gang. */
+  karte.querySelectorAll('[data-fid]').forEach(el => el.onclick = () => {
+    const x = a.ablauf.schritte.find(y => y.id === el.dataset.fid);
+    if(!x) return;
+    antwortSetzen(a, x, el.dataset.aid, () => {
+      if(a.ablauf.folgeNach === x.id && !a.ablaufFolge) ablaufFolgeFragen(a, heute(), neuZeichnen);
+      else neuZeichnen();
+    });
+  });
 }
-/* Die Folgeaufgabe: Rückfrage mit änderbarem Datum. „Nicht anlegen“ wird
-   gemerkt, damit beim Erledigen nicht noch einmal gefragt wird. */
-function ablaufFolgeFragen(a, basis, danach){
-  const f = a.ablauf && a.ablauf.folge, weiter = () => { if(danach) danach(); };
-  if(!f || a.ablaufFolge){ weiter(); return; }
+function antwortSetzen(a, x, aid, danach){
+  a.ablaufAntwort = a.ablaufAntwort || {};
+  a.ablaufStand = a.ablaufStand || {};
+  a.ablaufAntwort[x.id] = aid; a.ablaufStand[x.id] = heute();
+  saveAufg();
+  zweigFragen(a, x, heute(), danach);
+}
+/* Die Folgeaufgaben der gewählten Antwort, die noch nicht entschieden sind. */
+function zweigFragen(a, x, basis, danach){
+  const o = (x.antworten || []).find(y => y.id === (a.ablaufAntwort || {})[x.id]);
+  const offen = ((o && o.folgen) || []).filter(f => !(a.ablaufFolgen || {})[f.id]);
+  nacheinander(offen.map(f => weiter => folgeAnlegenFragen(a, f, basis, ergebnis => {
+    a.ablaufFolgen = a.ablaufFolgen || {};
+    a.ablaufFolgen[f.id] = ergebnis; saveAufg(); weiter();
+  })), danach);
+}
+/* Eine Folgeaufgabe: Rückfrage mit änderbarem Datum; fertig(id | 'nein'). */
+function folgeAnlegenFragen(a, f, basis, fertig){
   const vorschlag = tagPlus(basis || heute(), Math.max(0, Math.round(+f.tage || 0)));
   frage('Folgeaufgabe anlegen?', `„${f.titel || 'Folgeaufgabe'}“`, 'Anlegen', () => {
     const frist = ($('#folgeFrist') && $('#folgeFrist').value) || vorschlag;
@@ -6107,26 +6164,58 @@ function ablaufFolgeFragen(a, basis, danach){
       punkt:'', titel:f.titel || 'Folgeaufgabe', text:'', notiz:f.text || '', zeitraum:'', festgestellt:'',
       angelegt:heute(), frist, wichtig:f.wichtig || 'normal', erneut:[], erledigt:'', vermerk:'', vorgaenger:a.id};
     if(ablaufHat(f.ablauf)) n.ablauf = ablaufKopie(f.ablauf);
-    AUFG.push(n); a.ablaufFolge = n.id; saveAufg();
+    AUFG.push(n); saveAufg();
     toast('Folgeaufgabe angelegt · fällig ' + dText(frist));
-    weiter();
+    fertig(n.id);
   });
   $('#dlgNein').textContent = 'Nicht anlegen';
-  $('#dlgNein').onclick = () => { $('#dlg').hidden = true; a.ablaufFolge = 'nein'; saveAufg(); weiter(); };
+  $('#dlgNein').onclick = () => { $('#dlg').hidden = true; fertig('nein'); };
   const box = $('#dlgListe');
   box.hidden = false;
   box.innerHTML = `<label class="field" style="margin:12px 0 0"><span>Fällig am</span>
     <input type="date" id="folgeFrist" class="schmal" value="${esc(vorschlag)}"></label>`;
 }
+/* Die Folgeaufgabe, die immer gilt. „Nicht anlegen“ wird gemerkt, damit beim
+   Erledigen nicht noch einmal gefragt wird. */
+function ablaufFolgeFragen(a, basis, danach){
+  const f = a.ablauf && a.ablauf.folge;
+  if(!f || a.ablaufFolge){ if(danach) danach(); return; }
+  folgeAnlegenFragen(a, f, basis, ergebnis => { a.ablaufFolge = ergebnis; saveAufg(); if(danach) danach(); });
+}
+/* Beim Erledigen: offene Entscheidungen fragen, dann ihre Zweige, dann die
+   Folgeaufgabe, die immer gilt. Abbrechen lässt eine Entscheidung offen. */
+function ablaufErledigen(a, basis, danach){
+  const l = (a.ablauf && a.ablauf.schritte) || [];
+  const fragen = l.filter(x => x.art === 'frage' && (x.antworten || []).length);
+  nacheinander(fragen.map(x => weiter => {
+    if((a.ablaufAntwort || {})[x.id]){ zweigFragen(a, x, basis, weiter); return; }
+    wahlFenster(schrittText(x), x.antworten.map(o => ({text:o.text || 'Antwort', o})), w => {
+      a.ablaufAntwort = a.ablaufAntwort || {}; a.ablaufStand = a.ablaufStand || {};
+      a.ablaufAntwort[x.id] = w.o.id; a.ablaufStand[x.id] = basis || heute(); saveAufg();
+      zweigFragen(a, x, basis, weiter);
+    });
+    const ab = $('#dlgListe [data-ab]');
+    if(ab){ ab.textContent = 'Offen lassen'; ab.onclick = () => { $('#dlg').hidden = true; dlgZuruecksetzen(); weiter(); }; }
+  }), () => ablaufFolgeFragen(a, basis, danach));
+}
 
-/* Die Seite zum Bearbeiten. ablaufZiel = {a, ab, titel}; eine Folgeaufgabe
-   öffnet ihren Ablauf auf derselben Seite, „Zurück“ geht eine Stufe hoch. */
+/* Die Seite zum Bearbeiten. ablaufZiel = {a, ab, titel, f, weg}: f ist die
+   Folgeaufgabe, deren Angaben oben stehen (fehlt bei der Aufgabe selbst), weg
+   entfernt sie aus ihrem Zweig. Eine Folgeaufgabe öffnet sich auf derselben
+   Seite, „Zurück“ geht eine Stufe hoch. */
 let ablaufZiel = null, ablaufStapel = [];
 function ablaufOeffnen(a){
   if(!a.ablauf) a.ablauf = {schritte:[], folge:null, folgeNach:''};
   ablaufStapel = [];
   ablaufZiel = {a, ab:a.ablauf, titel:a.titel || 'Aufgabe'};
   go('ablauf');
+}
+function ablaufTiefer(z, f, weg){
+  if(!f.ablauf) f.ablauf = {schritte:[], folge:null, folgeNach:''};
+  if(!f.id) f.id = neueId();
+  ablaufStapel.push(z);
+  ablaufZiel = {a:z.a, ab:f.ablauf, titel:f.titel || 'Folgeaufgabe', f, weg};
+  renderAblauf(); bildNach(0);
 }
 function renderAblauf(){
   const box = $('#ablaufBox'), z = ablaufZiel;
@@ -6135,11 +6224,39 @@ function renderAblauf(){
   const sichern = () => { if(!a.entwurf) saveAufg(); };
   const iPl = info('In Adresse, Betreff und Text werden {Datum}, {Objekt} und {Titel} beim Ausführen ersetzt.', 'margin:-4px 0 10px');
   const feld = (i, f, titel, wert, extra = '') => `<label class="field"><span>${titel}</span><input data-i="${i}" data-f="${f}" value="${esc(wert || '')}" ${extra}></label>`;
+  /* Angaben einer Folgeaufgabe; p = Vorsilbe der Felder. */
+  const folgeFelder = (f, p) => `
+      <label class="field"><span>Titel</span><input data-${p}="titel" value="${esc(f.titel || '')}" placeholder="Was ist danach zu tun?"></label>
+      <label class="field"><span>Fällig nach (Tagen)</span><input data-${p}="tage" type="number" inputmode="numeric" min="0" class="schmal" value="${esc(f.tage ?? 7)}"></label>
+      <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
+        WICHTIG.map(([w, t]) => `<button type="button" data-${p}w="${w}" aria-pressed="${(f.wichtig || 'normal') === w}">${t}</button>`).join('')}</div></div>
+      <label class="field"><span>Notiz</span><textarea data-${p}="text" style="min-height:70px">${esc(f.text || '')}</textarea></label>`;
+  const folgeBinden = (f, p) => {
+    box.querySelectorAll(`[data-${p}]`).forEach(el => el.oninput = () => {
+      const k = el.getAttribute('data-' + p);
+      f[k] = k === 'tage' ? Math.max(0, Math.round(+el.value || 0)) : el.value; sichern();
+    });
+    box.querySelectorAll(`[data-${p}w]`).forEach(b => b.onclick = () => {
+      f.wichtig = b.getAttribute(`data-${p}w`);
+      box.querySelectorAll(`[data-${p}w]`).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      sichern();
+    });
+  };
+  const antwortenHtml = (x, i) => `<div class="ablaufAntworten">${(x.antworten || []).map((o, j) => `
+      <div class="gruppe"><div class="row ablaufReihe"><input data-i="${i}" data-j="${j}" data-at="1" value="${esc(o.text || '')}" placeholder="Antwort" aria-label="Antwort">
+        <button type="button" class="btn quadrat" data-i="${i}" data-j="${j}" data-aweg="1" aria-label="Antwort entfernen">✕</button></div>
+        ${(o.folgen || []).map((f, k) => `<button type="button" class="btn eintrag" data-i="${i}" data-j="${j}" data-k="${k}" data-fo="1">
+          <span class="etext">${esc(folgeKurz(f))}<small>${esc(ablaufHat(f.ablauf) ? `Ablauf: ${(f.ablauf.schritte || []).length} ${
+            (f.ablauf.schritte || []).length === 1 ? 'Schritt' : 'Schritte'}` : 'ohne Ablauf')}</small></span></button>`).join('')
+          || '<p class="muted small" style="margin:6px 0 0">Ende – keine Folgeaufgabe.</p>'}
+        <button type="button" class="btn ghost klein" data-i="${i}" data-j="${j}" data-fneu="1" style="margin-top:6px">+ Folgeaufgabe für „${esc(o.text || 'Antwort')}“</button></div>`).join('')}
+      <button type="button" class="btn ghost klein" data-i="${i}" data-aneu="1" style="margin-top:8px">+ Antwort</button></div>`;
   const karte = (x, i) => `<div class="card schrittKarte">
       <div class="eyebrow" style="margin:0 0 6px">Schritt ${i + 1}</div>
       <div class="field segfeld"><div class="seg">${ABLAUF_ARTEN.map(([w, t]) =>
         `<button type="button" data-i="${i}" data-art="${w}" aria-pressed="${x.art === w}">${t}</button>`).join('')}</div></div>
-      ${feld(i, 'text', 'Beschriftung', x.text, `placeholder="${esc(ABLAUF_VORGABE[x.art])}"`)}
+      ${x.art === 'frage' ? feld(i, 'text', 'Frage', x.text, 'placeholder="z. B. Abrechnung korrekt?"') + antwortenHtml(x, i)
+        : feld(i, 'text', 'Beschriftung', x.text, `placeholder="${esc(ABLAUF_VORGABE[x.art])}"`)}
       ${x.art === 'link' ? feld(i, 'url', 'Adresse', x.url, 'inputmode="url" autocapitalize="off" placeholder="z. B. portal.beispiel.de"') : ''}
       ${x.art === 'tel' ? feld(i, 'nummer', 'Nummer', x.nummer, 'type="tel"') : ''}
       ${x.art === 'mail' ? feld(i, 'an', 'An', x.an, 'type="email" autocapitalize="off"') + feld(i, 'betreff', 'Betreff', x.betreff)
@@ -6149,51 +6266,73 @@ function renderAblauf(){
         <button type="button" class="btn quadrat" data-runter="${i}" aria-label="nach unten"${i < l.length - 1 ? '' : ' disabled'}>↓</button>
         <button type="button" class="btn danger klein" data-weg="${i}">Entfernen</button></div></div>`;
   const f = ab.folge;
-  const folge = !f ? `<button class="btn" id="folgeNeu">+ Folgeaufgabe</button>`
-    : `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Folgeaufgabe</div>
-      <label class="field"><span>Titel</span><input id="folgeTitel" value="${esc(f.titel || '')}" placeholder="Was ist danach zu tun?"></label>
-      <label class="field"><span>Fällig nach (Tagen)</span><input id="folgeTage" type="number" inputmode="numeric" min="0" class="schmal" value="${esc(f.tage ?? 7)}"></label>
-      <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
-        WICHTIG.map(([w, t]) => `<button type="button" data-fw="${w}" aria-pressed="${(f.wichtig || 'normal') === w}">${t}</button>`).join('')}</div></div>
-      <label class="field"><span>Notiz</span><textarea id="folgeText" style="min-height:70px">${esc(f.text || '')}</textarea></label>
+  const folge = !f ? `<button class="btn" id="folgeNeu">+ Folgeaufgabe, die immer gilt</button>`
+    : `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Folgeaufgabe, die immer gilt</div>
+      ${folgeFelder(f, 'ff')}
       <label class="field"><span>Entsteht</span><select id="folgeNach">
         <option value="">beim Erledigen</option>${l.map((x, i) =>
           `<option value="${esc(x.id)}"${ab.folgeNach === x.id ? ' selected' : ''}>nach Schritt ${i + 1}: ${esc(schrittText(x))}</option>`).join('')}</select></label>
       <button class="btn" id="folgeAblauf">${ablaufHat(f.ablauf) ? `Ablauf der Folgeaufgabe (${(f.ablauf.schritte || []).length} ${
         (f.ablauf.schritte || []).length === 1 ? 'Schritt' : 'Schritte'}${f.ablauf.folge ? ', mit Folgeaufgabe' : ''})` : '+ Ablauf der Folgeaufgabe'}</button>
       <button class="btn ghost klein" id="folgeWeg" style="margin-top:10px">Folgeaufgabe entfernen</button></div>`;
+  /* Oben die Angaben der Folgeaufgabe, deren Ablauf hier bearbeitet wird. */
+  const kopf = z.f ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Folgeaufgabe</div>${folgeFelder(z.f, 'zf')}
+      ${z.weg ? '<button class="btn ghost klein" id="zweigWeg" style="margin-top:6px">Aus dem Zweig entfernen</button>' : ''}</div>
+      <div class="eyebrow">Ihr Ablauf</div>` : '';
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">${esc(z.titel)} ${iPl.knopf}</div>${iPl.text}`
     + (ablaufStapel.length ? `<p class="muted small" style="margin:-4px 0 10px">Folgeaufgabe von „${esc(ablaufStapel[ablaufStapel.length - 1].titel)}“</p>` : '')
-    + l.map(karte).join('')
+    + kopf + l.map(karte).join('')
     + `<button class="btn" id="schrittNeu" style="margin-bottom:14px">+ Schritt</button>` + folge;
   const neu = () => { renderAblauf(); };
   box.querySelectorAll('[data-f]').forEach(el => el.oninput = () => { l[+el.dataset.i][el.dataset.f] = el.value; sichern(); });
-  box.querySelectorAll('[data-art]').forEach(b => b.onclick = () => { l[+b.dataset.i].art = b.dataset.art; sichern(); neu(); });
+  box.querySelectorAll('[data-art]').forEach(b => b.onclick = () => {
+    const x = l[+b.dataset.i];
+    x.art = b.dataset.art;
+    if(x.art === 'frage' && !(x.antworten || []).length)
+      x.antworten = [{id:neueId(), text:'Ja', folgen:[]}, {id:neueId(), text:'Nein', folgen:[]}];
+    sichern(); neu();
+  });
   box.querySelectorAll('[data-hoch]').forEach(b => b.onclick = () => { const i = +b.dataset.hoch; [l[i - 1], l[i]] = [l[i], l[i - 1]]; sichern(); neu(); });
   box.querySelectorAll('[data-runter]').forEach(b => b.onclick = () => { const i = +b.dataset.runter; [l[i + 1], l[i]] = [l[i], l[i + 1]]; sichern(); neu(); });
   box.querySelectorAll('[data-weg]').forEach(b => b.onclick = () => {
-    const x = l.splice(+b.dataset.weg, 1)[0];
-    if(x && ab.folgeNach === x.id) ab.folgeNach = '';
-    sichern(); neu();
+    const x = l[+b.dataset.weg];
+    const mehr = x && x.art === 'frage' && (x.antworten || []).some(o => (o.folgen || []).length);
+    const weg = () => { l.splice(+b.dataset.weg, 1); if(x && ab.folgeNach === x.id) ab.folgeNach = ''; sichern(); neu(); };
+    if(mehr) frage('Entscheidung entfernen', 'Die Entscheidung und alle Folgeaufgaben ihrer Zweige werden entfernt.', 'Entfernen', weg);
+    else weg();
   });
+  /* Antworten und ihre Zweige (v1.158). */
+  const antwort = el => l[+el.dataset.i].antworten[+el.dataset.j];
+  box.querySelectorAll('[data-at]').forEach(el => el.oninput = () => { antwort(el).text = el.value; sichern(); });
+  box.querySelectorAll('[data-aneu]').forEach(b => b.onclick = () => {
+    const x = l[+b.dataset.i]; (x.antworten = x.antworten || []).push({id:neueId(), text:'', folgen:[]}); sichern(); neu();
+  });
+  box.querySelectorAll('[data-aweg]').forEach(b => b.onclick = () => {
+    const x = l[+b.dataset.i], o = antwort(b);
+    const weg = () => { x.antworten.splice(+b.dataset.j, 1); sichern(); neu(); };
+    if((o.folgen || []).length) frage('Antwort entfernen', `„${o.text || 'Antwort'}“ und ihre Folgeaufgaben werden entfernt.`, 'Entfernen', weg);
+    else weg();
+  });
+  box.querySelectorAll('[data-fneu]').forEach(b => b.onclick = () => {
+    const o = antwort(b), f2 = folgeNeu();
+    (o.folgen = o.folgen || []).push(f2); sichern();
+    ablaufTiefer(z, f2, () => { o.folgen = o.folgen.filter(y => y !== f2); });
+  });
+  box.querySelectorAll('[data-fo]').forEach(b => b.onclick = () => {
+    const o = antwort(b), f2 = o.folgen[+b.dataset.k];
+    ablaufTiefer(z, f2, () => { o.folgen = o.folgen.filter(y => y !== f2); });
+  });
+  if(z.f){
+    folgeBinden(z.f, 'zf');
+    if($('#zweigWeg')) $('#zweigWeg').onclick = () => frage('Folgeaufgabe entfernen',
+      `„${z.f.titel || 'Folgeaufgabe'}“ und ihr Ablauf werden aus dem Zweig entfernt.`, 'Entfernen', () => { z.weg(); sichern(); zurueck(); });
+  }
   $('#schrittNeu').onclick = () => { l.push({id:neueId(), art:'link', text:''}); sichern(); neu(); };
-  if($('#folgeNeu')) $('#folgeNeu').onclick = () => { ab.folge = {titel:'', tage:7, wichtig:'normal', text:'', ablauf:null}; sichern(); neu(); };
+  if($('#folgeNeu')) $('#folgeNeu').onclick = () => { ab.folge = folgeNeu(); sichern(); neu(); };
   if(!f) return;
-  $('#folgeTitel').oninput = e => { f.titel = e.target.value; sichern(); };
-  $('#folgeTage').oninput = e => { f.tage = Math.max(0, Math.round(+e.target.value || 0)); sichern(); };
-  $('#folgeText').oninput = e => { f.text = e.target.value; sichern(); };
+  folgeBinden(f, 'ff');
   $('#folgeNach').onchange = e => { ab.folgeNach = e.target.value; sichern(); };
-  box.querySelectorAll('[data-fw]').forEach(b => b.onclick = () => {
-    f.wichtig = b.dataset.fw;
-    box.querySelectorAll('[data-fw]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-    sichern();
-  });
-  $('#folgeAblauf').onclick = () => {
-    if(!f.ablauf) f.ablauf = {schritte:[], folge:null, folgeNach:''};
-    ablaufStapel.push(z);
-    ablaufZiel = {a, ab:f.ablauf, titel:f.titel || 'Folgeaufgabe'};
-    renderAblauf(); bildNach(0);
-  };
+  $('#folgeAblauf').onclick = () => ablaufTiefer(z, f, null);
   $('#folgeWeg').onclick = () => frage('Folgeaufgabe entfernen',
     `„${f.titel || 'Folgeaufgabe'}“ und ihr Ablauf werden entfernt.`, 'Entfernen', () => { ab.folge = null; ab.folgeNach = ''; sichern(); neu(); });
 }
@@ -6612,12 +6751,13 @@ function renderAufgabe(){
       AUFG.push(folge); a.folge = folge.id;
       saveAufg();
       toast(fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · wieder fällig ${dText(folge.frist)}`);
-      zurueck(); ablaufFolgeFragen(a, a.erledigt, tFragen);
+      zurueck(); ablaufErledigen(a, a.erledigt, tFragen);
       return;
     }
     saveAufg(); stoerAusAufgabe(a, 'erledigt'); toast('Als erledigt vermerkt'); zurueck();
-    /* Folgeaufgabe aus dem Ablauf (v1.157) – spätestens beim Erledigen. */
-    ablaufFolgeFragen(a, a.erledigt, tFragen);
+    /* Entscheidungen und Folgeaufgaben aus dem Ablauf (v1.157, v1.158) –
+       spätestens beim Erledigen. */
+    ablaufErledigen(a, a.erledigt, tFragen);
   };
   if($('#aufgWieder')) $('#aufgWieder').onclick = () => {
     /* Eine noch unberührte Folgeaufgabe geht mit zurück, sonst stünde der
@@ -6626,6 +6766,7 @@ function renderAufgabe(){
     if(f && !f.erledigt && !f.notiz && !f.vorbErledigt){ AUFG = AUFG.filter(x => x !== f); }
     delete a.folge;
     if(a.ablaufFolge === 'nein') delete a.ablaufFolge;   // dann darf wieder gefragt werden (v1.157)
+    Object.keys(a.ablaufFolgen || {}).forEach(k => { if(a.ablaufFolgen[k] === 'nein') delete a.ablaufFolgen[k]; });
     a.erledigt = ''; a.vermerk = ''; saveAufg(); stoerAusAufgabe(a, 'wieder'); renderAufgabe();
   };
   /* Nur eigene Aufgaben lassen sich löschen. Ein Mangel gehört zum Nachweis und

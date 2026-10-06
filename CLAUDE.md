@@ -212,6 +212,15 @@ steht.
   Kette. Wiederkehrende geben den Ablauf an die nächste weiter.
 - Seite `ablauf` (`ablaufOeffnen`, `renderAblauf`); Folgeaufgaben öffnen
   ihren Ablauf auf derselben Seite, `ablaufStapel` + `zurueck` gehen hoch.
+- Zweige (v1.158, Jean): Schritt `art:'frage'` mit `antworten:[{id, text,
+  folgen:[Folge]}]`, Folge = `{id, titel, tage, wichtig, text, ablauf}`.
+  Gewählt: `a.ablaufAntwort[Schritt-id]`, je Zweig-Folge `a.ablaufFolgen[id]`
+  (id | 'nein'). `antwortSetzen`/`zweigFragen`/`folgeAnlegenFragen`;
+  `ablaufErledigen` fragt offene Entscheidungen (`wahlFenster`, „Offen
+  lassen“), dann Zweige, dann die Folge „die immer gilt“ (`ab.folge`).
+  Mehrere Entscheidungen je Ablauf, mehrere Folgen je Antwort; Zweige laufen
+  nicht zusammen (Jean). Folge eines Zweigs bearbeitet `ablaufTiefer` (oben
+  ihre Angaben, `z.f`/`z.weg`). Selbsttätige Bedingungen kommen mit Etappe 2.
 - Etappe 2 (vereinbart): Runden der Nachweise, Sprinkler, Akkutausch,
   Wetterregeln; dann gehört der Ablauf an die Tätigkeit (`TAET.t[key]`).
 
