@@ -323,7 +323,8 @@ steht.
   (leer = alle). Editor: `wetterAktionFelder`/`abfallAktionFelder`.
 - Wann „vor Abholung“: Ziel `{stufe, abfall, vor}` (`vorAbholung`,
   `abholungVor`, in `zielDatum`/`wannText`); erste Abholung der Art, deren
-  Tag minus `vor` ≥ Basis; sonst die Basis selbst.
+  Tag minus `vor` ≥ Basis; sonst die Basis selbst. Kein Arbeitstag →
+  `wirksamerTag` davor, nie vor der Basis (v1.173, Jean).
 - Vereinbart als Nächstes (Jean, Baustein 2): Wetterregeln werden
   „Auslöser“ unter Übersicht › Abläufe, mit Abfall-Bedingung und „Dann:
   Ablauf starten“, Vorgabe „vorschlagen“. Danach Baustein 3: Ergebnis mit

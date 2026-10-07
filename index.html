@@ -10,6 +10,9 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.173 07.10.2026 „vor Abholung“ (Jean): fällt der Tag auf ein
+         Wochenende, einen Feiertag oder einen Tag der Abwesenheit, wird die
+         Folge am letzten Arbeitstag davor fällig.
   v1.172 07.10.2026 Abläufe (Jean): „Hilfen“ heißen jetzt „Aktionen“. Neu
          sind die Aktionen Wetter und Abfall: sie zeigen auf der Aufgabe den
          Stand von jetzt (z. B. „Regen am meisten 14 mm (nächste 3 Tage) ✓“
@@ -3512,7 +3515,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.172';
+const VERSION = 'v1.173';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6290,7 +6293,11 @@ function abholungVor(art, vor, basis){
      hilft das erste Wort. */
   if(art && !l.length){ const w = art.toLowerCase().split(/\s+/)[0]; l = ABFALL.termine.filter(t => t.art.toLowerCase().includes(w)); }
   const t = l.find(x => tagPlus(x.tag, -n) >= basis);
-  return t ? tagPlus(t.tag, -n) : '';
+  if(!t) return '';
+  /* Kein Arbeitstag (Wochenende, Feiertag, abwesend)? Dann der letzte davor,
+     aber nicht vor der Basis (v1.173, Jean). */
+  const w = wirksamerTag(alsDatum(tagPlus(t.tag, -n)), alsDatum(basis)).tag;
+  return w ? isoTag(w) : basis;
 }
 const zielDatum = (basis, z) => datumWahl(z) ? basis
   : vorAbholung(z) ? abholungVor(z.abfall, z.vor, basis.slice(0, 10)) || basis
