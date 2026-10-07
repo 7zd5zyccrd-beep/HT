@@ -325,10 +325,20 @@ steht.
   `abholungVor`, in `zielDatum`/`wannText`); erste Abholung der Art, deren
   Tag minus `vor` ≥ Basis; sonst die Basis selbst. Kein Arbeitstag →
   `wirksamerTag` davor, nie vor der Basis (v1.173, Jean).
-- Vereinbart als Nächstes (Jean, Baustein 2): Wetterregeln werden
-  „Auslöser“ unter Übersicht › Abläufe, mit Abfall-Bedingung und „Dann:
-  Ablauf starten“, Vorgabe „vorschlagen“. Danach Baustein 3: Ergebnis mit
-  Bedingung, die App wählt es selbst oder schlägt es vor.
+- Auslöser (v1.174, Jean): die Wetterregeln heißen sichtbar „Auslöser“,
+  Liste `renderWetterregeln` in `#ausloeserBox` auf Übersicht › Abläufe (auf
+  der Wetterseite nur ein Verweis). Intern weiter `CFG.wetterEigen`,
+  `regel…`, `HINWEISE`. Größe `abfuhr` (quelle 'abfall', `b.abfall`, Fenster
+  `b.tage` ab heute) liefert `ereignis` = Abholtag → Schlüssel je Abholung.
+  `r.dann` 'aufgabe'|'ablauf' mit `r.plan` (`hinweisAufgabe` legt die erste
+  Stufe an), `dannText`. Neue Auslöser `modus:'vorschlag'`. Ohne Wetter
+  prüfen nur die eigenen (`mitWetter`). `hinweisFrist` 'vorher' →
+  `wirksamerTag`. Karte auf der Startseite: „Vorschläge“.
+- Achtung: `eigeneRegeln()` gibt eine Abbildung zurück – nie darauf `push`en
+  (bis v1.173 gingen so neue eigene Regeln verloren), sondern
+  `CFG.wetterEigen`.
+- Als Nächstes (vereinbart): Baustein 3 – Ergebnis mit Bedingung, die App
+  wählt es selbst oder schlägt es vor.
 
 ## Suche (v1.145)
 

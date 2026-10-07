@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.174 07.10.2026 Auslöser (Jean): die Wetterregeln heißen „Auslöser“
+         und stehen unter Übersicht › Abläufe (unter Wetter ein Verweis).
+         Neue Bedingung „Abfuhr“: eine Abholung aus dem Abfallkalender in den
+         nächsten Tagen, wahlweise nur einer Abfallart – je Abholung genau
+         einmal. Neu bei „Dann“: „Ablauf starten“ statt einer einzelnen
+         Aufgabe. Neue Auslöser schlagen erst vor (umstellbar auf „gleich
+         anlegen“). „Fällig am Tag vorher“ rückt auf den letzten Arbeitstag.
+         Die Karte auf der Startseite heißt „Vorschläge“. Behoben: ein neu
+         angelegter eigener Auslöser (früher „eigene Wetterregel“) wurde
+         nicht gespeichert.
   v1.173 07.10.2026 „vor Abholung“ (Jean): fällt der Tag auf ein
          Wochenende, einen Feiertag oder einen Tag der Abwesenheit, wird die
          Folge am letzten Arbeitstag davor fällig.
@@ -3515,7 +3525,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.173';
+const VERSION = 'v1.174';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4782,7 +4792,7 @@ function go(name, push = true){
                           : name === 'taet' && taetAktiv ? taetAktiv.name
                           : name === 'wregel' && regelAktiv ? (regelAktiv.startsWith('eigen:')
                               /* Der Titel steht unter „Dann“; in der Kopfzeile bräche er um (v1.78). */
-                              ? (eigeneRegel(regelAktiv.slice(6)) ? 'Regel' : 'Neue Regel')
+                              ? (eigeneRegel(regelAktiv.slice(6)) ? 'Auslöser' : 'Neuer Auslöser')
                               : hinweisRegel(regelAktiv).name) : TITEL[name];
   const start = name === 'home', bb = $('#btnBack');
   bb.innerHTML = start ? GEAR_SVG : '&#8592;';
@@ -6701,13 +6711,15 @@ function renderAblaeufe(){
         ${lauf.length ? `<div class="eyebrow" style="margin:8px 0 2px">Laufend</div>` + lauf.map(a =>
           `<button class="btn eintrag laufEintrag" data-aufg="${esc(a.id)}"><span class="etext">${esc(laufZeile(a))}</span></button>`).join('') : ''}</div>`;
     }).join('')
-    + `<button class="btn" id="ablaufNeu" style="margin-top:10px">+ Neuer Ablauf</button>`;
+    + `<button class="btn" id="ablaufNeu" style="margin-top:10px">+ Neuer Ablauf</button>`
+    + `<div id="ausloeserBox" style="margin-top:14px"></div>`;
   box.querySelectorAll('[data-pi]').forEach(b => b.onclick = () => planOeffnen(l[+b.dataset.pi].id));
   knoepfeVerdrahten(box);
   $('#ablaufNeu').onclick = () => {
     const p = {id:neueId(), name:'', stufen:[stufeNeu('')]};
     l.push(p); saveCfg(); planOeffnen(p.id);
   };
+  renderWetterregeln();
 }
 const HILFE_ZEICHEN = {link:'↗', tel:'✆', mail:'✉', haken:'☐', wetter:'☁', abfall:'♻'};
 /* Der ganze Ablauf auf einer Seite: je Aufgabe ihre Hilfen und „Wenn …“. */
@@ -6881,7 +6893,7 @@ function wetterAktionFelder(x, i){
     `<option value="${esc(w)}"${String(w) === String(wert) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
   const zahl = (f, wert) => `<input type="number" step="any" inputmode="decimal" data-wb="${i}" data-bf="${f}" value="${esc(wert)}" style="width:80px">`;
   const zeit = g.quelle !== 'trocken' && g.quelle !== 'warnung';
-  return `<label class="field"><span>Was</span>${wahl('groesse', WGROESSEN.map(y => [y.k, y.name]), b.groesse)}</label>
+  return `<label class="field"><span>Was</span>${wahl('groesse', WGROESSEN.filter(y => y.quelle !== 'abfall').map(y => [y.k, y.name]), b.groesse)}</label>
     ${g.quelle === 'lage' ? `<label class="field"><span>Wetterlage</span>${wahl('lage', WLAGEN.map(y => [y[0], y[1]]), b.lage)}</label>` : ''}
     ${g.quelle === 'warnung' ? `<label class="field"><span>Stichwort (freiwillig)</span><input data-wb="${i}" data-bf="stichwort" value="${esc(b.stichwort || '')}" placeholder="z. B. Frost"></label>` : ''}
     ${zeit ? `<div class="field"><span>Zeitraum</span><div class="row ablaufReihe wAkt">${wahl('richtung', [['voraus', 'nächste'], ['zurueck', 'letzte']], b.richtung)}
@@ -10785,7 +10797,7 @@ function setWetter(box){
   $('#wZurAdresse').onclick = () => setOeffnen('adresse');
   wetterEinstAnhaengen(box);
   box.insertAdjacentHTML('beforeend',
-    `<p class="muted small" style="margin:18px 0 0">Die Ereignisregeln stehen auf der Startseite unter „Übersicht › Wetter“, unter der Vorhersage.</p>`);
+    `<p class="muted small" style="margin:18px 0 0">Die Auslöser, die aus dem Wetter Aufgaben machen, stehen auf der Startseite unter „Übersicht › Abläufe“.</p>`);
 }
 
 /* ---------- Online-Dienste: Adresse (v1.170) -------------------------------
@@ -11899,10 +11911,14 @@ function hinweisPruefen(r, reihen){
 }
 /* Alle offenen Vorschläge. */
 function wetterHinweise(){
-  if(!CFG.wetter || !wetterDaten()) return [];
+  /* Seit v1.174 auch ohne Wetter: eigene Auslöser können am Abfallkalender
+     hängen. Die Regeln ab Werk brauchen das Wetter. */
+  const mitWetter = !!(CFG.wetter && wetterDaten());
+  if(!mitWetter && !ABFALL.termine.length) return [];
   const reihen = hinweisReihen(), jetzt = Date.now(), raus = [];
   alleRegeln().forEach(r => {
     if(r.aus || r.modus === 'sofort') return;                    // legt selbst an
+    if(!r.eigen && !mitWetter) return;
     if(AUFG.some(a => !a.erledigt && a.regel === r.k)) return;   // noch offen aus derselben Regel
     const tr = regelPruefen(r, reihen);
     if(!tr) return;
@@ -11924,8 +11940,11 @@ function wetterHinweise(){
 function hinweisFrist(r, zeit){
   if(r.fristArt === 'heute') return heute();
   if(r.fristArt === 'vorher'){
-    const vor = isoTag(new Date(tagAnfang(new Date(zeit)).getTime() - TAG_MS));
-    return vor > heute() ? vor : heute();
+    const vor = tagPlus(isoTag(new Date(zeit)), -1);
+    if(vor <= heute()) return heute();
+    /* Kein Arbeitstag? Dann der letzte davor, frühestens heute (v1.174). */
+    const w = wirksamerTag(alsDatum(vor), alsDatum(heute())).tag;
+    return w ? isoTag(w) : heute();
   }
   return tagPlus(heute(), Math.max(0, Math.round(r.tage) || 0));
 }
@@ -11933,9 +11952,9 @@ function hinweisFrist(r, zeit){
 function hinweisKarte(liste){
   if(!liste.length) return '';
   return `<div class="card">
-    <div class="eyebrow" style="margin:0 0 6px">Wetter-Hinweise</div>
+    <div class="eyebrow" style="margin:0 0 6px">Vorschläge</div>
     ${liste.map(h => `<div class="hzeile">
-      <p style="margin:0 0 2px"><b>${esc(h.regel.titel)}</b></p>
+      <p style="margin:0 0 2px"><b>${esc(dannText(h.regel))}</b></p>
       <p class="muted small" style="margin:0 0 8px">${esc(h.grund)}</p>
       <div class="hknoepfe">
         <button class="btn ghost klein" data-hja="${esc(h.schluessel)}">Übernehmen</button>
@@ -11956,11 +11975,16 @@ function hinweisBeantwortet(schluessel, uebernommen){
   renderHome();
 }
 function hinweisAufgabe(r, tr){
-  const a = {id:neueId(), art:'eigen', quelle:'', k:'', anlage:'', punkt:'', titel:r.titel, text:'',
-    notiz:`${r.eigen ? 'Wetterregel' : 'Wetter-Hinweis'}: ${tr.grund}`, zeitraum:'', festgestellt:'', angelegt:heute(),
+  const a = {id:neueId(), art:'eigen', quelle:'', k:'', anlage:'', punkt:'', titel:r.titel || 'Aufgabe', text:'',
+    notiz:`${r.eigen ? 'Auslöser' : 'Wetter-Hinweis'}: ${tr.grund}`, zeitraum:'', festgestellt:'', angelegt:heute(),
     frist:hinweisFrist(r, tr.zeit), wichtig:r.wichtig, erneut:[], erledigt:'', vermerk:'',
     regel:r.k, ereignis:tr.schluessel};
   if(r.profil) a.wetter = r.profil;
+  /* „Ablauf starten“ (v1.174): die erste Aufgabe des Ablaufs. Gibt es ihn
+     nicht mehr, bleibt es eine einfache Aufgabe. */
+  const p = r.dann === 'ablauf' ? planVon(r.plan) : null, s = p && (p.stufen || [])[0];
+  if(s) Object.assign(a, {titel:s.titel || 'Aufgabe', wichtig:s.wichtig || 'normal', plan:p.id, stufe:s.id, kette:a.id,
+    notiz:[s.notiz, a.notiz].filter(Boolean).join('\n')});
   return a;
 }
 function hinweisUebernehmen(h){
@@ -11972,11 +11996,13 @@ function hinweisUebernehmen(h){
    die neue Aufgabe im selben Aufbau erscheint; gespeichert wird hier ohne
    Listennachzug, der Aufbau läuft ja gerade. */
 function wetterRegelnAnwenden(){
-  if(!CFG.wetter || !wetterDaten()) return;
+  const mitWetter = !!(CFG.wetter && wetterDaten());
+  if(!mitWetter && !ABFALL.termine.length) return;
   const reihen = hinweisReihen();
   let neu = 0;
   alleRegeln().forEach(r => {
     if(r.aus || r.modus !== 'sofort') return;
+    if(!r.eigen && !mitWetter) return;
     if(AUFG.some(a => !a.erledigt && a.regel === r.k)) return;
     const tr = regelPruefen(r, reihen);
     if(!tr) return;
@@ -11990,24 +12016,31 @@ function wetterRegelnAnwenden(){
   if(!neu) return;
   Store.set('nwAufg', AUFG);
   Store.set('nwHinweise', HINWEISE);
-  toast(neu === 1 ? 'Aufgabe aus einer Wetterregel angelegt' : `${neu} Aufgaben aus Wetterregeln angelegt`);
+  toast(neu === 1 ? 'Aufgabe aus einem Auslöser angelegt' : `${neu} Aufgaben aus Auslösern angelegt`);
 }
 
 /* Die Wetterregeln (v1.55): erst die Liste, dann je Regel eine eigene Seite.
    Die Liste steht seit v1.76 unten in „Wetter“ statt in einer eigenen Ansicht. */
 let regelAktiv = '';
 function renderWetterregeln(){
-  const box = $('#wetterRegeln');
+  /* Auf der Wetterseite nur noch der Weg zu den Auslösern (v1.174). */
+  const wbox = $('#wetterRegeln');
+  if(wbox){
+    wbox.innerHTML = `<div class="eyebrow">Auslöser</div><p class="muted small" style="margin:0 0 8px">Was aus Wetter und Abfuhrterminen Aufgaben macht, steht unter Übersicht › Abläufe.</p>
+      <button class="btn ghost klein" id="zuAusloesern">Zu den Auslösern</button>`;
+    $('#zuAusloesern').onclick = () => go('ablaeufe');
+  }
+  const box = $('#ausloeserBox');
   if(!box) return;
-  const i = info('Regeln machen aus dem Wetter Aufgaben. Eine Regel schlägt entweder vor – dann steht sie auf der Startseite unter „Wetter-Hinweise“ – oder sie legt die Aufgabe gleich an. Schwellen, Text, Wichtigkeit und Fälligkeit stehen in der Regel selbst.', 'margin:-2px 0 10px');
+  const i = info('Auslöser machen aus Wetter und Abfuhrterminen Aufgaben oder starten einen Ablauf. Einer schlägt entweder vor – dann steht er auf der Startseite unter „Vorschläge“ – oder er legt gleich an. Geprüft wird beim Öffnen der App.', 'margin:-2px 0 10px');
   const zeile = r => `<button class="btn eintrag" data-regel="${esc(r.k)}"><span>${esc(r.name)}</span><span class="zahl">${
     r.aus ? 'aus' : r.modus === 'sofort' ? 'legt gleich an' : 'schlägt vor'}</span></button>`;
   const eigene = eigeneRegeln().map(eigenAlsRegel);
-  box.innerHTML = `<div class="eyebrow mitInfo">Eigene Wetterregeln ${i.knopf}</div>${i.text}`
-    + `<button class="btn ghost klein" id="regelPlus" style="margin:0 0 10px">+ Regel hinzufügen</button>`
+  box.innerHTML = `<div class="eyebrow mitInfo">Auslöser ${i.knopf}</div>${i.text}`
     + (eigene.length ? eigene.map(zeile).join('')
-        : `<p class="muted small" style="margin:0 0 10px">Noch keine eigene Regel.</p>`)
-    + `<div class="eyebrow">Wetterregeln ab Werk</div>`
+        : `<p class="muted small" style="margin:0 0 10px">Noch kein eigener Auslöser.</p>`)
+    + `<button class="btn ghost klein" id="regelPlus" style="margin:0 0 10px">+ Auslöser</button>`
+    + `<div class="eyebrow">Wetter ab Werk</div>`
     + HINWEIS_STD.map(std => zeile(hinweisRegel(std.k))).join('');
   /* Seit v1.73 auch von hier aus, nicht nur über „+ Aufgabe hinzufügen“. */
   $('#regelPlus').onclick = () => eigenRegelNeu('');
@@ -12041,7 +12074,7 @@ function setRegel(box, k){
     <div class="field segfeld"><span>Regel</span><div class="seg">
       <button type="button" data-an="1" aria-pressed="${!r.aus}">Ein</button>
       <button type="button" data-an="0" aria-pressed="${!!r.aus}">Aus</button></div></div>
-    <div class="field segfeld"><span>Wenn die Regel auslöst</span><div class="seg">
+    <div class="field segfeld"><span>Wenn er auslöst</span><div class="seg">
       <button type="button" data-modus="vorschlag" aria-pressed="${r.modus !== 'sofort'}">Vorschlagen</button>
       <button type="button" data-modus="sofort" aria-pressed="${r.modus === 'sofort'}">Gleich anlegen</button></div></div>
     <label class="field"><span>Aufgabe</span><input id="regTitel" value="${esc(r.titel)}"></label>
@@ -12159,7 +12192,10 @@ const WGROESSEN = [
   {k:'feuchte',   name:'Luftfeuchte',                  einheit:'%',     quelle:'stunde',   feld:'relative_humidity_2m',dauer:'stunden'},
   {k:'boden',     name:'Bodentemperatur',              einheit:'°C',    quelle:'stunde',   feld:'soil_temperature_0cm',dauer:'stunden'},
   {k:'lage',      name:'Wetterlage',                   einheit:'',      quelle:'lage',     dauer:'stunden'},
-  {k:'warnung',   name:'Amtliche Warnung',             einheit:'',      quelle:'warnung'}
+  {k:'warnung',   name:'Amtliche Warnung',             einheit:'',      quelle:'warnung'},
+  /* Abfuhr aus dem Abfallkalender (v1.174): eine Abholung in den nächsten n
+     Tagen (heute mitgezählt), wahlweise nur einer Abfallart. */
+  {k:'abfuhr',    name:'Abfuhr (Abfallkalender)',      einheit:'',      quelle:'abfall'}
 ];
 const WLAGEN = [['gewitter', 'Gewitter', [95, 96, 99]], ['hagel', 'Hagel', [96, 99]],
   ['eis', 'Eisregen', [56, 57, 66, 67]], ['schnee', 'Schnee', [71, 73, 75, 77, 85, 86]],
@@ -12190,11 +12226,11 @@ const faelleOk = (r, ergebnisse) => regelFaelle(r).some(fall => fall.every(({i})
 const eigeneRegeln = () => (Array.isArray(CFG.wetterEigen) ? CFG.wetterEigen : (CFG.wetterEigen = [])).map(faelleOrdnen);
 const eigeneRegel = id => eigeneRegeln().find(r => r.id === id);
 function bedingungStd(fall = 0){
-  return {groesse:'tmaxMittel', vgl:'unter', wert:5, lage:'gewitter', stichwort:'',
+  return {groesse:'tmaxMittel', vgl:'unter', wert:5, lage:'gewitter', stichwort:'', abfall:'',
           richtung:'zurueck', tage:7, dauer:1, fall};
 }
 function regelStd(titel){
-  return {id:neueId(), eigen:true, aus:false, modus:'sofort', bed:[bedingungStd()],
+  return {id:neueId(), eigen:true, aus:false, modus:'vorschlag', dann:'aufgabe', plan:'', bed:[bedingungStd()],
           saisonVon:1, saisonBis:12, proSaison:0, ruhe:14,
           titel:titel || '', wichtig:'normal', fristArt:'tage', tage:2, profil:''};
 }
@@ -12239,6 +12275,15 @@ function bedPruefen(b, reihen){
   const fenster = `${b.richtung === 'voraus' ? 'nächste' : 'letzte'} ${n} Tage`;
   const fensterGen = `${b.richtung === 'voraus' ? 'nächsten' : 'letzten'} ${n} Tage`;
   const nix = {ok:false, text:`${g.name}: keine Daten`, zeit:0};
+  if(g.quelle === 'abfall'){
+    if(!ABFALL.termine.length) return {ok:false, text:'Kein Abfallkalender eingerichtet', zeit:0};
+    const h = heute(), bis = tagPlus(h, n);
+    const t = ABFALL.termine.find(x => x.tag >= h && x.tag <= bis && (!b.abfall || x.art === b.abfall));
+    /* ereignis = Tag der Abholung: je Abholung genau ein Vorschlag. */
+    return t ? {ok:true, text:`${t.art} ${abfallDatum(t.tag)}${abfallWann(t.tag) ? ` (${abfallWann(t.tag)})` : ''}`,
+                zeit:alsDatum(t.tag).getTime() + 6 * 3600000, ereignis:t.tag}
+             : {ok:false, text:`keine Abfuhr${b.abfall ? ` von ${b.abfall}` : ''} bis ${dText(bis)}`, zeit:0};
+  }
   if(g.quelle === 'warnung'){
     const wort = String(b.stichwort || '').trim().toUpperCase();
     const w = reihen.warn.find(x => !wort || warnPasst(x, new RegExp(wort.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))));
@@ -12343,7 +12388,8 @@ function eigenPruefen(r, reihen){
     .flat().map(({i}) => ergebnisse[i]);
   if(!treffer.length) return null;
   const zeiten = treffer.map(e => e.zeit).filter(t => t > Date.now());
-  return {schluessel:`eigen:${r.id}@${heute()}`,
+  const ereignis = treffer.map(e => e.ereignis).filter(Boolean).sort()[0];
+  return {schluessel:`eigen:${r.id}@${ereignis || heute()}`,
           zeit:zeiten.length ? Math.min(...zeiten) : Date.now(),
           grund:[...new Set(treffer.map(e => e.text))].join(' · ')};
 }
@@ -12356,7 +12402,7 @@ function regelStandSetzen(r){
 }
 /* Eine eigene Regel im selben Gewand wie eine Regel ab Werk. */
 function eigenAlsRegel(r){
-  return Object.assign({}, r, {k:'eigen:' + r.id, name:r.titel || 'Eigene Regel',
+  return Object.assign({}, r, {k:'eigen:' + r.id, name:r.dann === 'ablauf' ? dannText(r) : r.titel || 'Eigener Auslöser',
     wert:() => 0, werte:[]});
 }
 /* Alle Regeln, eigene zuerst. */
@@ -12369,12 +12415,18 @@ function regelPruefen(r, reihen){
 }
 
 /* ---- Der Satz unter den Karten und die Probe aufs Exempel ---- */
+const abfuhrFenster = b => { const n = Math.max(1, Math.round(b.tage) || 1);
+  return n === 1 ? 'bis morgen' : `in den nächsten ${n} Tagen`; };
+/* Was nach dem Auslösen geschieht, in Worten (v1.174). */
+const dannText = r => r.dann === 'ablauf'
+  ? `Ablauf „${(planVon(r.plan) || {}).name || '?'}“ starten` : r.titel || 'Aufgabe ohne Titel';
 function bedSatz(b){
   const g = groesse(b.groesse);
   const fenster = `${b.richtung === 'voraus' ? 'in den nächsten' : 'in den letzten'} ${Math.max(1, Math.round(b.tage) || 1)} Tagen`;
   const dauer = g.dauer && Math.round(b.dauer) > 1
     ? `, ${Math.round(b.dauer)} ${g.dauer === 'tage' ? 'Tage' : 'Stunden'} in Folge` : '';
   if(g.quelle === 'warnung') return `eine amtliche Warnung${b.stichwort ? ` mit „${b.stichwort}“` : ''} gilt`;
+  if(g.quelle === 'abfall') return `${b.abfall || 'irgendein Abfall'} ${abfuhrFenster(b)} abgeholt wird`;
   if(g.quelle === 'trocken') return `es seit ${b.vgl === 'unter' ? 'weniger als' : 'mindestens'} ${Math.max(0, +b.wert)} Tagen trocken ist`;
   if(g.quelle === 'lage') return `${lageNamen(b.lage)} ${fenster} vorkommt${dauer}`;
   return `${g.name} ${fenster} ${b.vgl === 'unter' ? 'unter' : 'ab'} ${mmText(+b.wert)} ${g.einheit} liegt${dauer}`;
@@ -12386,6 +12438,7 @@ function bedKurz(b){
   const dauer = g.dauer && Math.round(b.dauer) > 1
     ? `, ${Math.round(b.dauer)} ${g.dauer === 'tage' ? 'Tage' : 'Stunden'} in Folge` : '';
   if(g.quelle === 'warnung') return `Amtliche Warnung${b.stichwort ? ` mit „${b.stichwort}“` : ''}`;
+  if(g.quelle === 'abfall') return `Abfuhr${b.abfall ? ` von ${b.abfall}` : ''} ${abfuhrFenster(b)}`;
   if(g.quelle === 'trocken') return `Trocken seit ${b.vgl === 'unter' ? 'weniger als' : 'mindestens'} ${Math.max(0, +b.wert)} Tagen`;
   if(g.quelle === 'lage') return `${lageNamen(b.lage)}, ${fenster}${dauer}`;
   return `${g.name} ${b.vgl === 'unter' ? 'unter' : 'ab'} ${mmText(+b.wert)} ${g.einheit}, ${fenster}${dauer}`;
@@ -12399,13 +12452,14 @@ function regelSatz(r){
   const frist = r.fristArt === 'heute' ? 'fällig heute'
     : r.fristArt === 'vorher' ? 'fällig am Tag vor dem Ereignis'
     : `fällig in ${Math.max(0, Math.round(r.tage) || 0)} Tagen`;
-  return `Wenn ${wenn}${saison}${wie} → ${r.titel || 'Aufgabe ohne Titel'}, ${frist}`
+  return `Wenn ${wenn}${saison}${wie} → ${dannText(r)}, ${frist}`
     + `${r.profil ? `, Profil ${profilName(r.profil)}` : ''}`
     + `, ${r.modus === 'sofort' ? 'wird gleich angelegt' : 'wird vorgeschlagen'}.`;
 }
 function regelProbe(r){
-  if(!CFG.wetter) return 'Kein Standort festgelegt – ohne ihn kann nichts geprüft werden.';
-  if(!wetterDaten()) return 'Noch keine Wetterdaten.';
+  const nurAbfall = (r.bed || []).every(b => groesse(b.groesse).quelle === 'abfall');
+  if(!nurAbfall && !CFG.wetter) return 'Kein Standort festgelegt – ohne ihn kann nichts geprüft werden.';
+  if(!nurAbfall && !wetterDaten()) return 'Noch keine Wetterdaten.';
   const reihen = hinweisReihen();
   const e = (r.bed || []).map(b => bedPruefen(b, reihen));
   const ok = faelleOk(r, e);
@@ -12435,11 +12489,15 @@ function bedKarte(b, n, mehr){
         WLAGEN.map(l => `<option value="${l[0]}"${l[0] === b.lage ? ' selected' : ''}>${l[1]}</option>`).join('')}</select></div>`
       : g.quelle === 'warnung' ? `<div class="wgZeile wgBreit"><span>Stichwort der Warnung</span>
           <input data-f="stichwort" value="${esc(b.stichwort || '')}" placeholder="z. B. GLÄTTE, leer = jede"></div>`
+      : g.quelle === 'abfall' ? `<div class="wgZeile wgBreit"><span>Abfallart</span><select data-f="abfall"><option value="">jede</option>${
+          abfallArten().map(x => x.art).concat(b.abfall && !abfallArten().some(x => x.art === b.abfall) ? [b.abfall] : [])
+            .map(a => `<option value="${esc(a)}"${a === b.abfall ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select></div>`
+          + zeile('Zeitfenster', `nächste ${zahl('tage', b.tage, 'Tage')}`)
       : zeile('Vergleich', `<select data-f="vgl">
           <option value="ab"${b.vgl !== 'unter' ? ' selected' : ''}>ab</option>
           <option value="unter"${b.vgl === 'unter' ? ' selected' : ''}>unter</option>
         </select> ${zahl('wert', b.wert, g.einheit)}`)}
-    ${g.quelle === 'trocken' || g.quelle === 'warnung' ? ''
+    ${g.quelle === 'trocken' || g.quelle === 'warnung' || g.quelle === 'abfall' ? ''
       : zeile('Zeitfenster', `<select data-f="richtung">
           <option value="zurueck"${b.richtung !== 'voraus' ? ' selected' : ''}>letzte</option>
           <option value="voraus"${b.richtung === 'voraus' ? ' selected' : ''}>nächste</option>
@@ -12457,11 +12515,11 @@ function setEigenRegel(box, r, neu){
   if(regelSicht.id !== r.id) regelSicht = {id:r.id, bed:neu ? 0 : -1, dann:neu, oft:neu};
   const speichern = () => { if(!neu) saveCfg(); };
   const nochmal = () => setEigenRegel(box, r, neu);
-  const i = info('Die Regel löst aus, wenn einer der Fälle zutrifft; ein Fall trifft zu, wenn alle seine Bedingungen zutreffen. „+ und …“ fügt einem Fall eine Bedingung hinzu, „+ oder …“ einen neuen Fall. Ein Tipp auf eine Bedingung zeigt ihre Werte. ✓ und ✕ sind die Probe gegen die aktuellen Wetterdaten. Rückwärts reichen sie 30 Tage, vorwärts 10. Die Ruhezeit verhindert, dass ein tagelanger Zustand wie Trockenheit jeden Tag dieselbe Aufgabe erzeugt.', 'margin:-2px 0 10px');
+  const i = info('Die Regel löst aus, wenn einer der Fälle zutrifft; ein Fall trifft zu, wenn alle seine Bedingungen zutreffen. „+ und …“ fügt einem Fall eine Bedingung hinzu, „+ oder …“ einen neuen Fall. Ein Tipp auf eine Bedingung zeigt ihre Werte. ✓ und ✕ sind die Probe gegen die aktuellen Wetterdaten. Rückwärts reichen sie 30 Tage, vorwärts 10. Die Ruhezeit verhindert, dass ein tagelanger Zustand wie Trockenheit jeden Tag dieselbe Aufgabe erzeugt. Bei „Abfuhr“ gilt der Auslöser je Abholung einmal.', 'margin:-2px 0 10px');
   const seg = (feld, wahl) => `<div class="seg">${wahl.map(([w, t]) =>
     `<button type="button" data-seg="${feld}" data-wert="${w}" aria-pressed="${String(r[feld]) === String(w)}">${t}</button>`).join('')}</div>`;
   /* Die Probe je Bedingung – nur mit Standort und Daten. */
-  const reihen = CFG.wetter && wetterDaten() ? hinweisReihen() : null;
+  const reihen = (CFG.wetter && wetterDaten()) || ABFALL.termine.length ? hinweisReihen() : null;
   const erg = reihen ? r.bed.map(b => bedPruefen(b, reihen)) : null;
   const faelle = regelFaelle(r), mehr = faelle.length > 1;
   const zeichen = ok => !erg ? '' : ok ? '<span class="probe ja">✓</span>' : '<span class="probe nein">✕</span>';
@@ -12477,7 +12535,8 @@ function setEigenRegel(box, r, neu){
   const gesamt = erg ? (faelleOk(r, erg) ? 'trifft gerade zu ✓' : 'trifft gerade nicht zu') : '';
   const frist = r.fristArt === 'heute' ? 'fällig heute' : r.fristArt === 'vorher' ? 'fällig am Tag vorher'
     : `fällig in ${Math.max(0, Math.round(r.tage) || 0)} Tagen`;
-  const dann = [r.titel || 'ohne Titel', frist, r.modus === 'sofort' ? 'wird gleich angelegt' : 'wird vorgeschlagen'].join(' · ');
+  r.dann = r.dann === 'ablauf' ? 'ablauf' : 'aufgabe';
+  const dann = [dannText(r), frist, r.modus === 'sofort' ? 'wird gleich angelegt' : 'wird vorgeschlagen'].join(' · ');
   const ganz = (+r.saisonVon || 1) === 1 && (+r.saisonBis || 12) === 12;
   const oft = [r.aus ? 'Regel aus' : '', ganz ? 'ganzjährig' : `${MONATE_KURZ[(+r.saisonVon || 1) - 1]} bis ${MONATE_KURZ[(+r.saisonBis || 12) - 1]}`,
     +r.proSaison ? `höchstens ${+r.proSaison}× je Saison` : '', `Ruhezeit ${Math.max(0, Math.round(r.ruhe) || 0)} Tage`].filter(Boolean).join(' · ');
@@ -12488,19 +12547,23 @@ function setEigenRegel(box, r, neu){
 
     <div class="eyebrow">Dann</div>
     <details class="angaben" id="regDann"${regelSicht.dann ? ' open' : ''}><summary><span class="zfass">${esc(dann)}</span></summary>
-    <label class="field"><span>Titel</span><input id="regTitel" value="${esc(r.titel || '')}" placeholder="z. B. Junge Bäume wässern"></label>
-    <div class="field segfeld"><span>Wichtigkeit</span>${seg('wichtig', [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']])}</div>
+    <div class="field segfeld"><span>Dann</span>${seg('dann', [['aufgabe', 'Aufgabe anlegen'], ['ablauf', 'Ablauf starten']])}</div>
+    ${r.dann === 'ablauf' ? `<label class="field"><span>Ablauf</span><select id="regPlan"><option value="">– wählen –</option>${
+        plaeneListe().map(x => `<option value="${esc(x.id)}"${x.id === r.plan ? ' selected' : ''}>${esc(x.name || 'Ablauf')}</option>`).join('')}</select></label>
+      ${plaeneListe().length ? '' : '<p class="muted small" style="margin:-4px 0 10px">Noch kein Ablauf angelegt.</p>'}`
+    : `<label class="field"><span>Titel</span><input id="regTitel" value="${esc(r.titel || '')}" placeholder="z. B. Junge Bäume wässern"></label>
+    <div class="field segfeld"><span>Wichtigkeit</span>${seg('wichtig', [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']])}</div>`}
     ${gerahmt(r.fristArt === 'tage', `<div class="field segfeld"><span>Fällig</span>${seg('fristArt', [['tage', 'in x Tagen'], ['heute', 'heute'], ['vorher', 'Tag vorher']])}</div>
     ${r.fristArt === 'tage' ? `<label class="field"><span>Fällig in Tagen</span>
       <input type="number" step="1" class="schmal" data-r="tage" value="${esc(r.tage)}"></label>` : ''}`)}
     <label class="field"><span>Wetterprofil</span><select id="regProfil"><option value="">– keines –</option>${
       WETTER_PROFILE.map(([p, t]) => `<option value="${p}"${r.profil === p ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
-    <div class="field segfeld"><span>Wenn die Regel auslöst</span>${seg('modus', [['vorschlag', 'Vorschlagen'], ['sofort', 'Gleich anlegen']])}</div>
+    <div class="field segfeld"><span>Wenn er auslöst</span>${seg('modus', [['vorschlag', 'Vorschlagen'], ['sofort', 'Gleich anlegen']])}</div>
     </details>
 
     <div class="eyebrow">Wie oft</div>
     <details class="angaben" id="regOft"${regelSicht.oft ? ' open' : ''}><summary><span class="zfass">${esc(oft)}</span></summary>
-    ${neu ? '' : `<div class="field segfeld"><span>Regel</span>${seg('aus', [[false, 'Ein'], [true, 'Aus']])}</div>`}
+    ${neu ? '' : `<div class="field segfeld"><span>Auslöser</span>${seg('aus', [[false, 'Ein'], [true, 'Aus']])}</div>`}
     <div class="card wgKarte">
       <div class="wgZeile wgPaar"><span>Jahreszeit</span><span class="wgWerte">
         <select data-r="saisonVon" class="mon">${MONATS_WAHL(r.saisonVon)}</select> bis
@@ -12513,11 +12576,11 @@ function setEigenRegel(box, r, neu){
     </details>
 
     <div class="card">
-      <div class="eyebrow" style="margin:0 0 6px">So liest sich die Regel</div>
+      <div class="eyebrow" style="margin:0 0 6px">So liest sich der Auslöser</div>
       <p id="regSatz" style="margin:0 0 8px"></p>
       <p class="muted small" id="regProbe" style="margin:0"></p>
     </div>
-    ${neu ? `<button class="btn primary" id="regAnlegen">Regel anlegen</button>`
+    ${neu ? `<button class="btn primary" id="regAnlegen">Auslöser anlegen</button>`
           : `<div class="knopfzeile"><button class="btn danger klein" id="regWeg">Löschen</button></div>`}`;
   /* Zahlen und Texte bauen die Seite nicht neu auf (die Tastatur bliebe sonst
      nicht stehen) – Satz, Probe und Zusammenfassungen ziehen erst beim
@@ -12550,6 +12613,9 @@ function setEigenRegel(box, r, neu){
     karte.querySelectorAll('select[data-f]').forEach(f => f.onchange = () => {
       b[f.dataset.f] = f.value;
       if(f.dataset.f === 'groesse') Object.assign(b, {dauer:1});   // neue Größe, frische Dauer
+      /* Abfuhr (v1.174): je Abholung einmal – die Ruhezeit ab Werk (14 Tage)
+         ließe jede zweite Woche aus. */
+      if(f.dataset.f === 'groesse' && f.value === 'abfuhr'){ b.tage = 1; if(+r.ruhe === 14) r.ruhe = 0; }
       speichern(); nochmal();
     });
     karte.querySelectorAll('input[data-f]').forEach(f => f.onchange = () => {
@@ -12574,22 +12640,26 @@ function setEigenRegel(box, r, neu){
     f.value = String(r[feld]);
     speichern(); auffrischen();
   });
-  $('#regTitel').onchange = e => { r.titel = e.target.value.trim(); speichern(); auffrischen(); };
+  if($('#regTitel')) $('#regTitel').onchange = e => { r.titel = e.target.value.trim(); speichern(); auffrischen(); };
+  if($('#regPlan')) $('#regPlan').onchange = e => { r.plan = e.target.value; speichern(); nochmal(); };
   $('#regProfil').onchange = e => { r.profil = e.target.value; speichern(); auffrischen(); };
   if($('#regAnlegen')) $('#regAnlegen').onclick = () => {
-    if(!r.titel){ toast('Bitte einen Titel eintragen'); return; }
-    eigeneRegeln().push(r);
+    if(r.dann === 'ablauf' ? !planVon(r.plan) : !r.titel){ toast(r.dann === 'ablauf' ? 'Bitte einen Ablauf wählen' : 'Bitte einen Titel eintragen'); return; }
+    /* eigeneRegeln() liefert eine Abbildung, kein Original – ein push darauf
+       ging verloren, neue Regeln blieben ungespeichert (behoben v1.174). */
+    eigeneRegeln();
+    CFG.wetterEigen.push(r);
     saveCfg();
     regelEntwurf = null;
     regelAktiv = 'eigen:' + r.id;
-    toast('Regel angelegt');
+    toast('Auslöser angelegt');
     /* Kam der Weg über „+ Aufgabe hinzufügen“, gehört die Seite nicht mehr in
-       den Rückweg; kam er aus „Wetter“, stünde das sonst zweimal darin. */
-    if(stack[stack.length - 1] === 'aufgabe' || stack[stack.length - 1] === 'wetter') stack.pop();
-    go('wetter', false);
+       den Rückweg; seit v1.174 stehen die Auslöser unter Übersicht › Abläufe. */
+    if(stack[stack.length - 1] === 'aufgabe'){ stack.pop(); go('ablaeufe', false); }
+    else zurueck();
   };
   if($('#regWeg')) $('#regWeg').onclick = () =>
-    frage('Regel löschen', `„${r.titel || 'Die Regel'}“ wird gelöscht. Schon angelegte Aufgaben bleiben.`, 'Löschen', () => {
+    frage('Auslöser löschen', `„${dannText(r)}“ wird gelöscht. Schon angelegte Aufgaben bleiben.`, 'Löschen', () => {
       CFG.wetterEigen = eigeneRegeln().filter(x => x.id !== r.id);
       saveCfg();
       delete REGELSTAND[standSchluessel(r)];
