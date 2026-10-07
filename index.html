@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.164 07.10.2026 „Datum wählen“ einfacher (Jean): das Datumsfeld steht
+         gleich unter dem Ergebnis („→ Ausführung abnehmen am …“), auf der
+         Aufgabe wie im Fenster „Weiter“ – kein zweites Fenster mehr, dessen
+         „Abbrechen“ die Aufgabe trotzdem in die Liste gelegt hatte. Im
+         Fenster „Weiter“ entfällt „Danach als erledigt bestätigen“. Ein
+         Ergebnis ohne eigenen Namen heißt „Erledigt“ statt „Ergebnis“.
   v1.163 07.10.2026 „Datum“ bei Wann (Jean: jedes Mal ein anderes): im
          Ablauf wird nur noch festgelegt, dass ein Datum gewählt wird. Beim
          Erledigen steht „→ … · Datum wählen“; der Tipp auf das Ergebnis
@@ -3041,6 +3047,8 @@ a.ablaufSchritt{display:flex;align-items:center;justify-content:center;text-deco
 .ergebnisZiel{display:flex;align-items:center;gap:8px;margin-top:6px}
 .ergebnisZiel .small{flex:1;min-width:0}
 .ergFolge{margin-top:10px}
+.ergDatum{display:block;margin:0 0 8px}
+.ergDatum span{display:block;margin:0 0 4px}
 .schrittKarte{margin-bottom:8px}
 /* Störungen (v1.153): jede Zeile öffnet sich zum Bearbeiten. */
 .stoerEintrag{display:block;width:100%;text-align:left;background:none;border:0;font:inherit;color:inherit;cursor:pointer;-webkit-appearance:none;appearance:none}
@@ -3418,7 +3426,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.163';
+const VERSION = 'v1.164';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6175,9 +6183,11 @@ const zielDatum = (basis, z) => datumWahl(z) ? basis
 const datumKurz = iso => iso === heute() ? 'heute' : iso === tagPlus(heute(), 1) ? 'morgen' : dText(iso);
 const stufeNeu = titel => ({id:neueId(), titel:titel || '', wichtig:'normal', notiz:'', schritte:[], ergebnisse:[]});
 /* „in Ordnung → 1 Zustand prüfen (in 90 Tagen)“ – für Übersicht und Aufgabe. */
+/* Ein Ergebnis ohne eigenen Namen heißt auf dem Knopf „Erledigt“ (v1.164). */
+const ergName = e => { const t = String((e && e.text) || '').trim(); return t && t !== 'Ergebnis' ? t : 'Erledigt'; };
 function ergebnisText(p, e){
   const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
-  return `${e.text || 'Ergebnis'} → ${z.length ? z.map(x => `${stufeVon(p, x.stufe).titel || 'Aufgabe'} ${wannText(x)}`).join(' und ') : 'Ende'}`;
+  return `${ergName(e)} → ${z.length ? z.map(x => `${stufeVon(p, x.stufe).titel || 'Aufgabe'} ${wannText(x)}`).join(' und ') : 'Ende'}`;
 }
 /* Platzhalter in Adresse, Betreff und Text: {Datum}, {Objekt}, {Titel}. */
 const ablaufEinsetzen = (t, a) => String(t || '').replace(/\{(Datum|Objekt|Titel)\}/g, (_, w) =>
@@ -6308,14 +6318,27 @@ function ablaufStarten(a, neuZeichnen){
 function ergebnisseHtml(a){
   const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a);
   if(!p || !s || !(s.ergebnisse || []).length) return '';
-  return `<div class="ergebnisse">${s.ergebnisse.map((e, j) => {
-    const z = (e.ziele || []).map((x, i) => ({x, i, st:stufeVon(p, x.stufe)})).filter(y => y.st);
-    return `<div class="ergebnisBlock"><button class="btn ergebnisKnopf" data-erg="${j}">${esc(e.text || 'Ergebnis')}</button>
-      ${z.length ? z.map(y => `<div class="ergebnisZiel"><span class="small">→ ${esc(y.st.titel || 'Aufgabe')} · <b data-zd="${j}:${y.i}"></b></span>
-        <button type="button" class="btn quadrat" data-zedit="${j}:${y.i}" aria-label="Datum ändern">✎</button></div>`).join('')
-        : '<p class="muted small" style="margin:4px 0 0">→ Ende des Ablaufs</p>'}</div>`;
-  }).join('')}
+  return `<div class="ergebnisse">${s.ergebnisse.map((e, j) => ergebnisBlockHtml(p, e, j,
+    `<button class="btn ergebnisKnopf" data-erg="${j}">${esc(ergName(e))}</button>`,
+    y => `<div class="ergebnisZiel"><span class="small">→ ${esc(y.st.titel || 'Aufgabe')} · <b data-zd="${j}:${y.i}"></b></span>
+        <button type="button" class="btn quadrat" data-zedit="${j}:${y.i}" aria-label="Datum ändern">✎</button></div>`)).join('')}
   <button class="btn ghost klein" id="erlSetzen" style="margin-top:10px">Erledigen ohne Folge</button></div>`;
+}
+/* „Datum wählen“ (v1.164, Jean): das Feld steht gleich unter dem Ergebnis –
+   kein zweites Fenster mehr, dessen „Abbrechen“ missverständlich war. */
+const zielDatumFeld = (st, key) => `<label class="ergDatum"><span class="small">${esc(st.titel || 'Aufgabe')} am</span>
+  <input type="date" class="schmal" data-zw="${esc(key)}" value="${esc(tagPlus(heute(), 7))}" min="${esc(heute())}" aria-label="${esc(st.titel || 'Aufgabe')} am"></label>`;
+/* Erst den Tag wählen, dann aufs Ergebnis tippen: die Felder stehen über dem
+   Knopf, die übrigen Folgen wie gewohnt darunter. */
+function ergebnisBlockHtml(p, e, j, knopf, zeile){
+  const z = (e.ziele || []).map((x, i) => ({x, i, st:stufeVon(p, x.stufe)})).filter(y => y.st);
+  const wahl = z.filter(y => datumWahl(y.x)), sonst = z.filter(y => !datumWahl(y.x));
+  return `<div class="ergebnisBlock">${wahl.map(y => zielDatumFeld(y.st, j + ':' + y.i)).join('')}${knopf}
+    ${sonst.map(zeile).join('')}${z.length ? '' : '<p class="muted small" style="margin:4px 0 0">→ Ende des Ablaufs</p>'}</div>`;
+}
+/* Die eingetragenen Tage eines Ergebnisses in fest übernehmen. */
+function zielFelderLesen(box, j, fest, basis){
+  box.querySelectorAll(`[data-zw^="${j}:"]`).forEach(f => { fest[f.dataset.zw] = f.value && f.value >= basis ? f.value : basis; });
 }
 function ergebnisseVerdrahten(a, fest, erledigen){
   const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a);
@@ -6327,10 +6350,10 @@ function ergebnisseVerdrahten(a, fest, erledigen){
   });
   zeigen();
   if($('#erlDatum')) $('#erlDatum').addEventListener('input', zeigen);
-  /* Fehlt bei „Datum wählen“ noch der Tag, wird erst danach gefragt. */
   $$('[data-erg]').forEach(b => b.onclick = () => {
     const j = +b.dataset.erg;
-    datumFragen(p, s.ergebnisse[j], j, fest, basis(), () => erledigen(j));
+    zielFelderLesen($('.ergebnisse'), j, fest, basis());
+    erledigen(j);
   });
   $$('[data-zedit]').forEach(b => b.onclick = () => {
     const [j, i] = b.dataset.zedit.split(':').map(Number), z = s.ergebnisse[j].ziele[i];
@@ -6343,30 +6366,12 @@ function ergebnisseVerdrahten(a, fest, erledigen){
     box.innerHTML = `<input type="date" id="zielFrist" class="schmal" value="${esc(wert)}" style="margin-top:12px" aria-label="Fällig am">`;
   });
 }
-/* Für jede Folge mit „Datum wählen“ ohne eingetragenen Tag nacheinander
-   fragen (v1.163); fertig() erst, wenn alle da sind – Abbrechen bricht ab. */
-function datumFragen(p, e, j, fest, basis, fertig){
-  const offen = (e.ziele || []).map((z, i) => ({z, i, st:stufeVon(p, z.stufe)}))
-    .filter(x => x.st && datumWahl(x.z) && !fest[j + ':' + x.i]);
-  const los = n => {
-    if(n >= offen.length){ fertig(); return; }
-    const x = offen[n];
-    frage('Wann?', `„${x.st.titel || 'Aufgabe'}“ fällig am`, 'Übernehmen', () => {
-      const v = $('#zielFrist') && $('#zielFrist').value;
-      fest[j + ':' + x.i] = v && v >= basis ? v : basis;
-      los(n + 1);
-    });
-    const box = $('#dlgListe'); box.hidden = false;
-    box.innerHTML = `<input type="date" id="zielFrist" class="schmal" value="${esc(tagPlus(basis, 7))}" min="${esc(basis)}" style="margin-top:12px" aria-label="Fällig am">`;
-  };
-  los(0);
-}
 /* Erledigt mit Ergebnis j: die Folgeaufgaben entstehen sofort. Gibt den
    Hinweis für die Meldung zurück. */
 function planWeiter(a, j, fest){
   const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a), e = s && (s.ergebnisse || [])[j];
   if(!p || !e) return '';
-  a.ergebnis = e.id; a.ergebnisText = e.text || 'Ergebnis';
+  a.ergebnis = e.id; a.ergebnisText = ergName(e);
   a.planFolgen = a.planFolgen || {};
   const raus = [];
   (e.ziele || []).forEach((z, i) => {
@@ -6406,12 +6411,9 @@ function sofortFenster(n, danach){
   box.hidden = false;
   const er = s.ergebnisse || [];
   box.innerHTML = `<div class="sofortHilfen">${(s.schritte || []).map(x => hilfenKnopf(x, n, n.ablaufStand)).join('')}</div>
-    <div class="eyebrow" style="margin:14px 0 2px">${er.length ? 'Danach als erledigt bestätigen' : 'Danach bestätigen'}</div>
-    ${er.length ? er.map((e, j) => {
-      const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
-      return `<button class="btn ergebnisKnopf" data-serg="${j}" style="margin-top:8px">${esc(e.text || 'Ergebnis')}</button>
-        <p class="muted small" style="margin:4px 0 0">${esc(z.length ? z.map(x => `→ ${stufeVon(p, x.stufe).titel || 'Aufgabe'} · ${datumWahl(x) ? 'Datum wählen' : datumKurz(zielDatum(heute(), x))}`).join(', ') : '→ Ende des Ablaufs')}</p>`;
-    }).join('') : '<button class="btn ergebnisKnopf" data-serg="-1" style="margin-top:8px">Erledigt</button>'}
+    ${er.length ? er.map((e, j) => ergebnisBlockHtml(p, e, j,
+      `<button class="btn ergebnisKnopf" data-serg="${j}">${esc(ergName(e))}</button>`,
+      y => `<p class="muted small" style="margin:4px 0 0">→ ${esc(y.st.titel || 'Aufgabe')} · ${esc(datumKurz(zielDatum(heute(), y.x)))}</p>`)).join('') : '<div class="ergebnisBlock"><button class="btn ergebnisKnopf" data-serg="-1">Erledigt</button></div>'}
     <button class="btn ghost" id="sofortSpeichern" style="margin-top:16px">Als Aufgabe speichern · fällig ${esc(datumKurz(n.frist))}</button>`;
   hilfenVerdrahten(box, n);
   $('#sofortSpeichern').onclick = () => {
@@ -6419,10 +6421,10 @@ function sofortFenster(n, danach){
     toast(`Gespeichert · ${n.titel} fällig ${datumKurz(n.frist)}`); weiter();
   };
   box.querySelectorAll('[data-serg]').forEach(b => b.onclick = () => {
-    $('#dlg').hidden = true; dlgZuruecksetzen();
     const j = +b.dataset.serg, fest = {};
-    if(j >= 0) datumFragen(p, er[j], j, fest, heute(), () => sofortErledigt(j, fest));
-    else sofortErledigt(-1, fest);
+    if(j >= 0) zielFelderLesen(box, j, fest, heute());
+    $('#dlg').hidden = true; dlgZuruecksetzen();
+    sofortErledigt(j, fest);
   });
   const sofortErledigt = (j, fest) => {
     n.erledigt = heute(); delete n.geplant;
@@ -6470,7 +6472,7 @@ function renderAblaufPlan(){
     ${lauf.length ? `<p class="muted small" style="margin:0 0 10px">${lauf.length === 1 ? 'Läuft einmal' : `Läuft ${lauf.length}-mal`} – unter Übersicht › Abläufe.</p>` : ''}`
     + l.map((s, i) => !abAuf.has(s.id) ? `<div class="card abKarte zu">
         <button type="button" class="abKopf" data-st="${i}"><span class="abNr">${i + 1}</span><span class="abTitel">${esc(s.titel || 'Neue Aufgabe')}${s.sofort ? ' <span class="abSofort">⚡ sofort möglich</span>' : ''}<small>${esc(
-          (s.ergebnisse || []).length ? s.ergebnisse.map(e => e.text || 'Ergebnis').join(' · ') : 'Ende')}</small></span><span class="abPfeil">▸</span></button></div>`
+          (s.ergebnisse || []).length ? s.ergebnisse.map(ergName).join(' · ') : 'Ende')}</small></span><span class="abPfeil">▸</span></button></div>`
       : `<div class="card abKarte">
         <button type="button" class="abKopf" data-st="${i}"><span class="abNr">${i + 1}</span><span class="abTitel">${esc(s.titel || 'Neue Aufgabe')}${s.sofort ? ' <span class="abSofort">⚡ sofort möglich</span>' : ''}</span><span class="abPfeil">▾</span></button>
         ${(s.schritte || []).length ? `<p class="muted small abHilfen">${esc(s.schritte.map(x => `${HILFE_ZEICHEN[x.art] || ''} ${schrittText(x)}`).join(' · '))}</p>` : ''}
@@ -6479,7 +6481,7 @@ function renderAblaufPlan(){
           <button type="button" class="btn quadrat" data-strunter="${i}" aria-label="nach hinten"${i < l.length - 1 ? '' : ' disabled'}>↓</button></div>
         ${(s.ergebnisse || []).map((e, j) => {
           const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
-          return `<button type="button" class="abWenn" data-st="${i}" data-e="${j}"><span class="muted">Wenn</span> <b>${esc(e.text || 'Ergebnis')}</b><span class="abDann">${
+          return `<button type="button" class="abWenn" data-st="${i}" data-e="${j}"><span class="muted">Wenn</span> <b>${esc(ergName(e))}</b><span class="abDann">${
             esc(z.length ? z.map(x => `→ ${stufeVon(p, x.stufe).titel || 'Aufgabe'} · ${wannText(x)}`).join('\n') : '→ Ende des Ablaufs')}</span></button>`;
         }).join('') || '<p class="muted small" style="margin:6px 0 0">Ohne Ergebnis endet der Ablauf mit dieser Aufgabe.</p>'}
         <button type="button" class="btn ghost klein" data-eneu="${i}" style="margin-top:8px">+ Ergebnis</button></div>`).join('')
@@ -6522,7 +6524,7 @@ function ergebnisFenster(p, s, j){
       ziele.push(datumWahl(z) ? {stufe:z.stufe, wahl:true} : +z.monate ? {stufe:z.stufe, monate:+z.monate} : {stufe:z.stufe, tage:Math.max(0, Math.round(+z.tage || 0))});
     });
     const e = alt || {id:neueId()};
-    e.text = w.text.trim() || 'Ergebnis'; e.ziele = ziele;
+    e.text = w.text.trim(); e.ziele = ziele;
     if(!alt) (s.ergebnisse = s.ergebnisse || []).push(e);
     saveCfg(); renderAblaufPlan();
   });
