@@ -10,6 +10,8 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.166 07.10.2026 Fenster „Weiter“ (Jean): „Später erledigen“ entfällt –
+         neben Abbrechen und Speichern ergab er keinen Sinn mehr.
   v1.165 07.10.2026 Fenster „Weiter“ mit klaren Knöpfen (Jean): unten
          „Abbrechen“ und „Speichern“. Speichern übernimmt das eingetragene
          Datum, legt die Folgeaufgabe an und schließt das Fenster.
@@ -3433,7 +3435,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.165';
+const VERSION = 'v1.166';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6399,8 +6401,8 @@ planWeiter.neue = [];
 /* „Gleich im Anschluss“ (v1.161, Jean): ist eine eben entstandene Folge als
    sofort möglich eingestellt, bietet ein Fenster ihre Hilfen an (Mail,
    Anruf …) und daneben ihre Ergebnisse. Erledigt ist sie erst mit dem Tipp
-   auf „Speichern“ (Jean: noch einmal von Hand bestätigen); „Später
-   erledigen“ lässt sie in der Liste, „Abbrechen“ nimmt alles zurück. Ihre eigene Folge kann wieder sofort
+   auf „Speichern“ (Jean: noch einmal von Hand bestätigen); „Abbrechen“
+   nimmt alles zurück. Ihre eigene Folge kann wieder sofort
    möglich sein – dann geht es im nächsten Fenster weiter. */
 function sofortNaechste(liste){
   return (liste || []).find(n => { const s = stufeDerAufgabe(n); return s && s.sofort && !n.erledigt; }) || null;
@@ -6426,15 +6428,10 @@ function sofortFenster(n, danach, rueck){
       ${er.length > 1 ? `<div class="chips sofortWahl" style="margin-top:12px">${er.map((x, j) =>
         `<button type="button" data-serg="${j}" aria-pressed="${j === wahl}">${esc(ergName(x))}</button>`).join('')}</div>` : ''}
       ${e ? ergebnisBlockHtml(p, e, wahl, '',
-        y => `<p class="muted small" style="margin:4px 0 0">→ ${esc(y.st.titel || 'Aufgabe')} · ${esc(datumKurz(zielDatum(heute(), y.x)))}</p>`) : ''}
-      <button class="btn ghost" id="sofortSpaeter" style="margin-top:16px">Später erledigen · fällig ${esc(datumKurz(n.frist))}</button>`;
+        y => `<p class="muted small" style="margin:4px 0 0">→ ${esc(y.st.titel || 'Aufgabe')} · ${esc(datumKurz(zielDatum(heute(), y.x)))}</p>`) : ''}`;
     box.querySelectorAll('[data-zw]').forEach(f => { if(werte[f.dataset.zw]) f.value = werte[f.dataset.zw]; });
     hilfenVerdrahten(box, n);
     box.querySelectorAll('[data-serg]').forEach(b => b.onclick = () => { wahl = +b.dataset.serg; aufbauen(); });
-    $('#sofortSpaeter').onclick = () => {
-      $('#dlg').hidden = true; dlgZuruecksetzen();
-      toast(`In der Liste · ${n.titel} fällig ${datumKurz(n.frist)}`); weiter();
-    };
   };
   aufbauen();
   $('#dlgJa').onclick = () => {
