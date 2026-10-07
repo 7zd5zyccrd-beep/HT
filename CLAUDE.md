@@ -273,6 +273,11 @@ steht.
   seit v1.167 `aufg`) je Tag, Plan und Objekt zu `quelle:'ablauf'` mit
   `teile` zusammen. Ändern = `arbAblaufAendern` (je Schritt), Löschen legt
   alle Teil-Ids in `TAET.arb.weg`.
+- Dauerstufen (v1.169, Jean): `DAUER_STUFEN` beginnt mit 5 und 10 min,
+  dann 15-min-Schritte bis 4 h, dann Tage; `alsStufe` rundet unter 12,5 min
+  auf 5/10. Die Planung (`auf15`) rechnet weiter in Viertelstunden.
+- Testskripte im Notizordner überschreiben `ablaufDauerFragen` mit einer
+  leeren Funktion, sonst blockiert das Dauerfenster ältere Abläufe.
 - **Seitennamen eindeutig halten:** v1.159 nannte die Ablaufseite `plan` mit
   `#planBox` – das ist die Grundriss-Seite. `go('plan')` zeichnete dann den
   Ablauf in den Grundriss, Kopfzeile und Geschoss-Regler fehlten. Seit
