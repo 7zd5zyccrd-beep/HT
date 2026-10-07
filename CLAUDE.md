@@ -337,8 +337,16 @@ steht.
 - Achtung: `eigeneRegeln()` gibt eine Abbildung zurück – nie darauf `push`en
   (bis v1.173 gingen so neue eigene Regeln verloren), sondern
   `CFG.wetterEigen`.
-- Als Nächstes (vereinbart): Baustein 3 – Ergebnis mit Bedingung, die App
-  wählt es selbst oder schlägt es vor.
+- Ergebnis mit Bedingung (v1.175, Baustein 3): `e.bed` (alle müssen
+  zutreffen, Bausteine wie bei Auslösern inkl. Abfuhr), `e.auto`
+  'vorschlag'|'sofort'. `ergebnisTreffer(a)` nur für fällige Aufgaben
+  (Frist ≤ heute), erstes zutreffendes Ergebnis, ohne `a.ergebnisNein`.
+  `ergebnisseAnwenden` (sofort, beim Aufbau der Startseite nach den
+  Auslösern), `ergebnisVorschlaege` (in der Karte „Vorschläge“, Schlüssel
+  `erg:<Aufgabe>:<Ergebnis>`), `ergebnisAusfuehren` (Vermerk „Selbst
+  gewählt: …“, `wdhFolgeAnlegen`, `planWeiter`). Editor: „Selbst wählen“ im
+  `ergebnisFenster` über `bedFelderHtml`/`bedFeldSetzen` (auch die
+  Wetter-Aktion nutzt sie).
 
 ## Suche (v1.145)
 

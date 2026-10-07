@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.175 07.10.2026 Abläufe (Jean): ein Ergebnis kann Bedingungen aus Wetter
+         und Abfuhrterminen tragen („Selbst wählen“ im Ergebnis). Ist die
+         Aufgabe fällig und trifft alles zu, wählt die App das Ergebnis –
+         als Vorschlag auf der Startseite (Übernehmen/Verwerfen) oder gleich
+         erledigt, mit den Folgen wie von Hand. Auf der Aufgabe steht unter
+         dem Ergebnis, ob es gerade zutrifft.
   v1.174 07.10.2026 Auslöser (Jean): die Wetterregeln heißen „Auslöser“
          und stehen unter Übersicht › Abläufe (unter Wetter ein Verweis).
          Neue Bedingung „Abfuhr“: eine Abholung aus dem Abfallkalender in den
@@ -3096,6 +3102,8 @@ a.ablaufSchritt{display:flex;align-items:center;justify-content:center;text-deco
 .aktZeichen{flex:none;width:18px;text-align:center}
 .aktText{flex:1;min-width:0;white-space:pre-line;font-size:15px}
 .aktOk{flex:none;font-weight:700}
+.abSelbst{display:block;font-size:13px;color:var(--ink-soft);margin-top:2px}
+.ergSelbst{margin:4px 0 0}
 .ablaufHilfen .ablaufSchritt:first-child{margin-top:0}
 .erlAm{align-items:center;gap:10px}
 .erlAm span{flex:0 0 auto}
@@ -3525,7 +3533,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.174';
+const VERSION = 'v1.175';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5748,7 +5756,8 @@ function renderHome(){
   /* Regeln, die gleich anlegen, laufen vor der Liste – ihre Aufgaben sollen im
      selben Aufbau erscheinen (v1.55). */
   wetterRegelnAnwenden();
-  const liste = aufgaben(), gibt = irgendeinNachweis(), hinweise = wetterHinweise();
+  ergebnisseAnwenden();
+  const liste = aufgaben(), gibt = irgendeinNachweis(), hinweise = wetterHinweise().concat(ergebnisVorschlaege());
   /* Die Gruppen folgen der Sortierung (v1.99); „Gute Gelegenheit“ steht unter
      dem Überfälligen, sonst zuoberst. */
   const gruppen = [];
@@ -5862,10 +5871,11 @@ function renderHome(){
   if(wk) wk.onclick = () => { go('wetter'); wetterAbrufen(); };
   $('#homeListe').querySelectorAll('[data-hja]').forEach(b => b.onclick = () => {
     const h = hinweise.find(x => x.schluessel === b.dataset.hja);
-    if(h) hinweisUebernehmen(h);
+    if(h && h.erg) ergebnisVorschlagJa(h);
+    else if(h) hinweisUebernehmen(h);
   });
   $('#homeListe').querySelectorAll('[data-hnein]').forEach(b => b.onclick = () =>
-    hinweisBeantwortet(b.dataset.hnein, false));
+    b.dataset.hnein.startsWith('erg:') ? ergebnisVorschlagNein(b.dataset.hnein) : hinweisBeantwortet(b.dataset.hnein, false));
   $('#homeListe').querySelectorAll('[data-vorz]').forEach(b => b.onclick = () => {
     vorziehenAuf = !vorziehenAuf; vorziehenAlle = false; renderHome();
   });
@@ -6473,8 +6483,13 @@ function ablaufStarten(a, neuZeichnen){
 function ergebnisseHtml(a){
   const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a);
   if(!p || !s || !(s.ergebnisse || []).length) return '';
+  const reihen = s.ergebnisse.some(e => (e.bed || []).length) ? hinweisReihen() : null;
+  /* Bedingungen (v1.175): unter dem Knopf, ob sie gerade zutreffen. */
+  const selbst = e => { if(!(e.bed || []).length) return '';
+    const erg = e.bed.map(b => bedPruefen(b, reihen)), ok = erg.every(x => x.ok);
+    return `<p class="muted small ergSelbst">${ok ? '✓' : '✗'} ${esc(e.auto === 'sofort' ? 'selbst' : 'Vorschlag')}, wenn ${esc(e.bed.map(bedKurz).join(' und '))}${ok ? ' – trifft zu' : ''}</p>`; };
   return `<div class="ergebnisse">${s.ergebnisse.map((e, j) => ergebnisBlockHtml(p, e, j,
-    `<button class="btn ergebnisKnopf" data-erg="${j}">${esc(ergName(e))}</button>`,
+    `<button class="btn ergebnisKnopf" data-erg="${j}">${esc(ergName(e))}</button>` + selbst(e),
     y => `<div class="ergebnisZiel"><span class="small">→ ${esc(y.st.titel || 'Aufgabe')} · <b data-zd="${j}:${y.i}"></b></span>
         <button type="button" class="btn quadrat" data-zedit="${j}:${y.i}" aria-label="Datum ändern">✎</button></div>`)).join('')}
   <button class="btn ghost klein" id="erlSetzen" style="margin-top:10px">Erledigen ohne Folge</button></div>`;
@@ -6520,6 +6535,81 @@ function ergebnisseVerdrahten(a, fest, erledigen){
     const box = $('#dlgListe'); box.hidden = false;
     box.innerHTML = `<input type="date" id="zielFrist" class="schmal" value="${esc(wert)}" style="margin-top:12px" aria-label="Fällig am">`;
   });
+}
+/* Wiederkehrend: die nächste steht sofort bereit (herausgelöst v1.175, damit
+   auch ein selbst gewähltes Ergebnis sie anlegt). */
+function wdhFolgeAnlegen(a){
+  const fz = a.von ? naechsterZeitraum(a) : null;
+  const folge = {id:neueId(), art:'eigen', quelle:'', k:a.k, anlage:a.anlage, anlageText:a.anlageText || '',
+    punkt:'', titel:a.titel, text:'', notiz:'', zeitraum:'', festgestellt:'', angelegt:heute(),
+    frist:fz ? fz.bis : naechsterTermin(a), wichtig:a.wichtig, erneut:[], erledigt:'', vermerk:'',
+    wdh:Object.assign({}, a.wdh), vorb:a.vorb ? Object.assign({}, a.vorb) : undefined,
+    vorbErledigt:'', vorbVermerk:''};
+  if(fz) folge.von = fz.von;
+  /* Ein Ablauf reist mit, auf derselben Stufe als neue Kette (v1.159). */
+  if(a.plan){ folge.plan = a.plan; folge.stufe = a.stufe; folge.kette = folge.id; }
+  if(a.wetter) folge.wetter = a.wetter;
+  if(a.reihe) folge.reihe = a.reihe;
+  AUFG.push(folge); a.folge = folge.id;
+  return {folge, fz};
+}
+/* ---------- Ergebnis mit Bedingung (v1.175, Baustein 3) ---------------------
+   Ein Ergebnis kann Bedingungen tragen (e.bed, alle müssen zutreffen; dieselben
+   Bausteine wie bei den Auslösern: Wetter und Abfuhr). Ist eine Aufgabe des
+   Ablaufs fällig (Frist heute oder früher) und trifft die erste solche Regel
+   zu, wählt die App dieses Ergebnis – je nach e.auto gleich („sofort“) oder
+   als Vorschlag in der Karte auf der Startseite. Verworfen wird je Aufgabe
+   und Ergebnis (a.ergebnisNein). Geprüft wird beim Aufbau der Startseite. */
+function ergebnisTreffer(a){
+  if(a.erledigt || !a.plan || String(a.frist || '9') > heute()) return null;
+  const s = stufeDerAufgabe(a);
+  if(!s) return null;
+  let reihen = null;
+  for(let j = 0; j < (s.ergebnisse || []).length; j++){
+    const e = s.ergebnisse[j];
+    if(!(e.bed || []).length || (a.ergebnisNein || []).includes(e.id)) continue;
+    reihen = reihen || hinweisReihen();
+    const erg = e.bed.map(b => bedPruefen(b, reihen));
+    if(erg.every(x => x.ok)) return {j, e, grund:[...new Set(erg.map(x => x.text))].join(' · ')};
+  }
+  return null;
+}
+function ergebnisAusfuehren(a, j, grund){
+  a.erledigt = heute();
+  a.vermerk = 'Selbst gewählt: ' + grund;
+  delete a.geplant;
+  if(a.wdh && a.art !== 'mangel') wdhFolgeAnlegen(a);
+  planWeiter.neue = [];
+  const pt = planWeiter(a, j, {});
+  saveAufg(); stoerAusAufgabe(a, 'erledigt');
+  return pt;
+}
+/* Gleich erledigen – läuft zu Beginn des Listenaufbaus wie die Auslöser. */
+function ergebnisseAnwenden(){
+  let neu = 0;
+  AUFG.slice().forEach(a => {
+    const t = ergebnisTreffer(a);
+    if(!t || t.e.auto !== 'sofort') return;
+    ergebnisAusfuehren(a, t.j, t.grund); neu++;
+  });
+  if(neu) toast(neu === 1 ? 'Eine Aufgabe im Ablauf selbst erledigt' : `${neu} Aufgaben im Ablauf selbst erledigt`);
+}
+function ergebnisVorschlaege(){
+  return AUFG.map(a => { const t = ergebnisTreffer(a);
+    return t && t.e.auto !== 'sofort' ? {schluessel:`erg:${a.id}:${t.e.id}`, titel:`${a.titel || 'Aufgabe'} → ${ergName(t.e)}`,
+      grund:t.grund, erg:{id:a.id, j:t.j, eid:t.e.id}} : null; }).filter(Boolean);
+}
+function ergebnisVorschlagJa(h){
+  const a = AUFG.find(x => x.id === h.erg.id);
+  if(!a) return;
+  const pt = ergebnisAusfuehren(a, h.erg.j, h.grund);
+  toast(pt ? 'Erledigt · ' + pt : 'Erledigt');
+  renderHome();
+}
+function ergebnisVorschlagNein(schluessel){
+  const [, id, eid] = schluessel.split(':'), a = AUFG.find(x => x.id === id);
+  if(a){ a.ergebnisNein = (a.ergebnisNein || []).concat(eid); saveAufg(); }
+  toast('Vorschlag verworfen'); renderHome();
 }
 /* Erledigt mit Ergebnis j: die Folgeaufgaben entstehen sofort. Gibt den
    Hinweis für die Meldung zurück. */
@@ -6742,7 +6832,8 @@ function renderAblaufPlan(){
           <button type="button" class="btn quadrat" data-strunter="${i}" aria-label="nach hinten"${i < l.length - 1 ? '' : ' disabled'}>↓</button></div>
         ${(s.ergebnisse || []).map((e, j) => {
           const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
-          return `<button type="button" class="abWenn" data-st="${i}" data-e="${j}"><span class="muted">Wenn</span> <b>${esc(ergName(e))}</b><span class="abDann">${
+          return `<button type="button" class="abWenn" data-st="${i}" data-e="${j}"><span class="muted">Wenn</span> <b>${esc(ergName(e))}</b>${
+            (e.bed || []).length ? `<span class="abSelbst">${esc(`⚙ ${e.auto === 'sofort' ? 'selbst' : 'Vorschlag'}, wenn ${e.bed.map(bedKurz).join(' und ')}`)}</span>` : ''}<span class="abDann">${
             esc(z.length ? z.map(x => `→ ${stufeVon(p, x.stufe).titel || 'Aufgabe'} · ${wannText(x)}`).join('\n') : '→ Ende des Ablaufs')}</span></button>`;
         }).join('') || '<p class="muted small" style="margin:6px 0 0">Ohne Ergebnis endet der Ablauf mit dieser Aufgabe.</p>'}
         <button type="button" class="btn ghost klein" data-eneu="${i}" style="margin-top:8px">+ Ergebnis</button></div>`).join('')
@@ -6772,7 +6863,10 @@ function renderAblaufPlan(){
 function ergebnisFenster(p, s, j){
   const alt = j >= 0 ? s.ergebnisse[j] : null;
   const w = {text:alt ? alt.text || '' : '', ziele:alt ? (alt.ziele || []).filter(z => stufeVon(p, z.stufe)).map(z => Object.assign({}, z))
-    : [{stufe:'', tage:0}]};
+    : [{stufe:'', tage:0}],
+    /* Selbst wählen (v1.175): Bedingungen und ob gleich oder als Vorschlag. */
+    bed:alt && Array.isArray(alt.bed) ? alt.bed.map(b => Object.assign(bedingungStd(), b)) : [],
+    auto:alt && alt.auto === 'sofort' ? 'sofort' : 'vorschlag'};
   const arten = abfallArten().map(x => x.art);
   const gleich = (z, v) => !datumWahl(z) && !vorAbholung(z) && (+z.monate || 0) === (+v.monate || 0) && (+z.monate ? true : (+z.tage || 0) === (+v.tage || 0));
   frage(alt ? 'Ergebnis' : 'Neues Ergebnis', '', 'Speichern', () => {
@@ -6789,12 +6883,30 @@ function ergebnisFenster(p, s, j){
     });
     const e = alt || {id:neueId()};
     e.text = w.text.trim(); e.ziele = ziele;
+    if(w.bed.length){ e.bed = w.bed; e.auto = w.auto; } else { delete e.bed; delete e.auto; }
     if(!alt) (s.ergebnisse = s.ergebnisse || []).push(e);
     saveCfg(); renderAblaufPlan();
   });
   $('#dlgText').hidden = true;
   const box = $('#dlgListe');
   box.hidden = false;
+  /* „Selbst wählen“ unter den Folgen: je Bedingung die Felder und der Stand
+     von jetzt. */
+  const ergBedHtml = () => {
+    const reihen = w.bed.length ? hinweisReihen() : null;
+    return `<div class="gruppe ergFolge" style="margin-top:12px">
+      <div class="eyebrow" style="margin:0 0 6px">Selbst wählen</div>
+      <p class="muted small" style="margin:0 0 8px">${w.bed.length ? 'Ist die Aufgabe fällig und trifft alles zu, wählt die App dieses Ergebnis.'
+        : 'Mit Bedingungen aus Wetter oder Abfuhrterminen wählt die App dieses Ergebnis selbst.'}</p>
+      ${w.bed.map((b, n) => { const e = bedPruefen(b, reihen);
+        return `${n ? '<div class="bedUnd">und</div>' : ''}${bedFelderHtml(b, `data-eb="${n}"`, true)}
+          <p class="small" style="margin:-4px 0 6px">${e.ok ? '✓' : '✗'} <span class="muted">${esc(e.text)}</span></p>
+          <button type="button" class="btn ghost klein" data-ebweg="${n}" style="margin:0 0 6px">Bedingung entfernen</button>`; }).join('')}
+      <button type="button" class="btn ghost klein" id="ebPlus">${w.bed.length ? '+ und …' : '+ Bedingung'}</button>
+      ${w.bed.length ? `<div class="field segfeld" style="margin:10px 0 0"><span>Wenn es zutrifft</span><div class="seg">${
+        [['vorschlag', 'Vorschlagen'], ['sofort', 'Erledigen']].map(([v, t]) =>
+          `<button type="button" data-eauto="${v}" aria-pressed="${w.auto === v}">${t}</button>`).join('')}</div></div>` : ''}</div>`;
+  };
   const zeichnen = () => {
     box.innerHTML = `<label class="field" style="margin-top:4px"><span>Ergebnis</span><input id="ergText" value="${esc(w.text)}" placeholder="z. B. in Ordnung"></label>`
       + (w.ziele.length ? w.ziele.map((z, k) => `<div class="gruppe ergFolge">
@@ -6817,6 +6929,7 @@ function ergebnisFenster(p, s, j){
           <button type="button" class="btn ghost klein" data-k="${k}" data-zweg="1" style="margin-top:8px">${w.ziele.length > 1 ? 'Diese Folge entfernen' : 'Keine Folge – Ende des Ablaufs'}</button></div>`).join('')
         : `<p class="muted small" style="margin:8px 0">Dann: Ende des Ablaufs.</p>`)
       + `<button type="button" class="btn ghost klein" id="ergPlus" style="margin-top:8px">${w.ziele.length ? '+ Zugleich eine weitere Aufgabe' : '+ Folgeaufgabe'}</button>`
+      + ergBedHtml()
       + (alt ? `<button type="button" class="btn danger klein" id="ergWeg" style="margin-top:12px">Ergebnis löschen</button>` : '');
     $('#ergText').oninput = e => { w.text = e.target.value; };
     box.querySelectorAll('[data-zst]').forEach(b => b.onclick = () => { const z = w.ziele[+b.dataset.k]; z.stufe = b.dataset.zst; delete z.neu; zeichnen(); });
@@ -6837,6 +6950,14 @@ function ergebnisFenster(p, s, j){
     box.querySelectorAll('[data-ztage]').forEach(f => f.oninput = () => { const z = w.ziele[+f.dataset.k]; delete z.monate; z.tage = Math.max(0, Math.round(+f.value || 0)); });
     box.querySelectorAll('[data-zweg]').forEach(b => b.onclick = () => { w.ziele.splice(+b.dataset.k, 1); zeichnen(); });
     $('#ergPlus').onclick = () => { w.ziele.push({stufe:'', tage:0}); zeichnen(); };
+    box.querySelectorAll('[data-eb]').forEach(el => el.onchange = () => { bedFeldSetzen(w.bed[+el.dataset.eb], el.dataset.bf, el); zeichnen(); });
+    box.querySelectorAll('[data-ebweg]').forEach(b => b.onclick = () => { w.bed.splice(+b.dataset.ebweg, 1); zeichnen(); });
+    $('#ebPlus').onclick = () => {
+      w.bed.push(Object.assign(bedingungStd(), ABFALL.termine.length && !CFG.wetter
+        ? {groesse:'abfuhr', tage:1} : {groesse:'regen24', vgl:'unter', wert:2, richtung:'voraus', tage:3}));
+      zeichnen();
+    };
+    box.querySelectorAll('[data-eauto]').forEach(b => b.onclick = () => { w.auto = b.dataset.eauto; zeichnen(); });
     if($('#ergWeg')) $('#ergWeg').onclick = () => { $('#dlg').hidden = true; s.ergebnisse.splice(j, 1); saveCfg(); renderAblaufPlan(); };
   };
   zeichnen();
@@ -6886,20 +7007,42 @@ function stufeDauerHtml(p, s){
     <label class="haken" style="margin:0 0 8px"><input type="checkbox" id="stDauerFragen"${e.fragen === false ? '' : ' checked'}>
       <span>Nach dem Erledigen nach der Dauer fragen</span></label></div>`;
 }
-/* Die Felder der Wetter-Aktion: was, welcher Zeitraum, welche Grenze. */
-function wetterAktionFelder(x, i){
-  const b = x.bed = Object.assign(bedingungStd(), x.bed || {}), g = groesse(b.groesse);
-  const wahl = (f, liste, wert) => `<select data-wb="${i}" data-bf="${f}">${liste.map(([w, t]) =>
+/* Die Felder einer Bedingung in kurzer Form (v1.172 für die Wetter-Aktion,
+   seit v1.175 auch für Ergebnisse, dort mit Abfuhr). attr kennzeichnet die
+   Felder für den Aufrufer, data-bf das Feld. */
+function bedFelderHtml(b, attr, mitAbfuhr){
+  const g = groesse(b.groesse);
+  const wahl = (f, liste, wert) => `<select ${attr} data-bf="${f}">${liste.map(([w, t]) =>
     `<option value="${esc(w)}"${String(w) === String(wert) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
-  const zahl = (f, wert) => `<input type="number" step="any" inputmode="decimal" data-wb="${i}" data-bf="${f}" value="${esc(wert)}" style="width:80px">`;
+  const zahl = (f, wert) => `<input type="number" step="any" inputmode="decimal" ${attr} data-bf="${f}" value="${esc(wert)}">`;
+  if(g.quelle === 'abfall'){
+    const arten = abfallArten().map(t => t.art);
+    return `<label class="field"><span>Was</span>${wahl('groesse', WGROESSEN.map(y => [y.k, y.name]), b.groesse)}</label>
+      <label class="field"><span>Abfallart</span>${wahl('abfall', [['', 'jede']].concat(arten.concat(b.abfall && !arten.includes(b.abfall) ? [b.abfall] : []).map(a => [a, a])), b.abfall || '')}</label>
+      <div class="field"><span>Abholung in den</span><div class="row ablaufReihe wAkt"><span class="muted small">nächsten</span>${zahl('tage', b.tage)}<span class="muted small">Tagen</span></div></div>`;
+  }
   const zeit = g.quelle !== 'trocken' && g.quelle !== 'warnung';
-  return `<label class="field"><span>Was</span>${wahl('groesse', WGROESSEN.filter(y => y.quelle !== 'abfall').map(y => [y.k, y.name]), b.groesse)}</label>
+  return `<label class="field"><span>Was</span>${wahl('groesse', WGROESSEN.filter(y => mitAbfuhr || y.quelle !== 'abfall').map(y => [y.k, y.name]), b.groesse)}</label>
     ${g.quelle === 'lage' ? `<label class="field"><span>Wetterlage</span>${wahl('lage', WLAGEN.map(y => [y[0], y[1]]), b.lage)}</label>` : ''}
-    ${g.quelle === 'warnung' ? `<label class="field"><span>Stichwort (freiwillig)</span><input data-wb="${i}" data-bf="stichwort" value="${esc(b.stichwort || '')}" placeholder="z. B. Frost"></label>` : ''}
+    ${g.quelle === 'warnung' ? `<label class="field"><span>Stichwort (freiwillig)</span><input ${attr} data-bf="stichwort" value="${esc(b.stichwort || '')}" placeholder="z. B. Frost"></label>` : ''}
     ${zeit ? `<div class="field"><span>Zeitraum</span><div class="row ablaufReihe wAkt">${wahl('richtung', [['voraus', 'nächste'], ['zurueck', 'letzte']], b.richtung)}
       ${zahl('tage', b.tage)}<span class="muted small">Tage</span></div></div>` : ''}
     ${g.quelle !== 'lage' && g.quelle !== 'warnung' ? `<div class="field"><span>Grenze</span><div class="row ablaufReihe wAkt">${wahl('vgl', [['ab', 'ab'], ['unter', 'unter']], b.vgl)}
-      ${zahl('wert', b.wert)}<span class="muted small">${esc(g.einheit)}</span></div></div>` : ''}
+      ${zahl('wert', b.wert)}<span class="muted small">${esc(g.einheit)}</span></div></div>` : ''}`;
+}
+/* Ein Feld einer Bedingung übernehmen; eine neue Größe bringt passende
+   Vorgaben mit. */
+function bedFeldSetzen(b, f, el){
+  if(['tage', 'wert'].includes(f)){
+    const x = parseFloat(String(el.value).replace(',', '.'));
+    b[f] = !isFinite(x) ? b[f] : f === 'tage' ? Math.max(1, Math.round(x)) : x;
+  }else b[f] = el.value;
+  if(f === 'groesse'){ b.dauer = 1; if(el.value === 'abfuhr') b.tage = Math.min(+b.tage || 1, 7); }
+}
+/* Die Felder der Wetter-Aktion: was, welcher Zeitraum, welche Grenze. */
+function wetterAktionFelder(x, i){
+  const b = x.bed = Object.assign(bedingungStd(), x.bed || {});
+  return bedFelderHtml(b, `data-wb="${i}"`, false) + `
     <label class="haken" style="margin:0 0 10px"><input type="checkbox" data-wb="${i}" data-bf="grenze"${x.grenze ? ' checked' : ''}>
       <span>Mit ✓ oder ✗ zeigen, ob es zutrifft</span></label>
     <p class="muted small" style="margin:0 0 10px">Jetzt: ${esc(aktionInfoText(x).text)}</p>`;
@@ -6966,7 +7109,7 @@ function renderStufe(){
   box.querySelectorAll('[data-wb]').forEach(el => el.onchange = () => {
     const x = l[+el.dataset.wb], f = el.dataset.bf;
     if(f === 'grenze') x.grenze = el.checked;
-    else x.bed[f] = ['tage', 'wert'].includes(f) ? +el.value || 0 : el.value;
+    else bedFeldSetzen(x.bed, f, el);
     sichern(); const y = bildY(); neu(); bildNach(y);
   });
   box.querySelectorAll('[data-abart]').forEach(b => b.onclick = () => {
@@ -7438,18 +7581,7 @@ function renderAufgabe(){
     /* Wiederkehrend: die nächste steht sofort bereit. Die Notiz beginnt leer, die
        Vorbereitung wieder offen – beides gehört zum einzelnen Termin. */
     if(a.wdh && !mangel){
-      const fz = a.von ? naechsterZeitraum(a) : null;
-      const folge = {id:neueId(), art:'eigen', quelle:'', k:a.k, anlage:a.anlage, anlageText:a.anlageText || '',
-        punkt:'', titel:a.titel, text:'', notiz:'', zeitraum:'', festgestellt:'', angelegt:heute(),
-        frist:fz ? fz.bis : naechsterTermin(a), wichtig:a.wichtig, erneut:[], erledigt:'', vermerk:'',
-        wdh:Object.assign({}, a.wdh), vorb:a.vorb ? Object.assign({}, a.vorb) : undefined,
-        vorbErledigt:'', vorbVermerk:''};
-      if(fz) folge.von = fz.von;
-      /* Ein Ablauf reist mit, auf derselben Stufe als neue Kette (v1.159). */
-      if(a.plan){ folge.plan = a.plan; folge.stufe = a.stufe; folge.kette = folge.id; }
-      if(a.wetter) folge.wetter = a.wetter;
-      if(a.reihe) folge.reihe = a.reihe;
-      AUFG.push(folge); a.folge = folge.id;
+      const {folge, fz} = wdhFolgeAnlegen(a);
       planWeiter.neue = [];
       const pt = j == null ? '' : planWeiter(a, j, zielFest);
       saveAufg();
@@ -11954,7 +12086,7 @@ function hinweisKarte(liste){
   return `<div class="card">
     <div class="eyebrow" style="margin:0 0 6px">Vorschläge</div>
     ${liste.map(h => `<div class="hzeile">
-      <p style="margin:0 0 2px"><b>${esc(dannText(h.regel))}</b></p>
+      <p style="margin:0 0 2px"><b>${esc(h.titel || dannText(h.regel))}</b></p>
       <p class="muted small" style="margin:0 0 8px">${esc(h.grund)}</p>
       <div class="hknoepfe">
         <button class="btn ghost klein" data-hja="${esc(h.schluessel)}">Übernehmen</button>
