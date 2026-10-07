@@ -245,7 +245,11 @@ steht.
   manuell bestätigen), „Als Aufgabe speichern“ als leiser Knopf; Kette geht
   weiter, wenn die nächste Folge wieder sofort möglich ist.
 - Ablaufseite zugeklappt (v1.161): Kette aus Kärtchen, `abAuf` merkt die
-  offenen; „Titel und Hilfen bearbeiten“ öffnet die Stufen-Seite.
+  offenen; „Bearbeiten“ öffnet die Stufen-Seite, ↑ ↓ daneben ordnen
+  (v1.162, statt „Weiter nach vorn“ auf der Stufen-Seite – Jean: deplatziert).
+- Wann als festes Datum (v1.162): Ziel `{stufe, datum}`, Kachel „Datum“ im
+  `ergebnisFenster`; `zielDatum` nimmt den Tag der Erledigung, wenn das Datum
+  schon vorbei ist.
 - **Seitennamen eindeutig halten:** v1.159 nannte die Ablaufseite `plan` mit
   `#planBox` – das ist die Grundriss-Seite. `go('plan')` zeichnete dann den
   Ablauf in den Grundriss, Kopfzeile und Geschoss-Regler fehlten. Seit

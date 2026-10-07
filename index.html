@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.162 07.10.2026 Abläufe (Jean): „Weiter nach vorn“ auf der Seite einer
+         Aufgabe entfällt; die Reihenfolge stellt man jetzt mit ↑ ↓ in der
+         aufgeklappten Karte auf der Ablaufseite. Bei „Wann“ gibt es neben
+         den Kacheln auch „Datum“ für einen festen Tag (liegt er beim
+         Erledigen schon zurück, gilt der Tag der Erledigung).
   v1.161 07.10.2026 Aufgaben aufs Wesentliche und „gleich im Anschluss“
          (Jean). Die Aufgabe zeigt oben nur, worum es geht (Titel, Termin,
          Objekt, Ablauf, Notiz), darunter die Hilfen als Knöpfe und das
@@ -3020,6 +3025,8 @@ a.ablaufSchritt{display:flex;align-items:center;justify-content:center;text-deco
 .aufgMehr[open] > summary::before{content:'▾ '}
 .aufgMehr[open] > summary{margin-bottom:8px}
 .abKarte.zu{padding-top:12px;padding-bottom:12px}
+.abBearb{margin-top:8px;gap:8px}
+.abBearb .ghost{flex:1;min-width:0;margin:0}
 .abTitel small{display:block;font-weight:400;font-size:14px;color:var(--ink-soft);margin-top:2px}
 .abSofort{font-weight:400;font-size:13px;color:var(--ink-soft);white-space:nowrap}
 .sofortHilfen .ablaufSchritt:first-child{margin-top:4px}
@@ -3406,7 +3413,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.161';
+const VERSION = 'v1.162';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6148,12 +6155,15 @@ const schrittText = st => String(st.text || '').trim() || ABLAUF_VORGABE[st.art]
 const WANN = [['sofort', {tage:0}], ['1 Woche', {tage:7}], ['2 Wochen', {tage:14}], ['1 Monat', {monate:1}],
               ['3 Monate', {monate:3}], ['6 Monate', {monate:6}], ['1 Jahr', {monate:12}]];
 function wannText(z){
+  if(z.datum) return 'am ' + dText(z.datum);              // festes Datum (v1.162)
   const m = Math.round(+z.monate || 0), t = Math.max(0, Math.round(+z.tage || 0));
   if(m) return m % 12 === 0 ? `in ${m / 12} ${m === 12 ? 'Jahr' : 'Jahren'}` : `in ${m} ${m === 1 ? 'Monat' : 'Monaten'}`;
   if(!t) return 'sofort';
   return t % 7 === 0 ? `in ${t / 7} ${t === 7 ? 'Woche' : 'Wochen'}` : `in ${t} ${t === 1 ? 'Tag' : 'Tagen'}`;
 }
-const zielDatum = (basis, z) => +z.monate ? terminPlus(basis, Math.round(+z.monate), 'monat') : tagPlus(basis, Math.max(0, Math.round(+z.tage || 0)));
+/* Ein festes Datum gilt, solange es nicht vor dem Tag der Erledigung liegt. */
+const zielDatum = (basis, z) => z.datum ? (z.datum > basis ? z.datum : basis)
+  : +z.monate ? terminPlus(basis, Math.round(+z.monate), 'monat') : tagPlus(basis, Math.max(0, Math.round(+z.tage || 0)));
 const datumKurz = iso => iso === heute() ? 'heute' : iso === tagPlus(heute(), 1) ? 'morgen' : dText(iso);
 const stufeNeu = titel => ({id:neueId(), titel:titel || '', wichtig:'normal', notiz:'', schritte:[], ergebnisse:[]});
 /* „in Ordnung → 1 Zustand prüfen (in 90 Tagen)“ – für Übersicht und Aufgabe. */
@@ -6429,7 +6439,9 @@ function renderAblaufPlan(){
       : `<div class="card abKarte">
         <button type="button" class="abKopf" data-st="${i}"><span class="abNr">${i + 1}</span><span class="abTitel">${esc(s.titel || 'Neue Aufgabe')}${s.sofort ? ' <span class="abSofort">⚡ sofort möglich</span>' : ''}</span><span class="abPfeil">▾</span></button>
         ${(s.schritte || []).length ? `<p class="muted small abHilfen">${esc(s.schritte.map(x => `${HILFE_ZEICHEN[x.art] || ''} ${schrittText(x)}`).join(' · '))}</p>` : ''}
-        <button type="button" class="btn ghost klein" data-stbearb="${i}" style="margin-top:8px">Titel und Hilfen bearbeiten</button>
+        <div class="row ablaufReihe abBearb"><button type="button" class="btn ghost klein" data-stbearb="${i}">Bearbeiten</button>
+          <button type="button" class="btn quadrat" data-sthoch="${i}" aria-label="nach vorn"${i ? '' : ' disabled'}>↑</button>
+          <button type="button" class="btn quadrat" data-strunter="${i}" aria-label="nach hinten"${i < l.length - 1 ? '' : ' disabled'}>↓</button></div>
         ${(s.ergebnisse || []).map((e, j) => {
           const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
           return `<button type="button" class="abWenn" data-st="${i}" data-e="${j}"><span class="muted">Wenn</span> <b>${esc(e.text || 'Ergebnis')}</b><span class="abDann">${
@@ -6445,6 +6457,9 @@ function renderAblaufPlan(){
     const id = l[+b.dataset.st].id; abAuf.has(id) ? abAuf.delete(id) : abAuf.add(id); renderAblaufPlan();
   });
   box.querySelectorAll('[data-stbearb]').forEach(b => b.onclick = () => { stufeAktiv = l[+b.dataset.stbearb].id; go('stufe'); });
+  /* Reihenfolge (v1.162): die erste Aufgabe ist der Anfang. */
+  box.querySelectorAll('[data-sthoch]').forEach(b => b.onclick = () => { const i = +b.dataset.sthoch; [l[i - 1], l[i]] = [l[i], l[i - 1]]; saveCfg(); renderAblaufPlan(); });
+  box.querySelectorAll('[data-strunter]').forEach(b => b.onclick = () => { const i = +b.dataset.strunter; [l[i + 1], l[i]] = [l[i], l[i + 1]]; saveCfg(); renderAblaufPlan(); });
   box.querySelectorAll('.abWenn').forEach(b => b.onclick = () => ergebnisFenster(p, l[+b.dataset.st], +b.dataset.e));
   box.querySelectorAll('[data-eneu]').forEach(b => b.onclick = () => ergebnisFenster(p, l[+b.dataset.eneu], -1));
   $('#stufeNeu').onclick = () => { const s = stufeNeu(''); l.push(s); saveCfg(); abAuf.add(s.id); stufeAktiv = s.id; go('stufe'); };
@@ -6460,7 +6475,7 @@ function ergebnisFenster(p, s, j){
   const alt = j >= 0 ? s.ergebnisse[j] : null;
   const w = {text:alt ? alt.text || '' : '', ziele:alt ? (alt.ziele || []).filter(z => stufeVon(p, z.stufe)).map(z => Object.assign({}, z))
     : [{stufe:'', tage:0}]};
-  const gleich = (z, v) => (+z.monate || 0) === (+v.monate || 0) && (+z.monate ? true : (+z.tage || 0) === (+v.tage || 0));
+  const gleich = (z, v) => !z.datum && (+z.monate || 0) === (+v.monate || 0) && (+z.monate ? true : (+z.tage || 0) === (+v.tage || 0));
   frage(alt ? 'Ergebnis' : 'Neues Ergebnis', '', 'Speichern', () => {
     const ziele = [];
     w.ziele.forEach(z => {
@@ -6469,7 +6484,7 @@ function ergebnisFenster(p, s, j){
         const n = stufeNeu(String(z.neu).trim()); p.stufen.push(n); z.stufe = n.id; abAuf.add(n.id);
       }
       if(!stufeVon(p, z.stufe)) return;
-      ziele.push(+z.monate ? {stufe:z.stufe, monate:+z.monate} : {stufe:z.stufe, tage:Math.max(0, Math.round(+z.tage || 0))});
+      ziele.push(z.datum ? {stufe:z.stufe, datum:z.datum} : +z.monate ? {stufe:z.stufe, monate:+z.monate} : {stufe:z.stufe, tage:Math.max(0, Math.round(+z.tage || 0))});
     });
     const e = alt || {id:neueId()};
     e.text = w.text.trim() || 'Ergebnis'; e.ziele = ziele;
@@ -6488,8 +6503,10 @@ function ergebnisFenster(p, s, j){
           ${z.neu !== undefined ? `<input data-k="${k}" data-zname="1" value="${esc(z.neu)}" placeholder="Titel der neuen Aufgabe" style="margin-top:8px">` : ''}
           <div class="eyebrow" style="margin:12px 0 6px">Wann</div>
           <div class="chips">${WANN.map(([t, v], n) => `<button type="button" data-k="${k}" data-wann="${n}" aria-pressed="${!z.eigen && gleich(z, v)}">${t}</button>`).join('')}
-            <button type="button" data-k="${k}" data-weigen="1" aria-pressed="${!!z.eigen || !WANN.some(([, v]) => gleich(z, v))}">eigene</button></div>
-          ${z.eigen || !WANN.some(([, v]) => gleich(z, v)) ? `<div class="row ablaufReihe" style="margin-top:8px"><span class="muted small">in</span>
+            <button type="button" data-k="${k}" data-weigen="1" aria-pressed="${!z.datum && (!!z.eigen || !WANN.some(([, v]) => gleich(z, v)))}">eigene</button>
+            <button type="button" data-k="${k}" data-wdatum="1" aria-pressed="${!!z.datum}">Datum</button></div>
+          ${z.datum ? `<input type="date" class="schmal" data-k="${k}" data-zdatum="1" value="${esc(z.datum)}" style="margin-top:8px" aria-label="Datum">` : ''}
+          ${!z.datum && (z.eigen || !WANN.some(([, v]) => gleich(z, v))) ? `<div class="row ablaufReihe" style="margin-top:8px"><span class="muted small">in</span>
             <input type="number" inputmode="numeric" min="0" class="tage" data-k="${k}" data-ztage="1" value="${esc(+z.monate ? +z.monate * 30 : (z.tage ?? 0))}" aria-label="Tage"><span class="muted small">Tagen</span></div>` : ''}
           <button type="button" class="btn ghost klein" data-k="${k}" data-zweg="1" style="margin-top:8px">${w.ziele.length > 1 ? 'Diese Folge entfernen' : 'Keine Folge – Ende des Ablaufs'}</button></div>`).join('')
         : `<p class="muted small" style="margin:8px 0">Dann: Ende des Ablaufs.</p>`)
@@ -6502,9 +6519,12 @@ function ergebnisFenster(p, s, j){
     box.querySelectorAll('[data-zname]').forEach(f => f.oninput = () => { w.ziele[+f.dataset.k].neu = f.value; });
     box.querySelectorAll('[data-wann]').forEach(b => b.onclick = () => {
       const z = w.ziele[+b.dataset.k], v = WANN[+b.dataset.wann][1];
-      delete z.monate; delete z.tage; delete z.eigen; Object.assign(z, v); zeichnen();
+      delete z.monate; delete z.tage; delete z.eigen; delete z.datum; Object.assign(z, v); zeichnen();
     });
-    box.querySelectorAll('[data-weigen]').forEach(b => b.onclick = () => { w.ziele[+b.dataset.k].eigen = true; zeichnen(); });
+    box.querySelectorAll('[data-weigen]').forEach(b => b.onclick = () => { const z = w.ziele[+b.dataset.k]; delete z.datum; z.eigen = true; zeichnen(); });
+    box.querySelectorAll('[data-wdatum]').forEach(b => b.onclick = () => { const z = w.ziele[+b.dataset.k]; delete z.eigen; z.datum = z.datum || tagPlus(heute(), 7); zeichnen(); });
+    /* Datumsfeld: übernehmen bei input, nicht neu zeichnen (iOS-Datumswahl). */
+    box.querySelectorAll('[data-zdatum]').forEach(f => f.oninput = () => { if(f.value) w.ziele[+f.dataset.k].datum = f.value; });
     box.querySelectorAll('[data-ztage]').forEach(f => f.oninput = () => { const z = w.ziele[+f.dataset.k]; delete z.monate; z.tage = Math.max(0, Math.round(+f.value || 0)); });
     box.querySelectorAll('[data-zweg]').forEach(b => b.onclick = () => { w.ziele.splice(+b.dataset.k, 1); zeichnen(); });
     $('#ergPlus').onclick = () => { w.ziele.push({stufe:'', tage:0}); zeichnen(); };
@@ -6575,8 +6595,7 @@ function renderStufe(){
     <div class="eyebrow">Hilfen</div>${l.length ? '' : '<p class="muted small" style="margin:0 0 6px">Ein Link, eine Nummer, eine vorbereitete E-Mail oder etwas zum Abhaken.</p>'}
     ${l.map(schritt).join('')}
     <button class="btn ghost klein" id="schrittNeu" style="margin:6px 0 4px">+ Hilfe</button>
-    <div class="knopfzeile">${nr > 1 ? '<button class="btn ghost klein" id="stufeHoch">Weiter nach vorn</button>' : ''}
-      ${p.stufen.length > 1 ? '<button class="btn danger klein" id="stufeWeg">Aufgabe löschen</button>' : ''}</div>`;
+    ${p.stufen.length > 1 ? '<div class="knopfzeile"><button class="btn danger klein" id="stufeWeg">Aufgabe löschen</button></div>' : ''}`;
   const sichern = () => saveCfg(), neu = () => renderStufe();
   $('#stTitel').oninput = e => { s.titel = e.target.value; sichern(); };
   $('#stNotiz').oninput = e => { s.notiz = e.target.value; sichern(); };
@@ -6590,7 +6609,6 @@ function renderStufe(){
   box.querySelectorAll('[data-runter]').forEach(b => b.onclick = () => { const i = +b.dataset.runter; [l[i + 1], l[i]] = [l[i], l[i + 1]]; sichern(); neu(); });
   box.querySelectorAll('[data-weg]').forEach(b => b.onclick = () => { l.splice(+b.dataset.weg, 1); sichern(); neu(); });
   $('#schrittNeu').onclick = () => { l.push({id:neueId(), art:'link', text:''}); sichern(); neu(); };
-  if($('#stufeHoch')) $('#stufeHoch').onclick = () => { const i = nr - 1; [p.stufen[i - 1], p.stufen[i]] = [p.stufen[i], p.stufen[i - 1]]; sichern(); neu(); };
   if($('#stufeWeg')) $('#stufeWeg').onclick = () => frage('Aufgabe löschen',
     `„${s.titel || 'Aufgabe'}“ wird aus dem Ablauf gelöscht; Ergebnisse, die zu ihr führen, enden dann.`, 'Löschen', () => {
       p.stufen = p.stufen.filter(x => x !== s);
