@@ -10,6 +10,8 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.169 07.10.2026 Dauer (Jean): unter 15 Minuten lassen sich jetzt auch
+         5 und 10 Minuten wählen; darüber bleiben die Stufen wie bisher.
   v1.168 07.10.2026 Arbeitsnachweis (Jean): die Schritte eines Ablaufs
          stehen nicht mehr einzeln da, sondern als ein Eintrag je Tag unter
          dem Namen des Ablaufs (mit Objekt) und der Summe ihrer Dauern –
@@ -3453,7 +3455,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.168';
+const VERSION = 'v1.169';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -7657,6 +7659,7 @@ async function terminTeilen(t){
    Einplanung. Der Durchschnitt nimmt die letzten zehn Angaben, damit er einer
    geänderten Arbeitsweise folgt. */
 const DAUER_STUFEN = [
+  {m:5}, {m:10},                               // kurze Handgriffe (v1.169, Jean)
   ...Array.from({length:16}, (_, i) => ({m:(i + 1) * 15})),
   {t:0.5}, {t:1}, ...Array.from({length:19}, (_, i) => ({t:i + 2}))];
 const STUFE_HALB = DAUER_STUFEN.findIndex(x => x.t === 0.5),
@@ -7672,10 +7675,11 @@ function dauerText(w){
   const m = Math.round(+w.m || 0);
   return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')} h`;
 }
-/* Minuten auf die nächste Stufe: bis 4 Stunden auf 15 Minuten, darüber auf
-   halbe und ganze Tage. */
+/* Minuten auf die nächste Stufe: unter einer Viertelstunde 5 oder 10 Minuten
+   (v1.169), bis 4 Stunden auf 15 Minuten, darüber auf halbe und ganze Tage. */
 function alsStufe(min){
   if(!(min > 0)) return null;
+  if(min < 12.5) return {m:min < 7.5 ? 5 : 10};
   if(min <= 247) return {m:Math.min(240, Math.max(15, Math.round(min / 15) * 15))};
   const tag = tagMinuten(), halb = Math.round(min / tag * 2) / 2;
   if(halb <= 0.5) return {t:0.5};
@@ -9305,7 +9309,7 @@ function arbBlattHtml(z, liste){
   const fuss = `<div class="arbFuss"><div class="arbSumme"><b>Gesamt ≈ ${esc(dauerText({m:gesamt}))}</b>${
       tage.length ? ` an ${tage.length} ${tage.length === 1 ? 'Tag' : 'Tagen'}` : ''}</div>${
       schnitt ? '<p class="arbHinweis">* Durchschnittswert der Tätigkeit, keine einzeln erfasste Dauer.</p>' : ''}
-    <p class="arbHinweis">Dauern auf 15 Minuten gerundet; ein Tag als Dauer entspricht ${esc(dauerText({m:arbeitsMin()}))}.</p></div>`;
+    <p class="arbHinweis">Dauern auf 15 Minuten gerundet, unter 15 Minuten auf 5; ein Tag als Dauer entspricht ${esc(dauerText({m:arbeitsMin()}))}.</p></div>`;
   if(!zeilen.length)
     return `<div class="paper">${kopf('')}<p>In diesem Zeitraum ist nichts eingetragen.</p>${fuss}</div>`;
   /* Messen wie bei den Nachweisen: unsichtbar gesetzt, Zeile für Zeile. */
