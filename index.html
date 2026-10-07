@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.165 07.10.2026 Fenster „Weiter“ mit klaren Knöpfen (Jean): unten
+         „Abbrechen“ und „Speichern“. Speichern übernimmt das eingetragene
+         Datum, legt die Folgeaufgabe an und schließt das Fenster.
+         Abbrechen übernimmt nichts: auch das Erledigen davor wird
+         zurückgenommen, man ist wieder auf der Seite der Aufgabe (bzw. im
+         vorigen Fenster). Bei mehreren Ergebnissen wählt man oben eines aus.
+         „Später erledigen“ legt die Aufgabe wie bisher in die Liste.
   v1.164 07.10.2026 „Datum wählen“ einfacher (Jean): das Datumsfeld steht
          gleich unter dem Ergebnis („→ Ausführung abnehmen am …“), auf der
          Aufgabe wie im Fenster „Weiter“ – kein zweites Fenster mehr, dessen
@@ -3426,7 +3433,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.164';
+const VERSION = 'v1.165';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6392,49 +6399,85 @@ planWeiter.neue = [];
 /* „Gleich im Anschluss“ (v1.161, Jean): ist eine eben entstandene Folge als
    sofort möglich eingestellt, bietet ein Fenster ihre Hilfen an (Mail,
    Anruf …) und daneben ihre Ergebnisse. Erledigt ist sie erst mit dem Tipp
-   auf ein Ergebnis (Jean: noch einmal von Hand bestätigen); „Als Aufgabe
-   speichern“ lässt sie in der Liste. Ihre eigene Folge kann wieder sofort
+   auf „Speichern“ (Jean: noch einmal von Hand bestätigen); „Später
+   erledigen“ lässt sie in der Liste, „Abbrechen“ nimmt alles zurück. Ihre eigene Folge kann wieder sofort
    möglich sein – dann geht es im nächsten Fenster weiter. */
 function sofortNaechste(liste){
   return (liste || []).find(n => { const s = stufeDerAufgabe(n); return s && s.sofort && !n.erledigt; }) || null;
 }
-function sofortFenster(n, danach){
+function sofortFenster(n, danach, rueck){
   const p = planVon(n.plan), s = stufeDerAufgabe(n), weiter = () => { if(danach) danach(); };
   if(!p || !s){ weiter(); return; }
-  frage('Weiter: ' + (s.titel || 'Aufgabe'), n.anlage ? anlageName(n) : '', 'Als Aufgabe speichern', () => {
-    toast(`Gespeichert · ${n.titel} fällig ${datumKurz(n.frist)}`); weiter();
-  });
-  /* Hervorgehoben sind Hilfen und Ergebnis; Speichern ist der leise Weg. */
-  $('#dlgKnoepfe').hidden = true;
+  /* Unten Abbrechen und Speichern (v1.165, Jean): Speichern erledigt mit dem
+     gewählten Ergebnis und den eingetragenen Tagen, Abbrechen nimmt nichts
+     an und führt zurück, wo man herkam. */
+  frage('Weiter: ' + (s.titel || 'Aufgabe'), n.anlage ? anlageName(n) : '', 'Speichern', () => {});
   if(!n.anlage) $('#dlgText').hidden = true;
   const box = $('#dlgListe');
   box.hidden = false;
   const er = s.ergebnisse || [];
-  box.innerHTML = `<div class="sofortHilfen">${(s.schritte || []).map(x => hilfenKnopf(x, n, n.ablaufStand)).join('')}</div>
-    ${er.length ? er.map((e, j) => ergebnisBlockHtml(p, e, j,
-      `<button class="btn ergebnisKnopf" data-serg="${j}">${esc(ergName(e))}</button>`,
-      y => `<p class="muted small" style="margin:4px 0 0">→ ${esc(y.st.titel || 'Aufgabe')} · ${esc(datumKurz(zielDatum(heute(), y.x)))}</p>`)).join('') : '<div class="ergebnisBlock"><button class="btn ergebnisKnopf" data-serg="-1">Erledigt</button></div>'}
-    <button class="btn ghost" id="sofortSpeichern" style="margin-top:16px">Als Aufgabe speichern · fällig ${esc(datumKurz(n.frist))}</button>`;
-  hilfenVerdrahten(box, n);
-  $('#sofortSpeichern').onclick = () => {
-    $('#dlg').hidden = true; dlgZuruecksetzen();
-    toast(`Gespeichert · ${n.titel} fällig ${datumKurz(n.frist)}`); weiter();
+  let wahl = 0;
+  /* Eingetragene Tage überleben den Wechsel des Ergebnisses. */
+  const werte = {};
+  const aufbauen = () => {
+    box.querySelectorAll('[data-zw]').forEach(f => { werte[f.dataset.zw] = f.value; });
+    const e = er[wahl];
+    box.innerHTML = `<div class="sofortHilfen">${(s.schritte || []).map(x => hilfenKnopf(x, n, n.ablaufStand)).join('')}</div>
+      ${er.length > 1 ? `<div class="chips sofortWahl" style="margin-top:12px">${er.map((x, j) =>
+        `<button type="button" data-serg="${j}" aria-pressed="${j === wahl}">${esc(ergName(x))}</button>`).join('')}</div>` : ''}
+      ${e ? ergebnisBlockHtml(p, e, wahl, '',
+        y => `<p class="muted small" style="margin:4px 0 0">→ ${esc(y.st.titel || 'Aufgabe')} · ${esc(datumKurz(zielDatum(heute(), y.x)))}</p>`) : ''}
+      <button class="btn ghost" id="sofortSpaeter" style="margin-top:16px">Später erledigen · fällig ${esc(datumKurz(n.frist))}</button>`;
+    box.querySelectorAll('[data-zw]').forEach(f => { if(werte[f.dataset.zw]) f.value = werte[f.dataset.zw]; });
+    hilfenVerdrahten(box, n);
+    box.querySelectorAll('[data-serg]').forEach(b => b.onclick = () => { wahl = +b.dataset.serg; aufbauen(); });
+    $('#sofortSpaeter').onclick = () => {
+      $('#dlg').hidden = true; dlgZuruecksetzen();
+      toast(`In der Liste · ${n.titel} fällig ${datumKurz(n.frist)}`); weiter();
+    };
   };
-  box.querySelectorAll('[data-serg]').forEach(b => b.onclick = () => {
-    const j = +b.dataset.serg, fest = {};
+  aufbauen();
+  $('#dlgJa').onclick = () => {
+    const j = er.length ? wahl : -1, fest = {};
     if(j >= 0) zielFelderLesen(box, j, fest, heute());
     $('#dlg').hidden = true; dlgZuruecksetzen();
     sofortErledigt(j, fest);
-  });
+  };
+  $('#dlgNein').onclick = () => {
+    $('#dlg').hidden = true; dlgZuruecksetzen();
+    sofortZurueck(rueck);
+  };
   const sofortErledigt = (j, fest) => {
+    const vorher = JSON.parse(JSON.stringify(n));
     n.erledigt = heute(); delete n.geplant;
     planWeiter.neue = [];
     const pt = j >= 0 ? planWeiter(n, j, fest) : '';
     saveAufg();
     toast(`${s.titel || 'Aufgabe'} erledigt` + (pt ? ' · ' + pt : ''));
     const nx = sofortNaechste(planWeiter.neue);
-    if(nx) sofortFenster(nx, danach); else weiter();
+    /* Abbrechen im nächsten Fenster führt hierher zurück. */
+    if(nx) sofortFenster(nx, danach, {von:n, vorher, neue:planWeiter.neue.slice(),
+      dann:() => sofortFenster(n, danach, rueck)});
+    else weiter();
   };
+}
+/* Abbrechen im Fenster „Weiter“: das Erledigen davor wird zurückgenommen –
+   die eben entstandenen Folgen gehen, solange an ihnen nichts getan wurde,
+   die Aufgabe bekommt ihren Stand von vorher zurück. Danach geht es zur
+   vorigen Ansicht (Seite der Aufgabe oder voriges Fenster). */
+function sofortZurueck(r){
+  if(!r || !r.von){ toast('Abgebrochen'); return; }
+  const a = r.von, weg = new Set();
+  const unberuehrt = f => f && !f.erledigt && !f.notiz && !f.vorbErledigt;
+  (r.neue || []).forEach(f => { if(unberuehrt(f)) weg.add(f.id); });
+  const wdh = a.folge && AUFG.find(x => x.id === a.folge);
+  if(a.folge !== (r.vorher || {}).folge && unberuehrt(wdh)) weg.add(wdh.id);
+  AUFG = AUFG.filter(x => !weg.has(x.id));
+  Object.keys(a).forEach(k => delete a[k]);
+  Object.assign(a, r.vorher);
+  saveAufg(); stoerAusAufgabe(a, 'wieder');
+  toast('Abgebrochen – nichts übernommen');
+  if(r.dann) r.dann(); else aufgabeOeffnen(a.id);
 }
 
 /* --- Bearbeiten: Übersicht › Abläufe › Ablauf › Aufgabe ----------------------- */
@@ -7088,6 +7131,7 @@ function renderAufgabe(){
      entstehen sofort mit den Daten, die auf den Knöpfen stehen. */
   const zielFest = {};
   const erledigenMit = j => {
+    const vorher = JSON.parse(JSON.stringify(a));   // für Abbrechen im Fenster „Weiter“ (v1.165)
     a.erledigt = $('#erlDatum').value || heute();
     a.vermerk = $('#erlVermerk').value.trim();
     delete a.geplant;
@@ -7116,18 +7160,18 @@ function renderAufgabe(){
       const pt = j == null ? '' : planWeiter(a, j, zielFest);
       saveAufg();
       toast((fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · wieder fällig ${dText(folge.frist)}`) + (pt ? ' · ' + pt : ''));
-      zurueck(); weiterSofort(tFragen);
+      zurueck(); weiterSofort(tFragen, vorher);
       return;
     }
     planWeiter.neue = [];
     const pt = j == null ? '' : planWeiter(a, j, zielFest);
     saveAufg(); stoerAusAufgabe(a, 'erledigt'); toast(pt ? 'Erledigt · ' + pt : 'Als erledigt vermerkt'); zurueck();
-    weiterSofort(tFragen);
+    weiterSofort(tFragen, vorher);
   };
   /* Eine Folge, die gleich im Anschluss erledigt werden kann (v1.161). */
-  const weiterSofort = fragen => {
+  const weiterSofort = (fragen, vorher) => {
     const nx = sofortNaechste(planWeiter.neue);
-    if(nx) sofortFenster(nx, fragen); else fragen();
+    if(nx) sofortFenster(nx, fragen, {von:a, vorher, neue:planWeiter.neue.slice()}); else fragen();
   };
   if($('#erlSetzen')) $('#erlSetzen').onclick = () => erledigenMit(null);
   if(!a.erledigt && !neu) ergebnisseVerdrahten(a, zielFest, erledigenMit);

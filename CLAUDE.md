@@ -254,6 +254,12 @@ steht.
   `zielFelderLesen`), auf der Aufgabe
   und im `sofortFenster` – das Zwischenfenster mit „Abbrechen“ war
   missverständlich (Jean). Ergebnis ohne Namen = „Erledigt“ (`ergName`).
+- Fenster „Weiter“ (v1.165, Jean): unten Abbrechen/Speichern (`#dlgNein`/
+  `#dlgJa`), Ergebnis bei mehreren als Kacheln (`data-serg`), Datumsfelder
+  wie auf der Aufgabe; „Später erledigen“ (`#sofortSpaeter`) lässt die Folge
+  in der Liste. Abbrechen = `sofortZurueck(rueck)`: Stand vor dem Erledigen
+  (`vorher`, ganze Kopie) zurück, unberührte neue Folgen und Wiederholung
+  weg, dann Seite der Aufgabe bzw. voriges Fenster (`rueck.dann`).
 - **Seitennamen eindeutig halten:** v1.159 nannte die Ablaufseite `plan` mit
   `#planBox` – das ist die Grundriss-Seite. `go('plan')` zeichnete dann den
   Ablauf in den Grundriss, Kopfzeile und Geschoss-Regler fehlten. Seit
