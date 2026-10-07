@@ -313,6 +313,22 @@ steht.
   das nächste (Fehlschlag dort zählt nicht). Gespeichert bleibt der Link wie
   eingefügt.
 
+## Aktionen mit Daten (v1.172)
+
+- „Hilfen“ heißen sichtbar „Aktionen“ (Jean); im Code weiter `schritte`,
+  `hilfenKnopf`, `ablaufHilfenHtml`. Neue Arten `wetter`/`abfall`
+  (`AKTION_INFO`): keine Knöpfe, sondern `aktionInfoHtml` mit dem Stand von
+  jetzt. Wetter trägt `x.bed` (Bedingung wie die Wetterregeln, gerechnet mit
+  `bedPruefen`/`hinweisReihen`), `x.grenze` → ✓/✗. Abfall trägt `x.arten`
+  (leer = alle). Editor: `wetterAktionFelder`/`abfallAktionFelder`.
+- Wann „vor Abholung“: Ziel `{stufe, abfall, vor}` (`vorAbholung`,
+  `abholungVor`, in `zielDatum`/`wannText`); erste Abholung der Art, deren
+  Tag minus `vor` ≥ Basis; sonst die Basis selbst.
+- Vereinbart als Nächstes (Jean, Baustein 2): Wetterregeln werden
+  „Auslöser“ unter Übersicht › Abläufe, mit Abfall-Bedingung und „Dann:
+  Ablauf starten“, Vorgabe „vorschlagen“. Danach Baustein 3: Ergebnis mit
+  Bedingung, die App wählt es selbst oder schlägt es vor.
+
 ## Suche (v1.145)
 
 - `suchObjekte`: Text je Objekt = Name (+ Löscherangaben) + Name der Anlage
