@@ -302,10 +302,16 @@ steht.
   (`abfallAbrufen`, beim Öffnen höchstens täglich; TypeError online =
   'gesperrt', also CORS). `icsLesen`/`icsWiederholen`: RRULE, EXDATE,
   RECURRENCE-ID, UTC → Ortszeit. Seite `abfall` (Übersicht › Abfall).
-- Ziel „möglichst viele Kommunen“: als Nächstes (vereinbart) geführte Auswahl
-  bei abfall.io (Kommune/Straße/Hausnummer), falls Jeans Link-Test zeigt,
-  dass der Abruf aus der App geht. Ein eigener Vermittlungsserver nur, wenn
-  Datei und Link nicht reichen.
+- Ziel „möglichst viele Kommunen“: Weg ist „Link kopieren“ (Knopf der
+  ics-Datei auf der Abfallseite lange drücken – antippen gibt sie unter iOS
+  nur an den Kalender). Jeans Test (v1.170): api.abfall.io lässt den Abruf
+  aus der App zu. Geführte Auswahl bei abfall.io zurückgestellt (Jean): Schlüssel je
+  Entsorger, Auswahl-Schnittstelle (GraphQL, eigener Kopf) prüft vermutlich
+  die Herkunft. Ein Vermittlungsserver nur, wenn Datei und Link nicht reichen.
+- Fester Zeitraum im Link (v1.171): `abfallUrls` setzt in `timeperiod`/
+  `f_zeitraum` das laufende Jahr ein, ab November (`ABFALL_NEUES_JAHR`) dazu
+  das nächste (Fehlschlag dort zählt nicht). Gespeichert bleibt der Link wie
+  eingefügt.
 
 ## Suche (v1.145)
 

@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.171 07.10.2026 Abfallkalender (Jean): Links mit festem Jahr (bei
+         abfall.io „1. Januar bis 31. Dezember“) laufen nicht mehr zum
+         Jahresende aus – die App setzt beim Abruf das laufende Jahr ein und
+         holt ab November das nächste dazu, sobald der Entsorger es hat.
+         Unter „Kalender-Link“ steht jetzt, wie man den Link bekommt:
+         Knopf lange drücken, „Link kopieren“, einfügen.
   v1.170 07.10.2026 Online-Dienste (Jean): neue Gruppe in den Einstellungen
          mit Adresse, Wetter und Abfallkalender. Die Adresse wird einmal
          gesucht (Straße, Hausnummer, PLZ, Ort; auch „Aktueller Standort“)
@@ -3488,7 +3494,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.170';
+const VERSION = 'v1.171';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10971,6 +10977,20 @@ function abfallFehlerText(){
        : f === 'keine Verbindung' || f === 'keine Antwort' ? `Letzter Abruf gescheitert: ${f}.`
        : `Letzter Abruf gescheitert (${f}).`;
 }
+/* Links mit festem Zeitraum (abfall.io: timeperiod=20260101-20261231, ältere
+   Fassung f_zeitraum) liefen am Jahresende leer. Die App setzt darum das
+   laufende Jahr ein und holt ab ABFALL_NEUES_JAHR (November) das nächste
+   dazu (v1.171). Der gespeicherte Link bleibt, wie er eingefügt wurde. */
+const ABFALL_NEUES_JAHR = 10;
+function abfallUrls(link){
+  const u = String(link || '').trim().replace(/^webcals?:\/\//i, 'https://');
+  const re = /([?&](?:timeperiod|f_zeitraum)=)(\d{4})(\d{4})-(\d{4})(\d{4})/i;
+  const m = re.exec(u);
+  if(!m) return [u];
+  const jetzt = new Date(), j = jetzt.getFullYear(), spanne = +m[4] - +m[2];
+  const fuer = y => u.replace(re, `$1${y}$3-${y + spanne}$5`);
+  return jetzt.getMonth() >= ABFALL_NEUES_JAHR ? [fuer(j), fuer(j + 1)] : [fuer(j)];
+}
 /* sofort = true übergeht die Tagessperre („Abrufen“ in den Einstellungen). */
 async function abfallAbrufen(sofort = false){
   if(!ABFALL.url || abfallLaeuft || !listeGebaut) return;
@@ -10983,10 +11003,21 @@ async function abfallAbrufen(sofort = false){
   abfallNeuZeigen();
   const halt = new AbortController(), uhr = setTimeout(() => halt.abort(), 20000);
   try{
-    const url = ABFALL.url.trim().replace(/^webcals?:\/\//i, 'https://');
-    const r = await fetch(url, {signal:halt.signal, cache:'no-store'});
-    if(!r.ok) throw new Error('Antwort ' + r.status);
-    const termine = icsLesen(await r.text());
+    const [erst, ...weitere] = abfallUrls(ABFALL.url);
+    const holen = async url => {
+      const r = await fetch(url, {signal:halt.signal, cache:'no-store'});
+      if(!r.ok) throw new Error('Antwort ' + r.status);
+      return icsLesen(await r.text());
+    };
+    let termine = await holen(erst);
+    /* Das nächste Jahr gibt es beim Entsorger oft erst im Dezember – bis
+       dahin zählt ein Fehlschlag dort nicht. */
+    for(const url of weitere){
+      try{ termine = termine.concat(await holen(url)); }catch(e){ /* noch nicht veröffentlicht */ }
+    }
+    const gesehen = new Set();
+    termine = termine.filter(t => { const k = t.tag + '|' + t.art; if(gesehen.has(k)) return false; gesehen.add(k); return true; })
+      .sort((a, b) => a.tag < b.tag ? -1 : a.tag > b.tag ? 1 : a.art.localeCompare(b.art, 'de'));
     ABFALL = Object.assign({}, ABFALL, {termine, quelle:'link', datei:'', abgerufen:Date.now(), versuch:Date.now(), fehler:''});
   }catch(e){
     /* Gesperrt (CORS) und fehlende Verbindung sehen für die Seite gleich aus:
@@ -11056,7 +11087,7 @@ function setAbfall(box){
     <button class="btn" id="abfDatei">Kalenderdatei öffnen</button>
     <input type="file" id="abfDateiWahl" hidden>
     <div class="eyebrow" style="margin-top:22px">Kalender-Link</div>
-    <p class="muted small" style="margin:0 0 10px">Bietet der Entsorger „Kalender abonnieren“ an, den Link hier einfügen. Die App ruft ihn dann beim Öffnen einmal am Tag selbst ab.</p>
+    <p class="muted small" style="margin:0 0 10px">Auf der Abfallseite der Kommune den Knopf für die Kalenderdatei (iCal/ICS) <b>lange drücken</b>, „Link kopieren“ wählen und hier einfügen. Die App ruft ihn dann beim Öffnen einmal am Tag selbst ab und stellt ein Jahr im Link selbst weiter.</p>
     <label class="field"><span>Link</span><input id="abfLink" type="url" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
       placeholder="https://… oder webcal://…" value="${esc(ABFALL.url)}"></label>
     <div class="knopfzeile abfKn" style="margin-top:0">${ABFALL.url ? `<button class="btn danger klein" id="abfLinkWeg">Link entfernen</button>` : ''}<button class="btn" id="abfAbruf">Abrufen</button></div>
