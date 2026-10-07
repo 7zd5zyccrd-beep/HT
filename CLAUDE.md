@@ -230,6 +230,22 @@ steht.
   `ergebnisFenster` mit Kacheln „Dann folgt“ und „Wann“ (`WANN`; Ziel trägt
   `tage` oder `monate`, `zielDatum`/`wannText`). `planStarten` (Objekt,
   Datum), „Laufend“ unter Übersicht › Abläufe, Liste „Dachrinne · 2 von 3“.
+- Aufgabe aufs Wesentliche (v1.161, Jean: „was vordergründig geht, geht
+  unter“): Kopf nur Termin, Objekt, Ablauf („Dachrinne · Aufgabe 2 von 3“),
+  Notiz, kleine Knöpfe Grundriss/Nachweis; darunter Wetter (nur
+  wetterabhängig), Vorbereitung (nur wenn offen, `aufgVorbOffen`), Hilfen
+  (`ablaufHilfenHtml`), Erledigen (Vermerk/Dauer in `.erlMehr`). Alles
+  Übrige unter `#aufgMehr` („Mehr: Leiter · ≈ 30 min …“, `aufgMehrText`):
+  `ablaufMehrHtml` (Bisher, bearbeiten, „Ablauf starten“), Werkzeug-Karten,
+  `aufgInfoZeile`, Angaben, Löschen. `mehrAuf` hält es offen.
+- „Gleich im Anschluss“ (v1.161): `s.sofort` an der Aufgabe im Ablauf
+  (Schalter auf der Stufen-Seite, „⚡ sofort möglich“ auf der Ablaufseite).
+  `planWeiter.neue` sammelt die eben angelegten Folgen; `sofortFenster`
+  zeigt Hilfen und Ergebnisse, erledigt erst mit Tipp aufs Ergebnis (Jean:
+  manuell bestätigen), „Als Aufgabe speichern“ als leiser Knopf; Kette geht
+  weiter, wenn die nächste Folge wieder sofort möglich ist.
+- Ablaufseite zugeklappt (v1.161): Kette aus Kärtchen, `abAuf` merkt die
+  offenen; „Titel und Hilfen bearbeiten“ öffnet die Stufen-Seite.
 - **Seitennamen eindeutig halten:** v1.159 nannte die Ablaufseite `plan` mit
   `#planBox` – das ist die Grundriss-Seite. `go('plan')` zeichnete dann den
   Ablauf in den Grundriss, Kopfzeile und Geschoss-Regler fehlten. Seit

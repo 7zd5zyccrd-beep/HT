@@ -10,6 +10,18 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.161 07.10.2026 Aufgaben aufs Wesentliche und „gleich im Anschluss“
+         (Jean). Die Aufgabe zeigt oben nur, worum es geht (Titel, Termin,
+         Objekt, Ablauf, Notiz), darunter die Hilfen als Knöpfe und das
+         Erledigen; Vermerk und Dauer klappen erst auf Tipp auf. Werkzeug,
+         Dauer im Schnitt, Wiederholung, bisheriger Weg, Angaben und Löschen
+         stehen unter „▸ Mehr“. Vorbereitung nur oben, wenn noch offen;
+         Grundriss und Nachweis als kleine Knöpfe im Kopf. Abläufe: eine
+         Aufgabe kann „gleich im Anschluss erledigt werden“ – entsteht sie
+         als Folge, bietet ein Fenster ihre Hilfen (Mail, Anruf) an; erledigt
+         ist sie erst mit dem Tipp auf ihr Ergebnis, sonst „Als Aufgabe
+         speichern“. Die Ablaufseite zeigt die Aufgaben zugeklappt als Kette,
+         ein Tipp öffnet eine.
   v1.160 07.10.2026 Abläufe einfacher zu bedienen (Jean: „sehr
          unübersichtlich“). Erledigen: bei einer Aufgabe aus einem Ablauf
          stehen die Ergebnisse als Knöpfe da, darunter je Folge Aufgabe und
@@ -2992,6 +3004,25 @@ a.ablaufSchritt{display:flex;align-items:center;justify-content:center;text-deco
 .abWenn{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);margin-top:8px;padding:8px 0 0;font:inherit;color:inherit;cursor:pointer}
 .abDann{display:block;white-space:pre-line;font-size:15px;margin-top:2px}
 .laufEintrag .etext{font-size:15px}
+/* Aufgabe aufs Wesentliche (v1.161). */
+.kopfZeichen{display:flex;gap:8px;margin-top:10px}
+.kopfZeichen .btn{flex:0 0 auto;width:auto;margin:0}
+.kopfZeichen svg{width:18px;height:18px;margin-right:4px;vertical-align:-3px}
+.ablaufHilfen{margin:0 0 12px}
+.ablaufHilfen .ablaufSchritt:first-child{margin-top:0}
+.erlAm{align-items:center;gap:10px}
+.erlAm span{flex:0 0 auto}
+.erlMehr,.aufgMehr{margin-top:10px}
+.erlMehr summary,.aufgMehr > summary{cursor:pointer;color:var(--ink-soft);font-size:15px;padding:6px 0;list-style:none}
+.erlMehr summary::-webkit-details-marker,.aufgMehr > summary::-webkit-details-marker{display:none}
+.aufgMehr{margin-top:6px}
+.aufgMehr > summary::before{content:'▸ '}
+.aufgMehr[open] > summary::before{content:'▾ '}
+.aufgMehr[open] > summary{margin-bottom:8px}
+.abKarte.zu{padding-top:12px;padding-bottom:12px}
+.abTitel small{display:block;font-weight:400;font-size:14px;color:var(--ink-soft);margin-top:2px}
+.abSofort{font-weight:400;font-size:13px;color:var(--ink-soft);white-space:nowrap}
+.sofortHilfen .ablaufSchritt:first-child{margin-top:4px}
 /* Ergebnisse im Erledigen (v1.160). */
 .ergebnisBlock{margin-top:12px}
 .ergebnisKnopf{font-weight:700;border-width:2px}
@@ -3375,7 +3406,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.160';
+const VERSION = 'v1.161';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6186,28 +6217,30 @@ function ablaufUmwandeln(){
   return true;
 }
 
-/* Die Karte auf der Seite der Aufgabe: Ablauf und Platz darin, die Hilfen
-   (Link, Anruf und E-Mail sind echte Verweise – iOS öffnet sie nur aus dem
-   Tipp selbst) und der bisherige Weg. Die Ergebnisse stehen im Erledigen. */
-function ablaufKarteHtml(a){
+/* Auf der Aufgabe (v1.161): oben nur die Hilfen als Knöpfe (Link, Anruf und
+   E-Mail sind echte Verweise – iOS öffnet sie nur aus dem Tipp selbst), der
+   bisherige Weg und das Bearbeiten stehen unter „Mehr“. */
+function hilfenKnopf(x, a, st){
+  const fertig = !!(st || {})[x.id];
+  if(x.art === 'haken' || a.entwurf)
+    return `<label class="haken ablaufHaken"><input type="checkbox" data-sid="${esc(x.id)}"${fertig ? ' checked' : ''}${a.entwurf ? ' disabled' : ''}>
+      <span>${esc(schrittText(x))}</span></label>`;
+  const ziel = schrittZiel(x, a);
+  return ziel ? `<a class="btn ablaufSchritt${fertig ? ' fertig' : ''}" href="${esc(ziel)}" target="_blank" rel="noopener" data-sid="${esc(x.id)}">${esc((fertig ? '✓ ' : (HILFE_ZEICHEN[x.art] || '') + ' ') + schrittText(x))}</a>`
+    : `<button class="btn ablaufSchritt" disabled>${esc(schrittText(x))} – Angabe fehlt</button>`;
+}
+function ablaufHilfenHtml(a){
+  const s = stufeDerAufgabe(a);
+  return s && (s.schritte || []).length && !a.erledigt
+    ? `<div id="ablaufKarte" class="ablaufHilfen">${s.schritte.map(x => hilfenKnopf(x, a, a.ablaufStand)).join('')}</div>` : '';
+}
+function ablaufMehrHtml(a){
   const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a);
-  if(!p || !s) return `<button class="btn ghost klein" id="ablaufStart" style="margin:0 0 12px">Ablauf starten</button>`;
-  const st = a.ablaufStand || {};
-  const zeile = (x, i) => {
-    const fertig = !!st[x.id], vor = fertig ? '✓ ' : '';
-    if(x.art === 'haken' || a.entwurf)
-      return `<label class="haken ablaufHaken"><input type="checkbox" data-sid="${esc(x.id)}"${fertig ? ' checked' : ''}${a.entwurf ? ' disabled' : ''}>
-        <span>${esc(schrittText(x))}</span></label>`;
-    const ziel = schrittZiel(x, a);
-    return ziel ? `<a class="btn ablaufSchritt${fertig ? ' fertig' : ''}" href="${esc(ziel)}" target="_blank" rel="noopener" data-sid="${esc(x.id)}">${esc(vor + schrittText(x))}</a>`
-      : `<button class="btn ablaufSchritt" disabled>${esc(schrittText(x))} – Angabe fehlt</button>`;
-  };
+  if(!p || !s) return a.art === 'mangel' || a.erledigt ? '' : `<button class="btn ghost klein" id="ablaufStart" style="margin:0 0 10px">Ablauf starten</button>`;
   const bisher = ketteVon(a);
-  return `<div class="card" id="ablaufKarte"><div class="eyebrow" style="margin:0 0 4px">Ablauf · ${esc(p.name || 'Ablauf')}</div>
-    <p class="muted small" style="margin:0">Aufgabe ${stufeNr(p, s.id)} von ${p.stufen.length}</p>
-    ${(s.schritte || []).map(zeile).join('')}
-    ${bisher.length ? `<div class="eyebrow" style="margin:12px 0 4px">Bisher</div>${bisher.map(x =>
-      `<p class="small" style="margin:2px 0">${esc(ketteZeile(x))}</p>`).join('')}` : ''}
+  return `<div class="card"><div class="eyebrow" style="margin:0 0 4px">Ablauf · ${esc(p.name || 'Ablauf')}</div>
+    ${bisher.length ? bisher.map(x => `<p class="small" style="margin:2px 0">${esc(ketteZeile(x))}</p>`).join('')
+      : '<p class="muted small" style="margin:0">Erste Aufgabe des Ablaufs.</p>'}
     <button class="btn ghost klein" id="ablaufBearb" style="margin-top:10px">Ablauf ansehen und bearbeiten</button></div>`;
 }
 function ablaufVerdrahten(a, neuZeichnen){
@@ -6217,18 +6250,22 @@ function ablaufVerdrahten(a, neuZeichnen){
   if(b) b.onclick = () => planOeffnen(a.plan);
   const karte = $('#ablaufKarte');
   if(!karte || a.entwurf) return;
+  hilfenVerdrahten(karte, a);
+}
+/* Ein Tipp auf eine Hilfe hakt sie ab (auch im Fenster „Weiter“). */
+function hilfenVerdrahten(box, a){
   const erledigt = (id, an) => {
     a.ablaufStand = a.ablaufStand || {};
     if(an) a.ablaufStand[id] = heute(); else delete a.ablaufStand[id];
     saveAufg();
   };
-  karte.querySelectorAll('a[data-sid]').forEach(el => el.addEventListener('click', () => {
+  box.querySelectorAll('a[data-sid]').forEach(el => el.addEventListener('click', () => {
     erledigt(el.dataset.sid, true);
     el.classList.add('fertig');
-    const x = (stufeDerAufgabe(a).schritte || []).find(y => y.id === el.dataset.sid);
+    const x = ((stufeDerAufgabe(a) || {}).schritte || []).find(y => y.id === el.dataset.sid);
     if(x) el.textContent = '✓ ' + schrittText(x);
   }));
-  karte.querySelectorAll('input[data-sid]').forEach(el => el.onchange = () => erledigt(el.dataset.sid, el.checked));
+  box.querySelectorAll('input[data-sid]').forEach(el => el.onchange = () => erledigt(el.dataset.sid, el.checked));
 }
 /* Einen Ablauf an einer bestehenden Aufgabe starten – vorhandenen wählen oder
    aus dieser Aufgabe einen neuen anlegen. */
@@ -6300,16 +6337,62 @@ function planWeiter(a, j, fest){
       punkt:'', titel:st.titel || 'Aufgabe', text:'', notiz:st.notiz || '', zeitraum:'', festgestellt:'',
       angelegt:heute(), frist, wichtig:st.wichtig || 'normal', erneut:[], erledigt:'', vermerk:'',
       plan:p.id, stufe:st.id, kette:a.kette || a.id, vorgaenger:a.id};
-    AUFG.push(n); a.planFolgen[i] = n.id;
+    AUFG.push(n); a.planFolgen[i] = n.id; planWeiter.neue.push(n);
     raus.push(`${st.titel || 'Aufgabe'} ${datumKurz(frist)}`);
   });
   saveAufg();
   return raus.length ? 'weiter: ' + raus.join(', ') : 'Ablauf beendet';
 }
+planWeiter.neue = [];
+/* „Gleich im Anschluss“ (v1.161, Jean): ist eine eben entstandene Folge als
+   sofort möglich eingestellt, bietet ein Fenster ihre Hilfen an (Mail,
+   Anruf …) und daneben ihre Ergebnisse. Erledigt ist sie erst mit dem Tipp
+   auf ein Ergebnis (Jean: noch einmal von Hand bestätigen); „Als Aufgabe
+   speichern“ lässt sie in der Liste. Ihre eigene Folge kann wieder sofort
+   möglich sein – dann geht es im nächsten Fenster weiter. */
+function sofortNaechste(liste){
+  return (liste || []).find(n => { const s = stufeDerAufgabe(n); return s && s.sofort && !n.erledigt; }) || null;
+}
+function sofortFenster(n, danach){
+  const p = planVon(n.plan), s = stufeDerAufgabe(n), weiter = () => { if(danach) danach(); };
+  if(!p || !s){ weiter(); return; }
+  frage('Weiter: ' + (s.titel || 'Aufgabe'), n.anlage ? anlageName(n) : '', 'Als Aufgabe speichern', () => {
+    toast(`Gespeichert · ${n.titel} fällig ${datumKurz(n.frist)}`); weiter();
+  });
+  /* Hervorgehoben sind Hilfen und Ergebnis; Speichern ist der leise Weg. */
+  $('#dlgKnoepfe').hidden = true;
+  if(!n.anlage) $('#dlgText').hidden = true;
+  const box = $('#dlgListe');
+  box.hidden = false;
+  const er = s.ergebnisse || [];
+  box.innerHTML = `<div class="sofortHilfen">${(s.schritte || []).map(x => hilfenKnopf(x, n, n.ablaufStand)).join('')}</div>
+    <div class="eyebrow" style="margin:14px 0 2px">${er.length ? 'Danach als erledigt bestätigen' : 'Danach bestätigen'}</div>
+    ${er.length ? er.map((e, j) => {
+      const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
+      return `<button class="btn ergebnisKnopf" data-serg="${j}" style="margin-top:8px">${esc(e.text || 'Ergebnis')}</button>
+        <p class="muted small" style="margin:4px 0 0">${esc(z.length ? z.map(x => `→ ${stufeVon(p, x.stufe).titel || 'Aufgabe'} · ${datumKurz(zielDatum(heute(), x))}`).join(', ') : '→ Ende des Ablaufs')}</p>`;
+    }).join('') : '<button class="btn ergebnisKnopf" data-serg="-1" style="margin-top:8px">Erledigt</button>'}
+    <button class="btn ghost" id="sofortSpeichern" style="margin-top:16px">Als Aufgabe speichern · fällig ${esc(datumKurz(n.frist))}</button>`;
+  hilfenVerdrahten(box, n);
+  $('#sofortSpeichern').onclick = () => {
+    $('#dlg').hidden = true; dlgZuruecksetzen();
+    toast(`Gespeichert · ${n.titel} fällig ${datumKurz(n.frist)}`); weiter();
+  };
+  box.querySelectorAll('[data-serg]').forEach(b => b.onclick = () => {
+    $('#dlg').hidden = true; dlgZuruecksetzen();
+    n.erledigt = heute(); delete n.geplant;
+    planWeiter.neue = [];
+    const pt = +b.dataset.serg >= 0 ? planWeiter(n, +b.dataset.serg, {}) : '';
+    saveAufg();
+    toast(`${s.titel || 'Aufgabe'} erledigt` + (pt ? ' · ' + pt : ''));
+    const nx = sofortNaechste(planWeiter.neue);
+    if(nx) sofortFenster(nx, danach); else weiter();
+  });
+}
 
 /* --- Bearbeiten: Übersicht › Abläufe › Ablauf › Aufgabe ----------------------- */
-let planAktiv = '', stufeAktiv = '', stufeVorher = [];
-function planOeffnen(id){ planAktiv = id; go('ablaufplan'); }
+let planAktiv = '', stufeAktiv = '', stufeVorher = [], abAuf = new Set();
+function planOeffnen(id){ if(planAktiv !== id) abAuf = new Set(); planAktiv = id; go('ablaufplan'); }
 const laufendIn = id => AUFG.filter(a => a.plan === id && !a.erledigt);
 const laufZeile = a => [a.anlage ? anlageName(a) : '', a.titel || 'Aufgabe', a.frist ? 'fällig ' + datumKurz(a.frist) : ''].filter(Boolean).join(' · ');
 function renderAblaeufe(){
@@ -6340,9 +6423,13 @@ function renderAblaufPlan(){
   box.innerHTML = `<label class="field" style="margin-top:0"><span>Name des Ablaufs</span><input id="ablaufName" value="${esc(p.name || '')}" placeholder="z. B. Dachrinne"></label>
     <button class="btn primary" id="ablaufLos" style="margin-bottom:6px">Starten</button>
     ${lauf.length ? `<p class="muted small" style="margin:0 0 10px">${lauf.length === 1 ? 'Läuft einmal' : `Läuft ${lauf.length}-mal`} – unter Übersicht › Abläufe.</p>` : ''}`
-    + l.map((s, i) => `<div class="card abKarte">
-        <button type="button" class="abKopf" data-st="${i}"><span class="abNr">${i + 1}</span><span class="abTitel">${esc(s.titel || 'Neue Aufgabe – Titel antippen')}</span><span class="abPfeil">›</span></button>
+    + l.map((s, i) => !abAuf.has(s.id) ? `<div class="card abKarte zu">
+        <button type="button" class="abKopf" data-st="${i}"><span class="abNr">${i + 1}</span><span class="abTitel">${esc(s.titel || 'Neue Aufgabe')}${s.sofort ? ' <span class="abSofort">⚡ sofort möglich</span>' : ''}<small>${esc(
+          (s.ergebnisse || []).length ? s.ergebnisse.map(e => e.text || 'Ergebnis').join(' · ') : 'Ende')}</small></span><span class="abPfeil">▸</span></button></div>`
+      : `<div class="card abKarte">
+        <button type="button" class="abKopf" data-st="${i}"><span class="abNr">${i + 1}</span><span class="abTitel">${esc(s.titel || 'Neue Aufgabe')}${s.sofort ? ' <span class="abSofort">⚡ sofort möglich</span>' : ''}</span><span class="abPfeil">▾</span></button>
         ${(s.schritte || []).length ? `<p class="muted small abHilfen">${esc(s.schritte.map(x => `${HILFE_ZEICHEN[x.art] || ''} ${schrittText(x)}`).join(' · '))}</p>` : ''}
+        <button type="button" class="btn ghost klein" data-stbearb="${i}" style="margin-top:8px">Titel und Hilfen bearbeiten</button>
         ${(s.ergebnisse || []).map((e, j) => {
           const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
           return `<button type="button" class="abWenn" data-st="${i}" data-e="${j}"><span class="muted">Wenn</span> <b>${esc(e.text || 'Ergebnis')}</b><span class="abDann">${
@@ -6353,10 +6440,14 @@ function renderAblaufPlan(){
        <div class="knopfzeile"><button class="btn danger klein" id="ablaufWeg">Ablauf löschen</button></div>`;
   $('#ablaufName').oninput = e => { p.name = e.target.value; saveCfg(); };
   $('#ablaufLos').onclick = () => planStarten(p);
-  box.querySelectorAll('.abKopf').forEach(b => b.onclick = () => { stufeAktiv = l[+b.dataset.st].id; go('stufe'); });
+  /* Zugeklappt steht die Kette, ein Tipp öffnet eine Aufgabe (v1.161). */
+  box.querySelectorAll('.abKopf').forEach(b => b.onclick = () => {
+    const id = l[+b.dataset.st].id; abAuf.has(id) ? abAuf.delete(id) : abAuf.add(id); renderAblaufPlan();
+  });
+  box.querySelectorAll('[data-stbearb]').forEach(b => b.onclick = () => { stufeAktiv = l[+b.dataset.stbearb].id; go('stufe'); });
   box.querySelectorAll('.abWenn').forEach(b => b.onclick = () => ergebnisFenster(p, l[+b.dataset.st], +b.dataset.e));
   box.querySelectorAll('[data-eneu]').forEach(b => b.onclick = () => ergebnisFenster(p, l[+b.dataset.eneu], -1));
-  $('#stufeNeu').onclick = () => { const s = stufeNeu(''); l.push(s); saveCfg(); stufeAktiv = s.id; go('stufe'); };
+  $('#stufeNeu').onclick = () => { const s = stufeNeu(''); l.push(s); saveCfg(); abAuf.add(s.id); stufeAktiv = s.id; go('stufe'); };
   $('#ablaufWeg').onclick = () => {
     const n = laufendIn(p.id).length;
     frage('Ablauf löschen', `„${p.name || 'Ablauf'}“ wird gelöscht.` + (n ? `\n\n${n === 1 ? 'Eine offene Aufgabe läuft' : n + ' offene Aufgaben laufen'} darin; sie bleiben als einfache Aufgaben stehen.` : ''),
@@ -6375,7 +6466,7 @@ function ergebnisFenster(p, s, j){
     w.ziele.forEach(z => {
       if(z.neu !== undefined){
         if(!String(z.neu).trim()) return;
-        const n = stufeNeu(String(z.neu).trim()); p.stufen.push(n); z.stufe = n.id;
+        const n = stufeNeu(String(z.neu).trim()); p.stufen.push(n); z.stufe = n.id; abAuf.add(n.id);
       }
       if(!stufeVon(p, z.stufe)) return;
       ziele.push(+z.monate ? {stufe:z.stufe, monate:+z.monate} : {stufe:z.stufe, tage:Math.max(0, Math.round(+z.tage || 0))});
@@ -6479,6 +6570,8 @@ function renderStufe(){
     <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
       WICHTIG.map(([w, t]) => `<button type="button" data-sw="${w}" aria-pressed="${(s.wichtig || 'normal') === w}">${t}</button>`).join('')}</div></div>
     <label class="field"><span>Notiz</span><textarea id="stNotiz" style="min-height:70px">${esc(s.notiz || '')}</textarea></label>
+    ${nr > 1 || (p.stufen || []).some(x => (x.ergebnisse || []).some(e => (e.ziele || []).some(z => z.stufe === s.id))) ? `<label class="haken" style="margin:4px 0 8px"><input type="checkbox" id="stSofort"${s.sofort ? ' checked' : ''}>
+      <span>Kann gleich im Anschluss erledigt werden<small class="muted" style="display:block">Wenn sie als Folge entsteht, bietet ein Fenster sofort ihre Hilfen an – oder sie kommt als Aufgabe in die Liste.</small></span></label>` : ''}
     <div class="eyebrow">Hilfen</div>${l.length ? '' : '<p class="muted small" style="margin:0 0 6px">Ein Link, eine Nummer, eine vorbereitete E-Mail oder etwas zum Abhaken.</p>'}
     ${l.map(schritt).join('')}
     <button class="btn ghost klein" id="schrittNeu" style="margin:6px 0 4px">+ Hilfe</button>
@@ -6487,6 +6580,7 @@ function renderStufe(){
   const sichern = () => saveCfg(), neu = () => renderStufe();
   $('#stTitel').oninput = e => { s.titel = e.target.value; sichern(); };
   $('#stNotiz').oninput = e => { s.notiz = e.target.value; sichern(); };
+  if($('#stSofort')) $('#stSofort').onchange = e => { if(e.target.checked) s.sofort = true; else delete s.sofort; sichern(); };
   box.querySelectorAll('[data-sw]').forEach(b => b.onclick = () => {
     s.wichtig = b.dataset.sw; box.querySelectorAll('[data-sw]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); sichern();
   });
@@ -6564,12 +6658,16 @@ function aufgKopfZeigen(a, mangelKopf){
   const ut = key ? ((TAET.t[key] || {}).utensilien || []) : (a.utensilien || []);
   const wp = WETTER_PROFILE.find(x => x[0] === a.wetter);
   const wi = a.wichtig && a.wichtig !== 'normal' ? WICHTIG.find(x => x[0] === a.wichtig) : null;
+  /* Nur, worum es geht (v1.161, Jean): Termin, Objekt, Platz im Ablauf.
+     Wiederholung, Wetterprofil, Wichtigkeit, Dauer und Werkzeug stehen unter
+     „Mehr“ (aufgMehrText). */
+  const pl = a.plan ? planVon(a.plan) : null;
+  void s; void ut; void wp; void wi;
   const zeilen = [
     aufgTerminText(a),
     a.geplant && !a.erledigt && a.geplant >= heute() ? 'Eingeplant für ' + planTagWort(alsDatum(a.geplant)) : '',
     !mangel && n ? n.label + (a.anlage ? ' · ' + anlageName(a) : '') : '',
-    [!mangel && a.wdh ? wdhText(a.wdh) : '', !mangel && wp ? 'Wetter: ' + wp[1] : '', wi ? 'Wichtigkeit ' + klein(wi[1]) : ''].filter(Boolean).join(' · '),
-    a.erledigt ? '' : [s ? '≈ ' + dauerText(s) : '', ut.length ? 'Werkzeug: ' + ut.join(', ') : ''].filter(Boolean).join(' · ')
+    pl && stufeVon(pl, a.stufe) ? `${pl.name || 'Ablauf'} · Aufgabe ${stufeNr(pl, a.stufe)} von ${pl.stufen.length}` : ''
   ].filter(Boolean);
   box.innerHTML = `<div class="card aufgKopfKarte">${mangel ? mangelKopf : `<p class="aufgKopf">${esc(a.titel || 'Aufgabe')}</p>`}
     ${zeilen.map((z, i) => !i && !a.erledigt
@@ -6579,13 +6677,14 @@ function aufgKopfZeigen(a, mangelKopf){
       ? `<button type="button" class="aufgZeile aufgTerminKnopf" data-zumtermin="1"${mangel ? ' style="margin-top:8px"' : ''}>${esc(z)}<span aria-hidden="true">›</span></button>`
       : `<p class="aufgZeile${i ? ' muted small' : ''}"${mangel && !i ? ' style="margin-top:8px"' : ''}>${esc(z)}</p>`).join('')}
     ${String(a.notiz || '').trim() ? `<p class="aufgText"><span class="muted">Notiz:</span> ${esc(a.notiz)}</p>` : ''}
-    ${a.k && n ? `<div class="row">
-      ${aufgOrt(a) ? `<button class="btn" data-weg="plan">${ORT_SVG}Grundriss</button>` : ''}
-      <button class="btn" data-weg="nw">Zum Nachweis</button></div>` : ''}</div>`;
+    ${a.k && n ? `<div class="kopfZeichen">
+      ${aufgOrt(a) ? `<button class="btn ghost klein" data-weg="plan">${ORT_SVG}Grundriss</button>` : ''}
+      <button class="btn ghost klein" data-weg="nw">Nachweis ›</button></div>` : ''}</div>`;
   const zt = box.querySelector('[data-zumtermin]');
   if(zt) zt.onclick = () => {
     const ang = $('#aufgAngaben'), feld = $('#aufgVon') || $('#aufgFrist');
     if(!ang || !feld) return;
+    if($('#aufgMehr')){ $('#aufgMehr').open = true; mehrAuf = a.id; }
     ang.open = true; angabenAuf = a.id;
     /* Nur hinscrollen, nicht fokussieren – sonst ginge unter iOS sofort die
        Datumswahl auf. */
@@ -6629,6 +6728,27 @@ function aufgOrt(a){
 /* Was zusammengehört und mehr als eine Zeile hat, steht in einem dünnen
    Rahmen (v1.109) – nur, wenn es gerade wirklich mehr als eine Zeile ist. */
 const gerahmt = (an, inhalt) => an ? `<div class="gruppe">${inhalt}</div>` : inhalt;
+/* Unter „Mehr“ (v1.161): eine Zeile, was dort steht. */
+let mehrAuf = '';
+function aufgMehrText(a){
+  const key = taetSchluessel(a, false), s = key ? taetSchnitt(key) : null;
+  const ut = key ? ((TAET.t[key] || {}).utensilien || []) : (a.utensilien || []);
+  const bisher = ketteVon(a).length;
+  const teile = [ut.length ? ut.join(', ') : '', s && !a.erledigt ? '≈ ' + dauerText(s) : '', a.wdh ? wdhText(a.wdh) : '',
+    bisher ? `Bisher ${bisher} ${bisher === 1 ? 'Schritt' : 'Schritte'}` : ''].filter(Boolean);
+  return 'Mehr' + (teile.length ? ': ' + teile.join(' · ') : '');
+}
+function aufgInfoZeile(a){
+  const wp = WETTER_PROFILE.find(x => x[0] === a.wetter);
+  const wi = a.wichtig && a.wichtig !== 'normal' ? WICHTIG.find(x => x[0] === a.wichtig) : null;
+  return [a.art !== 'mangel' && a.wdh ? wdhText(a.wdh) : '', wp ? 'Wetter: ' + wp[1] : '', wi ? 'Wichtigkeit ' + klein(wi[1]) : ''].filter(Boolean).join(' · ');
+}
+/* Ist an der Vorbereitung noch etwas offen? Dann steht sie oben. */
+function aufgVorbOffen(a){
+  if(String((a.vorb || {}).text || '').trim() && !a.vorbErledigt) return true;
+  const o = aufgAnlass(a);
+  return !!o && matPosten([o]).some(p => !p.bereit);
+}
 function renderAufgabe(){
   const a = aufgAktiv, box = $('#aufgBox');
   if(!a){ box.innerHTML = ''; return; }
@@ -6707,12 +6827,13 @@ function renderAufgabe(){
            <p style="margin:0">am ${esc(dText(a.erledigt))}${a.dauer ? ' · ' + esc(dauerText(a.dauer)) : ''}</p>
            ${a.vermerk ? `<p class="aufgText">${esc(a.vermerk)}</p>` : ''}
            <button class="btn ghost klein" id="aufgWieder" style="margin-top:10px">Wieder öffnen</button></div>`
-      : `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erledigen</div>
-           <label class="field" style="margin:0"><span>Erledigt am</span>
-             <input type="date" id="erlDatum" class="schmal" value="${heute()}"></label>
-           <input id="erlVermerk" placeholder="Vermerk, z. B. Firma" style="margin-top:10px">
-           ${fragtNachher ? '' : `<div class="field" style="margin:12px 0 0"><span>Dauer (freiwillig)</span><div id="erlDauer"></div></div>`}
-           ${ergebnisseHtml(a) || '<button class="btn primary" id="erlSetzen" style="margin-top:10px">Als erledigt vermerken</button>'}</div>`;
+      /* Erledigen (v1.161): Tag und Knöpfe, Vermerk und Dauer zugeklappt. */
+      : `<div class="card erlKarte">
+           <div class="row erlAm"><span class="muted">Erledigt am</span><input type="date" id="erlDatum" class="schmal" value="${heute()}" aria-label="Erledigt am"></div>
+           ${ergebnisseHtml(a) || '<button class="btn primary" id="erlSetzen" style="margin-top:10px">Als erledigt vermerken</button>'}
+           <details class="erlMehr"><summary>+ Vermerk oder Dauer</summary>
+             <input id="erlVermerk" placeholder="Vermerk, z. B. Firma" style="margin-top:8px">
+             ${fragtNachher ? '' : `<div class="field" style="margin:12px 0 0"><span>Dauer (freiwillig)</span><div id="erlDauer"></div></div>`}</details></div>`;
   /* Termin oder Zeitraum (v1.51). Die Umschaltung steht nur bei eigenen
      Aufgaben; ein Mangel hat seinen Termin. */
   const zr = !mangel && !!a.von;
@@ -6744,14 +6865,21 @@ function renderAufgabe(){
      Erledigen –, darunter Dauer und Werkzeug, die Angaben zugeklappt. Der
      Entwurf einer neuen Aufgabe hat noch nichts zusammenzufassen: dort stehen
      die Felder offen wie bisher. */
-  /* Ablauf (v1.157): eigene Aufgaben, offen oder als Entwurf. */
-  const ablauf = !mangel && !a.erledigt ? ablaufKarteHtml(a) : '';
-  box.innerHTML = neu ? felder + ablauf + erledigung
+  /* Aufs Wesentliche (v1.161, Jean: „was im Schritt vordergründig geht, geht
+     unter“): oben Kopf, Wetter (nur wetterabhängig), Vorbereitung (nur wenn
+     offen), Hilfen und Erledigen; alles Übrige unter „▸ Mehr“. */
+  const ablauf = !mangel && !a.erledigt ? ablaufHilfenHtml(a) : '';
+  const vorbOffen = !neu && !a.erledigt && aufgVorbOffen(a);
+  box.innerHTML = neu ? felder + ablaufMehrHtml(a) + erledigung
     : `<div id="aufgKopf"></div>`
     + (!mangel && !a.erledigt && a.wetter ? `<div id="aufgWetterKarte">${aufgWetterKarteHtml(a)}</div>` : '')
-    + '<div id="aufgVorb"></div>' + ablauf + erledigung + erfKarte + eigenKarte
+    + (vorbOffen ? '<div id="aufgVorb"></div>' : '') + ablauf + erledigung
+    + `<details class="aufgMehr" id="aufgMehr"${mehrAuf === a.id ? ' open' : ''}><summary>${esc(aufgMehrText(a))}</summary>`
+    + (vorbOffen ? '' : '<div id="aufgVorb"></div>') + (mangel ? '' : ablaufMehrHtml(a)) + erfKarte + eigenKarte
+    + (aufgInfoZeile(a) ? `<p class="muted small" style="margin:0 0 10px">${esc(aufgInfoZeile(a))}</p>` : '')
     + `<details class="angaben" id="aufgAngaben"${angabenAuf === a.id ? ' open' : ''}><summary>Angaben bearbeiten</summary>${felder}</details>`
-    + (!mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '');
+    + (!mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '') + '</details>';
+  if($('#aufgMehr')) $('#aufgMehr').ontoggle = e => { mehrAuf = e.target.open ? a.id : ''; };
   aufgKopfZeigen(a, mangelKopf);
   /* Beim Zuklappen zieht die Kopfkarte nach (v1.103) – während die Angaben
      offen sind, baut sich über den Feldern nichts neu auf (v1.104). */
@@ -6760,7 +6888,7 @@ function renderAufgabe(){
 
   /* Vorbereiten (v1.74) – nur die offene, gespeicherte Aufgabe. */
   if(!neu && !a.erledigt) aufgVorbKarte($('#aufgVorb'), a);
-  if(ablauf) ablaufVerdrahten(a, () => { if(current === 'aufgabe' && aufgAktiv === a) renderAufgabe(); });
+  ablaufVerdrahten(a, () => { if(current === 'aufgabe' && aufgAktiv === a) renderAufgabe(); });
   if(!mangel){
     $('#aufgTitel').oninput = e => { a.titel = e.target.value; sichern(); };
     $('#aufgTitel').onchange = () => kopfNeu();
@@ -6931,15 +7059,22 @@ function renderAufgabe(){
       if(a.wetter) folge.wetter = a.wetter;
       if(a.reihe) folge.reihe = a.reihe;
       AUFG.push(folge); a.folge = folge.id;
+      planWeiter.neue = [];
       const pt = j == null ? '' : planWeiter(a, j, zielFest);
       saveAufg();
       toast((fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · wieder fällig ${dText(folge.frist)}`) + (pt ? ' · ' + pt : ''));
-      zurueck(); tFragen();
+      zurueck(); weiterSofort(tFragen);
       return;
     }
+    planWeiter.neue = [];
     const pt = j == null ? '' : planWeiter(a, j, zielFest);
     saveAufg(); stoerAusAufgabe(a, 'erledigt'); toast(pt ? 'Erledigt · ' + pt : 'Als erledigt vermerkt'); zurueck();
-    tFragen();
+    weiterSofort(tFragen);
+  };
+  /* Eine Folge, die gleich im Anschluss erledigt werden kann (v1.161). */
+  const weiterSofort = fragen => {
+    const nx = sofortNaechste(planWeiter.neue);
+    if(nx) sofortFenster(nx, fragen); else fragen();
   };
   if($('#erlSetzen')) $('#erlSetzen').onclick = () => erledigenMit(null);
   if(!a.erledigt && !neu) ergebnisseVerdrahten(a, zielFest, erledigenMit);
