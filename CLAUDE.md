@@ -216,12 +216,25 @@ steht.
 - Erledigen: `ablaufErledigen` – Ergebnis per `wahlFenster` (eines → direkt,
   „Ohne Folge“), je Ziel `folgeStufeFragen` mit Rückfrage und Datum (Jean);
   Objekt und Kette reisen mit. Wiederkehrende behalten Plan und Stufe.
-- Seiten `ablaeufe` (Übersicht › Abläufe), `plan`, `stufe`; „+ neue Stufe …“
-  in der Zielwahl öffnet sie gleich (`stufeVorher` + `zurueck`).
+- Seiten `ablaeufe` (Übersicht › Abläufe), `ablaufplan`, `stufe`.
 - Verlauf des Objekts: Abschnitt „Abläufe“ (`verlaufAblauf`).
 - `ablaufUmwandeln`: alte `a.ablauf` (v1.157/158) → Plan (erste Frage →
   Ergebnisse, „immer“-Folge zu jedem Ergebnis), beim Start und in
   `paketUebernehmen`.
+- Bedienung v1.160 (Jean: „unübersichtlich“): Begriffe „Aufgaben“ und
+  „Hilfen“ statt Stufen/Schritte. Erledigen = Tipp auf ein Ergebnis
+  (`ergebnisseHtml`/`ergebnisseVerdrahten`, ✎ ändert das Datum vorher,
+  `planWeiter` legt die Folgen sofort an – keine Rückfrage mehr, Jean),
+  „Erledigen ohne Folge“ = `erlSetzen`. Ganzer Ablauf auf einer Seite
+  (`renderAblaufPlan`, Sätze „Wenn … → … · in 3 Monaten“), Ergebnis im Fenster
+  `ergebnisFenster` mit Kacheln „Dann folgt“ und „Wann“ (`WANN`; Ziel trägt
+  `tage` oder `monate`, `zielDatum`/`wannText`). `planStarten` (Objekt,
+  Datum), „Laufend“ unter Übersicht › Abläufe, Liste „Dachrinne · 2 von 3“.
+- **Seitennamen eindeutig halten:** v1.159 nannte die Ablaufseite `plan` mit
+  `#planBox` – das ist die Grundriss-Seite. `go('plan')` zeichnete dann den
+  Ablauf in den Grundriss, Kopfzeile und Geschoss-Regler fehlten. Seit
+  v1.160 `ablaufplan`/`#ablaufPlanBox`, Klassen `ab…`. Vor neuen Seiten,
+  Ids und Klassen nach dem Namen suchen.
 - Etappe 2 (vereinbart): Runden der Nachweise, Sprinkler, Akkutausch,
   Wetterregeln; selbsttätige Bedingungen (z. B. Mangel in der Runde).
 

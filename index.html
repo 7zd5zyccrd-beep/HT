@@ -10,6 +10,21 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.160 07.10.2026 Abläufe einfacher zu bedienen (Jean: „sehr
+         unübersichtlich“). Erledigen: bei einer Aufgabe aus einem Ablauf
+         stehen die Ergebnisse als Knöpfe da, darunter je Folge Aufgabe und
+         Datum („→ Firma beauftragen · heute“, ✎ ändert das Datum) – ein Tipp
+         erledigt und legt die Folge an, ohne weitere Fenster. Der ganze
+         Ablauf steht auf einer Seite in Sätzen („Wenn in Ordnung → Zustand
+         prüfen · in 3 Monaten“); ein Tipp auf eine Zeile öffnet ein Fenster
+         mit Kacheln für „Dann folgt“ (Aufgaben, + Neue Aufgabe) und „Wann“
+         (sofort bis 1 Jahr, eigene). Begriffe: Aufgaben und Hilfen statt
+         Stufen und Schritte. „Starten“ direkt am Ablauf mit Objekt und
+         Datum; unter Übersicht › Abläufe steht je Ablauf, was gerade läuft.
+         In der Liste steht „Dachrinne · 2 von 3“.
+         Fehler behoben: seit v1.159 war der Grundriss verschoben (Kopfzeile
+         unten, kein Geschoss-Regler) – die neue Ablaufseite trug intern
+         denselben Namen wie die Grundriss-Seite.
   v1.159 06.10.2026 Abläufe als Pläne aus Stufen (Jean: die Logik muss auch
          zurückspringen können – „in Ordnung, in 90 Tagen erneut prüfen“,
          „Handlungsbedarf, Firma beauftragen“ und so weiter). Ein Ablauf
@@ -2968,7 +2983,21 @@ a.ablaufSchritt{display:flex;align-items:center;justify-content:center;text-deco
 .ablaufZiel select{flex:1;min-width:0}
 .ablaufZiel input.tage{flex:0 0 76px;width:76px}
 .ablaufZiel .ablaufReihe > span{flex:0 0 auto}
-.planStufe .eintrag{flex:1;min-width:0}
+/* Ablauf auf einer Seite (v1.160): Kopf je Aufgabe, darunter „Wenn …“. */
+.abKopf{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.abNr{flex:0 0 28px;height:28px;border-radius:50%;background:var(--strong);color:var(--on-strong);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+.abTitel{flex:1;min-width:0;font-weight:700;font-size:17px}
+.abPfeil{color:var(--ink-soft);font-size:22px}
+.abHilfen{margin:6px 0 0 38px}
+.abWenn{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);margin-top:8px;padding:8px 0 0;font:inherit;color:inherit;cursor:pointer}
+.abDann{display:block;white-space:pre-line;font-size:15px;margin-top:2px}
+.laufEintrag .etext{font-size:15px}
+/* Ergebnisse im Erledigen (v1.160). */
+.ergebnisBlock{margin-top:12px}
+.ergebnisKnopf{font-weight:700;border-width:2px}
+.ergebnisZiel{display:flex;align-items:center;gap:8px;margin-top:6px}
+.ergebnisZiel .small{flex:1;min-width:0}
+.ergFolge{margin-top:10px}
 .schrittKarte{margin-bottom:8px}
 /* Störungen (v1.153): jede Zeile öffnet sich zum Bearbeiten. */
 .stoerEintrag{display:block;width:100%;text-align:left;background:none;border:0;font:inherit;color:inherit;cursor:pointer;-webkit-appearance:none;appearance:none}
@@ -3139,7 +3168,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
     </section>
     <!-- Abläufe: Liste, ein Plan, eine Stufe (v1.159) -->
     <section class="view" id="view-ablaeufe"><div id="ablaeufeBox"></div></section>
-    <section class="view" id="view-plan"><div id="planBox"></div></section>
+    <section class="view" id="view-ablaufplan"><div id="ablaufPlanBox"></div></section>
     <section class="view" id="view-stufe"><div id="stufeBox"></div></section>
 
     <!-- Ein Termin und die Übersicht der Termine (v1.103) -->
@@ -3346,8 +3375,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.159';
-const BUILD   = VERSION + ' · 06.10.2026';
+const VERSION = 'v1.160';
+const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -4578,7 +4607,7 @@ function ring(n, takt){
 }
 
 /* ---------- Ansichten ---------- */
-const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', ablaeufe:'Abläufe', plan:'Ablauf', stufe:'Stufe', erledigt:'Erledigt', stoerungen:'Störungen', nachweis:'Nachweis', blatt:'Blatt',
+const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', ablaeufe:'Abläufe', ablaufplan:'Ablauf', stufe:'Aufgabe im Ablauf', erledigt:'Erledigt', stoerungen:'Störungen', nachweis:'Nachweis', blatt:'Blatt',
                historie:'Historie', histnw:'Historie', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregel:'Regel',
@@ -4641,7 +4670,7 @@ function go(name, push = true){
   if(name === 'alle')     renderAlle();
   if(name === 'aufgabe')  renderAufgabe();
   if(name === 'ablaeufe') renderAblaeufe();
-  if(name === 'plan')     renderPlan();
+  if(name === 'ablaufplan') renderAblaufPlan();
   if(name === 'stufe')    renderStufe();
   if(name === 'termin')   renderTermin();
   if(name === 'termine')  renderTermine();
@@ -6050,7 +6079,7 @@ function renderRundgang(){
   bildNach(imBild(karten[i - 1]) - 8);
 }
 
-/* ---------- Abläufe: Pläne aus Stufen (v1.159) -------------------------------
+/* ---------- Abläufe: Pläne aus Stufen (v1.159, Bedienung v1.160) ------------
    Wunsch von Jean (v1.157 Schritte, v1.158 Zweige, v1.159 diese Form): eine
    Aufgabe ist z. B. „Zustand prüfen“. Beim Erledigen wählt man das Ergebnis –
    „in Ordnung“ führt nach 90 Tagen wieder zu „Zustand prüfen“,
@@ -6068,7 +6097,14 @@ function renderRundgang(){
    a.ablaufStand {Schritt: Tag}, a.ergebnis (id), a.ergebnisText, a.planFolgen
    {Ziel-Nr: Aufgaben-id | 'nein'}. Jede Folgeaufgabe entsteht mit Rückfrage
    (Datum änderbar) und trägt Objekt und Kette weiter; der Verlauf der Kette
-   sind ihre erledigten Aufgaben. */
+   sind ihre erledigten Aufgaben.
+   v1.160 (Jean: „sehr unübersichtlich“): in der Bedienung heißen Stufen
+   „Aufgaben“ und Schritte „Hilfen“; der ganze Ablauf steht auf einer Seite in
+   Sätzen („Wenn in Ordnung → Zustand prüfen · in 3 Monaten“), ein Ergebnis
+   wird in einem Fenster mit Kacheln für Folge und Zeit bearbeitet. Erledigt
+   wird mit einem Tipp auf das Ergebnis; die Folgeaufgabe entsteht sofort mit
+   dem Datum, das auf dem Knopf steht (✎ ändert es vorher). Ein Ziel kann statt
+   Tagen Monate tragen ({stufe, monate}) – dann bleibt der Tag im Monat. */
 const ABLAUF_ARTEN = [['link', 'Link'], ['tel', 'Anruf'], ['mail', 'Mail'], ['haken', 'Haken']];
 const ABLAUF_VORGABE = {link:'Link öffnen', tel:'Anrufen', mail:'E-Mail schreiben', haken:'Schritt'};
 const plaeneListe = () => (Array.isArray(CFG.ablaeufe) ? CFG.ablaeufe : (CFG.ablaeufe = []));
@@ -6077,12 +6113,22 @@ const stufeVon = (p, id) => p ? (p.stufen || []).find(s => s.id === id) || null 
 const stufeNr = (p, id) => p ? (p.stufen || []).findIndex(s => s.id === id) + 1 : 0;
 const stufeDerAufgabe = a => a && a.plan ? stufeVon(planVon(a.plan), a.stufe) : null;
 const schrittText = st => String(st.text || '').trim() || ABLAUF_VORGABE[st.art] || 'Schritt';
-const tageText = t => +t ? `in ${+t} ${+t === 1 ? 'Tag' : 'Tagen'}` : 'sofort';
+/* Zeit bis zur Folge: Kacheln wie in der Bedienung, sonst Tage. */
+const WANN = [['sofort', {tage:0}], ['1 Woche', {tage:7}], ['2 Wochen', {tage:14}], ['1 Monat', {monate:1}],
+              ['3 Monate', {monate:3}], ['6 Monate', {monate:6}], ['1 Jahr', {monate:12}]];
+function wannText(z){
+  const m = Math.round(+z.monate || 0), t = Math.max(0, Math.round(+z.tage || 0));
+  if(m) return m % 12 === 0 ? `in ${m / 12} ${m === 12 ? 'Jahr' : 'Jahren'}` : `in ${m} ${m === 1 ? 'Monat' : 'Monaten'}`;
+  if(!t) return 'sofort';
+  return t % 7 === 0 ? `in ${t / 7} ${t === 7 ? 'Woche' : 'Wochen'}` : `in ${t} ${t === 1 ? 'Tag' : 'Tagen'}`;
+}
+const zielDatum = (basis, z) => +z.monate ? terminPlus(basis, Math.round(+z.monate), 'monat') : tagPlus(basis, Math.max(0, Math.round(+z.tage || 0)));
+const datumKurz = iso => iso === heute() ? 'heute' : iso === tagPlus(heute(), 1) ? 'morgen' : dText(iso);
 const stufeNeu = titel => ({id:neueId(), titel:titel || '', wichtig:'normal', notiz:'', schritte:[], ergebnisse:[]});
 /* „in Ordnung → 1 Zustand prüfen (in 90 Tagen)“ – für Übersicht und Aufgabe. */
 function ergebnisText(p, e){
   const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
-  return `${e.text || 'Ergebnis'} → ${z.length ? z.map(x => `${stufeNr(p, x.stufe)} ${stufeVon(p, x.stufe).titel || 'Stufe'} (${tageText(x.tage)})`).join(' und ') : 'Ende'}`;
+  return `${e.text || 'Ergebnis'} → ${z.length ? z.map(x => `${stufeVon(p, x.stufe).titel || 'Aufgabe'} ${wannText(x)}`).join(' und ') : 'Ende'}`;
 }
 /* Platzhalter in Adresse, Betreff und Text: {Datum}, {Objekt}, {Titel}. */
 const ablaufEinsetzen = (t, a) => String(t || '').replace(/\{(Datum|Objekt|Titel)\}/g, (_, w) =>
@@ -6100,9 +6146,10 @@ function schrittZiel(st, a){
     + '&body=' + encodeURIComponent(ablaufEinsetzen(st.inhalt, a));
   return '';
 }
+/* In der Liste: „Dachrinne · 2 von 3“ (v1.160). */
 function ablaufListenText(a){
-  const s = stufeDerAufgabe(a), l = (s && s.schritte) || [], st = a.ablaufStand || {};
-  return l.length && !a.erledigt ? `Ablauf ${l.filter(x => st[x.id]).length} von ${l.length}` : '';
+  const p = a.plan ? planVon(a.plan) : null;
+  return p && stufeVon(p, a.stufe) && !a.erledigt ? `${p.name || 'Ablauf'} · ${stufeNr(p, a.stufe)} von ${p.stufen.length}` : '';
 }
 /* Die erledigten Aufgaben derselben Kette, älteste zuerst. */
 const ketteVon = a => a && a.kette ? AUFG.filter(x => x.kette === a.kette && x.erledigt && x !== a)
@@ -6139,37 +6186,35 @@ function ablaufUmwandeln(){
   return true;
 }
 
-/* Die Karte auf der Seite der Aufgabe: Plan und Stufe, ein Knopf je Schritt
+/* Die Karte auf der Seite der Aufgabe: Ablauf und Platz darin, die Hilfen
    (Link, Anruf und E-Mail sind echte Verweise – iOS öffnet sie nur aus dem
-   Tipp selbst), was beim Erledigen folgen kann, und der bisherige Weg. */
+   Tipp selbst) und der bisherige Weg. Die Ergebnisse stehen im Erledigen. */
 function ablaufKarteHtml(a){
   const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a);
   if(!p || !s) return `<button class="btn ghost klein" id="ablaufStart" style="margin:0 0 12px">Ablauf starten</button>`;
   const st = a.ablaufStand || {};
   const zeile = (x, i) => {
-    const fertig = !!st[x.id], vor = fertig ? '✓ ' : `${i + 1}. `;
+    const fertig = !!st[x.id], vor = fertig ? '✓ ' : '';
     if(x.art === 'haken' || a.entwurf)
       return `<label class="haken ablaufHaken"><input type="checkbox" data-sid="${esc(x.id)}"${fertig ? ' checked' : ''}${a.entwurf ? ' disabled' : ''}>
         <span>${esc(schrittText(x))}</span></label>`;
     const ziel = schrittZiel(x, a);
     return ziel ? `<a class="btn ablaufSchritt${fertig ? ' fertig' : ''}" href="${esc(ziel)}" target="_blank" rel="noopener" data-sid="${esc(x.id)}">${esc(vor + schrittText(x))}</a>`
-      : `<button class="btn ablaufSchritt" disabled>${esc(vor + schrittText(x))} – Angabe fehlt</button>`;
+      : `<button class="btn ablaufSchritt" disabled>${esc(schrittText(x))} – Angabe fehlt</button>`;
   };
   const bisher = ketteVon(a);
-  return `<div class="card" id="ablaufKarte"><div class="eyebrow" style="margin:0 0 6px">Ablauf · ${esc(p.name || 'Ablauf')}</div>
-    <p class="muted small" style="margin:0 0 4px">Stufe ${stufeNr(p, s.id)}: ${esc(s.titel || 'Stufe')}</p>
+  return `<div class="card" id="ablaufKarte"><div class="eyebrow" style="margin:0 0 4px">Ablauf · ${esc(p.name || 'Ablauf')}</div>
+    <p class="muted small" style="margin:0">Aufgabe ${stufeNr(p, s.id)} von ${p.stufen.length}</p>
     ${(s.schritte || []).map(zeile).join('')}
-    <p class="muted small" style="margin:10px 0 0">Beim Erledigen: ${esc((s.ergebnisse || []).length
-      ? s.ergebnisse.map(e => ergebnisText(p, e)).join(' · ') : 'Ende des Ablaufs')}</p>
     ${bisher.length ? `<div class="eyebrow" style="margin:12px 0 4px">Bisher</div>${bisher.map(x =>
       `<p class="small" style="margin:2px 0">${esc(ketteZeile(x))}</p>`).join('')}` : ''}
-    <button class="btn ghost klein" id="ablaufBearb" style="margin-top:10px">Ablauf bearbeiten</button></div>`;
+    <button class="btn ghost klein" id="ablaufBearb" style="margin-top:10px">Ablauf ansehen und bearbeiten</button></div>`;
 }
 function ablaufVerdrahten(a, neuZeichnen){
   const sb = $('#ablaufStart');
   if(sb) sb.onclick = () => ablaufStarten(a, neuZeichnen);
   const b = $('#ablaufBearb');
-  if(b) b.onclick = () => planOeffnen(a.plan, a.stufe);
+  if(b) b.onclick = () => planOeffnen(a.plan);
   const karte = $('#ablaufKarte');
   if(!karte || a.entwurf) return;
   const erledigt = (id, an) => {
@@ -6185,109 +6230,237 @@ function ablaufVerdrahten(a, neuZeichnen){
   }));
   karte.querySelectorAll('input[data-sid]').forEach(el => el.onchange = () => erledigt(el.dataset.sid, el.checked));
 }
-/* Einen Plan zuweisen – vorhandenen wählen oder aus dieser Aufgabe einen neuen. */
+/* Einen Ablauf an einer bestehenden Aufgabe starten – vorhandenen wählen oder
+   aus dieser Aufgabe einen neuen anlegen. */
 function ablaufStarten(a, neuZeichnen){
   const zuweisen = p => {
     a.plan = p.id; a.stufe = p.stufen[0].id; a.kette = a.kette || a.id; a.ablaufStand = {};
     if(!a.entwurf) saveAufg();
   };
   const neu = () => {
-    const s = stufeNeu(a.titel || 'Stufe 1'); s.wichtig = a.wichtig || 'normal';
+    const s = stufeNeu(a.titel || ''); s.wichtig = a.wichtig || 'normal';
     const p = {id:neueId(), name:a.titel || 'Neuer Ablauf', stufen:[s]};
     plaeneListe().push(p); saveCfg(); zuweisen(p);
-    planOeffnen(p.id, s.id);
+    planOeffnen(p.id);
   };
   const l = plaeneListe().filter(p => (p.stufen || []).length);
   if(!l.length){ neu(); return; }
   wahlFenster('Ablauf starten', l.map(p => ({text:p.name || 'Ablauf', p})).concat([{text:'+ Neuer Ablauf aus dieser Aufgabe', neu:true}]),
     w => { if(w.neu) neu(); else { zuweisen(w.p); neuZeichnen(); } });
 }
-/* Beim Erledigen: Ergebnis wählen (bei einem einzigen gilt es), dann je Ziel
-   die Folgeaufgabe mit Rückfrage. „Ohne Folge“ beendet die Kette hier. */
-function ablaufErledigen(a, basis, danach){
-  const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a), weiter = () => { if(danach) danach(); };
-  if(!p || !s || !(s.ergebnisse || []).length || a.ergebnis){ weiter(); return; }
-  const mit = e => {
-    a.ergebnis = e.id; a.ergebnisText = e.text || 'Ergebnis'; saveAufg();
-    const ziele = (e.ziele || []).map((z, i) => ({z, i, st:stufeVon(p, z.stufe)})).filter(x => x.st && !(a.planFolgen || {})[x.i]);
-    nacheinander(ziele.map(x => w => folgeStufeFragen(a, p, x.st, x.z.tage, basis, erg => {
-      a.planFolgen = a.planFolgen || {}; a.planFolgen[x.i] = erg; saveAufg(); w();
-    })), weiter);
-  };
-  if(s.ergebnisse.length === 1){ mit(s.ergebnisse[0]); return; }
-  wahlFenster('Ergebnis', s.ergebnisse.map(e => ({text:e.text || 'Ergebnis', e})), w => mit(w.e));
-  const ab = $('#dlgListe [data-ab]');
-  if(ab){ ab.textContent = 'Ohne Folge'; ab.onclick = () => { $('#dlg').hidden = true; dlgZuruecksetzen(); weiter(); }; }
+/* Die Ergebnisse im Erledigen (v1.160): je Ergebnis ein Knopf, darunter je
+   Folge Aufgabe und Datum mit ✎. fest = von Hand geänderte Daten. */
+function ergebnisseHtml(a){
+  const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a);
+  if(!p || !s || !(s.ergebnisse || []).length) return '';
+  return `<div class="ergebnisse">${s.ergebnisse.map((e, j) => {
+    const z = (e.ziele || []).map((x, i) => ({x, i, st:stufeVon(p, x.stufe)})).filter(y => y.st);
+    return `<div class="ergebnisBlock"><button class="btn ergebnisKnopf" data-erg="${j}">${esc(e.text || 'Ergebnis')}</button>
+      ${z.length ? z.map(y => `<div class="ergebnisZiel"><span class="small">→ ${esc(y.st.titel || 'Aufgabe')} · <b data-zd="${j}:${y.i}"></b></span>
+        <button type="button" class="btn quadrat" data-zedit="${j}:${y.i}" aria-label="Datum ändern">✎</button></div>`).join('')
+        : '<p class="muted small" style="margin:4px 0 0">→ Ende des Ablaufs</p>'}</div>`;
+  }).join('')}
+  <button class="btn ghost klein" id="erlSetzen" style="margin-top:10px">Erledigen ohne Folge</button></div>`;
 }
-/* Mehreres nacheinander fragen: jede Stufe ruft weiter(), wenn sie fertig ist. */
-const nacheinander = (stufen, ende) => {
-  const los = i => i < stufen.length ? stufen[i](() => los(i + 1)) : (ende && ende());
-  los(0);
-};
-function folgeStufeFragen(a, p, st, tage, basis, fertig){
-  const vorschlag = tagPlus(basis || heute(), Math.max(0, Math.round(+tage || 0)));
-  frage('Folgeaufgabe anlegen?', `„${st.titel || 'Stufe'}“ (Stufe ${stufeNr(p, st.id)})`, 'Anlegen', () => {
-    const frist = ($('#folgeFrist') && $('#folgeFrist').value) || vorschlag;
+function ergebnisseVerdrahten(a, fest, erledigen){
+  const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a);
+  if(!p || !s || !$('.ergebnisse')) return;
+  const basis = () => ($('#erlDatum') && $('#erlDatum').value) || heute();
+  const zeigen = () => $$('[data-zd]').forEach(el => {
+    const [j, i] = el.dataset.zd.split(':').map(Number), z = s.ergebnisse[j].ziele[i];
+    el.textContent = datumKurz(fest[el.dataset.zd] || zielDatum(basis(), z));
+  });
+  zeigen();
+  if($('#erlDatum')) $('#erlDatum').addEventListener('input', zeigen);
+  $$('[data-erg]').forEach(b => b.onclick = () => erledigen(+b.dataset.erg));
+  $$('[data-zedit]').forEach(b => b.onclick = () => {
+    const [j, i] = b.dataset.zedit.split(':').map(Number), z = s.ergebnisse[j].ziele[i];
+    const st = stufeVon(p, z.stufe), wert = fest[b.dataset.zedit] || zielDatum(basis(), z);
+    frage('Fällig am', st ? st.titel || 'Aufgabe' : '', 'Übernehmen', () => {
+      const v = $('#zielFrist') && $('#zielFrist').value;
+      if(v){ fest[b.dataset.zedit] = v; zeigen(); }
+    });
+    const box = $('#dlgListe'); box.hidden = false;
+    box.innerHTML = `<input type="date" id="zielFrist" class="schmal" value="${esc(wert)}" style="margin-top:12px" aria-label="Fällig am">`;
+  });
+}
+/* Erledigt mit Ergebnis j: die Folgeaufgaben entstehen sofort. Gibt den
+   Hinweis für die Meldung zurück. */
+function planWeiter(a, j, fest){
+  const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a), e = s && (s.ergebnisse || [])[j];
+  if(!p || !e) return '';
+  a.ergebnis = e.id; a.ergebnisText = e.text || 'Ergebnis';
+  a.planFolgen = a.planFolgen || {};
+  const raus = [];
+  (e.ziele || []).forEach((z, i) => {
+    const st = stufeVon(p, z.stufe);
+    if(!st || a.planFolgen[i]) return;
+    const frist = fest[j + ':' + i] || zielDatum(a.erledigt || heute(), z);
     const n = {id:neueId(), art:'eigen', quelle:'', k:a.k || '', anlage:a.anlage || '', anlageText:a.anlageText || '',
-      punkt:'', titel:st.titel || 'Folgeaufgabe', text:'', notiz:st.notiz || '', zeitraum:'', festgestellt:'',
+      punkt:'', titel:st.titel || 'Aufgabe', text:'', notiz:st.notiz || '', zeitraum:'', festgestellt:'',
       angelegt:heute(), frist, wichtig:st.wichtig || 'normal', erneut:[], erledigt:'', vermerk:'',
       plan:p.id, stufe:st.id, kette:a.kette || a.id, vorgaenger:a.id};
-    AUFG.push(n); saveAufg();
-    toast('Folgeaufgabe angelegt · fällig ' + dText(frist));
-    fertig(n.id);
+    AUFG.push(n); a.planFolgen[i] = n.id;
+    raus.push(`${st.titel || 'Aufgabe'} ${datumKurz(frist)}`);
   });
-  $('#dlgNein').textContent = 'Nicht anlegen';
-  $('#dlgNein').onclick = () => { $('#dlg').hidden = true; fertig('nein'); };
-  const box = $('#dlgListe');
-  box.hidden = false;
-  box.innerHTML = `<label class="field" style="margin:12px 0 0"><span>Fällig am</span>
-    <input type="date" id="folgeFrist" class="schmal" value="${esc(vorschlag)}"></label>`;
+  saveAufg();
+  return raus.length ? 'weiter: ' + raus.join(', ') : 'Ablauf beendet';
 }
 
-/* --- Bearbeiten: Übersicht › Abläufe › Plan › Stufe -------------------------- */
+/* --- Bearbeiten: Übersicht › Abläufe › Ablauf › Aufgabe ----------------------- */
 let planAktiv = '', stufeAktiv = '', stufeVorher = [];
-function planOeffnen(id, stufe){ planAktiv = id; stufeVorher = []; if(stufe){ stufeAktiv = stufe; go('plan'); go('stufe'); } else go('plan'); }
-const laufendIn = id => AUFG.filter(a => a.plan === id && !a.erledigt).length;
+function planOeffnen(id){ planAktiv = id; go('ablaufplan'); }
+const laufendIn = id => AUFG.filter(a => a.plan === id && !a.erledigt);
+const laufZeile = a => [a.anlage ? anlageName(a) : '', a.titel || 'Aufgabe', a.frist ? 'fällig ' + datumKurz(a.frist) : ''].filter(Boolean).join(' · ');
 function renderAblaeufe(){
   const box = $('#ablaeufeBox'), l = plaeneListe();
-  box.innerHTML = `<p class="muted small" style="margin-top:0">Ein Ablauf besteht aus Stufen. Beim Erledigen einer Stufe wählst du das Ergebnis; es bestimmt, welche Aufgabe danach folgt – auch zurück zu einer früheren Stufe. Gestartet wird ein Ablauf an einer Aufgabe.</p>`
-    + l.map((p, i) => `<button class="btn eintrag" data-pi="${i}"><span class="etext">${esc(p.name || 'Ablauf')}<small>${
-        esc([`${(p.stufen || []).length} ${(p.stufen || []).length === 1 ? 'Stufe' : 'Stufen'}`, laufendIn(p.id) ? `${laufendIn(p.id)} offen` : ''].filter(Boolean).join(' · '))}</small></span></button>`).join('')
-    + `<button class="btn" id="planNeu" style="margin-top:10px">+ Neuer Ablauf</button>`;
+  box.innerHTML = (l.length ? '' : `<p class="muted small" style="margin-top:0">Ein Ablauf ist eine Folge von Aufgaben. Jede endet mit einem Ergebnis, und das Ergebnis bestimmt, was danach kommt – z. B. „in Ordnung → in 3 Monaten wieder prüfen“, „Handlungsbedarf → Firma beauftragen“.</p>`)
+    + l.map((p, i) => {
+      const lauf = laufendIn(p.id).sort((x, y) => String(x.frist).localeCompare(String(y.frist)));
+      return `<div class="card ablaufListe"><button class="btn eintrag" data-pi="${i}"><span class="etext">${esc(p.name || 'Ablauf')}<small>${
+          esc(`${(p.stufen || []).length} ${(p.stufen || []).length === 1 ? 'Aufgabe' : 'Aufgaben'}`)}</small></span></button>
+        ${lauf.length ? `<div class="eyebrow" style="margin:8px 0 2px">Laufend</div>` + lauf.map(a =>
+          `<button class="btn eintrag laufEintrag" data-aufg="${esc(a.id)}"><span class="etext">${esc(laufZeile(a))}</span></button>`).join('') : ''}</div>`;
+    }).join('')
+    + `<button class="btn" id="ablaufNeu" style="margin-top:10px">+ Neuer Ablauf</button>`;
   box.querySelectorAll('[data-pi]').forEach(b => b.onclick = () => planOeffnen(l[+b.dataset.pi].id));
-  $('#planNeu').onclick = () => {
+  knoepfeVerdrahten(box);
+  $('#ablaufNeu').onclick = () => {
     const p = {id:neueId(), name:'', stufen:[stufeNeu('')]};
     l.push(p); saveCfg(); planOeffnen(p.id);
   };
 }
-function renderPlan(){
-  const box = $('#planBox'), p = planVon(planAktiv);
+const HILFE_ZEICHEN = {link:'↗', tel:'✆', mail:'✉', haken:'☐'};
+/* Der ganze Ablauf auf einer Seite: je Aufgabe ihre Hilfen und „Wenn …“. */
+function renderAblaufPlan(){
+  const box = $('#ablaufPlanBox'), p = planVon(planAktiv);
   if(!p){ box.innerHTML = '<p class="muted small">Diesen Ablauf gibt es nicht mehr.</p>'; return; }
   const l = p.stufen = p.stufen || [];
-  box.innerHTML = `<label class="field" style="margin-top:0"><span>Name</span><input id="planName" value="${esc(p.name || '')}" placeholder="z. B. Dachrinne"></label>
-    <div class="eyebrow">Stufen</div>`
-    + l.map((s, i) => `<div class="row ablaufReihe planStufe">
-        <button class="btn eintrag" data-si="${i}"><span class="etext">${i + 1}. ${esc(s.titel || 'Stufe')}${i === 0 ? ' · Anfang' : ''}<small>${esc(
-          [(s.schritte || []).length ? `${s.schritte.length} ${s.schritte.length === 1 ? 'Schritt' : 'Schritte'}` : '',
-           (s.ergebnisse || []).length ? s.ergebnisse.map(e => ergebnisText(p, e)).join(' · ') : 'Ende'].filter(Boolean).join(' · '))}</small></span></button>
-        <span class="pfeile"><button type="button" class="btn quadrat" data-hoch="${i}" aria-label="nach oben"${i ? '' : ' disabled'}>↑</button></span></div>`).join('')
-    + `<button class="btn" id="stufeNeu" style="margin-top:6px">+ Stufe</button>
-       <div class="knopfzeile"><button class="btn danger klein" id="planWeg">Ablauf löschen</button></div>`;
-  $('#planName').oninput = e => { p.name = e.target.value; saveCfg(); };
-  box.querySelectorAll('[data-si]').forEach(b => b.onclick = () => { stufeAktiv = l[+b.dataset.si].id; stufeVorher = []; go('stufe'); });
-  box.querySelectorAll('[data-hoch]').forEach(b => b.onclick = () => { const i = +b.dataset.hoch; [l[i - 1], l[i]] = [l[i], l[i - 1]]; saveCfg(); renderPlan(); });
-  $('#stufeNeu').onclick = () => { const s = stufeNeu(''); l.push(s); saveCfg(); stufeAktiv = s.id; stufeVorher = []; go('stufe'); };
-  $('#planWeg').onclick = () => {
-    const n = laufendIn(p.id);
+  const lauf = laufendIn(p.id);
+  box.innerHTML = `<label class="field" style="margin-top:0"><span>Name des Ablaufs</span><input id="ablaufName" value="${esc(p.name || '')}" placeholder="z. B. Dachrinne"></label>
+    <button class="btn primary" id="ablaufLos" style="margin-bottom:6px">Starten</button>
+    ${lauf.length ? `<p class="muted small" style="margin:0 0 10px">${lauf.length === 1 ? 'Läuft einmal' : `Läuft ${lauf.length}-mal`} – unter Übersicht › Abläufe.</p>` : ''}`
+    + l.map((s, i) => `<div class="card abKarte">
+        <button type="button" class="abKopf" data-st="${i}"><span class="abNr">${i + 1}</span><span class="abTitel">${esc(s.titel || 'Neue Aufgabe – Titel antippen')}</span><span class="abPfeil">›</span></button>
+        ${(s.schritte || []).length ? `<p class="muted small abHilfen">${esc(s.schritte.map(x => `${HILFE_ZEICHEN[x.art] || ''} ${schrittText(x)}`).join(' · '))}</p>` : ''}
+        ${(s.ergebnisse || []).map((e, j) => {
+          const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
+          return `<button type="button" class="abWenn" data-st="${i}" data-e="${j}"><span class="muted">Wenn</span> <b>${esc(e.text || 'Ergebnis')}</b><span class="abDann">${
+            esc(z.length ? z.map(x => `→ ${stufeVon(p, x.stufe).titel || 'Aufgabe'} · ${wannText(x)}`).join('\n') : '→ Ende des Ablaufs')}</span></button>`;
+        }).join('') || '<p class="muted small" style="margin:6px 0 0">Ohne Ergebnis endet der Ablauf mit dieser Aufgabe.</p>'}
+        <button type="button" class="btn ghost klein" data-eneu="${i}" style="margin-top:8px">+ Ergebnis</button></div>`).join('')
+    + `<button class="btn" id="stufeNeu" style="margin-top:6px">+ Aufgabe</button>
+       <div class="knopfzeile"><button class="btn danger klein" id="ablaufWeg">Ablauf löschen</button></div>`;
+  $('#ablaufName').oninput = e => { p.name = e.target.value; saveCfg(); };
+  $('#ablaufLos').onclick = () => planStarten(p);
+  box.querySelectorAll('.abKopf').forEach(b => b.onclick = () => { stufeAktiv = l[+b.dataset.st].id; go('stufe'); });
+  box.querySelectorAll('.abWenn').forEach(b => b.onclick = () => ergebnisFenster(p, l[+b.dataset.st], +b.dataset.e));
+  box.querySelectorAll('[data-eneu]').forEach(b => b.onclick = () => ergebnisFenster(p, l[+b.dataset.eneu], -1));
+  $('#stufeNeu').onclick = () => { const s = stufeNeu(''); l.push(s); saveCfg(); stufeAktiv = s.id; go('stufe'); };
+  $('#ablaufWeg').onclick = () => {
+    const n = laufendIn(p.id).length;
     frage('Ablauf löschen', `„${p.name || 'Ablauf'}“ wird gelöscht.` + (n ? `\n\n${n === 1 ? 'Eine offene Aufgabe läuft' : n + ' offene Aufgaben laufen'} darin; sie bleiben als einfache Aufgaben stehen.` : ''),
       'Löschen', () => { CFG.ablaeufe = plaeneListe().filter(x => x !== p); saveCfg(); zurueck(); });
   };
 }
+/* Ein Ergebnis bearbeiten (j = -1: neu). Je Folge Kacheln für die Aufgabe
+   und die Zeit; keine Folge = Ende des Ablaufs. */
+function ergebnisFenster(p, s, j){
+  const alt = j >= 0 ? s.ergebnisse[j] : null;
+  const w = {text:alt ? alt.text || '' : '', ziele:alt ? (alt.ziele || []).filter(z => stufeVon(p, z.stufe)).map(z => Object.assign({}, z))
+    : [{stufe:'', tage:0}]};
+  const gleich = (z, v) => (+z.monate || 0) === (+v.monate || 0) && (+z.monate ? true : (+z.tage || 0) === (+v.tage || 0));
+  frage(alt ? 'Ergebnis' : 'Neues Ergebnis', '', 'Speichern', () => {
+    const ziele = [];
+    w.ziele.forEach(z => {
+      if(z.neu !== undefined){
+        if(!String(z.neu).trim()) return;
+        const n = stufeNeu(String(z.neu).trim()); p.stufen.push(n); z.stufe = n.id;
+      }
+      if(!stufeVon(p, z.stufe)) return;
+      ziele.push(+z.monate ? {stufe:z.stufe, monate:+z.monate} : {stufe:z.stufe, tage:Math.max(0, Math.round(+z.tage || 0))});
+    });
+    const e = alt || {id:neueId()};
+    e.text = w.text.trim() || 'Ergebnis'; e.ziele = ziele;
+    if(!alt) (s.ergebnisse = s.ergebnisse || []).push(e);
+    saveCfg(); renderAblaufPlan();
+  });
+  $('#dlgText').hidden = true;
+  const box = $('#dlgListe');
+  box.hidden = false;
+  const zeichnen = () => {
+    box.innerHTML = `<label class="field" style="margin-top:4px"><span>Ergebnis</span><input id="ergText" value="${esc(w.text)}" placeholder="z. B. in Ordnung"></label>`
+      + (w.ziele.length ? w.ziele.map((z, k) => `<div class="gruppe ergFolge">
+          <div class="eyebrow" style="margin:0 0 6px">Dann folgt${w.ziele.length > 1 ? ` (${k + 1})` : ''}</div>
+          <div class="chips">${p.stufen.map(y => `<button type="button" data-k="${k}" data-zst="${esc(y.id)}" aria-pressed="${z.neu === undefined && z.stufe === y.id}">${esc(y.titel || 'Aufgabe ohne Titel')}</button>`).join('')}
+            <button type="button" data-k="${k}" data-zneu="1" aria-pressed="${z.neu !== undefined}">+ Neue Aufgabe</button></div>
+          ${z.neu !== undefined ? `<input data-k="${k}" data-zname="1" value="${esc(z.neu)}" placeholder="Titel der neuen Aufgabe" style="margin-top:8px">` : ''}
+          <div class="eyebrow" style="margin:12px 0 6px">Wann</div>
+          <div class="chips">${WANN.map(([t, v], n) => `<button type="button" data-k="${k}" data-wann="${n}" aria-pressed="${!z.eigen && gleich(z, v)}">${t}</button>`).join('')}
+            <button type="button" data-k="${k}" data-weigen="1" aria-pressed="${!!z.eigen || !WANN.some(([, v]) => gleich(z, v))}">eigene</button></div>
+          ${z.eigen || !WANN.some(([, v]) => gleich(z, v)) ? `<div class="row ablaufReihe" style="margin-top:8px"><span class="muted small">in</span>
+            <input type="number" inputmode="numeric" min="0" class="tage" data-k="${k}" data-ztage="1" value="${esc(+z.monate ? +z.monate * 30 : (z.tage ?? 0))}" aria-label="Tage"><span class="muted small">Tagen</span></div>` : ''}
+          <button type="button" class="btn ghost klein" data-k="${k}" data-zweg="1" style="margin-top:8px">${w.ziele.length > 1 ? 'Diese Folge entfernen' : 'Keine Folge – Ende des Ablaufs'}</button></div>`).join('')
+        : `<p class="muted small" style="margin:8px 0">Dann: Ende des Ablaufs.</p>`)
+      + `<button type="button" class="btn ghost klein" id="ergPlus" style="margin-top:8px">${w.ziele.length ? '+ Zugleich eine weitere Aufgabe' : '+ Folgeaufgabe'}</button>`
+      + (alt ? `<button type="button" class="btn danger klein" id="ergWeg" style="margin-top:12px">Ergebnis löschen</button>` : '');
+    $('#ergText').oninput = e => { w.text = e.target.value; };
+    box.querySelectorAll('[data-zst]').forEach(b => b.onclick = () => { const z = w.ziele[+b.dataset.k]; z.stufe = b.dataset.zst; delete z.neu; zeichnen(); });
+    box.querySelectorAll('[data-zneu]').forEach(b => b.onclick = () => { const z = w.ziele[+b.dataset.k]; z.neu = z.neu || ''; zeichnen();
+      const f = box.querySelector(`[data-zname][data-k="${b.dataset.k}"]`); if(f) f.focus(); });
+    box.querySelectorAll('[data-zname]').forEach(f => f.oninput = () => { w.ziele[+f.dataset.k].neu = f.value; });
+    box.querySelectorAll('[data-wann]').forEach(b => b.onclick = () => {
+      const z = w.ziele[+b.dataset.k], v = WANN[+b.dataset.wann][1];
+      delete z.monate; delete z.tage; delete z.eigen; Object.assign(z, v); zeichnen();
+    });
+    box.querySelectorAll('[data-weigen]').forEach(b => b.onclick = () => { w.ziele[+b.dataset.k].eigen = true; zeichnen(); });
+    box.querySelectorAll('[data-ztage]').forEach(f => f.oninput = () => { const z = w.ziele[+f.dataset.k]; delete z.monate; z.tage = Math.max(0, Math.round(+f.value || 0)); });
+    box.querySelectorAll('[data-zweg]').forEach(b => b.onclick = () => { w.ziele.splice(+b.dataset.k, 1); zeichnen(); });
+    $('#ergPlus').onclick = () => { w.ziele.push({stufe:'', tage:0}); zeichnen(); };
+    if($('#ergWeg')) $('#ergWeg').onclick = () => { $('#dlg').hidden = true; s.ergebnisse.splice(j, 1); saveCfg(); renderAblaufPlan(); };
+  };
+  zeichnen();
+}
+/* Starten von der Seite des Ablaufs: Objekt (freiwillig) und Datum. */
+function planStarten(p){
+  const s = (p.stufen || [])[0];
+  if(!s){ toast('Der Ablauf hat noch keine Aufgabe'); return; }
+  let k = '', anlage = '';
+  frage('Ablauf starten', `„${p.name || 'Ablauf'}“ beginnt mit „${s.titel || 'Aufgabe'}“.`, 'Starten', () => {
+    const frist = ($('#startFrist') && $('#startFrist').value) || heute();
+    const wahl = bezugsAnlagen(k).find(x => x.wert === anlage);
+    const n = {id:neueId(), art:'eigen', quelle:'', k, anlage:wahl ? wahl.wert : '', anlageText:wahl ? wahl.text : '',
+      punkt:'', titel:s.titel || 'Aufgabe', text:'', notiz:s.notiz || '', zeitraum:'', festgestellt:'',
+      angelegt:heute(), frist, wichtig:s.wichtig || 'normal', erneut:[], erledigt:'', vermerk:'',
+      plan:p.id, stufe:s.id};
+    n.kette = n.id;
+    AUFG.push(n); saveAufg();
+    toast(`Gestartet · ${s.titel || 'Aufgabe'} fällig ${datumKurz(frist)}`);
+    aufgabeOeffnen(n.id);
+  });
+  const box = $('#dlgListe');
+  box.hidden = false;
+  const nachweise = VORLAGEN.filter(x => aktiv(x.k) && bezugsAnlagen(x.k).length);
+  const zeichnen = () => {
+    const anl = bezugsAnlagen(k);
+    box.innerHTML = `<label class="field" style="margin-top:8px"><span>Objekt (freiwillig)</span>
+        <select id="startNw"><option value="">– ohne Objekt –</option>${nachweise.map(x =>
+          `<option value="${x.k}"${x.k === k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
+      ${anl.length ? `<label class="field"><span>Welches</span><select id="startAnl"><option value="">– wählen –</option>${anl.map(x =>
+          `<option value="${esc(x.wert)}"${x.wert === anlage ? ' selected' : ''}>${esc(x.text)}</option>`).join('')}</select></label>` : ''}
+      <label class="field"><span>Fällig am</span><input type="date" id="startFrist" class="schmal" value="${esc(($('#startFrist') && $('#startFrist').value) || heute())}"></label>`;
+    $('#startNw').onchange = e => { k = e.target.value; anlage = ''; zeichnen(); };
+    if($('#startAnl')) $('#startAnl').onchange = e => { anlage = e.target.value; };
+  };
+  zeichnen();
+}
+/* Eine Aufgabe des Ablaufs: Titel, Wichtigkeit, Notiz und Hilfen. Ihre
+   Ergebnisse stehen auf der Seite des Ablaufs. */
 function renderStufe(){
   const box = $('#stufeBox'), p = planVon(planAktiv), s = stufeVon(p, stufeAktiv);
-  if(!p || !s){ box.innerHTML = '<p class="muted small">Diese Stufe gibt es nicht mehr.</p>'; return; }
-  const l = s.schritte = s.schritte || [], er = s.ergebnisse = s.ergebnisse || [];
-  const iPl = info('In Adresse, Betreff und Text werden {Datum}, {Objekt} und {Titel} beim Ausführen ersetzt.', 'margin:-4px 0 10px');
+  if(!p || !s){ box.innerHTML = '<p class="muted small">Diese Aufgabe gibt es nicht mehr.</p>'; return; }
+  const l = s.schritte = s.schritte || [], nr = stufeNr(p, s.id);
+  const iPl = info('Hilfen stehen auf der Aufgabe als Knöpfe. In Adresse, Betreff und Text werden {Datum}, {Objekt} und {Titel} beim Ausführen ersetzt.', 'margin:-4px 0 10px');
   const feld = (i, f, titel, wert, extra = '') => `<label class="field"><span>${titel}</span><input data-i="${i}" data-f="${f}" value="${esc(wert || '')}" ${extra}></label>`;
   const schritt = (x, i) => `<div class="gruppe schrittKarte">
       <div class="field segfeld"><div class="seg">${ABLAUF_ARTEN.map(([w, t]) =>
@@ -6301,30 +6474,16 @@ function renderStufe(){
         <button type="button" class="btn quadrat" data-hoch="${i}" aria-label="nach oben"${i ? '' : ' disabled'}>↑</button>
         <button type="button" class="btn quadrat" data-runter="${i}" aria-label="nach unten"${i < l.length - 1 ? '' : ' disabled'}>↓</button>
         <button type="button" class="btn danger klein" data-weg="${i}">Entfernen</button></div></div>`;
-  const stufenWahl = (j, k, wert) => `<select data-j="${j}" data-k="${k}" data-zs="1" aria-label="Folgt">${(p.stufen || []).map((y, n) =>
-      `<option value="${esc(y.id)}"${y.id === wert ? ' selected' : ''}>${n + 1}. ${esc(y.titel || 'Stufe')}${y.id === s.id ? ' (diese)' : ''}</option>`).join('')}
-      <option value="+">+ neue Stufe …</option></select>`;
-  const ergebnis = (e, j) => `<div class="gruppe">
-      <div class="row ablaufReihe"><input data-j="${j}" data-et="1" value="${esc(e.text || '')}" placeholder="z. B. in Ordnung" aria-label="Ergebnis">
-        <button type="button" class="btn quadrat" data-j="${j}" data-eweg="1" aria-label="Ergebnis entfernen">✕</button></div>
-      ${(e.ziele || []).map((z, k) => `<div class="ablaufZiel"><div class="row ablaufReihe"><span class="muted">→</span>${stufenWahl(j, k, z.stufe)}</div>
-        <div class="row ablaufReihe"><span class="muted small">nach</span>
-        <input type="number" inputmode="numeric" min="0" class="tage" data-j="${j}" data-k="${k}" data-zt="1" value="${esc(z.tage ?? 0)}" aria-label="nach Tagen"><span class="muted small">Tagen</span>
-        <button type="button" class="btn quadrat" data-j="${j}" data-k="${k}" data-zweg="1" aria-label="Folge entfernen" style="margin-left:auto">✕</button></div></div>`).join('')
-        || '<p class="muted small" style="margin:6px 0 0">→ Ende des Ablaufs</p>'}
-      <button type="button" class="btn ghost klein" data-j="${j}" data-zneu="1" style="margin-top:6px">+ Folgeaufgabe</button></div>`;
-  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">${esc(p.name || 'Ablauf')} · Stufe ${stufeNr(p, s.id)} ${iPl.knopf}</div>${iPl.text}
-    <label class="field"><span>Titel der Aufgabe</span><input id="stTitel" value="${esc(s.titel || '')}" placeholder="z. B. Zustand prüfen"></label>
+  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">${esc(p.name || 'Ablauf')} · Aufgabe ${nr} ${iPl.knopf}</div>${iPl.text}
+    <label class="field"><span>Titel</span><input id="stTitel" value="${esc(s.titel || '')}" placeholder="z. B. Zustand prüfen"></label>
     <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
       WICHTIG.map(([w, t]) => `<button type="button" data-sw="${w}" aria-pressed="${(s.wichtig || 'normal') === w}">${t}</button>`).join('')}</div></div>
     <label class="field"><span>Notiz</span><textarea id="stNotiz" style="min-height:70px">${esc(s.notiz || '')}</textarea></label>
-    <div class="eyebrow">Schritte</div>${l.map(schritt).join('')}
-    <button class="btn ghost klein" id="schrittNeu" style="margin:6px 0 4px">+ Schritt</button>
-    <div class="eyebrow">Ergebnisse beim Erledigen</div>
-    ${er.length ? '' : '<p class="muted small" style="margin:0 0 6px">Ohne Ergebnis endet der Ablauf mit dieser Stufe.</p>'}
-    ${er.map(ergebnis).join('')}
-    <button class="btn ghost klein" id="ergNeu" style="margin-top:6px">+ Ergebnis</button>
-    ${(p.stufen || []).length > 1 ? '<div class="knopfzeile"><button class="btn danger klein" id="stufeWeg">Stufe löschen</button></div>' : ''}`;
+    <div class="eyebrow">Hilfen</div>${l.length ? '' : '<p class="muted small" style="margin:0 0 6px">Ein Link, eine Nummer, eine vorbereitete E-Mail oder etwas zum Abhaken.</p>'}
+    ${l.map(schritt).join('')}
+    <button class="btn ghost klein" id="schrittNeu" style="margin:6px 0 4px">+ Hilfe</button>
+    <div class="knopfzeile">${nr > 1 ? '<button class="btn ghost klein" id="stufeHoch">Weiter nach vorn</button>' : ''}
+      ${p.stufen.length > 1 ? '<button class="btn danger klein" id="stufeWeg">Aufgabe löschen</button>' : ''}</div>`;
   const sichern = () => saveCfg(), neu = () => renderStufe();
   $('#stTitel').oninput = e => { s.titel = e.target.value; sichern(); };
   $('#stNotiz').oninput = e => { s.notiz = e.target.value; sichern(); };
@@ -6337,25 +6496,9 @@ function renderStufe(){
   box.querySelectorAll('[data-runter]').forEach(b => b.onclick = () => { const i = +b.dataset.runter; [l[i + 1], l[i]] = [l[i], l[i + 1]]; sichern(); neu(); });
   box.querySelectorAll('[data-weg]').forEach(b => b.onclick = () => { l.splice(+b.dataset.weg, 1); sichern(); neu(); });
   $('#schrittNeu').onclick = () => { l.push({id:neueId(), art:'link', text:''}); sichern(); neu(); };
-  $('#ergNeu').onclick = () => { er.push({id:neueId(), text:'', ziele:[]}); sichern(); neu(); };
-  box.querySelectorAll('[data-et]').forEach(el => el.oninput = () => { er[+el.dataset.j].text = el.value; sichern(); });
-  box.querySelectorAll('[data-eweg]').forEach(b => b.onclick = () => { er.splice(+b.dataset.j, 1); sichern(); neu(); });
-  box.querySelectorAll('[data-zneu]').forEach(b => b.onclick = () => {
-    (er[+b.dataset.j].ziele = er[+b.dataset.j].ziele || []).push({stufe:s.id, tage:0}); sichern(); neu();
-  });
-  box.querySelectorAll('[data-zweg]').forEach(b => b.onclick = () => { er[+b.dataset.j].ziele.splice(+b.dataset.k, 1); sichern(); neu(); });
-  box.querySelectorAll('[data-zt]').forEach(el => el.oninput = () => { er[+el.dataset.j].ziele[+el.dataset.k].tage = Math.max(0, Math.round(+el.value || 0)); sichern(); });
-  /* „+ neue Stufe …“ legt sie an und öffnet sie gleich (zurück führt hierher). */
-  box.querySelectorAll('[data-zs]').forEach(el => el.onchange = () => {
-    const z = er[+el.dataset.j].ziele[+el.dataset.k];
-    if(el.value === '+'){
-      const n = stufeNeu(''); p.stufen.push(n); z.stufe = n.id; sichern();
-      stufeVorher.push(s.id); stack.push('stufe'); stufeAktiv = n.id; renderStufe(); bildNach(0); return;
-    }
-    z.stufe = el.value; sichern();
-  });
-  if($('#stufeWeg')) $('#stufeWeg').onclick = () => frage('Stufe löschen',
-    `„${s.titel || 'Stufe'}“ wird gelöscht; Verweise anderer Stufen auf sie fallen weg.`, 'Löschen', () => {
+  if($('#stufeHoch')) $('#stufeHoch').onclick = () => { const i = nr - 1; [p.stufen[i - 1], p.stufen[i]] = [p.stufen[i], p.stufen[i - 1]]; sichern(); neu(); };
+  if($('#stufeWeg')) $('#stufeWeg').onclick = () => frage('Aufgabe löschen',
+    `„${s.titel || 'Aufgabe'}“ wird aus dem Ablauf gelöscht; Ergebnisse, die zu ihr führen, enden dann.`, 'Löschen', () => {
       p.stufen = p.stufen.filter(x => x !== s);
       p.stufen.forEach(x => (x.ergebnisse || []).forEach(e => { e.ziele = (e.ziele || []).filter(z => z.stufe !== s.id); }));
       sichern(); zurueck();
@@ -6569,7 +6712,7 @@ function renderAufgabe(){
              <input type="date" id="erlDatum" class="schmal" value="${heute()}"></label>
            <input id="erlVermerk" placeholder="Vermerk, z. B. Firma" style="margin-top:10px">
            ${fragtNachher ? '' : `<div class="field" style="margin:12px 0 0"><span>Dauer (freiwillig)</span><div id="erlDauer"></div></div>`}
-           <button class="btn primary" id="erlSetzen" style="margin-top:10px">Als erledigt vermerken</button></div>`;
+           ${ergebnisseHtml(a) || '<button class="btn primary" id="erlSetzen" style="margin-top:10px">Als erledigt vermerken</button>'}</div>`;
   /* Termin oder Zeitraum (v1.51). Die Umschaltung steht nur bei eigenen
      Aufgaben; ein Mangel hat seinen Termin. */
   const zr = !mangel && !!a.von;
@@ -6760,7 +6903,10 @@ function renderAufgabe(){
     box.innerHTML = '<div id="aufgUt"></div>';
     const ut = utensilWahl($('#aufgUt'), a.utensilien || [], null, a.material || []);
   };
-  if($('#erlSetzen')) $('#erlSetzen').onclick = () => {
+  /* Erledigen, bei einem Ablauf mit Ergebnis j (v1.160): die Folgeaufgaben
+     entstehen sofort mit den Daten, die auf den Knöpfen stehen. */
+  const zielFest = {};
+  const erledigenMit = j => {
     a.erledigt = $('#erlDatum').value || heute();
     a.vermerk = $('#erlVermerk').value.trim();
     delete a.geplant;
@@ -6785,16 +6931,18 @@ function renderAufgabe(){
       if(a.wetter) folge.wetter = a.wetter;
       if(a.reihe) folge.reihe = a.reihe;
       AUFG.push(folge); a.folge = folge.id;
+      const pt = j == null ? '' : planWeiter(a, j, zielFest);
       saveAufg();
-      toast(fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · wieder fällig ${dText(folge.frist)}`);
-      zurueck(); ablaufErledigen(a, a.erledigt, tFragen);
+      toast((fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · wieder fällig ${dText(folge.frist)}`) + (pt ? ' · ' + pt : ''));
+      zurueck(); tFragen();
       return;
     }
-    saveAufg(); stoerAusAufgabe(a, 'erledigt'); toast('Als erledigt vermerkt'); zurueck();
-    /* Entscheidungen und Folgeaufgaben aus dem Ablauf (v1.157, v1.158) –
-       spätestens beim Erledigen. */
-    ablaufErledigen(a, a.erledigt, tFragen);
+    const pt = j == null ? '' : planWeiter(a, j, zielFest);
+    saveAufg(); stoerAusAufgabe(a, 'erledigt'); toast(pt ? 'Erledigt · ' + pt : 'Als erledigt vermerkt'); zurueck();
+    tFragen();
   };
+  if($('#erlSetzen')) $('#erlSetzen').onclick = () => erledigenMit(null);
+  if(!a.erledigt && !neu) ergebnisseVerdrahten(a, zielFest, erledigenMit);
   if($('#aufgWieder')) $('#aufgWieder').onclick = () => {
     /* Eine noch unberührte Folgeaufgabe geht mit zurück, sonst stünde der
        nächste Termin doppelt da. Wurde an ihr schon etwas getan, bleibt sie. */
