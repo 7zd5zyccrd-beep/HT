@@ -286,6 +286,27 @@ steht.
 - Etappe 2 (vereinbart): Runden der Nachweise, Sprinkler, Akkutausch,
   Wetterregeln; selbsttätige Bedingungen (z. B. Mangel in der Runde).
 
+## Online-Dienste (v1.170)
+
+- Gruppe „Online-Dienste“ in den Einstellungen (Name von Jean): Adresse,
+  Wetter, Abfallkalender. `CFG.adresse` {strasse, hnr, plz, ort, zusatz,
+  lat, lon} über `setAdresse`; Suche bei Photon (komoot, OSM, kennt
+  Hausnummern), sonst Rückfall auf die Ortssuche von Open-Meteo. Felder von
+  Hand korrigierbar (Jean), die Lage ändert sich nur über die Suche.
+  `adresseSetzen` setzt `CFG.wetter` mit (Wetter-Code liest weiter
+  `CFG.wetter`); `setWetter` zeigt nur noch den Standort und „Adresse ändern“.
+- Abfallkalender: vorerst nur Information, keine Aufgaben (Jean). `ABFALL`
+  (Store `nwAbfall`, Sicherung `abfall`, `abfallPruefen`): {url, quelle
+  'datei'|'link', datei, abgerufen, versuch, fehler, termine:[{tag, art}]}.
+  Datei öffnen (`abfallDateiLesen`, entfernt den Link) oder Link
+  (`abfallAbrufen`, beim Öffnen höchstens täglich; TypeError online =
+  'gesperrt', also CORS). `icsLesen`/`icsWiederholen`: RRULE, EXDATE,
+  RECURRENCE-ID, UTC → Ortszeit. Seite `abfall` (Übersicht › Abfall).
+- Ziel „möglichst viele Kommunen“: als Nächstes (vereinbart) geführte Auswahl
+  bei abfall.io (Kommune/Straße/Hausnummer), falls Jeans Link-Test zeigt,
+  dass der Abruf aus der App geht. Ein eigener Vermittlungsserver nur, wenn
+  Datei und Link nicht reichen.
+
 ## Suche (v1.145)
 
 - `suchObjekte`: Text je Objekt = Name (+ Löscherangaben) + Name der Anlage

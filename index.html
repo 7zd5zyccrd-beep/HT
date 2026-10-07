@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.170 07.10.2026 Online-Dienste (Jean): neue Gruppe in den Einstellungen
+         mit Adresse, Wetter und Abfallkalender. Die Adresse wird einmal
+         gesucht (Straße, Hausnummer, PLZ, Ort; auch „Aktueller Standort“)
+         und bleibt von Hand korrigierbar; das Wetter nimmt seine Lage von
+         dort, ein bisheriger Wetter-Standort bleibt bestehen. Abfallkalender:
+         die Kalenderdatei (.ics) des Entsorgers öffnen oder seinen Link zum
+         Abonnieren eintragen – dann holt die App ihn beim Öffnen einmal am
+         Tag selbst und sagt klar, wenn der Entsorger das nicht zulässt.
+         Startseite › Übersicht › Abfall zeigt je Abfallart die nächste
+         Abfuhr und alle kommenden Tage. Noch keine Aufgaben daraus.
+         Reist mit der Sicherung.
   v1.169 07.10.2026 Dauer (Jean): unter 15 Minuten lassen sich jetzt auch
          5 und 10 Minuten wählen; darüber bleiben die Stufen wie bisher.
   v1.168 07.10.2026 Arbeitsnachweis (Jean): die Schritte eines Ablaufs
@@ -3195,6 +3206,23 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 .wgZeile.wgBreit{display:block;padding:10px 0}
 .wgZeile.wgBreit select,.wgZeile.wgBreit input{width:100%;margin-top:6px;padding:10px;font-size:16px}
 .wgKarte .knopfzeile{margin:6px 0 10px}
+.adrZeile{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:8px}
+.adrZeile.plz{grid-template-columns:100px minmax(0,1fr)}
+.adrZeile .field{min-width:0}
+.adrZeile input{width:100%;min-width:0}
+.abfZeile{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.abfZeile:first-child{border-top:0;padding-top:0}
+.abfZeile:last-child{padding-bottom:0}
+.abfPunkt{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
+.abfArten .abfPunkt{margin-right:6px}
+.abfArt{flex:1;min-width:0}
+.abfWann{text-align:right;white-space:nowrap}
+.abfWann small{display:block;font-size:13px;color:var(--ink-soft)}
+.abfTag{width:84px;flex:none;align-self:flex-start;font-variant-numeric:tabular-nums}
+.abfArten{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px 14px}
+.abfArten span{display:inline-flex;align-items:center}
+.abfKn{gap:8px}
+.abfKn .btn + .btn{margin-top:0}
 .btn.ortTreffer small{display:block;margin-top:3px;font-size:14px;font-weight:400;color:var(--ink-soft)}
 /* Die gesuchte Karte wird kurz umrandet, damit das Auge sie gleich findet. */
 .pos.gesucht{outline:3px solid var(--ink);outline-offset:2px}
@@ -3285,6 +3313,11 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
     <!-- Wetter am Standort (v1.50) -->
     <section class="view" id="view-wetter">
       <div id="wetterBox"></div>
+    </section>
+
+    <!-- Abfuhrtermine aus dem Abfallkalender (v1.170) -->
+    <section class="view" id="view-abfall">
+      <div id="abfallBox"></div>
     </section>
 
     <!-- Erledigte Aufgaben -->
@@ -3455,7 +3488,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.169';
+const VERSION = 'v1.170';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4692,7 +4725,7 @@ const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufg
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregel:'Regel',
                taeten:'Tätigkeiten', taet:'Tätigkeit', wplan:'Wochenplan', arbeit:'Arbeitsnachweis',
-               termin:'Termin', termine:'Termine'};
+               termin:'Termin', termine:'Termine', abfall:'Abfall'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
    nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
@@ -4758,6 +4791,7 @@ function go(name, push = true){
   if(name === 'erledigt') renderErledigt();
   if(name === 'stoerungen') renderStoerungen();
   if(name === 'wetter')   renderWetter();
+  if(name === 'abfall')   renderAbfall();
   if(name === 'taeten')   renderTaeten();
   if(name === 'wplan')    renderWochenplan();
   if(name === 'arbeit')   renderArbeit();
@@ -4868,7 +4902,7 @@ $('#btnBack').onclick = zurueck;
 /* Kommt die App aus dem Hintergrund zurück, kann ein neuer Tag begonnen haben –
    Fristen und Gruppen der Liste rechnen dann neu. */
 document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'visible'){ listeNachziehen(); wetterAbrufen(); }
+  if(document.visibilityState === 'visible'){ listeNachziehen(); wetterAbrufen(); abfallAbrufen(); }
 });
 
 /* Rückfrage im eigenen Fenster. Der Aufruf übergibt, was bei Zustimmung
@@ -5756,7 +5790,8 @@ function renderHome(){
     + `<button class="btn eintrag" data-ablaeufe="1"><span>Abläufe</span>${plaeneListe().length ? `<span class="zahl">${plaeneListe().length}</span>` : ''}</button>`
     + (STOER.length ? `<button class="btn eintrag" data-stoer="1"><span>Störungen</span><span class="zahl">${stoerObjekte().length}</span></button>` : '')
     + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigt</span><span class="zahl">${erledigt}</span></button>` : '')
-    + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span></button>` : '');
+    + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span></button>` : '')
+    + (ABFALL.termine.length || ABFALL.url ? `<button class="btn eintrag" data-abfall="1"><span>Abfall</span></button>` : '');
   $('#homeListe').innerHTML = `<div class="row neuZeile"><button class="btn ghost klein" data-neuaufg="1">+ Aufgabe</button>
       <button class="btn ghost klein" data-neutermin="1">+ Termin</button></div>`
     + warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
@@ -5773,6 +5808,8 @@ function renderHome(){
   if(sto) sto.onclick = () => go('stoerungen');
   const wet = $('#homeListe [data-wetter]');
   if(wet){ wet.onclick = () => { go('wetter'); wetterAbrufen(); }; wetterStandZeigen(); }
+  const abf = $('#homeListe [data-abfall]');
+  if(abf) abf.onclick = () => { go('abfall'); abfallAbrufen(); };
   $('#homeListe [data-neuaufg]').onclick = aufgabeNeu;
   $('#homeListe [data-neutermin]').onclick = terminNeu;
   const tl = $('#homeListe [data-termine]');
@@ -10489,7 +10526,7 @@ function renderWetter(){
   if(!o){
     box.innerHTML = `<p class="muted small">Noch kein Standort festgelegt.</p>
       <button class="btn primary" id="wetterZuOrt">Standort festlegen</button>`;
-    $('#wetterZuOrt').onclick = () => setOeffnen('wetter');
+    $('#wetterZuOrt').onclick = () => setOeffnen('adresse');
     return;
   }
   const d = wetterDaten();
@@ -10598,87 +10635,489 @@ function koordinaten(o){
 }
 let ortSucheUhr = null, ortSucheNr = 0;
 function setWetter(box){
+  /* Der Standort kommt seit v1.170 aus der Adresse unter „Online-Dienste“ –
+     hier steht nur noch, welcher es ist, und der Weg dorthin. */
   const o = CFG.wetter;
   const i = info('Für diesen Ort ruft die App beim Öffnen höchstens einmal pro Stunde das Wetter ab – 30 Tage zurück, 10 Tage voraus. Die Wetterseite zeigt davon eine Woche Rückblick. Übertragen werden nur die Koordinaten.', 'margin:-2px 0 10px');
   box.innerHTML = `
     <div class="eyebrow mitInfo" style="margin-top:0">Standort ${i.knopf}</div>${i.text}
     ${o ? `<div class="card">
-        <label class="field" style="margin-bottom:8px"><span>Bezeichnung</span><input id="wOrtName" value="${esc(o.name || '')}" placeholder="z. B. Musterhaus"></label>
-        <p class="muted small" style="margin:0">${esc([o.zusatz, koordinaten(o)].filter(Boolean).join(' · '))}</p>
-        <div class="knopfzeile" style="margin-top:10px"><button class="btn danger klein" id="wOrtWeg">Löschen</button></div>
-      </div>` : `<p class="muted small" style="margin:0 0 10px">Noch kein Standort festgelegt.</p>`}
-    <div class="suchfeld"><svg class="lupe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><input type="search" id="wOrtSuche" placeholder="${o ? 'Anderen Ort oder PLZ suchen' : 'Ort oder PLZ suchen'}"
-      enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
-    <div id="wOrtTreffer"></div>
-    <button class="btn ghost klein" id="wOrtHier">Aktuellen Standort übernehmen</button>`;
+        <div class="name" style="margin:0">${esc(o.name || 'Standort')}</div>
+        <p class="muted small" style="margin:4px 0 0">${esc([o.zusatz, koordinaten(o)].filter(Boolean).join(' · '))}</p>
+      </div>` : `<p class="muted small" style="margin:0 0 10px">Noch kein Standort festgelegt. Er kommt aus der Adresse.</p>`}
+    <button class="btn ghost klein" id="wZurAdresse">${o ? 'Adresse ändern' : 'Adresse festlegen'}</button>`;
+  $('#wZurAdresse').onclick = () => setOeffnen('adresse');
+  wetterEinstAnhaengen(box);
+  box.insertAdjacentHTML('beforeend',
+    `<p class="muted small" style="margin:18px 0 0">Die Ereignisregeln stehen auf der Startseite unter „Übersicht › Wetter“, unter der Vorhersage.</p>`);
+}
 
-  const uebernehmen = neu => {
-    CFG.wetter = neu; saveCfg();
-    wetterOffen.clear();
-    toast('Standort übernommen');
-    setWetter(box);
-    wetterAbrufen(true);
-  };
-  if($('#wOrtName')) $('#wOrtName').onchange = e => {
-    CFG.wetter.name = e.target.value.trim(); saveCfg();
-  };
-  if($('#wOrtWeg')) $('#wOrtWeg').onclick = () =>
-    frage('Standort löschen', `${o.name || 'Der Standort'} wird gelöscht. Ohne Standort ruft die App kein Wetter ab.`, 'Löschen', () => {
-      delete CFG.wetter; saveCfg();
+/* ---------- Online-Dienste: Adresse (v1.170) -------------------------------
+   Eine Adresse für alles, was die App aus dem Netz holt: das Wetter nimmt ihre
+   Lage (CFG.wetter bleibt dafür bestehen und wird hier mitgesetzt), der
+   Abfallkalender braucht Straße und Hausnummer. Gesucht wird bei Photon
+   (komoot, Daten von OpenStreetMap) – das kennt Straßen und Hausnummern.
+   Antwortet es nicht, hilft die Ortssuche von Open-Meteo aus (nur PLZ und
+   Ort). Alle Felder bleiben von Hand korrigierbar (Jean); die Lage ändert
+   sich nur über die Suche. CFG.adresse reist mit der Sicherung. */
+const adresse = () => CFG.adresse || {};
+const adrStrasse = a => [a.strasse, a.hnr].filter(Boolean).join(' ');
+const adrOrt = a => [a.plz, a.ort].filter(Boolean).join(' ');
+const adrText = a => [adrStrasse(a), adrOrt(a)].filter(Boolean).join(', ');
+/* Das Wetter führt Name und Zusatz aus der Adresse mit. */
+function adrWetterNachziehen(){
+  const a = adresse();
+  if(!CFG.wetter || a.lat == null) return;
+  CFG.wetter.name = a.ort || adrStrasse(a) || 'Standort';
+  CFG.wetter.zusatz = adrStrasse(a);
+}
+function adresseSetzen(neu){
+  CFG.adresse = neu;
+  const lageNeu = neu.lat != null && neu.lon != null;
+  if(lageNeu) CFG.wetter = {name:'', zusatz:'', lat:neu.lat, lon:neu.lon};
+  adrWetterNachziehen();
+  saveCfg();
+  if(lageNeu){ wetterOffen.clear(); wetterAbrufen(true); }
+}
+function photonEintrag(f){
+  const p = f.properties || {}, c = (f.geometry || {}).coordinates || [];
+  const strasse = p.street || (p.osm_key === 'highway' ? p.name || '' : '');
+  const ort = p.city || p.town || p.village
+    || (['city', 'town', 'village', 'hamlet', 'suburb'].includes(p.osm_value) || p.type === 'city' ? p.name || '' : '');
+  const zusatz = [...new Set([p.county, p.state].filter(x => x && x !== ort))]
+    .concat(p.countrycode && p.countrycode !== 'DE' && p.country ? [p.country] : []).join(', ');
+  /* Ein Name, der weder Straße noch Ort ist – ein Gebäude, eine Einrichtung. */
+  const name = p.name && p.name !== strasse && p.name !== ort && p.name !== p.housenumber ? p.name : '';
+  return {strasse, hnr:p.housenumber || '', plz:p.postcode || '', ort, zusatz, name, lat:+c[1], lon:+c[0]};
+}
+async function adresseSuchen(q){
+  const w = CFG.wetter;
+  const nah = w ? `&lat=${(+w.lat).toFixed(3)}&lon=${(+w.lon).toFixed(3)}` : '';
+  try{
+    const r = await fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&lang=de&limit=8' + nah, {cache:'no-store'});
+    const j = await r.json();
+    if(!r.ok || !j || !Array.isArray(j.features)) throw new Error('Antwort ' + r.status);
+    const gesehen = new Set();
+    return {grob:false, liste:j.features.map(photonEintrag).filter(e => {
+      const s = e.name + '|' + adrText(e);
+      if(!isFinite(e.lat) || !isFinite(e.lon) || gesehen.has(s)) return false;
+      gesehen.add(s); return true;
+    })};
+  }catch(e){ /* weiter mit der Ortssuche von Open-Meteo */ }
+  const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q.replace(/^.*\d+\s*[a-z]?\s*,\s*/i, ''))
+    + '&count=8&language=de&format=json', {cache:'no-store'});
+  const j = await r.json();
+  if(!r.ok) throw new Error(j && j.reason || 'Antwort ' + r.status);
+  const plz = /^\d+$/.test(q.trim());
+  return {grob:true, liste:(Array.isArray(j.results) ? j.results : []).map(r => ({
+    strasse:'', hnr:'', name:'', ort:r.name,
+    plz:plz && Array.isArray(r.postcodes) ? String(r.postcodes.find(p => String(p).startsWith(q.trim())) || '') : '',
+    zusatz:[...new Set([r.admin2, r.admin1].filter(x => x && x !== r.name))]
+      .concat(r.country_code && r.country_code !== 'DE' && r.country ? [r.country] : []).join(', '),
+    lat:r.latitude, lon:r.longitude}))};
+}
+function setAdresse(box){
+  const a = adresse(), w = CFG.wetter;
+  const i = info('Die Adresse gilt für alle Online-Dienste: Das Wetter nimmt ihre Lage, der Abfallkalender braucht Straße und Hausnummer. Übertragen wird nur, was im Suchfeld steht. Passt ein Feld nicht, lässt es sich unten von Hand ändern.', 'margin:-2px 0 10px');
+  const feld = (id, titel, wert, extra = '') =>
+    `<label class="field"><span>${titel}</span><input id="${id}" value="${esc(wert || '')}" autocomplete="off"${extra}></label>`;
+  const lage = a.lat != null ? `Lage fürs Wetter: ${koordinaten(a)}`
+             : w ? `Lage fürs Wetter: ${koordinaten(w)} (bisheriger Wetter-Standort)`
+             : 'Noch keine Lage – sie kommt aus der Suche. Ohne sie gibt es kein Wetter.';
+  box.innerHTML = `
+    <div class="eyebrow mitInfo" style="margin-top:0">Suchen ${i.knopf}</div>${i.text}
+    <div class="suchfeld"><svg class="lupe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><input type="search" id="adrSuche" placeholder="Straße Hausnummer, Ort"
+      enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+    <div id="adrTreffer"></div>
+    <button class="btn ghost klein" id="adrHier">Aktuellen Standort übernehmen</button>
+    <div class="eyebrow" style="margin-top:22px">Adresse</div>
+    <div class="adrZeile">${feld('adrStrasse', 'Straße', a.strasse)}${feld('adrHnr', 'Nr.', a.hnr)}</div>
+    <div class="adrZeile plz">${feld('adrPlz', 'PLZ', a.plz, ' inputmode="numeric"')}${feld('adrOrt', 'Ort', a.ort)}</div>
+    <p class="muted small" style="margin:2px 0 0">${esc(lage)}</p>
+    ${CFG.adresse || w ? `<div class="knopfzeile" style="margin-top:14px"><button class="btn danger klein" id="adrWeg">Adresse löschen</button></div>` : ''}
+    <p class="muted small" style="margin:18px 0 0">Adresssuche: <a href="https://photon.komoot.io/" target="_blank" rel="noopener">Photon</a> von komoot, Daten © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende</p>`;
+
+  /* Von Hand korrigieren: nur das Feld, die Lage bleibt. */
+  [['adrStrasse', 'strasse'], ['adrHnr', 'hnr'], ['adrPlz', 'plz'], ['adrOrt', 'ort']].forEach(([id, k]) =>
+    $('#' + id).onchange = e => {
+      CFG.adresse = Object.assign({}, adresse(), {[k]: e.target.value.trim()});
+      adrWetterNachziehen(); saveCfg();
+    });
+  if($('#adrWeg')) $('#adrWeg').onclick = () =>
+    frage('Adresse löschen', 'Die Adresse wird gelöscht. Ohne sie ruft die App kein Wetter mehr ab.', 'Löschen', () => {
+      delete CFG.adresse; delete CFG.wetter; saveCfg();
       WETTER = null; Store.set('nwWetter', null);
-      setWetter(box);
+      setAdresse(box);
     });
 
-  const feld = $('#wOrtSuche'), treffer = $('#wOrtTreffer');
+  const uebernehmen = (e, grob) => {
+    const alt = adresse();
+    /* Die grobe Ortssuche kennt keine Straße – die bisherige bleibt stehen. */
+    adresseSetzen({strasse:grob ? alt.strasse || '' : e.strasse, hnr:grob ? alt.hnr || '' : e.hnr,
+                   plz:e.plz || (grob ? alt.plz || '' : ''), ort:e.ort, zusatz:e.zusatz, lat:e.lat, lon:e.lon});
+    toast(grob ? 'Ort übernommen – Straße und Nr. bitte prüfen'
+        : !e.strasse ? 'Übernommen – Straße und Nr. bitte ergänzen'
+        : !e.hnr ? 'Übernommen – Hausnummer bitte ergänzen' : 'Adresse übernommen');
+    setAdresse(box);
+  };
+  const feldS = $('#adrSuche'), treffer = $('#adrTreffer');
   const suchen = async () => {
-    const q = feld.value.trim(), nr = ++ortSucheNr;
-    if(q.length < 2){ treffer.innerHTML = ''; return; }
+    const q = feldS.value.trim(), nr = ++ortSucheNr;
+    if(q.length < 3){ treffer.innerHTML = ''; return; }
     treffer.innerHTML = `<p class="muted small">Suche …</p>`;
-    let liste;
-    try{
-      const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q)
-        + '&count=8&language=de&format=json', {cache:'no-store'});
-      const j = await r.json();
-      if(!r.ok) throw new Error(j && j.reason || 'Antwort ' + r.status);
-      liste = Array.isArray(j.results) ? j.results : [];
-    }catch(e){
+    let erg;
+    try{ erg = await adresseSuchen(q); }
+    catch(e){
       if(nr === ortSucheNr) treffer.innerHTML = `<p class="muted small">Suche nicht möglich – keine Verbindung.</p>`;
       return;
     }
     if(nr !== ortSucheNr) return;             // inzwischen weitergetippt
-    if(!liste.length){ treffer.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
-    const plz = /^\d+$/.test(q);
-    const eintraege = liste.map(r => {
-      const pc = plz && Array.isArray(r.postcodes) ? (r.postcodes.find(p => String(p).startsWith(q)) || '') : '';
-      const zusatz = [...new Set([r.admin2, r.admin1].filter(x => x && x !== r.name))]
-        .concat(r.country_code && r.country_code !== 'DE' && r.country ? [r.country] : []).join(', ');
-      return {name: r.name, titel: (pc ? pc + ' ' : '') + r.name, zusatz, lat: r.latitude, lon: r.longitude};
-    });
-    treffer.innerHTML = `<div style="margin:0 0 12px">${eintraege.map((e, n) =>
-      `<button class="btn ortTreffer" data-n="${n}">${esc(e.titel)}${e.zusatz ? `<small>${esc(e.zusatz)}</small>` : ''}</button>`).join('')}</div>`;
-    treffer.querySelectorAll('[data-n]').forEach(b => b.onclick = () => {
-      const e = eintraege[+b.dataset.n];
-      uebernehmen({name:e.name, zusatz:e.zusatz, lat:e.lat, lon:e.lon});
-    });
+    if(!erg.liste.length){ treffer.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
+    treffer.innerHTML = `<div style="margin:0 0 12px">${erg.grob ? `<p class="muted small" style="margin:0 0 8px">Die Adresssuche antwortet gerade nicht – nur Orte. Straße und Nr. dann unten eintragen.</p>` : ''}${erg.liste.map((e, n) => {
+      const haupt = e.name || adrStrasse(e) || adrOrt(e);
+      const unter = [e.name ? adrStrasse(e) : '', haupt !== adrOrt(e) ? adrOrt(e) : '', e.zusatz].filter(Boolean).join(', ');
+      return `<button class="btn ortTreffer" data-n="${n}">${esc(haupt)}${unter ? `<small>${esc(unter)}</small>` : ''}</button>`;
+    }).join('')}</div>`;
+    treffer.querySelectorAll('[data-n]').forEach(b => b.onclick = () => uebernehmen(erg.liste[+b.dataset.n], erg.grob));
   };
-  feld.oninput = () => { clearTimeout(ortSucheUhr); ortSucheUhr = setTimeout(suchen, 400); };
-  feld.onkeydown = e => { if(e.key === 'Enter'){ clearTimeout(ortSucheUhr); suchen(); e.target.blur(); } };
+  feldS.oninput = () => { clearTimeout(ortSucheUhr); ortSucheUhr = setTimeout(suchen, 400); };
+  feldS.onkeydown = e => { if(e.key === 'Enter'){ clearTimeout(ortSucheUhr); suchen(); e.target.blur(); } };
 
-  $('#wOrtHier').onclick = () => {
-    const b = $('#wOrtHier');
+  $('#adrHier').onclick = () => {
+    const b = $('#adrHier');
     if(!navigator.geolocation){ toast('Standort ist hier nicht verfügbar'); return; }
     b.disabled = true; b.textContent = 'Standort wird bestimmt …';
-    navigator.geolocation.getCurrentPosition(p => {
-      uebernehmen({name:'Eigener Standort', zusatz:'',
-                   lat:p.coords.latitude, lon:p.coords.longitude});
+    navigator.geolocation.getCurrentPosition(async p => {
+      const lat = p.coords.latitude, lon = p.coords.longitude;
+      let e = null;
+      try{
+        const r = await fetch(`https://photon.komoot.io/reverse?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}&lang=de`, {cache:'no-store'});
+        const j = await r.json();
+        if(r.ok && j && Array.isArray(j.features) && j.features[0]) e = photonEintrag(j.features[0]);
+      }catch(err){ /* dann nur die Lage */ }
+      if(e) uebernehmen(Object.assign(e, {lat, lon}), false);
+      else{
+        adresseSetzen(Object.assign({}, adresse(), {lat, lon}));
+        toast('Lage übernommen – Adresse bitte von Hand eintragen');
+        setAdresse(box);
+      }
     }, err => {
       toast(err && err.code === 1 ? 'Standortfreigabe abgelehnt' : 'Standort nicht bestimmbar');
       b.disabled = false; b.textContent = 'Aktuellen Standort übernehmen';
-    }, {enableHighAccuracy:false, timeout:15000, maximumAge:10 * 60 * 1000});
+    }, {enableHighAccuracy:true, timeout:15000, maximumAge:60 * 1000});
   };
-  wetterEinstAnhaengen(box);
-  box.insertAdjacentHTML('beforeend',
-    `<p class="muted small" style="margin:18px 0 0">Die Ereignisregeln stehen auf der Startseite unter „Übersicht › Wetter“, unter der Vorhersage.</p>`);
+}
+
+/* ---------- Online-Dienste: Abfallkalender (v1.170) ------------------------
+   Vorerst nur die Termine, keine Aufgaben daraus (Jean). Zwei Wege, die beide
+   auf das Kalenderformat (.ics) hinauslaufen und darum bei fast jeder Kommune
+   gehen:
+     Datei  die Jahresdatei vom Entsorger, in der App geöffnet – geht immer,
+            muss aber einmal im Jahr wiederholt werden;
+     Link   ein fester Kalender-Link („abonnieren“); die App ruft ihn beim
+            Öffnen höchstens einmal am Tag ab. Viele Entsorger lassen fremde
+            Seiten nicht zu – dann sagt die App das und verweist auf die Datei.
+   Eine Datei nimmt den Link weg, sonst überschriebe ihn der nächste Abruf.
+   Gespeichert unter nwAbfall, in der Sicherung als „abfall“. Behalten wird ab
+   ABFALL_ZURUECK Tagen vor heute; Wiederholungen (RRULE) werden bis
+   ABFALL_VORAUS Tage voraus ausgerechnet. Als Nächstes vereinbart: geführte
+   Auswahl bei abfall.io, wenn der Link-Abruf zeigt, dass es geht. */
+const ABFALL_ZURUECK = 31, ABFALL_VORAUS = 400;
+const ABFALL_TAKT = 24 * 60 * 60 * 1000, ABFALL_WIEDER = 60 * 60 * 1000;
+function abfallPruefen(x){
+  const a = x && typeof x === 'object' && !Array.isArray(x) ? x : {};
+  return {url:typeof a.url === 'string' ? a.url : '',
+          quelle:a.quelle === 'link' || a.quelle === 'datei' ? a.quelle : '',
+          datei:typeof a.datei === 'string' ? a.datei : '',
+          abgerufen:+a.abgerufen || 0, versuch:+a.versuch || 0, fehler:typeof a.fehler === 'string' ? a.fehler : '',
+          termine:Array.isArray(a.termine)
+            ? a.termine.filter(t => t && /^\d{4}-\d\d-\d\d$/.test(t.tag) && typeof t.art === 'string' && t.art) : []};
+}
+let ABFALL = abfallPruefen(Store.get('nwAbfall', null));
+let abfallLaeuft = false;
+const saveAbfall = () => Store.set('nwAbfall', ABFALL);
+
+/* Kalenderdatei lesen: Zeilen entfalten, VEVENTs sammeln. */
+const icsWert = v => v.replace(/\\n/gi, ' ').replace(/\\([,;\\])/g, '$1').replace(/\s+/g, ' ').trim();
+/* Ein Zeitpunkt als Tag. UTC-Zeiten (…Z) zählen in Ortszeit – eine Abfuhr um
+   0 Uhr deutscher Zeit steht in UTC noch am Vortag. */
+function icsTag(wert){
+  const m = /^(\d{4})(\d\d)(\d\d)(?:T(\d\d)(\d\d)(\d\d)?(Z)?)?/.exec(String(wert).trim());
+  if(!m) return '';
+  if(m[7]) return isoTag(new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0))));
+  return `${m[1]}-${m[2]}-${m[3]}`;
+}
+const ICS_WT = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+/* Wiederholungen, so weit Abfallkalender sie brauchen: täglich, wöchentlich
+   (auch mit BYDAY), monatlich (gleicher Tag oder „2. Dienstag“), jährlich –
+   mit INTERVAL, COUNT und UNTIL. */
+function icsWiederholen(start, regel, bis){
+  const r = {};
+  regel.split(';').forEach(p => { const [k, v] = p.split('='); if(k && v) r[k.trim().toUpperCase()] = v.trim().toUpperCase(); });
+  const n = Math.max(1, +r.INTERVAL || 1), max = +r.COUNT || Infinity;
+  const ende = r.UNTIL ? icsTag(r.UNTIL) || bis : bis, grenze = ende < bis ? ende : bis;
+  const d0 = new Date(start + 'T12:00:00'), tage = [];
+  const nimm = t => { if(t >= start && t <= grenze && tage.length < max) tage.push(t); };
+  const tagPlus = (d, x) => { const e = new Date(d); e.setDate(e.getDate() + x); return e; };
+  const byday = (r.BYDAY || '').split(',').map(x => /^([+-]?\d)?(SU|MO|TU|WE|TH|FR|SA)$/.exec(x)).filter(Boolean)
+    .map(m => ({nr:m[1] ? +m[1] : 0, wt:ICS_WT.indexOf(m[2])}));
+  for(let k = 0; k < 3000 && tage.length < max; k++){
+    if(r.FREQ === 'DAILY'){
+      const t = isoTag(tagPlus(d0, k * n)); if(t > grenze) break; nimm(t);
+    }else if(r.FREQ === 'WEEKLY'){
+      const wo = tagPlus(d0, k * 7 * n);
+      if(!byday.length){ const t = isoTag(wo); if(t > grenze) break; nimm(t); continue; }
+      const mo = tagPlus(wo, -((wo.getDay() + 6) % 7));
+      if(isoTag(mo) > grenze) break;
+      byday.map(b => (b.wt + 6) % 7).sort((a, b) => a - b).forEach(x => nimm(isoTag(tagPlus(mo, x))));
+    }else if(r.FREQ === 'MONTHLY'){
+      const m = new Date(d0.getFullYear(), d0.getMonth() + k * n, 1, 12);
+      if(isoTag(m) > grenze) break;
+      if(!byday.length){
+        const d = new Date(m.getFullYear(), m.getMonth(), d0.getDate(), 12);
+        if(d.getMonth() === m.getMonth()) nimm(isoTag(d));
+        continue;
+      }
+      const lang = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate(), im = [];
+      for(let t = 1; t <= lang; t++){
+        const d = new Date(m.getFullYear(), m.getMonth(), t, 12), wt = d.getDay();
+        byday.forEach(b => {
+          if(b.wt !== wt) return;
+          const vorn = Math.ceil(t / 7), hinten = -Math.ceil((lang - t + 1) / 7);
+          if(!b.nr || b.nr === vorn || b.nr === hinten) im.push(isoTag(d));
+        });
+      }
+      im.sort().forEach(nimm);
+    }else if(r.FREQ === 'YEARLY'){
+      const d = new Date(d0.getFullYear() + k * n, d0.getMonth(), d0.getDate(), 12);
+      const t = isoTag(d); if(t > grenze) break;
+      if(d.getDate() === d0.getDate()) nimm(t);
+    }else{ nimm(start); break; }
+  }
+  return tage;
+}
+function icsLesen(text){
+  const zeilen = String(text).replace(/^﻿/, '').replace(/\r\n?/g, '\n').replace(/\n[ \t]/g, '').split('\n');
+  if(!zeilen.some(l => /^BEGIN:VCALENDAR/i.test(l.trim()))) throw new Error('keine Kalenderdatei');
+  const ev = [];
+  let e = null;
+  zeilen.forEach(l => {
+    if(/^BEGIN:VEVENT/i.test(l)){ e = {exdate:[]}; return; }
+    if(/^END:VEVENT/i.test(l)){ if(e) ev.push(e); e = null; return; }
+    if(!e) return;
+    const i = l.indexOf(':'); if(i < 0) return;
+    const name = l.slice(0, i).split(';')[0].trim().toUpperCase(), wert = l.slice(i + 1);
+    if(name === 'SUMMARY')            e.art = icsWert(wert);
+    else if(name === 'DTSTART')       e.tag = icsTag(wert);
+    else if(name === 'RRULE')         e.regel = wert;
+    else if(name === 'EXDATE')        wert.split(',').forEach(v => { const t = icsTag(v); if(t) e.exdate.push(t); });
+    else if(name === 'RECURRENCE-ID') e.rid = icsTag(wert);
+    else if(name === 'UID')           e.uid = wert.trim();
+    else if(name === 'STATUS')        e.status = wert.trim().toUpperCase();
+  });
+  const jetzt = Date.now();
+  const ab = isoTag(new Date(jetzt - ABFALL_ZURUECK * TAG_MS)), bis = isoTag(new Date(jetzt + ABFALL_VORAUS * TAG_MS));
+  /* Einzeln verschobene Termine einer Wiederholung (RECURRENCE-ID) ersetzen
+     den ursprünglichen Tag. */
+  const verlegt = new Set(ev.filter(x => x.rid && x.uid).map(x => x.uid + '|' + x.rid));
+  const aus = new Map();
+  const dazu = (tag, art) => { if(tag >= ab && tag <= bis) aus.set(tag + '|' + art, {tag, art}); };
+  ev.forEach(x => {
+    if(!x.tag || !x.art || x.status === 'CANCELLED') return;
+    if(x.rid){ dazu(x.tag, x.art); return; }
+    (x.regel ? icsWiederholen(x.tag, x.regel, bis) : [x.tag]).forEach(t => {
+      if(!x.exdate.includes(t) && !(x.uid && verlegt.has(x.uid + '|' + t))) dazu(t, x.art);
+    });
+  });
+  return [...aus.values()].sort((a, b) => a.tag < b.tag ? -1 : a.tag > b.tag ? 1 : a.art.localeCompare(b.art, 'de'));
+}
+
+/* Tonnenfarben als kleiner Punkt – grob nach dem Namen der Abfallart. */
+const ABFALL_FARBEN = [[/glas/i, '#2e9d6b'], [/papier|pappe|ppk|blau/i, '#2f6fd6'],
+  [/gelb|wertstoff|verpackung|lvp/i, '#e0b000'], [/bio|kompost/i, '#8b5a2b'],
+  [/grün|gruen|garten|laub|baum|strauch/i, '#4f8a3c'], [/rest|grau|schwarz|hausmüll|hausmuell/i, '#6b6b6b'],
+  [/sperr|schadstoff|elektro|problem|sonder/i, '#c0503a']];
+const abfallFarbe = art => (ABFALL_FARBEN.find(([r]) => r.test(art)) || [null, '#9a9a9a'])[1];
+const abfallPunkt = art => `<span class="abfPunkt" style="background:${abfallFarbe(art)}" aria-hidden="true"></span>`;
+const abfallDatum = tag => { const d = new Date(tag + 'T12:00:00'); return `${WOCHENTAG[d.getDay()]} ${ttmm(d)}`; };
+function abfallWann(tag){
+  const n = Math.round((new Date(tag + 'T12:00:00') - new Date(heute() + 'T12:00:00')) / TAG_MS);
+  return n === 0 ? 'heute' : n === 1 ? 'morgen' : n === 2 ? 'übermorgen' : n > 2 && n < 7 ? `in ${n} Tagen` : '';
+}
+/* Je Abfallart der nächste Tag; die Termine liegen sortiert vor. */
+function abfallArten(){
+  const h = heute(), m = new Map();
+  ABFALL.termine.forEach(t => {
+    const x = m.get(t.art) || {art:t.art, naechst:''};
+    if(t.tag >= h && !x.naechst) x.naechst = t.tag;
+    m.set(t.art, x);
+  });
+  return [...m.values()].sort((a, b) => (a.naechst || '9') < (b.naechst || '9') ? -1
+    : (a.naechst || '9') > (b.naechst || '9') ? 1 : a.art.localeCompare(b.art, 'de'));
+}
+function abfallStandText(){
+  const t = ABFALL.termine, letzt = t.length ? t[t.length - 1].tag : '';
+  const her = ABFALL.quelle === 'datei' ? `Aus der Datei „${ABFALL.datei || 'Kalender'}“ vom ${dText(isoTag(new Date(ABFALL.abgerufen)))}`
+            : ABFALL.quelle === 'link' && ABFALL.abgerufen ? `Über den Link, abgerufen ${wetterWann(ABFALL.abgerufen)}` : '';
+  const reicht = letzt ? (letzt < heute() ? 'abgelaufen am ' : 'reicht bis ') + dText(letzt) : '';
+  return [her, reicht].filter(Boolean).join(' · ');
+}
+/* Was beim letzten Abruf schiefging, in Worten für die Bedienung. */
+function abfallFehlerText(){
+  const f = ABFALL.fehler;
+  if(!f || !ABFALL.url) return '';
+  return f === 'gesperrt' ? 'Der Kalender ließ sich nicht abrufen. Meist lässt der Entsorger den direkten Abruf aus einer App nicht zu, manchmal fehlt die Verbindung. Dann bitte die Kalenderdatei herunterladen und hier öffnen.'
+       : f === 'keine Kalenderdatei' ? 'Unter dem Link liegt kein Kalender. Bitte den Link zum Abonnieren (iCal/ICS) nehmen.'
+       : f === 'keine Verbindung' || f === 'keine Antwort' ? `Letzter Abruf gescheitert: ${f}.`
+       : `Letzter Abruf gescheitert (${f}).`;
+}
+/* sofort = true übergeht die Tagessperre („Abrufen“ in den Einstellungen). */
+async function abfallAbrufen(sofort = false){
+  if(!ABFALL.url || abfallLaeuft || !listeGebaut) return;
+  const jetzt = Date.now();
+  if(!sofort){
+    if(ABFALL.quelle === 'link' && ABFALL.abgerufen && jetzt - ABFALL.abgerufen < ABFALL_TAKT) return;
+    if(ABFALL.fehler && ABFALL.versuch && jetzt - ABFALL.versuch < ABFALL_WIEDER) return;
+  }
+  abfallLaeuft = true;
+  abfallNeuZeigen();
+  const halt = new AbortController(), uhr = setTimeout(() => halt.abort(), 20000);
+  try{
+    const url = ABFALL.url.trim().replace(/^webcals?:\/\//i, 'https://');
+    const r = await fetch(url, {signal:halt.signal, cache:'no-store'});
+    if(!r.ok) throw new Error('Antwort ' + r.status);
+    const termine = icsLesen(await r.text());
+    ABFALL = Object.assign({}, ABFALL, {termine, quelle:'link', datei:'', abgerufen:Date.now(), versuch:Date.now(), fehler:''});
+  }catch(e){
+    /* Gesperrt (CORS) und fehlende Verbindung sehen für die Seite gleich aus:
+       ein TypeError. Ist das Gerät online, ist es fast immer die Sperre. */
+    const grund = e.name === 'AbortError' ? 'keine Antwort'
+                : navigator.onLine === false ? 'keine Verbindung'
+                : e instanceof TypeError ? 'gesperrt'
+                : String(e.message || e);
+    ABFALL = Object.assign({}, ABFALL, {versuch:Date.now(), fehler:grund});
+  }finally{
+    clearTimeout(uhr);
+    abfallLaeuft = false;
+  }
+  saveAbfall();
+  abfallNeuZeigen();
+}
+/* Nach einem Abruf nur den Stand erneuern – ein offenes Linkfeld bleibt. */
+function abfallNeuZeigen(){
+  if(current === 'abfall') renderAbfall();
+  if(current === 'setsub' && setSeite.art === 'abfall') abfStandFuellen();
+}
+function abfallDateiLesen(datei){
+  if(!datei) return;
+  datei.text().then(text => {
+    let termine;
+    try{ termine = icsLesen(text); }
+    catch(e){ toast('Das ist keine Kalenderdatei (.ics)'); return; }
+    if(!termine.length){ toast('Keine aktuellen Abfuhrtermine darin gefunden'); return; }
+    const hatteLink = !!ABFALL.url;
+    ABFALL = Object.assign(abfallPruefen(null), {quelle:'datei', datei:datei.name || '', termine,
+                                                 abgerufen:Date.now(), versuch:Date.now()});
+    saveAbfall();
+    toast(`${termine.length} Termine übernommen` + (hatteLink ? ' – der Link ist entfernt' : ''));
+    if(current === 'setsub' && setSeite.art === 'abfall') setAbfall($('#setSubDyn'));
+  }).catch(() => toast('Die Datei ließ sich nicht lesen'));
+}
+function abfStandFuellen(){
+  const el = $('#abfStand');
+  if(!el) return;
+  const arten = abfallArten(), kommend = ABFALL.termine.some(t => t.tag >= heute());
+  const fehler = abfallFehlerText();
+  el.innerHTML = ABFALL.termine.length || ABFALL.url ? `<div class="card">
+      ${arten.length ? arten.map(x => `<div class="abfZeile">${abfallPunkt(x.art)}<span class="abfArt">${esc(x.art)}</span><span class="abfWann">${
+        x.naechst ? esc(abfallDatum(x.naechst)) : '–'}</span></div>`).join('')
+        : `<p class="muted small" style="margin:0">Noch keine Termine.</p>`}
+      ${abfallLaeuft ? `<p class="muted small" style="margin:8px 0 0">Wird abgerufen …</p>`
+        : abfallStandText() ? `<p class="muted small" style="margin:8px 0 0">${esc(abfallStandText())}</p>` : ''}
+      ${fehler && !abfallLaeuft ? `<p class="small" style="margin:8px 0 0"><b>${esc(fehler)}</b></p>` : ''}
+      <div class="knopfzeile abfKn" style="margin-top:12px">${kommend ? `<button class="btn klein" id="abfAnsehen">Ansehen</button>` : ''}<button class="btn danger klein" id="abfWeg">Löschen</button></div>
+    </div>` : `<p class="muted small" style="margin:0">Noch kein Abfallkalender eingelesen.</p>`;
+  if($('#abfAnsehen')) $('#abfAnsehen').onclick = () => go('abfall');
+  if($('#abfWeg')) $('#abfWeg').onclick = () =>
+    frage('Abfallkalender löschen', 'Alle Abfuhrtermine und der Link werden gelöscht.', 'Löschen', () => {
+      ABFALL = abfallPruefen(null); saveAbfall();
+      setAbfall($('#setSubDyn'));
+    });
+}
+function setAbfall(box){
+  const a = adresse();
+  const i = info('Fast jeder Entsorger bietet seinen Abfuhrkalender im Kalenderformat an (.ics, „iCal“) – als Datei zum Herunterladen oder als Link zum Abonnieren. Die App liest beides. Aufgaben entstehen daraus nicht; die Termine stehen auf der Startseite unter „Übersicht › Abfall“.', 'margin:-2px 0 10px');
+  box.innerHTML = `
+    <div class="eyebrow mitInfo" style="margin-top:0">Stand ${i.knopf}</div>${i.text}
+    <div id="abfStand"></div>
+    <div class="eyebrow" style="margin-top:22px">Kalenderdatei</div>
+    <p class="muted small" style="margin:0 0 10px">Auf der Abfallseite der Kommune den Kalender für ${
+      adrText(a) ? `<b>${esc(adrText(a))}</b>` : 'die Adresse'} als iCal/ICS herunterladen und hier öffnen. Einmal im Jahr wiederholen.</p>
+    <button class="btn" id="abfDatei">Kalenderdatei öffnen</button>
+    <input type="file" id="abfDateiWahl" hidden>
+    <div class="eyebrow" style="margin-top:22px">Kalender-Link</div>
+    <p class="muted small" style="margin:0 0 10px">Bietet der Entsorger „Kalender abonnieren“ an, den Link hier einfügen. Die App ruft ihn dann beim Öffnen einmal am Tag selbst ab.</p>
+    <label class="field"><span>Link</span><input id="abfLink" type="url" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+      placeholder="https://… oder webcal://…" value="${esc(ABFALL.url)}"></label>
+    <div class="knopfzeile abfKn" style="margin-top:0">${ABFALL.url ? `<button class="btn danger klein" id="abfLinkWeg">Link entfernen</button>` : ''}<button class="btn" id="abfAbruf">Abrufen</button></div>
+    ${adrText(a) ? '' : `<p class="muted small" style="margin:18px 0 8px">Noch keine Adresse festgelegt.</p><button class="btn ghost klein" id="abfZurAdresse">Adresse festlegen</button>`}`;
+  abfStandFuellen();
+  $('#abfDatei').onclick = () => $('#abfDateiWahl').click();
+  $('#abfDateiWahl').onchange = e => { abfallDateiLesen(e.target.files && e.target.files[0]); e.target.value = ''; };
+  $('#abfAbruf').onclick = async () => {
+    const u = $('#abfLink').value.trim();
+    $('#abfLink').blur();
+    if(!u){ toast('Bitte zuerst einen Link einfügen'); return; }
+    if(!/^(https?|webcals?):\/\/\S+$/i.test(u)){ toast('Der Link muss mit https:// oder webcal:// beginnen'); return; }
+    ABFALL = Object.assign({}, ABFALL, {url:u, fehler:''});
+    saveAbfall();
+    await abfallAbrufen(true);
+    toast(ABFALL.fehler ? 'Abruf nicht möglich' : `${ABFALL.termine.length} Termine abgerufen`);
+    setAbfall(box);
+  };
+  if($('#abfLinkWeg')) $('#abfLinkWeg').onclick = () => {
+    ABFALL = Object.assign({}, ABFALL, {url:'', fehler:''}); saveAbfall();
+    toast('Link entfernt – die Termine bleiben');
+    setAbfall(box);
+  };
+  if($('#abfZurAdresse')) $('#abfZurAdresse').onclick = () => setOeffnen('adresse');
+}
+/* Übersicht › Abfall: je Art der nächste Tag, darunter alle kommenden Tage
+   nach Monaten. */
+function renderAbfall(){
+  const box = $('#abfallBox');
+  if(!box) return;
+  const h = heute(), kommend = ABFALL.termine.filter(t => t.tag >= h);
+  const stand = abfallStandText(), fehler = abfallFehlerText();
+  const fuss = (stand ? `<p class="muted small" style="margin:14px 0 0">${esc(stand)}</p>` : '')
+    + (fehler ? `<p class="small" style="margin:8px 0 0"><b>${esc(fehler)}</b></p>` : '');
+  if(!kommend.length){
+    box.innerHTML = `<p class="muted small" style="margin-top:0">${ABFALL.termine.length
+        ? 'Keine kommenden Abfuhrtermine – der Kalender ist abgelaufen. Bitte den neuen einlesen.'
+        : 'Noch kein Abfallkalender eingerichtet.'}</p>${fuss}
+      <button class="btn primary" id="abfZuEinst" style="margin-top:14px">Abfallkalender einrichten</button>`;
+    $('#abfZuEinst').onclick = () => setOeffnen('abfall');
+    return;
+  }
+  const arten = abfallArten().filter(x => x.naechst);
+  let html = `<div class="eyebrow" style="margin-top:0">Als Nächstes</div><div class="card">` + arten.map(x =>
+    `<div class="abfZeile">${abfallPunkt(x.art)}<span class="abfArt">${esc(x.art)}</span><span class="abfWann">${
+      esc(abfallDatum(x.naechst))}${abfallWann(x.naechst) ? `<small>${esc(abfallWann(x.naechst))}</small>` : ''}</span></div>`).join('') + '</div>';
+  const tage = new Map();
+  kommend.forEach(t => { if(!tage.has(t.tag)) tage.set(t.tag, []); tage.get(t.tag).push(t.art); });
+  let monat = '';
+  tage.forEach((l, tag) => {
+    if(tag.slice(0, 7) !== monat){
+      if(monat) html += '</div>';
+      monat = tag.slice(0, 7);
+      html += `<div class="eyebrow">${MONATE[+tag.slice(5, 7) - 1]} ${tag.slice(0, 4)}</div><div class="card">`;
+    }
+    html += `<div class="abfZeile"><span class="abfTag">${esc(abfallDatum(tag))}</span><span class="abfArten">${
+      l.map(a => `<span>${abfallPunkt(a)}${esc(a)}</span>`).join('')}</span></div>`;
+  });
+  html += '</div>';
+  box.innerHTML = html + fuss + `<button class="btn ghost klein" id="abfZuEinst" style="margin-top:10px">Abfallkalender einstellen</button>`;
+  $('#abfZuEinst').onclick = () => setOeffnen('abfall');
 }
 
 /* ---------- DWD über Bright Sky (v1.53) -------------------------------------
@@ -11008,7 +11447,7 @@ function aufgWetterKarteBinden(box){
   const s = box.querySelector('[data-wseite]');
   if(s) s.onclick = () => { go('wetter'); wetterAbrufen(); };
   const o = box.querySelector('[data-wort]');
-  if(o) o.onclick = () => setOeffnen('wetter');
+  if(o) o.onclick = () => setOeffnen('adresse');
 }
 /* Nach einem Abruf nur die Karte erneuern – die übrige Aufgabenseite bleibt
    stehen, sonst risse ein Neuaufbau eine offene Tastatur weg. */
@@ -12023,7 +12462,6 @@ function renderSettings(){
   $('#setMenue').innerHTML =
       knopf('obj', '', 'Objekt und Prüfer')
     + knopf('abwesend', '', 'Arbeitszeit')
-    + knopf('wetter', '', 'Wetter')
     + '<div class="eyebrow">Anlagen und Prüfumfang</div>'
     + TYPEN_AKTIV.filter(n => !n.spaeter).map(n => knopf('nw', n.k, n.label, anzahl(n))).join('')
     /* Anlagentypen kommen nur noch auf Wunsch dazu (v1.147), seit v1.148 auch
@@ -12034,6 +12472,11 @@ function renderSettings(){
     + '<div class="eyebrow">Listen</div>'
     + knopf('werkmat', '', 'Arbeitsmittel', TAET.werkzeug.length + TAET.material.length)
     + knopf('akkus', '', 'Akkutypen', akkuTypen().length)
+    /* Was die App aus dem Netz holt, unter einer Adresse (v1.170). */
+    + '<div class="eyebrow">Online-Dienste</div>'
+    + knopf('adresse', '', 'Adresse')
+    + knopf('wetter', '', 'Wetter')
+    + knopf('abfall', '', 'Abfallkalender')
     + '<div class="eyebrow">Gerät</div>'
     + knopf('plaene', '', 'Grundrisse', '…')
     + knopf('geraet', '', 'Sicherung')
@@ -12060,6 +12503,8 @@ function setOeffnen(art, k){
            : art === 'obj'    ? 'Objekt und Prüfer'
            : art === 'abwesend' ? 'Arbeitszeit'
            : art === 'wetter' ? 'Wetter'
+           : art === 'adresse' ? 'Adresse'
+           : art === 'abfall' ? 'Abfallkalender'
            : art === 'check'  ? 'Checkliste'
            : art === 'akkus'  ? 'Akkutypen'
            : art === 'werkmat' ? 'Arbeitsmittel'
@@ -12082,6 +12527,8 @@ function renderSetSub(){
   if(a === 'obj')   { setObjekt(dyn);   return; }
   if(a === 'abwesend'){ setAbwesend(dyn); return; }
   if(a === 'wetter'){ setWetter(dyn); return; }
+  if(a === 'adresse'){ setAdresse(dyn); return; }
+  if(a === 'abfall'){ setAbfall(dyn); return; }
   if(a === 'check') { setCheck(dyn, k); return; }
   if(a === 'tausch'){ setTausch(dyn);   return; }
   if(a === 'akkus') { setAkkus(dyn);     return; }
@@ -15689,7 +16136,7 @@ async function dateiSichernLauf(){
   const paket = {format:CFG_FORMAT, stand:heute(),
                  cfg:CFG, dat:DAT, alt:MED_ALT, tausch:TAUSCH, exp:EXP, buch:BUCH, aufg:AUFG, vorb:VORB, termine:TERM,
                  regelstand:REGELSTAND, hinweise:HINWEISE, frost:+Store.get('nwFrost', 0) || 0,
-                 taet:TAET, mat:MAT, akku:AKKU, stoerungen:STOER,
+                 taet:TAET, mat:MAT, akku:AKKU, stoerungen:STOER, abfall:ABFALL,
                  plaene, quellen, historie};
   const name = `Nachweise ${heute().slice(2)}.json`;
   void plaene;
@@ -15736,6 +16183,9 @@ async function paketUebernehmen(paket){
   /* Störungen (v1.153); ältere Sicherungen kennen sie nicht – dann bleiben die
      vorhandenen stehen. */
   if(Array.isArray(paket.stoerungen)){ STOER = paket.stoerungen; Store.set('nwStoer', STOER); }
+  /* Abfallkalender (v1.170); ältere Sicherungen kennen ihn nicht – dann bleibt
+     der vorhandene stehen. */
+  if(paket.abfall && typeof paket.abfall === 'object'){ ABFALL = abfallPruefen(paket.abfall); saveAbfall(); }
   if(Array.isArray(paket.aufg)){ AUFG = paket.aufg; saveAufg(); ablaufUmwandeln(); }
   /* Termine (v1.103); ältere Sicherungen kennen sie nicht – dann bleiben die
      vorhandenen stehen. */
@@ -17588,7 +18038,7 @@ async function ableiten(pw, salzHex){
 
 (function zugang(){
   const schloss = $('#schloss'), feld = $('#schlossFeld'), ok = $('#schlossOk');
-  const auf = () => { schloss.remove(); histMedLaden(); renderHome(); go('home', false); wetterAbrufen(); };
+  const auf = () => { schloss.remove(); histMedLaden(); renderHome(); go('home', false); wetterAbrufen(); abfallAbrufen(); };
 
   if(!window.crypto || !crypto.subtle){
     $('#schlossText').textContent = 'Dieser Browser kann die Prüfung nicht ausführen.';
