@@ -260,6 +260,14 @@ steht.
   Abbrechen = `sofortZurueck(rueck)`: Stand vor dem Erledigen
   (`vorher`, ganze Kopie) zurück, unberührte neue Folgen und Wiederholung
   weg, dann Seite der Aufgabe bzw. voriges Fenster (`rueck.dann`).
+- Dauer im Ablauf (v1.167, Jean): Tätigkeitsschlüssel `ablauf:Plan:Stufe`
+  (geht in `taetSchluessel` vor `wdh`). Erledigen setzt `a.dauerOffen`
+  (auch im `sofortFenster`), kein `taetFragen`. `ablaufDauerFragen(a)` läuft
+  am Ende von `weiterSofort` (nicht bei Abbrechen): steht in der Kette heute
+  noch etwas offen an, wartet es; sonst `dauerVermerken` für Handeingaben,
+  Fenster mit einer Zeile je Schritt (− +, „wieder fragen“ je Schritt),
+  „Später“ nimmt nur `dauerOffen` weg (dann zählt der Schnitt).
+  `stufeDauerHtml` auf der Stufen-Seite.
 - **Seitennamen eindeutig halten:** v1.159 nannte die Ablaufseite `plan` mit
   `#planBox` – das ist die Grundriss-Seite. `go('plan')` zeichnete dann den
   Ablauf in den Grundriss, Kopfzeile und Geschoss-Regler fehlten. Seit
