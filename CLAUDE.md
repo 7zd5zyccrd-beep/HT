@@ -268,6 +268,11 @@ steht.
   Fenster mit einer Zeile je Schritt (− +, „wieder fragen“ je Schritt),
   „Später“ nimmt nur `dauerOffen` weg (dann zählt der Schnitt).
   `stufeDauerHtml` auf der Stufen-Seite.
+- Arbeitsnachweis (v1.168, Jean): `arbAblaeufeBuendeln` fasst Schritte
+  (`aufg` mit `a.plan`, `taet` mit `ablauf:`-Schlüssel; Dauer-Einträge tragen
+  seit v1.167 `aufg`) je Tag, Plan und Objekt zu `quelle:'ablauf'` mit
+  `teile` zusammen. Ändern = `arbAblaufAendern` (je Schritt), Löschen legt
+  alle Teil-Ids in `TAET.arb.weg`.
 - **Seitennamen eindeutig halten:** v1.159 nannte die Ablaufseite `plan` mit
   `#planBox` – das ist die Grundriss-Seite. `go('plan')` zeichnete dann den
   Ablauf in den Grundriss, Kopfzeile und Geschoss-Regler fehlten. Seit

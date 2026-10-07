@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.168 07.10.2026 Arbeitsnachweis (Jean): die Schritte eines Ablaufs
+         stehen nicht mehr einzeln da, sondern als ein Eintrag je Tag unter
+         dem Namen des Ablaufs (mit Objekt) und der Summe ihrer Dauern –
+         in der App und auf dem Blatt. „Ändern“ zeigt die Schritte einzeln,
+         „Löschen“ nimmt den ganzen Eintrag heraus.
   v1.167 07.10.2026 Dauer im Ablauf (Jean): jede Aufgabe eines Ablaufs
          sammelt ihre eigenen Zeiten (auch wiederkehrende, bisherige Werte
          bleiben stehen). Beim Erledigen wird nicht gefragt. Sobald im
@@ -3448,7 +3453,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.167';
+const VERSION = 'v1.168';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6504,7 +6509,7 @@ function dauerVermerken(a, w){
   const ein = TAET.t[key] = TAET.t[key] || {name:ablaufTaetName(a), dauern:[], utensilien:[], fragen:true};
   ein.name = ablaufTaetName(a);
   ein.dauern = Array.isArray(ein.dauern) ? ein.dauern : [];
-  ein.dauern.push(Object.assign({datum:a.erledigt || heute()}, nurDauer(w)));
+  ein.dauern.push(Object.assign({datum:a.erledigt || heute(), aufg:a.id}, nurDauer(w)));
   if(ein.dauern.length > 50) ein.dauern = ein.dauern.slice(-50);
   a.dauer = nurDauer(w); a.taetVermerkt = true; delete a.dauerOffen;
 }
@@ -6545,22 +6550,23 @@ function ablaufDauerFragen(a, danach){
       <div class="dauerSchrittKopf"><b>${esc((stufeDerAufgabe(x) || {}).titel || x.titel || 'Aufgabe')}</b>${x.erledigt !== heute() ? `<span class="muted small">${esc(dText(x.erledigt))}</span>` : ''}</div>
       <div class="dauerWahl"><div class="stufe" data-dzeile="${i}"></div></div>
       <label class="haken klein"><input type="checkbox" data-dfrag="${i}" checked><span>Beim nächsten Mal wieder fragen</span></label></div>`).join('');
-  box.querySelectorAll('[data-dzeile]').forEach(z => {
-    const i = +z.dataset.dzeile;
-    let j = DAUER_STUFEN.findIndex(x => gleicheDauer(x, werte[i]));
-    if(j < 0) j = DAUER_STUFEN.findIndex(x => gleicheDauer(x, alsStufe(dauerMin(werte[i]))));
-    if(j < 0) j = 0;
-    const zeichnen = () => {
-      z.innerHTML = `<button type="button" data-d="-1" aria-label="kürzer"${j <= 0 ? ' disabled' : ''}>−</button>
-        <span class="wert">${esc(dauerText(DAUER_STUFEN[j]))}</span>
-        <button type="button" data-d="1" aria-label="länger"${j >= DAUER_STUFEN.length - 1 ? ' disabled' : ''}>+</button>`;
-      z.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {
-        j = Math.max(0, Math.min(DAUER_STUFEN.length - 1, j + +b.dataset.d));
-        werte[i] = nurDauer(DAUER_STUFEN[j]); zeichnen();
-      });
-    };
-    zeichnen();
-  });
+  box.querySelectorAll('[data-dzeile]').forEach(z => dauerStufe(z, werte[+z.dataset.dzeile], w => { werte[+z.dataset.dzeile] = w; }));
+}
+/* Nur − Wert +, für mehrere Dauern in einem Fenster. */
+function dauerStufe(z, start, bei){
+  let j = DAUER_STUFEN.findIndex(x => gleicheDauer(x, start));
+  if(j < 0 && start) j = DAUER_STUFEN.findIndex(x => gleicheDauer(x, alsStufe(dauerMin(start))));
+  if(j < 0) j = 0;
+  const zeichnen = () => {
+    z.innerHTML = `<button type="button" data-d="-1" aria-label="kürzer"${j <= 0 ? ' disabled' : ''}>−</button>
+      <span class="wert">${esc(dauerText(DAUER_STUFEN[j]))}</span>
+      <button type="button" data-d="1" aria-label="länger"${j >= DAUER_STUFEN.length - 1 ? ' disabled' : ''}>+</button>`;
+    z.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {
+      j = Math.max(0, Math.min(DAUER_STUFEN.length - 1, j + +b.dataset.d));
+      bei(nurDauer(DAUER_STUFEN[j])); zeichnen();
+    });
+  };
+  zeichnen();
 }
 /* --- Bearbeiten: Übersicht › Abläufe › Ablauf › Aufgabe ----------------------- */
 let planAktiv = '', stufeAktiv = '', stufeVorher = [], abAuf = new Set();
@@ -9070,6 +9076,36 @@ function renderWochenplan(){
    Das Blatt zum Ausgeben folgt in D2. */
 let arbZeit = null;                            // {art:'monat'|'woche', ab:Date}
 const kennung = () => 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+/* Abläufe im Arbeitsnachweis (v1.168, Jean): die einzelnen Schritte stehen
+   nicht für sich, sondern als ein Eintrag je Tag und Ablauf (am selben
+   Objekt) unter dem Namen des Ablaufs, mit der Summe ihrer Dauern. */
+function arbAblaeufeBuendeln(liste){
+  const gruppen = new Map(), raus = [];
+  liste.forEach(r => {
+    let a = null, plan = '';
+    if(r.quelle === 'aufg' && r.a.plan){ a = r.a; plan = a.plan; }
+    else if(r.quelle === 'taet' && String(r.key).startsWith('ablauf:')){
+      plan = r.key.split(':')[1]; a = r.d.aufg ? AUFG.find(x => x.id === r.d.aufg) || null : null;
+    }
+    if(!plan){ raus.push(r); return; }
+    const ort = a && a.anlage ? (a.k || '') + '|' + a.anlage : '';
+    const id = `ab:${plan}:${ort}:${r.datum}`;
+    let g = gruppen.get(id);
+    if(!g){
+      const p = planVon(plan);
+      g = {id, quelle:'ablauf', datum:r.datum, teile:[],
+           name:[(p && p.name) || 'Ablauf', a && a.anlage ? anlageName(a) : ''].filter(Boolean).join(' · ')};
+      gruppen.set(id, g); raus.push(g);
+    }
+    g.teile.push(r);
+  });
+  gruppen.forEach(g => {
+    const mit = g.teile.filter(r => r.w);
+    g.w = mit.length ? {m:mit.reduce((s, r) => s + planMin(r.w), 0)} : null;
+    g.schnitt = g.teile.some(r => r.schnitt);
+  });
+  return raus;
+}
 function arbEintraege(){
   const raus = [];
   let neueKennung = false;
@@ -9103,7 +9139,7 @@ function arbEintraege(){
     w:stoerDauer(s)}); });
   TAET.arb.eigen.forEach(x => raus.push({id:'e:' + x.id, quelle:'eigen', x, datum:x.datum, name:x.text, w:nurDauer(x), eigen:true}));
   const weg = new Set(TAET.arb.weg);
-  return raus.filter(r => r.datum && !weg.has(r.id));
+  return arbAblaeufeBuendeln(raus.filter(r => r.datum && !weg.has(r.id)));
 }
 function arbZeitraum(){
   if(!arbZeit){
@@ -9183,6 +9219,7 @@ function renderArbeit(){
   box.querySelectorAll('.zeile[data-id]').forEach(row => {
     const r = liste.find(x => x.id === row.dataset.id);
     row.querySelector('[data-aendern]').onclick = () => {
+      if(r.quelle === 'ablauf') return arbAblaufAendern(r);
       const start = r.w || {m:30};
       if(r.quelle === 'eigen') return dauerFenster('Eintrag ändern', start, r.datum, (w, datum, text) => {
         Object.keys(r.x).forEach(k => { if(k === 'm' || k === 't') delete r.x[k]; });
@@ -9210,10 +9247,33 @@ function renderArbeit(){
       `„${r.name}“ am ${dText(r.datum)} verschwindet aus dem Arbeitsnachweis.` + (r.eigen ? '' : '\n\nDie erfassten Dauern der Tätigkeit bleiben, wie sie sind.'),
       'Löschen', () => {
         if(r.eigen) TAET.arb.eigen = TAET.arb.eigen.filter(x => x !== r.x);
+        else if(r.quelle === 'ablauf') r.teile.forEach(x => TAET.arb.weg.push(x.id));
         else TAET.arb.weg.push(r.id);
         saveTaet(); renderArbeit(); toast('Gelöscht');
       });
   });
+}
+/* Ein Ablauf im Arbeitsnachweis ändern (v1.168): je Schritt eine Zeile,
+   geändert wird an der Quelle wie bei den übrigen Einträgen. */
+function arbAblaufAendern(g){
+  const werte = g.teile.map(r => r.w || {m:30});
+  const titel = r => r.quelle === 'aufg' ? (stufeDerAufgabe(r.a) || {}).titel || r.a.titel
+    : (r.d.aufg && AUFG.find(x => x.id === r.d.aufg) ? (stufeDerAufgabe(AUFG.find(x => x.id === r.d.aufg)) || {}).titel : '')
+      || String(r.name).split(' · ').pop();
+  frage('Dauer ändern', g.name + ' · ' + dText(g.datum), 'Speichern', () => {
+    g.teile.forEach((r, i) => {
+      const w = werte[i];
+      if(r.quelle === 'taet'){ delete r.d.m; delete r.d.t; Object.assign(r.d, w); }
+      else if(r.quelle === 'aufg') r.a.dauer = w;
+    });
+    saveTaet(); saveAufg(); renderArbeit(); toast('Geändert');
+  });
+  const box = $('#dlgListe');
+  box.hidden = false;
+  box.innerHTML = g.teile.map((r, i) => `<div class="dauerSchritt">
+      <div class="dauerSchrittKopf"><b>${esc(titel(r) || 'Aufgabe')}</b>${r.schnitt ? '<span class="muted small">Schnitt</span>' : ''}</div>
+      <div class="dauerWahl"><div class="stufe" data-dzeile="${i}"></div></div></div>`).join('');
+  box.querySelectorAll('[data-dzeile]').forEach(z => dauerStufe(z, werte[+z.dataset.dzeile], w => { werte[+z.dataset.dzeile] = w; }));
 }
 /* --- Arbeitsnachweis als Blatt (v1.66, Etappe D2) --------------------------------
    Wie die Nachweise: ein Bogen oder mehrere, als HTML an den Kurzbefehl, der es
