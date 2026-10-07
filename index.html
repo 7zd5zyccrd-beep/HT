@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.163 07.10.2026 „Datum“ bei Wann (Jean: jedes Mal ein anderes): im
+         Ablauf wird nur noch festgelegt, dass ein Datum gewählt wird. Beim
+         Erledigen steht „→ … · Datum wählen“; der Tipp auf das Ergebnis
+         fragt erst nach dem Tag und erledigt dann. Ebenso im Fenster
+         „Weiter“. Ein in v1.162 fest eingetragenes Datum gilt als „wählen“.
   v1.162 07.10.2026 Abläufe (Jean): „Weiter nach vorn“ auf der Seite einer
          Aufgabe entfällt; die Reihenfolge stellt man jetzt mit ↑ ↓ in der
          aufgeklappten Karte auf der Ablaufseite. Bei „Wann“ gibt es neben
@@ -3413,7 +3418,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.162';
+const VERSION = 'v1.163';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6155,14 +6160,17 @@ const schrittText = st => String(st.text || '').trim() || ABLAUF_VORGABE[st.art]
 const WANN = [['sofort', {tage:0}], ['1 Woche', {tage:7}], ['2 Wochen', {tage:14}], ['1 Monat', {monate:1}],
               ['3 Monate', {monate:3}], ['6 Monate', {monate:6}], ['1 Jahr', {monate:12}]];
 function wannText(z){
-  if(z.datum) return 'am ' + dText(z.datum);              // festes Datum (v1.162)
+  if(datumWahl(z)) return 'Datum beim Erledigen';          // (v1.163)
   const m = Math.round(+z.monate || 0), t = Math.max(0, Math.round(+z.tage || 0));
   if(m) return m % 12 === 0 ? `in ${m / 12} ${m === 12 ? 'Jahr' : 'Jahren'}` : `in ${m} ${m === 1 ? 'Monat' : 'Monaten'}`;
   if(!t) return 'sofort';
   return t % 7 === 0 ? `in ${t / 7} ${t === 7 ? 'Woche' : 'Wochen'}` : `in ${t} ${t === 1 ? 'Tag' : 'Tagen'}`;
 }
-/* Ein festes Datum gilt, solange es nicht vor dem Tag der Erledigung liegt. */
-const zielDatum = (basis, z) => z.datum ? (z.datum > basis ? z.datum : basis)
+/* „Datum“ (v1.163, Jean: jedes Mal ein anderes): im Ablauf steht nur, dass
+   gewählt wird ({stufe, wahl:true}); den Tag trägt man beim Erledigen ein.
+   Das feste Datum aus v1.162 ({datum}) gilt genauso als „wählen“. */
+const datumWahl = z => !!(z && (z.wahl || z.datum));
+const zielDatum = (basis, z) => datumWahl(z) ? basis
   : +z.monate ? terminPlus(basis, Math.round(+z.monate), 'monat') : tagPlus(basis, Math.max(0, Math.round(+z.tage || 0)));
 const datumKurz = iso => iso === heute() ? 'heute' : iso === tagPlus(heute(), 1) ? 'morgen' : dText(iso);
 const stufeNeu = titel => ({id:neueId(), titel:titel || '', wichtig:'normal', notiz:'', schritte:[], ergebnisse:[]});
@@ -6315,11 +6323,15 @@ function ergebnisseVerdrahten(a, fest, erledigen){
   const basis = () => ($('#erlDatum') && $('#erlDatum').value) || heute();
   const zeigen = () => $$('[data-zd]').forEach(el => {
     const [j, i] = el.dataset.zd.split(':').map(Number), z = s.ergebnisse[j].ziele[i];
-    el.textContent = datumKurz(fest[el.dataset.zd] || zielDatum(basis(), z));
+    el.textContent = fest[el.dataset.zd] ? datumKurz(fest[el.dataset.zd]) : datumWahl(z) ? 'Datum wählen' : datumKurz(zielDatum(basis(), z));
   });
   zeigen();
   if($('#erlDatum')) $('#erlDatum').addEventListener('input', zeigen);
-  $$('[data-erg]').forEach(b => b.onclick = () => erledigen(+b.dataset.erg));
+  /* Fehlt bei „Datum wählen“ noch der Tag, wird erst danach gefragt. */
+  $$('[data-erg]').forEach(b => b.onclick = () => {
+    const j = +b.dataset.erg;
+    datumFragen(p, s.ergebnisse[j], j, fest, basis(), () => erledigen(j));
+  });
   $$('[data-zedit]').forEach(b => b.onclick = () => {
     const [j, i] = b.dataset.zedit.split(':').map(Number), z = s.ergebnisse[j].ziele[i];
     const st = stufeVon(p, z.stufe), wert = fest[b.dataset.zedit] || zielDatum(basis(), z);
@@ -6330,6 +6342,24 @@ function ergebnisseVerdrahten(a, fest, erledigen){
     const box = $('#dlgListe'); box.hidden = false;
     box.innerHTML = `<input type="date" id="zielFrist" class="schmal" value="${esc(wert)}" style="margin-top:12px" aria-label="Fällig am">`;
   });
+}
+/* Für jede Folge mit „Datum wählen“ ohne eingetragenen Tag nacheinander
+   fragen (v1.163); fertig() erst, wenn alle da sind – Abbrechen bricht ab. */
+function datumFragen(p, e, j, fest, basis, fertig){
+  const offen = (e.ziele || []).map((z, i) => ({z, i, st:stufeVon(p, z.stufe)}))
+    .filter(x => x.st && datumWahl(x.z) && !fest[j + ':' + x.i]);
+  const los = n => {
+    if(n >= offen.length){ fertig(); return; }
+    const x = offen[n];
+    frage('Wann?', `„${x.st.titel || 'Aufgabe'}“ fällig am`, 'Übernehmen', () => {
+      const v = $('#zielFrist') && $('#zielFrist').value;
+      fest[j + ':' + x.i] = v && v >= basis ? v : basis;
+      los(n + 1);
+    });
+    const box = $('#dlgListe'); box.hidden = false;
+    box.innerHTML = `<input type="date" id="zielFrist" class="schmal" value="${esc(tagPlus(basis, 7))}" min="${esc(basis)}" style="margin-top:12px" aria-label="Fällig am">`;
+  };
+  los(0);
 }
 /* Erledigt mit Ergebnis j: die Folgeaufgaben entstehen sofort. Gibt den
    Hinweis für die Meldung zurück. */
@@ -6380,7 +6410,7 @@ function sofortFenster(n, danach){
     ${er.length ? er.map((e, j) => {
       const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
       return `<button class="btn ergebnisKnopf" data-serg="${j}" style="margin-top:8px">${esc(e.text || 'Ergebnis')}</button>
-        <p class="muted small" style="margin:4px 0 0">${esc(z.length ? z.map(x => `→ ${stufeVon(p, x.stufe).titel || 'Aufgabe'} · ${datumKurz(zielDatum(heute(), x))}`).join(', ') : '→ Ende des Ablaufs')}</p>`;
+        <p class="muted small" style="margin:4px 0 0">${esc(z.length ? z.map(x => `→ ${stufeVon(p, x.stufe).titel || 'Aufgabe'} · ${datumWahl(x) ? 'Datum wählen' : datumKurz(zielDatum(heute(), x))}`).join(', ') : '→ Ende des Ablaufs')}</p>`;
     }).join('') : '<button class="btn ergebnisKnopf" data-serg="-1" style="margin-top:8px">Erledigt</button>'}
     <button class="btn ghost" id="sofortSpeichern" style="margin-top:16px">Als Aufgabe speichern · fällig ${esc(datumKurz(n.frist))}</button>`;
   hilfenVerdrahten(box, n);
@@ -6390,14 +6420,19 @@ function sofortFenster(n, danach){
   };
   box.querySelectorAll('[data-serg]').forEach(b => b.onclick = () => {
     $('#dlg').hidden = true; dlgZuruecksetzen();
+    const j = +b.dataset.serg, fest = {};
+    if(j >= 0) datumFragen(p, er[j], j, fest, heute(), () => sofortErledigt(j, fest));
+    else sofortErledigt(-1, fest);
+  });
+  const sofortErledigt = (j, fest) => {
     n.erledigt = heute(); delete n.geplant;
     planWeiter.neue = [];
-    const pt = +b.dataset.serg >= 0 ? planWeiter(n, +b.dataset.serg, {}) : '';
+    const pt = j >= 0 ? planWeiter(n, j, fest) : '';
     saveAufg();
     toast(`${s.titel || 'Aufgabe'} erledigt` + (pt ? ' · ' + pt : ''));
     const nx = sofortNaechste(planWeiter.neue);
     if(nx) sofortFenster(nx, danach); else weiter();
-  });
+  };
 }
 
 /* --- Bearbeiten: Übersicht › Abläufe › Ablauf › Aufgabe ----------------------- */
@@ -6475,7 +6510,7 @@ function ergebnisFenster(p, s, j){
   const alt = j >= 0 ? s.ergebnisse[j] : null;
   const w = {text:alt ? alt.text || '' : '', ziele:alt ? (alt.ziele || []).filter(z => stufeVon(p, z.stufe)).map(z => Object.assign({}, z))
     : [{stufe:'', tage:0}]};
-  const gleich = (z, v) => !z.datum && (+z.monate || 0) === (+v.monate || 0) && (+z.monate ? true : (+z.tage || 0) === (+v.tage || 0));
+  const gleich = (z, v) => !datumWahl(z) && (+z.monate || 0) === (+v.monate || 0) && (+z.monate ? true : (+z.tage || 0) === (+v.tage || 0));
   frage(alt ? 'Ergebnis' : 'Neues Ergebnis', '', 'Speichern', () => {
     const ziele = [];
     w.ziele.forEach(z => {
@@ -6484,7 +6519,7 @@ function ergebnisFenster(p, s, j){
         const n = stufeNeu(String(z.neu).trim()); p.stufen.push(n); z.stufe = n.id; abAuf.add(n.id);
       }
       if(!stufeVon(p, z.stufe)) return;
-      ziele.push(z.datum ? {stufe:z.stufe, datum:z.datum} : +z.monate ? {stufe:z.stufe, monate:+z.monate} : {stufe:z.stufe, tage:Math.max(0, Math.round(+z.tage || 0))});
+      ziele.push(datumWahl(z) ? {stufe:z.stufe, wahl:true} : +z.monate ? {stufe:z.stufe, monate:+z.monate} : {stufe:z.stufe, tage:Math.max(0, Math.round(+z.tage || 0))});
     });
     const e = alt || {id:neueId()};
     e.text = w.text.trim() || 'Ergebnis'; e.ziele = ziele;
@@ -6503,10 +6538,10 @@ function ergebnisFenster(p, s, j){
           ${z.neu !== undefined ? `<input data-k="${k}" data-zname="1" value="${esc(z.neu)}" placeholder="Titel der neuen Aufgabe" style="margin-top:8px">` : ''}
           <div class="eyebrow" style="margin:12px 0 6px">Wann</div>
           <div class="chips">${WANN.map(([t, v], n) => `<button type="button" data-k="${k}" data-wann="${n}" aria-pressed="${!z.eigen && gleich(z, v)}">${t}</button>`).join('')}
-            <button type="button" data-k="${k}" data-weigen="1" aria-pressed="${!z.datum && (!!z.eigen || !WANN.some(([, v]) => gleich(z, v)))}">eigene</button>
-            <button type="button" data-k="${k}" data-wdatum="1" aria-pressed="${!!z.datum}">Datum</button></div>
-          ${z.datum ? `<input type="date" class="schmal" data-k="${k}" data-zdatum="1" value="${esc(z.datum)}" style="margin-top:8px" aria-label="Datum">` : ''}
-          ${!z.datum && (z.eigen || !WANN.some(([, v]) => gleich(z, v))) ? `<div class="row ablaufReihe" style="margin-top:8px"><span class="muted small">in</span>
+            <button type="button" data-k="${k}" data-weigen="1" aria-pressed="${!datumWahl(z) && (!!z.eigen || !WANN.some(([, v]) => gleich(z, v)))}">eigene</button>
+            <button type="button" data-k="${k}" data-wdatum="1" aria-pressed="${datumWahl(z)}">Datum</button></div>
+          ${datumWahl(z) ? '<p class="muted small" style="margin:8px 0 0">Den Tag trägst du jedes Mal beim Erledigen ein.</p>' : ''}
+          ${!datumWahl(z) && (z.eigen || !WANN.some(([, v]) => gleich(z, v))) ? `<div class="row ablaufReihe" style="margin-top:8px"><span class="muted small">in</span>
             <input type="number" inputmode="numeric" min="0" class="tage" data-k="${k}" data-ztage="1" value="${esc(+z.monate ? +z.monate * 30 : (z.tage ?? 0))}" aria-label="Tage"><span class="muted small">Tagen</span></div>` : ''}
           <button type="button" class="btn ghost klein" data-k="${k}" data-zweg="1" style="margin-top:8px">${w.ziele.length > 1 ? 'Diese Folge entfernen' : 'Keine Folge – Ende des Ablaufs'}</button></div>`).join('')
         : `<p class="muted small" style="margin:8px 0">Dann: Ende des Ablaufs.</p>`)
@@ -6519,12 +6554,10 @@ function ergebnisFenster(p, s, j){
     box.querySelectorAll('[data-zname]').forEach(f => f.oninput = () => { w.ziele[+f.dataset.k].neu = f.value; });
     box.querySelectorAll('[data-wann]').forEach(b => b.onclick = () => {
       const z = w.ziele[+b.dataset.k], v = WANN[+b.dataset.wann][1];
-      delete z.monate; delete z.tage; delete z.eigen; delete z.datum; Object.assign(z, v); zeichnen();
+      delete z.monate; delete z.tage; delete z.eigen; delete z.datum; delete z.wahl; Object.assign(z, v); zeichnen();
     });
-    box.querySelectorAll('[data-weigen]').forEach(b => b.onclick = () => { const z = w.ziele[+b.dataset.k]; delete z.datum; z.eigen = true; zeichnen(); });
-    box.querySelectorAll('[data-wdatum]').forEach(b => b.onclick = () => { const z = w.ziele[+b.dataset.k]; delete z.eigen; z.datum = z.datum || tagPlus(heute(), 7); zeichnen(); });
-    /* Datumsfeld: übernehmen bei input, nicht neu zeichnen (iOS-Datumswahl). */
-    box.querySelectorAll('[data-zdatum]').forEach(f => f.oninput = () => { if(f.value) w.ziele[+f.dataset.k].datum = f.value; });
+    box.querySelectorAll('[data-weigen]').forEach(b => b.onclick = () => { const z = w.ziele[+b.dataset.k]; delete z.datum; delete z.wahl; z.eigen = true; zeichnen(); });
+    box.querySelectorAll('[data-wdatum]').forEach(b => b.onclick = () => { const z = w.ziele[+b.dataset.k]; delete z.eigen; delete z.datum; z.wahl = true; zeichnen(); });
     box.querySelectorAll('[data-ztage]').forEach(f => f.oninput = () => { const z = w.ziele[+f.dataset.k]; delete z.monate; z.tage = Math.max(0, Math.round(+f.value || 0)); });
     box.querySelectorAll('[data-zweg]').forEach(b => b.onclick = () => { w.ziele.splice(+b.dataset.k, 1); zeichnen(); });
     $('#ergPlus').onclick = () => { w.ziele.push({stufe:'', tage:0}); zeichnen(); };

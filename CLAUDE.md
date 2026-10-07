@@ -247,9 +247,10 @@ steht.
 - Ablaufseite zugeklappt (v1.161): Kette aus Kärtchen, `abAuf` merkt die
   offenen; „Bearbeiten“ öffnet die Stufen-Seite, ↑ ↓ daneben ordnen
   (v1.162, statt „Weiter nach vorn“ auf der Stufen-Seite – Jean: deplatziert).
-- Wann als festes Datum (v1.162): Ziel `{stufe, datum}`, Kachel „Datum“ im
-  `ergebnisFenster`; `zielDatum` nimmt den Tag der Erledigung, wenn das Datum
-  schon vorbei ist.
+- „Datum“ bei Wann (v1.163, Jean: jedes Mal ein anderes – nicht im Ablauf
+  festlegen): Ziel `{stufe, wahl:true}` (altes `{datum}` aus v1.162 zählt
+  gleich, `datumWahl`). Beim Erledigen „Datum wählen“, `datumFragen` fragt
+  vor dem Erledigen nach dem Tag (auch im `sofortFenster`).
 - **Seitennamen eindeutig halten:** v1.159 nannte die Ablaufseite `plan` mit
   `#planBox` – das ist die Grundriss-Seite. `go('plan')` zeichnete dann den
   Ablauf in den Grundriss, Kopfzeile und Geschoss-Regler fehlten. Seit
