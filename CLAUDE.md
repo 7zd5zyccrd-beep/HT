@@ -175,7 +175,14 @@ steht.
   Karte). Typ im Kopf einer Objekt-/Mangelseite: `.kopfTyp`. Einzelne
   Wege nachträglich gruppieren: `eintraegeGruppieren(box)`. In der Kontrolle
   „Dauer und Arbeitsmittel“ als `.angListe`-Zeile (`taetKarteZeigen`).
-  Fett nur der Titel einer Karte; Daten in Listen normal. Farben `--dringend`, `--bald` mit Dunkelwert.
+  Fett nur der Titel einer Karte; Daten in Listen normal.
+- Einstellungen eines Typs (v1.205): feste Reihenfolge in `renderSetSub`
+  (`#setWichtig`, `#setOpt`, `#setWege` als gliste mit `data-weg2`,
+  `#setNwInhalt`, `#setEntf`). „Objekte bearbeiten“ für alle mit Objekten
+  über `objektKarten(box, k, nachZeichnen)` (Etagen über `etagenKnoepfe`,
+  das auch Karten kennt); Sprinkler-Punkte `listeBauen` mit `karte:true` und
+  `beiTausch` (Werte in `g.w` ziehen mit). Zähler: „Grundriss“, keine Pfeile
+  (die Ablesereihenfolge ist eine eigene, `folgeSpeichern`). Farben `--dringend`, `--bald` mit Dunkelwert.
 - Schriften (E1): `<style id="schriften">` mit Barlow Condensed 500/600
   (latin, OFL) als data-URL, Fließtext Systemschrift. `blattDokument` lässt
   diesen Block weg, `blattFreigeben` entfernt alte Google-Verweise.

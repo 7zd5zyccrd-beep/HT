@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.205 08.10.2026 Einstellungen der Anlagentypen einheitlich (Jean): jede
+                    Seite in derselben Reihenfolge – Wichtigkeit, Einstellungen
+                    (Prüfabstand, Rundgang, Akkutausch), Wege als Liste
+                    (Objekte/Zähler/Prüfpunkte bearbeiten, Checkliste,
+                    Akkutypen), Zählerstände prüfen, ganz unten „Entfernen“.
+                    „Objekte bearbeiten“ zeigt jedes Objekt als Karte mit
+                    „Grundriss“, ↑ ↓ und „Löschen“, auch bei Aufzügen,
+                    Rollbandfiltern und Feststellanlagen (die Pfeile ändern
+                    dieselbe Reihenfolge wie beim Prüfen). Die Prüfpunkte
+                    des Sprinklers sind Karten mit ↑ ↓; Erfasstes zieht mit.
+                    Zähler bekommen „Grundriss“.
   v1.204 08.10.2026 Einstellungen der Anlagentypen, kleine Korrekturen: Im
                     Baukasten war „Löschen“ bei den Zuständen abgeschnitten,
                     jetzt ganz und rot. „+ Neues Objekt“, „+ Neuer Punkt“,
@@ -2811,7 +2822,10 @@ button > .ortIcon:only-child{display:block;margin:auto}
 .etagen button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong);border-color:var(--strong)}
 /* Knopfreihe der Objektkarte: mit der Anzahl der Akkus wird es eng, deshalb
    etwas kleinere Abstände; die Anzahl steht rechts vor Löschen. */
-.stelle .knopfreihe{gap:8px;flex-wrap:wrap}   /* sehr schmale Geräte: Löschen rutscht in die nächste Zeile (v1.118) */
+.stelle .knopfreihe{gap:8px;flex-wrap:wrap}
+.stelle .knopfreihe .btn.mitWort{display:flex;align-items:center;gap:5px;padding:0 10px}
+.stelle .knopfreihe .btn.mitWort svg{width:18px;height:18px}
+.stelle .knopfreihe .btn.danger{margin-left:auto}   /* sehr schmale Geräte: Löschen rutscht in die nächste Zeile (v1.118) */
 /* Zwei Knöpfe nebeneinander (Zeilen, Fußleiste) mit weniger seitlichem Polster
    – sonst würde „Nachweis ausgeben“ auf schmalen Geräten abgeschnitten. */
 .row > .btn:not(.eintrag),.actionbar .barKnoepfe .btn,.hknoepfe .btn{padding:0 8px}
@@ -4013,7 +4027,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.204';
+const VERSION = 'v1.205';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -14366,37 +14380,45 @@ function renderSetSub(){
   if(a === 'typbau'){ setTypBau(dyn, k); return; }
   if(a === 'objekte'){ setObjekteSeite(dyn, k); return; }
   const n = NW(k);
-  /* Oben die Wichtigkeit für die Aufgabenliste, darunter wie gehabt die Seite
-     des Nachweises in einem eigenen Behälter. */
-  dyn.innerHTML = (n.eigen ? `<button class="btn eintrag" id="setTypBearb"><span>Typ bearbeiten</span></button>` : '')
-    + '<div id="setWichtig"></div><div id="setRundgang"></div><div id="setNwInhalt"></div>';
-  if(n.eigen) $('#setTypBearb').onclick = () => setOeffnen('typbau', k);
+  /* Gleiche Reihenfolge für jeden Typ (v1.205, Jean): Wichtigkeit, die
+     Einstellungen des Typs, die Wege als gruppierte Liste, was nur dieser Typ
+     hat, ganz unten „Entfernen“. Vorher ordnete jeder Typ anders, bei den
+     Medien stand „Zähler bearbeiten“ unter „Ablesewerte löschen“. */
+  dyn.innerHTML = '<div id="setWichtig"></div><div id="setOpt"></div><div id="setWege"></div><div id="setNwInhalt"></div><div id="setEntf"></div>';
   if(n.art !== 'bestand') wichtigWahl($('#setWichtig'), k);
+  const opt = $('#setOpt');
+  if(n.art === 'fremd') setFremd(opt, k, 'typ');                 // Prüfabstand
+  if(RUNDGANG_TYPEN.includes(k)){
+    opt.insertAdjacentHTML('beforeend', '<div id="setRundgang"></div>');
+    rundgangWahl($('#setRundgang'), k);
+  }
   /* Akkutausch bei den Vorlagen einschaltbar (v1.149); eigene Typen stellen
      ihn im Baukasten ein, Sprinkler und Medien haben keinen. */
   if(!n.eigen && n.art !== 'sprinkler' && n.art !== 'medien'){
-    $('#setRundgang').insertAdjacentHTML('beforebegin', `<label class="haken" style="margin:0 0 14px"><input type="checkbox" id="setAkkuHaken"${akkuAktiv(k) ? ' checked' : ''}>
+    opt.insertAdjacentHTML('beforeend', `<label class="haken" style="margin:0 0 14px"><input type="checkbox" id="setAkkuHaken"${akkuAktiv(k) ? ' checked' : ''}>
       <span>Akkutausch (Akkutyp je Objekt, eigener Tauschtermin)</span></label>`);
     $('#setAkkuHaken').onchange = e => {
       teilCfg(k).akku = e.target.checked; saveCfg();
       const y = bildY(); renderSetSub(); bildNach(y);
     };
   }
-  if(RUNDGANG_TYPEN.includes(k)) rundgangWahl($('#setRundgang'), k);
-  const box = $('#setNwInhalt');
-  if(n.art === 'medien')         setStellen(box, 'typ');
-  else if(n.art === 'fremd')     setFremd(box, k, 'typ');
-  else if(n.art !== 'sprinkler') setAnlagen(box, k, 'typ');
-  /* Die Objekte selbst stehen seit v1.184 unter Anlagen; hier nur der Weg. */
-  box.insertAdjacentHTML('beforeend', `<button class="btn eintrag" id="setZuObjekte"><span class="etext mehrZeile"><span>${
-    n.art === 'sprinkler' ? 'Prüfpunkte' : n.art === 'medien' ? 'Zähler' : 'Objekte'} bearbeiten</span>${
-    n.art === 'sprinkler' ? '' : `<span class="zahl">${n.art === 'medien' ? stellen().length : (teilCfg(k).anlagen || []).length}</span>`}</span></button>`);
-  $('#setZuObjekte').onclick = () => setOeffnen('objekte', k);
-  eintraegeGruppieren(dyn);
-  /* Ganz unten: den Typ wieder entfernen (v1.147). */
-  dyn.insertAdjacentHTML('beforeend', `<div class="eyebrow" style="margin-top:24px">Anlagentyp</div>
-    <button class="btn klein" id="setTypWeg">Anlagentyp entfernen</button>
-    <p class="muted small" style="margin:8px 0 0">Verschwindet aus Aufgabenliste, Nachweisen und Grundrissen. Objekte, Erfasstes und Marken bleiben gespeichert – wer den Typ wieder hinzufügt, findet alles wieder.</p>`);
+  const wort = n.art === 'sprinkler' ? 'Prüfpunkte' : n.art === 'medien' ? 'Zähler' : 'Objekte';
+  const wege = [];
+  if(n.eigen) wege.push(['Typ bearbeiten', '', () => setOeffnen('typbau', k)]);
+  wege.push([wort + ' bearbeiten', n.art === 'sprinkler' ? '' : String(n.art === 'medien' ? stellen().length : (teilCfg(k).anlagen || []).length), () => setOeffnen('objekte', k)]);
+  if(!['fremd', 'medien', 'sprinkler', 'bestand'].includes(n.art)) wege.push(['Checkliste bearbeiten', '', () => setOeffnen('check', k)]);
+  if(akkuAktiv(k)) wege.push(['Akkutypen', String(akkuTypen().length), () => setOeffnen('akkus', '')]);
+  $('#setWege').innerHTML = gliste(wege.map(([t, z], i) => `<button class="btn eintrag" data-weg2="${i}"><span class="etext mehrZeile"><span>${esc(t)}</span>${
+    z ? `<span class="zahl">${esc(z)}</span>` : ''}</span></button>`).join(''));
+  $$('#setWege [data-weg2]').forEach(b => b.onclick = wege[+b.dataset.weg2][2]);
+  if(n.art === 'medien') setStellen($('#setNwInhalt'), 'typ');   // Zählerstände prüfen
+  /* Ganz unten, was etwas wegnimmt. */
+  $('#setEntf').innerHTML = `<div class="eyebrow" style="margin-top:24px">Entfernen</div>`
+    + (n.art === 'medien' ? `<button class="btn danger klein" id="btnMedReset">Ablesewerte löschen</button>
+       <p class="muted small" style="margin:8px 0 14px">Löscht die laufende Ablesung und die gemerkten Stände aller Zähler. Für einen einzelnen Tausch „Zähler getauscht“ auf der Seite des Zählers nehmen.</p>` : '')
+    + `<button class="btn klein" id="setTypWeg">Anlagentyp entfernen</button>
+    <p class="muted small" style="margin:8px 0 0">Verschwindet aus Aufgabenliste, Nachweisen und Grundrissen. Objekte, Erfasstes und Marken bleiben gespeichert – wer den Typ wieder hinzufügt, findet alles wieder.</p>`;
+  if($('#btnMedReset')) $('#btnMedReset').onclick = medienZuruecksetzen;
   $('#setTypWeg').onclick = () => typEntfernen(k);
 }
 /* Die Objekte eines Typs bearbeiten (v1.184): anlegen, umbenennen, ordnen,
@@ -14408,7 +14430,7 @@ function setObjekteSeite(dyn, k){
   if(n.art === 'medien')         setStellen(box, 'objekte');
   else if(n.art === 'fremd')     setFremd(box, k, 'objekte');
   else if(n.art === 'sprinkler') setSprinkler(box, k);
-  else                           setAnlagen(box, k, 'objekte');
+  else                           setAnlagen(box, k);
   /* Eben hinzugefügt: gleich das Feld für das erste Objekt öffnen. */
   if(typFrisch === k){
     typFrisch = null;
@@ -14803,11 +14825,21 @@ const feldHoehe = ta => {
 /* „+ Neues …“ wie überall (v1.204). */
 const NEU_WORT = {Objekt:'Neues Objekt', Punkt:'Neuer Punkt', Werkzeug:'Neues Werkzeug'};
 function listeBauen(box, opt){
-  const zeile = (text, i) =>
-    `<div class="zeile" data-i="${i}">
+  /* opt.karte (v1.205): als Karte wie die Objekte, mit ↑ ↓ – für die
+     Prüfpunkte des Sprinklers. opt.beiTausch zieht Erfasstes mit um. */
+  const zeile = (text, i) => opt.karte
+    ? `<div class="stelle" data-i="${i}">
+       <textarea rows="1"${i < 0 ? ` placeholder="${esc(opt.wort)}"` : ''}>${esc(text)}</textarea>
+       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
+         <button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= basis ? ' disabled' : ''}>↑</button>
+         <button class="btn ghost klein quadrat" data-runter="1" aria-label="nach unten"${i < 0 || i >= basis - 1 ? ' disabled' : ''}>↓</button>
+         <button class="btn danger klein" data-weg="1" style="margin-left:auto">Löschen</button></div>
+     </div>`
+    : `<div class="zeile" data-i="${i}">
        <textarea rows="1"${i < 0 ? ` placeholder="${esc(opt.wort)}"` : ''}>${esc(text)}</textarea>
        <button class="btn danger klein" data-weg="1">Löschen</button>
      </div>`;
+  const reihe = opt.karte ? '.stelle' : '.zeile';
   /* Wer an einer frisch angelegten Zeile "Löschen" tippt, verwirft sie. Das
      Verlassen des Feldes kommt aber VOR dem Klick – ohne diesen Merker wäre der
      Eintrag schon gespeichert, bevor der Knopf überhaupt drankommt. */
@@ -14819,8 +14851,21 @@ function listeBauen(box, opt){
       + (mitNeuer ? zeile('', -1) : '')
       + anzeigeFolge(liste.length, basis).map(i => zeile(liste[i], i)).join('');
     if(opt.nachZeichnen) opt.nachZeichnen(box);
-    box.querySelectorAll('.zeile').forEach(r => {
+    box.querySelectorAll(reihe + '[data-i]').forEach(r => {
       const ta = r.querySelector('textarea'), i = +r.dataset.i, neu = i < 0;
+      const tausch = j => {
+        const l = opt.liste();
+        if(i < 0 || j < 0 || i >= basis || j >= basis) return;
+        const top = r.getBoundingClientRect().top;
+        [l[i], l[j]] = [l[j], l[i]];
+        if(opt.beiTausch) opt.beiTausch(i, j);
+        saveCfg(); zeichnen(false);
+        lageHalten(top, () => box.querySelector(`${reihe}[data-i="${j}"]`));
+      };
+      if(r.querySelector('[data-hoch]')){
+        r.querySelector('[data-hoch]').onclick = () => tausch(i - 1);
+        r.querySelector('[data-runter]').onclick = () => tausch(i + 1);
+      }
       feldHoehe(ta);
       ta.oninput  = () => feldHoehe(ta);
       ta.onchange = () => {
@@ -14861,7 +14906,7 @@ function listeBauen(box, opt){
     });
     box.querySelector('[data-plus]').onclick = () => {
       zeichnen(true);
-      const t = box.querySelector('.zeile[data-i="-1"] textarea');
+      const t = box.querySelector(reihe + '[data-i="-1"] textarea');
       if(t) t.focus();
     };
   };
@@ -14871,35 +14916,22 @@ function listeBauen(box, opt){
 /* Seit v1.184 (Etappe 3) in zwei Teilen: „typ“ für die Einstellungen des
    Anlagentyps (Checkliste, Akkutypen), „objekte“ für die Objektliste, die
    man über Anlagen › Typ › „Objekte bearbeiten“ erreicht. */
-function setAnlagen(box, k, teil){
+function setAnlagen(box, k){
   const n = NW(k), mitEtagen = !!n.etagen, bestand = n.art === 'bestand';
-  if(teil === 'typ'){
-    box.innerHTML = (bestand ? '' : `<button class="btn eintrag" id="setZuCheck"><span>Checkliste bearbeiten</span></button>`)
-      + (akkuAktiv(k) ? `<button class="btn eintrag" id="setZuAkkus"><span>Akkutypen</span><span class="zahl">${akkuTypen().length}</span></button>` : '');
-    if(!bestand) $('#setZuCheck').onclick = () => setOeffnen('check', k);
-    if(akkuAktiv(k)) $('#setZuAkkus').onclick = () => setOeffnen('akkus', '');
-    return;
-  }
-  const i = info((bestand ? 'Neue Objekte hängen sich hinten an.' : 'Die Reihenfolge stellst du beim Prüfen mit den Pfeilen ein; neue Objekte hängen sich hinten an.')
+  /* Seit v1.205 (Jean) dieselben Karten wie bei Feuerlöscher und RWA: Name,
+     was der Typ braucht, darunter Grundriss, ↑ ↓ und Löschen. Die Pfeile
+     ändern dieselbe Reihenfolge wie „Reihenfolge ändern“ beim Prüfen. */
+  const i = info((bestand ? 'Neue Objekte hängen sich hinten an. „Grundriss“ zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge.'
+      : 'Neue Objekte hängen sich hinten an. „Grundriss“ zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge – dieselbe wie beim Prüfen.')
     + (mitEtagen ? ' Unter jedem Objekt wählst du seine Etagen. Die Marke gilt auf allen und wandert beim Verschieben mit. Sind die Etagenpläne unterschiedlich geschnitten, richte sie unter Grundrisse aus.' : ''), 'margin:-4px 0 6px');
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Objekte ${i.knopf}</div>${i.text}
      <div id="setListe"></div>`;
   const liste = $('#setListe');
-  /* Die Pläne kommen aus dem Bilderspeicher und damit verzögert. Bis dahin
-     stehen die Zeilen ohne Etagen da; danach werden sie nur ergänzt, nicht neu
-     gebaut – ein Feld, in dem gerade getippt wird, bleibt unberührt. */
+  /* Die Pläne kommen aus dem Bilderspeicher und damit verzögert; die Etagen
+     werden danach nur ergänzt. */
   let plaene = null;
-  /* Akkutyp und Anzahl je Objekt (v1.149), unter der Zeile wie die Etagen. */
-  const etagen = b => { if(akkuAktiv(k)) akkuReihen(b, k); if(mitEtagen && plaene) etagenKnoepfe(b, plaene, k); };
-  listeBauen(liste, {
-    wort:'Objekt',
-    liste:() => teilCfg(k).anlagen,
-    nachZeichnen:etagen,
-    nachher:() => etagen(liste),               // nach Umbenennen: Knöpfe am neuen Namen
-    beiUmbenennen:(alt, neu) => anlageUmbenennen(k, alt, neu),
-    loeschHinweis:'Das bisher Erfasste und die Stelle im Grundriss bleiben gespeichert – '
-      + 'wer das Objekt mit demselben Namen wieder anlegt, findet beides wieder.'
-  });
+  const etagen = b => { if(mitEtagen && plaene) etagenKnoepfe(b, plaene, k); };
+  objektKarten(liste, k, etagen);
   if(mitEtagen) Bilder.alle().then(l => {
     plaene = planSortieren(l || []);
     if(liste.isConnected) etagen(liste);
@@ -14942,8 +14974,10 @@ function etagenKnoepfe(box, plaene, k = 'aufzuege'){
   box.querySelectorAll('.etagen').forEach(e => e.remove());
   if(!plaene.length) return;
   const anlagen = teilCfg(k).anlagen;
-  box.querySelectorAll('.zeile').forEach(r => {
-    const i = +r.dataset.i; if(i < 0 || anlagen[i] == null) return;
+  /* Zeilen (früher) oder Karten (seit v1.205): in der Karte vor der Knopfreihe. */
+  box.querySelectorAll('.zeile[data-i], .stelle[data-i]').forEach(r0 => {
+    const i = +r0.dataset.i; if(i < 0 || anlagen[i] == null) return;
+    const r = r0.classList.contains('stelle') ? r0.querySelector('.knopfreihe').previousElementSibling : r0;
     const key = k + '|' + anlagen[i];
     const an = etagenAuswahl(key), kurz = planKurzNamen(plaene);
     /* Dieselben Kurzbezeichnungen wie am Regler; der volle Planname steht in der
@@ -14968,7 +15002,7 @@ function etagenKnoepfe(box, plaene, k = 'aufzuege'){
    an seinem Text: ein gelöschter Punkt muss deshalb auch aus den laufenden
    Kontrollgängen heraus, sonst rutschen die Werte dahinter um einen weiter. */
 function setSprinkler(box, k){
-  const i = info('Endet ein Punkt auf „(bar)“, bekommt er beim Erfassen ein Zahlenfeld statt der Zustandswahl – wöchentlich wie monatlich.', 'margin:-4px 0 6px');
+  const i = info('Endet ein Punkt auf „(bar)“, bekommt er beim Erfassen ein Zahlenfeld statt der Zustandswahl – wöchentlich wie monatlich. Die Pfeile ändern die Reihenfolge, auch auf dem Blatt; schon Erfasstes zieht mit.', 'margin:-4px 0 6px');
   box.innerHTML =
     `<div class="eyebrow mitInfo">Wöchentliche Punkte ${i.knopf}</div>${i.text}
      <div id="setWoch"></div>
@@ -14976,8 +15010,17 @@ function setSprinkler(box, k){
      <div id="setMon"></div>`;
   [['woch', '#setWoch'], ['mon', '#setMon']].forEach(([feld, wo]) => {
     listeBauen($(wo), {
-      wort:'Punkt',
+      wort:'Punkt', karte:true,
       liste:() => teilCfg(k)[feld],
+      /* Die Werte hängen an der Stelle des Punktes – beim Verschieben ziehen
+         sie in den laufenden Kontrollgängen mit (v1.205). */
+      beiTausch:(i, j) => {
+        const d = DAT[k];
+        if(d && Array.isArray(d[feld])){
+          d[feld].forEach(g => { if(Array.isArray(g.w)) [g.w[i], g.w[j]] = [g.w[j], g.w[i]]; });
+          saveDat();
+        }
+      },
       beiLoeschen:i => {
         const d = DAT[k];
         if(d && Array.isArray(d[feld])){
@@ -14996,7 +15039,7 @@ function setSprinkler(box, k){
 function setFremd(box, k, teil){
   const n = NW(k), t = teilCfg(k);
   const iAbst = info('Aus dem letzten Prüfdatum und diesem Abstand ergibt sich der nächste Termin – und unter welcher Überschrift der Typ unter „Anlagen“ steht. 12 = jährlich, 24 = alle zwei Jahre.', 'margin:-6px 0 14px');
-  const iObj = info('Neue Objekte hängen sich hinten an. Das Grundriss-Symbol (Plan mit Stecknadel) zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge.'
+  const iObj = info('Neue Objekte hängen sich hinten an. „Grundriss“ zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge.'
     + (akkuAktiv(k) ? ' Unter dem Namen wählst du den Akkutyp, rechts in der Knopfreihe die Anzahl.' : ''), 'margin:-4px 0 6px');
   if(teil !== 'typ'){
     box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Objekte ${iObj.knopf}</div>${iObj.text}<div id="setListe"></div>`;
@@ -15005,14 +15048,12 @@ function setFremd(box, k, teil){
   }
   box.innerHTML =
     `<label class="field"><span class="mitInfo">Prüfabstand in Monaten ${iAbst.knopf}</span>
-       <input type="number" id="setJahre" class="schmal" min="1" max="240" step="1" inputmode="numeric" value="${t.monate}"></label>${iAbst.text}`
-    + (akkuAktiv(k) ? `<button class="btn eintrag" id="setZuAkkus"><span>Akkutypen</span><span class="zahl">${akkuTypen().length}</span></button>` : '');
+       <input type="number" id="setJahre" class="schmal" min="1" max="240" step="1" inputmode="numeric" value="${t.monate}"></label>${iAbst.text}`;
   $('#setJahre').onchange = e => {
     const m = Math.round(+e.target.value);
     if(!(m > 0 && m <= 240)){ e.target.value = t.monate; return; }
     t.monate = m; saveCfg();
   };
-  if(akkuAktiv(k)) $('#setZuAkkus').onclick = () => setOeffnen('akkus', '');
 }
 /* --- Die Objekte der Fremdprüfungen ----------------------------------------
    Sie stehen als Karten da, nicht als Zeilen wie die übrigen Listen: neben der
@@ -15139,7 +15180,7 @@ function loeFelderZeigen(box, name, zf){
    verschoben, Nachtrag bei einem alten Objekt) bleibt alles, wie es war. */
 const objFrisch = new Set();          // 'k|Name', seit dem Öffnen der Seite angelegt
 let objPlanWeg = null;                // {key, hatteMarke, basis} beim Sprung in den Grundriss
-function objektKarten(box, k){
+function objektKarten(box, k, nachZeichnen){
   let verworfen = false, basis = teilCfg(k).anlagen.length;
   let weg = objPlanWeg; objPlanWeg = null;
   if(weg && !weg.key.startsWith(k + '|')) weg = null;
@@ -15178,7 +15219,7 @@ function objektKarten(box, k){
       ${akkuWahl(text, i)}${k === 'loescher' && i >= 0 ? `<details class="loeKenn"${loeKennAuf.has(text) ? ' open' : ''}><summary><span class="loeZf">${
         esc(loeZusammenfassung(text))}</span></summary><div class="loeFelder"></div></details>` : ''}
       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
-        <button class="btn ghost klein quadrat" data-ort="1" aria-label="Grundriss"${i < 0 ? ' disabled' : ''}>${ORT_SVG}</button>
+        <button class="btn ghost klein mitWort" data-ort="1"${i < 0 ? ' disabled' : ''}>${ORT_SVG}<span>Grundriss</span></button>
         <button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= basis ? ' disabled' : ''}>↑</button>
         <button class="btn ghost klein quadrat" data-runter="1" aria-label="nach unten"${i < 0 || i >= basis - 1 ? ' disabled' : ''}>↓</button>
         <button class="btn danger klein" data-weg="1">Löschen</button>
@@ -15258,7 +15299,7 @@ function objektKarten(box, k){
         const liste = teilCfg(k).anlagen;
         frage('Objekt löschen',
           `„${liste[i]}“ verschwindet aus der Liste.\n\n`
-          + 'Prüfdatum, Bemerkung und die Stelle im Grundriss bleiben gespeichert – '
+          + (NW(k).art === 'fremd' ? 'Prüfdatum, Bemerkung' : 'Das bisher Erfasste') + ' und die Stelle im Grundriss bleiben gespeichert – '
           + 'wer das Objekt mit demselben Namen wieder anlegt, findet alles wieder.',
           'Löschen', () => {
             liste.splice(i, 1); if(i < basis) basis--; saveCfg(); toast('Gelöscht');
@@ -15271,6 +15312,7 @@ function objektKarten(box, k){
       const t = box.querySelector('.stelle[data-i="-1"] textarea');
       if(t) t.focus();
     };
+    if(nachZeichnen) nachZeichnen(box);
   };
   zeichnen(false);
   if(nachOben){ listenLage = null; bildNach(0); }
@@ -15372,12 +15414,8 @@ function setStellen(box, teil){
   const iSt = info('Partei, Medium und Zählernummer bilden den Schlüssel eines Zählers. Wird einer davon geändert, wandern Vorquartalsstand, laufender Wert, Ableseplatz und Stelle im Grundriss mit – Tippfehler lassen sich gefahrlos berichtigen. Wasser rechnet immer in m³.', 'margin:-4px 0 6px');
   const iTa = info('Für einen wirklich getauschten Zähler: neue Nummer, Wechseldatum, Aus- und Einbaustand. Der Stand des Vorquartals wird dabei verworfen.', 'margin:-4px 0 10px');
   if(teil === 'typ'){
-    box.innerHTML = `<div id="setPlaus"></div>
-     <div class="eyebrow" style="margin-top:20px">Alles zurücksetzen</div>
-     <button class="btn ghost klein danger" id="btnMedReset">Ablesewerte löschen</button>
-     <p class="muted small" style="margin:8px 0 0">Löscht die laufende Ablesung und die gemerkten Stände aller Zähler. Für einen einzelnen Tausch „Zähler getauscht“ auf der Seite des Zählers nehmen.</p>`;
+    box.innerHTML = `<div id="setPlaus"></div>`;   // Löschen steht seit v1.205 unten unter „Entfernen“
     plausEinstellungen($('#setPlaus'));
-    $('#btnMedReset').onclick = medienZuruecksetzen;
     return;
   }
   box.innerHTML =
@@ -15408,7 +15446,8 @@ function stelleKarte(z, i){
     </div>
     <label class="field"><span>Zählernummer</span><input data-f="nr" value="${esc(z.nr)}"></label>
     <label class="field"><span>Ort</span><input data-f="ort" value="${esc(z.ort)}"></label>
-    <div class="zeile knopfreihe" style="border-top:0;padding:0"><button class="btn danger klein" data-weg="1">Löschen</button></div>
+    <div class="zeile knopfreihe" style="border-top:0;padding:0">${i >= 0
+      ? `<button class="btn ghost klein mitWort" data-ort="1">${ORT_SVG}<span>Grundriss</span></button>` : ''}<button class="btn danger klein" data-weg="1">Löschen</button></div>
   </div>`;
 }
 let stellenBasis = 0;
@@ -15452,6 +15491,11 @@ function stellenZeichnen(mitNeuer){
       }
       if(!neu) sichern();
     });
+    /* Grundriss auch hier (v1.205), wie bei allen Objekten. */
+    if(r.querySelector('[data-ort]')) r.querySelector('[data-ort]').onclick = () => {
+      const z = stelleLesen(t.stellen[i]);
+      verorten(z.key, [z.partei, z.medium].filter(Boolean).join(' · '));
+    };
     r.querySelector('[data-weg]').onpointerdown = () => { if(neu) verworfen = true; };
     r.querySelector('[data-weg]').onclick = () => {
       if(neu){ stellenZeichnen(false); return; }
