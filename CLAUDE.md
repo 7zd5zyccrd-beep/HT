@@ -383,6 +383,10 @@ steht.
   dem passen, was darunter steht. Auf der Aufgabe kommen Infos zuerst.
 - „+ Neuer Ablauf“ (`ablaufNeu`): leer oder `ablaufBeispiel()` „Regelmäßig
   prüfen“ (Jean: ein Beispiel genügt).
+- Auf der Aufgabe „Ablauf festlegen“ (v1.181, vorher „Ablauf starten“):
+  `ablaufStarten` → `wahlFenster` mit „Bestehenden Ablauf wählen“ / „Neuen
+  Ablauf anlegen“ / Abbrechen; `ablaufWahlListe` zeigt je Plan Schritte,
+  „läuft …“ und 🗑 (`ablaufLoeschen`, auch von der Ablaufseite).
 - Übersicht › Abläufe: Auslöser nur für einzelne Aufgaben (an einen
   vorhandenen Plan gebundene stehen beim Ablauf), Wetter ab Werk in
   `<details>` (`werkAuf`).

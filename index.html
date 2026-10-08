@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.181 08.10.2026 Aufgabe (Jean): „Ablauf starten“ heißt „Ablauf
+         festlegen“. Das Fenster bietet nur noch „Bestehenden Ablauf wählen“,
+         „Neuen Ablauf anlegen“ und „Abbrechen“; die bestehenden stehen im
+         zweiten Fenster, je mit Zahl der Schritte, ob er gerade läuft, und
+         einem Knopf zum Löschen (mit Rückfrage; laufende Aufgaben bleiben
+         als einfache Aufgaben).
   v1.180 08.10.2026 Tastatur (Jean): auf kurzen Seiten blieb das Feld mit
          dem Cursor hinter der Tastatur – iOS kann es nur so weit hochholen,
          wie die Seite darunter noch rollen kann. Solange ein Feld aktiv ist,
@@ -3176,6 +3182,9 @@ a.ablaufSchritt{display:flex;align-items:center;justify-content:center;text-deco
 .ergNach input{flex:0 0 72px}
 .ergNach select{flex:1;min-width:0}
 .ergZeile{display:flex;justify-content:space-between;gap:10px;width:100%;background:none;border:0;border-top:1px solid var(--line);margin-top:12px;padding:12px 0 0;font:inherit;font-size:15px;color:inherit;text-align:left;cursor:pointer}
+.abWahlZeile{margin-top:8px;align-items:stretch;gap:8px}
+.abWahlZeile .eintrag{flex:1;min-width:0;margin:0}
+.abWahlZeile .quadrat{align-self:center}
 .ergZeile span:last-child{color:var(--ink-soft);white-space:nowrap}
 .sofortHilfen .ablaufSchritt:first-child{margin-top:4px}
 /* Ergebnisse im Erledigen (v1.160). */
@@ -3588,7 +3597,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.180';
+const VERSION = 'v1.181';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6527,7 +6536,7 @@ function ablaufHilfenHtml(a){
 }
 function ablaufMehrHtml(a){
   const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a);
-  if(!p || !s) return a.art === 'mangel' || a.erledigt ? '' : `<button class="btn ghost klein" id="ablaufStart" style="margin:0 0 10px">Ablauf starten</button>`;
+  if(!p || !s) return a.art === 'mangel' || a.erledigt ? '' : `<button class="btn ghost klein" id="ablaufStart" style="margin:0 0 10px">Ablauf festlegen</button>`;
   const bisher = ketteVon(a);
   return `<div class="card"><div class="eyebrow" style="margin:0 0 4px">Ablauf · ${esc(p.name || 'Ablauf')}</div>
     ${bisher.length ? bisher.map(x => `<p class="small" style="margin:2px 0">${esc(ketteZeile(x))}</p>`).join('')
@@ -6571,10 +6580,46 @@ function ablaufStarten(a, neuZeichnen){
     plaeneListe().push(p); saveCfg(); zuweisen(p);
     planOeffnen(p.id);
   };
-  const l = plaeneListe().filter(p => (p.stufen || []).length);
-  if(!l.length){ neu(); return; }
-  wahlFenster('Ablauf starten', l.map(p => ({text:p.name || 'Ablauf', p})).concat([{text:'+ Neuer Ablauf aus dieser Aufgabe', neu:true}]),
-    w => { if(w.neu) neu(); else { zuweisen(w.p); neuZeichnen(); } });
+  /* Drei Wege (v1.181, Jean): bestehender Ablauf, neuer Ablauf, Abbrechen –
+     die Liste der bestehenden kommt erst im zweiten Fenster. */
+  const vorhanden = () => plaeneListe().filter(p => (p.stufen || []).length);
+  const waehlen = () => ablaufWahlListe(vorhanden, p => { zuweisen(p); neuZeichnen(); }, () => ablaufStarten(a, neuZeichnen));
+  wahlFenster('Ablauf festlegen', (vorhanden().length ? [{text:'Bestehenden Ablauf wählen', best:true}] : [])
+    .concat([{text:'Neuen Ablauf anlegen', neu:true}]),
+    w => w.neu ? neu() : waehlen());
+}
+/* Die bestehenden Abläufe zur Wahl, je Zeile mit Löschen (v1.181, Jean: zum
+   Ausprobieren angelegte sammeln sich sonst an). Dazu steht, ob einer gerade
+   läuft – laufende Aufgaben bleiben beim Löschen als einfache Aufgaben. */
+function ablaufWahlListe(vorhanden, aufWahl, zurueckZu){
+  const l = vorhanden();
+  if(!l.length){ zurueckZu(); return; }
+  dlgZuruecksetzen();
+  $('#dlgTitel').textContent = 'Bestehenden Ablauf wählen';
+  $('#dlgText').hidden = true;
+  $('#dlgKnoepfe').hidden = true;
+  const box = $('#dlgListe');
+  box.hidden = false;
+  box.innerHTML = l.map((p, i) => { const n = laufendIn(p.id).length;
+      return `<div class="row ablaufReihe abWahlZeile"><button class="btn eintrag" data-wi="${i}"><span class="etext">${esc(p.name || 'Ablauf ohne Namen')}<small>${
+        esc(`${p.stufen.length} ${p.stufen.length === 1 ? 'Schritt' : 'Schritte'} · ${n ? (n === 1 ? 'läuft einmal' : `läuft ${n}-mal`) : 'läuft nicht'}`)}</small></span></button>
+        <button type="button" class="btn quadrat" data-wweg="${i}" aria-label="Löschen">🗑</button></div>`; }).join('')
+    + `<button class="btn ghost" data-zur="1" style="margin-top:14px">Zurück</button>`;
+  $('#dlg').hidden = false;
+  const zu = () => { $('#dlg').hidden = true; dlgZuruecksetzen(); };
+  box.querySelectorAll('[data-wi]').forEach(b => b.onclick = () => { zu(); aufWahl(l[+b.dataset.wi]); });
+  box.querySelectorAll('[data-wweg]').forEach(b => b.onclick = () => {
+    const p = l[+b.dataset.wweg];
+    ablaufLoeschen(p, () => ablaufWahlListe(vorhanden, aufWahl, zurueckZu), () => ablaufWahlListe(vorhanden, aufWahl, zurueckZu));
+  });
+  box.querySelector('[data-zur]').onclick = () => { zu(); zurueckZu(); };
+}
+/* Löschen mit Rückfrage – von der Ablaufseite und aus der Wahl (v1.181). */
+function ablaufLoeschen(p, danach, abbrechen){
+  const n = laufendIn(p.id).length;
+  frage('Ablauf löschen', `„${p.name || 'Ablauf'}“ wird gelöscht.` + (n ? `\n\n${n === 1 ? 'Eine offene Aufgabe läuft' : n + ' offene Aufgaben laufen'} darin; sie bleiben als einfache Aufgaben stehen.` : ''),
+    'Löschen', () => { CFG.ablaeufe = plaeneListe().filter(x => x !== p); saveCfg(); toast('Ablauf gelöscht'); danach(); });
+  if(abbrechen) $('#dlgNein').onclick = () => { $('#dlg').hidden = true; abbrechen(); };
 }
 /* Die Ergebnisse im Erledigen (v1.160): je Ergebnis ein Knopf, darunter je
    Folge Aufgabe und Datum mit ✎. fest = von Hand geänderte Daten. */
@@ -7014,11 +7059,7 @@ function renderAblaufPlan(){
     go('wregel');
   };
   $('#stufeNeu').onclick = () => { const s = stufeNeu(''); l.push(s); saveCfg(); stufeAktiv = s.id; go('stufe'); };
-  $('#ablaufWeg').onclick = () => {
-    const n = laufendIn(p.id).length;
-    frage('Ablauf löschen', `„${p.name || 'Ablauf'}“ wird gelöscht.` + (n ? `\n\n${n === 1 ? 'Eine offene Aufgabe läuft' : n + ' offene Aufgaben laufen'} darin; sie bleiben als einfache Aufgaben stehen.` : ''),
-      'Löschen', () => { CFG.ablaeufe = plaeneListe().filter(x => x !== p); saveCfg(); zurueck(); });
-  };
+  $('#ablaufWeg').onclick = () => ablaufLoeschen(p, zurueck);
 }
 /* Ein Ergebnis bearbeiten (j = -1: neu), seit v1.179 als drei Fragen (Jean):
    Wie lautet es? Was kommt danach? Wann? Weitere Folgen und die Bedingung
