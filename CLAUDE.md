@@ -146,6 +146,43 @@ steht.
   Mehr › Dauern und Arbeitsmittel. Werksregel und eigener Auslöser haben
   weiter getrennte Editoren (Angleichung offen).
 
+## Prüfteam (v1.190–v1.195, Bericht als Artifact „Prüfbericht“)
+
+- Jean folgte allen Empfehlungen, bei E3 und E7 dem Design; E9 später.
+- Wörterbuch dazu: **Prüfung** macht die Firma, **Kontrolle** macht man
+  selbst; „Arbeitsmittel“ (nicht „Werkzeug und Material“), „Kontrollen und
+  Aufgaben“ (nicht „Tätigkeiten“), „Abholtage“, „Gemeinsamer Rundgang“,
+  „Version“, „Blatt“. Neues in Listen: „+ Neuer …/Neue …“. In Wegen „Mehr ›
+  …“ und „Heute“, nie „Startseite“/„Übersicht ›“.
+- Ausgeben: `ausgeben` mit Sperre (`ausgebenLaeuft`), `dateiTeilen(…,
+  mitAbbruch)` → 'abbruch' fragt „Wurde das Blatt verschickt?“; danach
+  zurück zur Typseite. Vorschau-Knopf heißt immer „Ausgeben“, im Grundriss
+  „Blatt ansehen“.
+- Rückgängig: `erledigtMeldung`, Einplanen, Zustand löschen über
+  `toastRueck`. `frage()` färbt „Löschen…“/„Ersetzen“ rot (`.gefahr`).
+- Freie Zeit: eine Rechnung `vorziehenRechnen(liste).frei` (gemerkt je
+  Liste), Text `freiText` („frei ≈ …“). Kalender heute: Fälliges oben,
+  Vorgezogenes blass unter „Könnte heute mit“ (`planKnopf(p, true)`).
+- Ringe (E3): rot = überfällig, `ring-heute` (dunkel) = heute fällig, gelb
+  wie bisher. Farben `--dringend`, `--bald` mit Dunkelwert.
+- Schriften (E1): `<style id="schriften">` mit Barlow Condensed 500/600
+  (latin, OFL) als data-URL, Fließtext Systemschrift. `blattDokument` lässt
+  diesen Block weg, `blattFreigeben` entfernt alte Google-Verweise.
+- Gruppierte Listen (E7): `gliste(html)` für Mehr und Einstellungen;
+  Feldbeschriftungen ohne Versalien. Titel einzeilig, `titelMitte()` per
+  MutationObserver. Meldung als Band unter der Kopfzeile (E4).
+- Auswahl von unten (E6): `wahlFenster(…, {unten:true})` nur für das
+  „+“-Menü, „Auf einen Tag legen“ und die Wahl im Kalender.
+- „+ › Störung“ (E8): `stoerungNeu` (Typ → Objekt → Feld offen). Karte
+  Störungen nur, wenn es welche gibt; vermerkt wird über den Weg oben.
+- Suche findet Seiten (`SEITEN`, `suchSeiten`). Grundriss öffnet ganz
+  eingepasst: `planZoom = 0` heißt „ganz“, `zoomJetzt()`, `planZoomMin()`;
+  der Gestenablauf selbst ist unverändert.
+- `Historie.alle()` merkt die Liste (`histMerk`), put/weg/leeren leeren sie.
+- Tests im Notizordner: `qs/test/t_*.js` (lib.js), `fuzz2.js SEED`,
+  `qs/fix/t_ausgabe.js`. `t_leer.js` endet mit einer Zeitüberschreitung
+  (klickt einen verborgenen Zurück-Knopf) – kein Fehler der App.
+
 ## Aufgabenliste und Planung (Stand v1.102)
 
 - Gruppen nach Tag (`aufgaben()`, `gruppeVon`): Überfällig, Heute, Morgen,
@@ -498,7 +535,8 @@ steht.
   Media-Abfrage – sonst würden ausgegebene Blätter dunkel. Neue Farben als
   Variable anlegen und unter `html.dunkel` mit dunklem Wert versehen.
 
-- Ringe der Aufgabenliste (v1.114, vom Nutzer so entschieden): rot =
+- Ringe der Aufgabenliste (v1.114, vom Nutzer so entschieden; seit v1.194
+  heute fällig dunkel statt rot, E3): rot =
   überfällig oder heute fällig, gelb = morgen fällig, angefangene Runde oder
   laufende Vorbereitung, sonst keiner. Grün nur in „Alle Nachweise“. Die
   Zeile „Heute auf einen Blick“ (`heuteZeile`) steht unter der Überschrift
