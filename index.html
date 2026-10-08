@@ -10,6 +10,22 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.190 08.10.2026 Prüfteam, Paket 1: Fehler. „→ Werkzeug“ bei einem
+         Material stürzte ab, danach traf ein Tipp auf „Löschen“ das falsche
+         Material – behoben. Ausgeben ist gegen Doppeltipp gesperrt (bisher
+         zwei Blätter). Wird das Teilen-Menü geschlossen, fragt die App
+         „Wurde das Blatt verschickt?“ – erst „Ja, abschließen“ leert die
+         Kontrolle. Danach geht es zurück zur Seite des Anlagentyps, wenn man
+         von dort kam; sie zeigt „Oktober 2026 ausgegeben · nichts offen“,
+         die Objekte „geprüft, Blatt ausgegeben“ statt „noch offen“. Die
+         Unterschrift passt sich auch unter „Abschließen“ beim Drehen an und
+         behält, was schon gezeichnet ist. Neues Passwort: verdecktes Feld
+         ohne Großschreibung und Korrektur, danach geleert. „Von selbst
+         anlegen lassen“ behält Objekt, Wichtigkeit, Wetter und Notiz. Der
+         Kalender fasst Tage mit Abholung, Wetter oder Urlaub dazwischen
+         nicht mehr zu „nichts eingeplant“ zusammen; heute abwesend steht als
+         eigene Zeile. „Titel und Objekt“ behält das Objekt, der Rundgang hat
+         „Zustand zurücksetzen“, Anlagen ohne Typen „+ Neuer Anlagentyp“.
   v1.189 08.10.2026 Bedienkonzept, Etappe 7 von 7: Auslöser und
          Einstellungen. Alle Auslöser stehen auf einer eigenen Seite (Mehr ›
          Auslöser): die eigenen – auch die, die einen Ablauf starten – und
@@ -3785,9 +3801,9 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
     <div id="schlossWerk" hidden>
       <p class="schlosstext">Passwort eintippen, Prüfwert berechnen und die
         ausgegebene Zeile in der Datei einsetzen – dort, wo <code>const ZUGANG</code> steht.</p>
-      <input type="text" id="werkFeld" placeholder="neues Passwort">
+      <input type="password" id="werkFeld" placeholder="neues Passwort" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false">
       <button class="btn ghost klein" id="werkOk" style="margin-top:10px">Berechnen</button>
-      <textarea id="werkAus" rows="3" readonly hidden></textarea>
+      <textarea id="werkAus" rows="3" readonly hidden autocorrect="off" spellcheck="false"></textarea>
     </div>
   </div>
 </div>
@@ -3812,7 +3828,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.189';
+const VERSION = 'v1.190';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6451,6 +6467,7 @@ function renderRundgang(){
       </div>
       <div class="seg">${n.status.map(st =>
         `<button type="button" data-status="${esc(st)}" aria-pressed="${z.status === st}">${esc(st)}</button>`).join('')}</div>
+      ${z.status ? `<button type="button" class="linkKnopf" data-status="${esc(z.status)}">Zustand zurücksetzen</button>` : ''}
       <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem)}">
       ${vorschlagHtml(n, z.bem)}
       ${mittelZeile(`${o.k}|${o.id}`, o.id)}
@@ -8325,7 +8342,8 @@ function renderAufgabe(){
   });
   const angWertNeu = () => {
     const wi2 = WICHTIG.find(x => x[0] === a.wichtig), wp2 = WETTER_PROFILE.find(x => x[0] === a.wetter);
-    const werte = {titel:[a.titel || '–', a.k && NW(a.k) ? NW(a.k).label : ''].filter(Boolean).join(' · '),
+    const anl2 = a.anlage ? (bezugsAnlagen(a.k).find(x => x.wert === a.anlage) || {}).text || a.anlage : '';
+    const werte = {titel:[a.titel || '–', a.k && NW(a.k) ? NW(a.k).label : '', anl2].filter(Boolean).join(' · '),
       frist:aufgTerminText(a), geplant:a.geplant ? planTagWort(alsDatum(a.geplant)) : '–', wichtig:wi2 ? wi2[1] : 'Normal',
       wdh:a.wdh ? wdhText(a.wdh) : 'nein', wetter:wp2 ? wp2[1] : 'nicht wetterabhängig',
       vorb:String((a.vorb || {}).text || '').trim() || '–', notiz:String(a.notiz || '').trim().split('\n')[0] || '–'};
@@ -8400,7 +8418,7 @@ function renderAufgabe(){
   box.querySelectorAll('[data-tart]').forEach(b => b.onclick = () => {
     /* „Wetter“ ist kein Termin, sondern eine Regel: aus dem Entwurf der Aufgabe
        wird der Entwurf einer Regel (v1.56). */
-    if(b.dataset.tart === 'wetter'){ eigenRegelNeu(a.titel); return; }
+    if(b.dataset.tart === 'wetter'){ eigenRegelNeu(a.titel, a); return; }
     const zum = b.dataset.tart === 'zeitraum';
     if(zum === zr) return;
     if(zum){
@@ -9476,7 +9494,7 @@ function setWerkMat(box){
 /* Die Liste des Verbrauchsmaterials (v1.68): je Zeile Name und Löschen,
    darunter die Einheit und der Wechsel zum Werkzeug. Ein Name ist eine Zeile;
    Umbenennen wirkt auf alle Tätigkeiten. */
-function materialListeBauen(box, neu){
+function materialListeBauen(box, neuAufbau){
   let verworfen = false, basis = TAET.material.length;
   const zeile = (m, i) => `<div class="zeile matZeile" data-i="${i}">
       <textarea rows="1" placeholder="Material">${esc(m.name)}</textarea>
@@ -9538,7 +9556,9 @@ function materialListeBauen(box, neu){
       };
       const wechsel = r.querySelector('[data-wechsel]');
       if(wechsel) wechsel.onclick = () => {
-        utensilVerschieben(TAET.material[i].name, false); neu(); toast('Zum Werkzeug verschoben');
+        /* (v1.190) Hieß wie die Zeilenvariable „neu“ – der Aufruf ging ins Leere,
+           die Liste blieb stehen und der nächste Tipp traf den falschen Eintrag. */
+        utensilVerschieben(TAET.material[i].name, false); neuAufbau(); toast('Zum Werkzeug verschoben');
       };
     });
     box.querySelector('[data-plus]').onclick = () => {
@@ -10354,15 +10374,21 @@ function renderWochenplan(){
     const k = t => `${WOCHENTAG[t.getDay()]} ${ttmm(t)}`;
     return `<div class="eyebrow">${esc(k(a.t))}${frei.length > 1 ? ' – ' + esc(k(z.t)) : ''} <span class="summe">· ${esc(tx)}</span></div>`;
   };
-  let html = '';
+  /* Heute abwesend (v1.190): eine eigene Zeile vor dem ersten Arbeitstag. */
+  const h0 = tagAnfang(new Date());
+  let html = tage.length ? luecke(new Date(h0.getFullYear(), h0.getMonth(), h0.getDate() - 1), tage[0].t) : '';
   for(let j = 0; j < tage.length; j++){
     const tg = tage[j];
     if(j > 0) html += luecke(tage[j - 1].t, tg.t);
-    /* Ein Tag nur mit Terminen ist nicht leer (v1.103). */
+    /* Ein Tag nur mit Terminen ist nicht leer (v1.103). Zusammengefasst wird
+       nur, was nichts zu sagen hat – kein Urlaub dazwischen, keine Abholung,
+       kein Wetter (v1.190: bis dahin verschwanden sie in „nichts eingeplant“). */
     const leer = x => !x.posten.length && !x.termine.length;
     if(leer(tg)){
       let bis = j;
-      while(bis + 1 < tage.length && leer(tage[bis + 1])) bis++;
+      if(!tagZusatz(tg.iso).length)
+        while(bis + 1 < tage.length && leer(tage[bis + 1]) && !tagZusatz(tage[bis + 1].iso).length
+              && !luecke(tage[bis].t, tage[bis + 1].t)) bis++;
       const zs = bis === j ? tagZusatz(tg.iso) : [];
       html += `<div class="eyebrow">${esc(kopfVon(j))}${bis > j ? ' bis ' + esc(kopfVon(bis)) : ''} <span class="summe">· ${esc(['nichts eingeplant'].concat(zs).join(' · '))}</span></div>`;
       j = bis;
@@ -10748,7 +10774,8 @@ function renderAlle(){
       (teilCfg(n.k).anlagen || []).length} Objekte</small></span></button>`).join('')]);
   const inhalt = gruppen.map(([titel, knoepfe]) =>
     `<div class="eyebrow">${esc(titel)}</div>` + knoepfe).join('');
-  $('#alleListe').innerHTML = (inhalt || `<p class="muted small">Noch nichts eingetragen. Unter Mehr › Einstellungen legst du an, was im Haus steht.</p>`)
+  $('#alleListe').innerHTML = (inhalt || `<p class="muted small">Noch nichts eingetragen. Lege an, was im Haus geprüft wird – Aufzüge, Feuerlöscher, RWA oder einen eigenen Typ.</p>
+      <button class="btn primary" id="alleTypNeu">+ Neuer Anlagentyp</button>`)
     /* Die Überschrift erscheint erst, wenn darunter etwas steht – Grundrisse
        und Blätter kommen verzögert aus dem Bilderspeicher. */
     + `<div id="alleWeiter"><div class="eyebrow" hidden>Übersicht</div><div id="alleGrund"></div>`
@@ -10756,6 +10783,7 @@ function renderAlle(){
     + '<div id="alleHist"></div></div>';
   alleWeiterZeigen();
   knoepfeVerdrahten($('#alleListe'));
+  if($('#alleTypNeu')) $('#alleTypNeu').onclick = typWahl;
   $$('#alleListe [data-typ]').forEach(b => b.onclick = () => typSeiteOeffnen(b.dataset.typ));
   const sto = $('#alleListe [data-stoer]');
   if(sto) sto.onclick = () => go('stoerungen');
@@ -10776,15 +10804,17 @@ function renderTypSeite(){
   /* Was gerade ansteht, wie in der Liste unter Anlagen. */
   const stand = art === 'bestand' ? '' : art === 'fremd' ? (fristGrund(fristen(k), 'Prüfdatum') || '') : homeStand(n).replace(/^ · /, '');
   const los = art !== 'fremd' && art !== 'bestand' && begonnen(n);
+  const fertig = !los && ausgegebenJetzt(n);
+  const stand2 = fertig ? `${zeitraumVoll(fertig)} ausgegeben · nichts offen` : stand;
   const kontrolle = art === 'bestand' ? ''
-    : `<button class="btn primary" data-tk="1">${art === 'fremd' ? 'Prüfung eintragen' : los ? 'Weiter mit der Kontrolle' : 'Kontrolle beginnen'}</button>`;
+    : `<button class="btn ${fertig ? '' : 'primary'}" data-tk="1">${art === 'fremd' ? 'Prüfung eintragen' : los ? 'Weiter mit der Kontrolle' : fertig ? 'Nächste Kontrolle vorab beginnen' : 'Kontrolle beginnen'}</button>`;
   const wort = art === 'medien' ? 'Zähler' : art === 'sprinkler' ? 'Prüfpunkte' : 'Objekte';
   const zeile = (o, i) => `<button class="btn eintrag" data-o="${i}"><span class="etext">${esc(o.titel)}<small>${esc(suchStand0(o) || '')}</small></span></button>`;
   const liste = art === 'sprinkler'
     ? `<p class="muted small" style="margin:0 0 8px">${teilCfg(k).woch.length} wöchentliche, ${teilCfg(k).mon.length} monatliche Prüfpunkte</p>`
     : objekte.length ? objekte.map(zeile).join('') : `<p class="muted small" style="margin:0 0 8px">Noch keine.</p>`;
-  box.innerHTML = (kontrolle || stand ? `<div class="card">
-      ${stand ? `<p class="small" style="margin:0 0 ${kontrolle ? 10 : 0}px">${esc(stand)}</p>` : ''}${kontrolle}
+  box.innerHTML = (kontrolle || stand2 ? `<div class="card">
+      ${stand2 ? `<p class="small" style="margin:0 0 ${kontrolle ? 10 : 0}px">${esc(stand2)}</p>` : ''}${kontrolle}
       ${akkuAktiv(k) ? `<button class="btn" data-takku="1" style="margin-top:8px">${esc(akkuTitel(k))}</button>` : ''}</div>` : '')
     + `<div class="eyebrow">${wort}${art === 'sprinkler' ? '' : ` <span class="summe">· ${objekte.length}</span>`}</div>${liste}
        <button class="btn ghost klein" data-tbearb="1" style="margin:6px 0 0">${wort} bearbeiten</button>
@@ -11670,7 +11700,19 @@ function initPad(){
   window.addEventListener('mousemove', move);
   window.addEventListener('mouseup', end);
 })();
-window.addEventListener('resize', () => { if(current === 'nachweis') initPad(); });
+/* Seit v1.187 wird unter „Abschließen“ unterschrieben – auch dort passt sich
+   das Feld beim Drehen an (v1.190). Was gerade gezeichnet, aber noch nicht
+   gespeichert ist, wird mitgenommen statt gelöscht. */
+window.addEventListener('resize', () => {
+  if(current !== 'nachweis' && current !== 'abschluss') return;
+  const cv = $('#sigpad'), roh = sigAktiv && gezeichnet && cv ? cv.toDataURL('image/png') : null;
+  initPad();
+  if(roh && padCtx){
+    const r = cv.getBoundingClientRect(), img = new Image();
+    img.onload = () => padCtx.drawImage(img, 0, 0, r.width, r.height);
+    img.src = roh;
+  }
+});
 
 /* ---------- Erklärtexte hinter ⓘ -------------------------------------------
    info(text) liefert den Knopf und den verborgenen Text; beide sind über die
@@ -13202,9 +13244,11 @@ function hinweisBeantwortet(schluessel, uebernommen){
 }
 function hinweisAufgabe(r, tr){
   const a = {id:neueId(), art:'eigen', quelle:'', k:'', anlage:'', punkt:'', titel:r.titel || 'Aufgabe', text:'',
-    notiz:`Auslöser: ${tr.grund}`, zeitraum:'', festgestellt:'', angelegt:heute(),
+    notiz:[r.notiz, `Auslöser: ${tr.grund}`].filter(Boolean).join('\n'), zeitraum:'', festgestellt:'', angelegt:heute(),
     frist:hinweisFrist(r, tr.zeit), wichtig:r.wichtig, erneut:[], erledigt:'', vermerk:'',
     regel:r.k, ereignis:tr.schluessel};
+  /* Objekt aus dem Auslöser (v1.190). */
+  if(r.objK && r.dann !== 'ablauf'){ a.k = r.objK; a.anlage = r.objAnlage || ''; }
   if(r.profil) a.wetter = r.profil;
   /* „Ablauf starten“ (v1.174): die erste Aufgabe des Ablaufs. Gibt es ihn
      nicht mehr, bleibt es eine einfache Aufgabe. */
@@ -13778,6 +13822,7 @@ function setEigenRegel(box, r, neu){
         plaeneListe().map(x => `<option value="${esc(x.id)}"${x.id === r.plan ? ' selected' : ''}>${esc(x.name || 'Ablauf')}</option>`).join('')}</select></label>
       ${plaeneListe().length ? '' : '<p class="muted small" style="margin:-4px 0 10px">Noch kein Ablauf angelegt.</p>'}`
     : `<label class="field"><span>Titel</span><input id="regTitel" value="${esc(r.titel || '')}" placeholder="z. B. Junge Bäume wässern"></label>
+    ${r.objK && NW(r.objK) ? `<p class="muted small" style="margin:-4px 0 10px">Für ${esc([NW(r.objK).label, r.objAnlage].filter(Boolean).join(' · '))}</p>` : ''}
     <div class="field segfeld"><span>Wichtigkeit</span>${seg('wichtig', [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']])}</div>`}
     ${gerahmt(r.fristArt === 'tage', `<div class="field segfeld"><span>Fällig</span>${seg('fristArt', [['tage', 'in x Tagen'], ['heute', 'heute'], ['vorher', 'Tag vorher']])}</div>
     ${r.fristArt === 'tage' ? `<label class="field"><span>Fällig in Tagen</span>
@@ -13898,8 +13943,16 @@ function setEigenRegel(box, r, neu){
 }
 /* Aus „+ Aufgabe hinzufügen“ heraus: aus dem Entwurf der Aufgabe wird der
    Entwurf einer Regel, der Titel wandert mit. */
-function eigenRegelNeu(titel){
+/* Aus einer neuen Aufgabe heraus (v1.190): Objekt, Wichtigkeit, Wetterprofil
+   und Notiz gehen mit – bis v1.189 kam nur der Titel an. */
+function eigenRegelNeu(titel, a){
   regelEntwurf = regelStd(titel);
+  if(a){
+    if(a.k){ regelEntwurf.objK = a.k; regelEntwurf.objAnlage = a.anlage || ''; }   // r.k ist die Kennung des Auslösers
+    if(a.wichtig) regelEntwurf.wichtig = a.wichtig;
+    if(a.wetter) regelEntwurf.profil = a.wetter;
+    if(String(a.notiz || '').trim()) regelEntwurf.notiz = a.notiz;
+  }
   regelAktiv = 'eigen:' + regelEntwurf.id;
   go('wregel');
 }
@@ -13991,7 +14044,8 @@ function renderSetSub(){
   if(a === 'bedienung'){ $('#tonHaken').checked = tonAn(); $('#einrastHaken').checked = einrastenAn(); return; }
   if(a === 'app'){ $('#appFassung').textContent = 'Fassung ' + BUILD; return; }
   if(a === 'geraet'){ sicherStandZeigen(); return; }
-  if(a === 'zugang') return;
+  /* Das Werkzeug zum Prüfwert steht jedes Mal leer und zu da (v1.190). */
+  if(a === 'zugang'){ const w = $('#schlossWerk'); if(w && $('#zugWerk').contains(w)){ w.hidden = true; $('#werkFeld').value = ''; $('#werkAus').value = ''; $('#werkAus').hidden = true; } return; }
   if(a === 'obj')   { setObjekt(dyn);   return; }
   if(a === 'abwesend'){ setAbwesend(dyn); return; }
   if(a === 'wetter'){ setWetter(dyn); return; }
@@ -19372,6 +19426,14 @@ function suchStand(o){
     ? (NW(o.k).art === 'medien' ? 'Bestätigt: ' : 'Bemerkung: ') + kurz(o.bem) : '';
   return [suchStand0(o), bem, o.ueberMittel ? 'Arbeitsmittel: ' + o.mittel : ''].filter(Boolean).join(' · ');
 }
+/* Ist der laufende Zeitraum schon ausgegeben? Dann gilt er als erledigt,
+   auch wenn DAT nach der Ausgabe leer ist (v1.190). */
+function ausgegebenJetzt(n){
+  if(!n || n.art === 'fremd' || n.art === 'bestand') return '';
+  const z = n.art === 'medien' ? expQuartal(n.k) : n.art === 'sprinkler' ? expMonat(n.k) : expZr(n.k, taktVon(n));
+  const jetzt = n.art === 'medien' ? jetztZeitraum(true) : n.art === 'sprinkler' ? jetztZeitraum('monat') : jetztZeitraum(taktVon(n));
+  return z && z === jetzt ? z : '';
+}
 function suchStand0(o){
   const n = NW(o.k);
   if(n.art === 'medien'){
@@ -19385,7 +19447,7 @@ function suchStand0(o){
   const z = zeileVon(o.k, o.id);
   if(n.art === 'fremd') return [o.zusatz, z.datum ? fristText(fristM(z.datum, teilCfg(o.k).monate)) : 'noch nicht geprüft'].filter(Boolean).join(' · ');
   const m = offenerMangel(o.ort);
-  return [z.status ? `${dText(z.datum)} · ${z.status}` : 'in dieser Kontrolle noch offen',
+  return [z.status ? `${dText(z.datum)} · ${z.status}` : ausgegebenJetzt(n) ? 'geprüft, Blatt ausgegeben' : 'in dieser Kontrolle noch offen',
           m ? `Mangel seit ${dText(m.festgestellt)}` : ''].filter(Boolean).join(' · ');
 }
 let suchListe = [];
@@ -19534,13 +19596,19 @@ function exportHtml(k){ return blattDokument(NW(k).titel, blattHtml(k)); }
 /* Hinausgereicht wird immer gleich: eine Datei, geteilt, wie das Gerät es
    anbietet. Ohne Titel im Teilen-Vorgang, sonst kommt er als zusätzliches
    Textobjekt an. */
-async function dateiTeilen(name, inhalt){
+async function dateiTeilen(name, inhalt, mitAbbruch){
   if(/\.html$/i.test(name)) inhalt = blattFreigeben(inhalt);
   const datei = new File([new Blob([inhalt], {type:'text/html'})], name, {type:'text/html'});
   try{
     if(navigator.canShare && navigator.canShare({files:[datei]})){
       try{ await navigator.share({files:[datei]}); }
-      catch(e){ /* iOS meldet auch bei Erfolg einen Abbruch – bewusst übergangen */ }
+      catch(e){
+        /* iOS meldet auch bei Erfolg einen Abbruch – darum entscheidet beim
+           Ausgeben der Nutzer (v1.190). Läuft schon ein Teilen, geschieht
+           nichts weiter. */
+        if(e && e.name === 'InvalidStateError') return 'laeuft';
+        if(mitAbbruch && e && e.name === 'AbortError') return 'abbruch';
+      }
     }else{
       const a = document.createElement('a');
       a.href = URL.createObjectURL(datei); a.download = name;
@@ -19550,7 +19618,17 @@ async function dateiTeilen(name, inhalt){
     return true;
   }catch(e){ toast('Übergabe nicht möglich'); return false; }
 }
+/* Ein zweiter Tipp, während das Teilen-Menü aufgeht, gab bis v1.189 ein
+   zweites Blatt aus (v1.190). */
+let ausgebenLaeuft = false;
 async function ausgeben(){
+  if(ausgebenLaeuft) return;
+  ausgebenLaeuft = true;
+  $$('#abAus, #barA').forEach(b => { b.disabled = true; });
+  try{ await ausgebenLauf(); }
+  finally{ ausgebenLaeuft = false; if(current === 'abschluss') renderAbschluss(); else renderBar(); }
+}
+async function ausgebenLauf(){
   const n = NW(offen), kAus = offen;
   if(n.art === 'medien' && unbestaetigtZahl(DAT.medien)){ toast('Erst die auffälligen Stände bestätigen'); return; }
   /* Der Dateiname ist fertig, wie er ist: Prüfmonat und der Kurzname des
@@ -19569,7 +19647,15 @@ async function ausgeben(){
     : zrVon(taktVon(n), stichtag).slice(2).replace(/-J$/, '');
   const name = `${teil} ${nameTeil(n.datei || n.label)}.html`;
   const html = exportHtml(offen);
-  if(!await dateiTeilen(name, html)) return;
+  const geteilt = await dateiTeilen(name, html, true);
+  if(!geteilt || geteilt === 'laeuft') return;
+  /* Teilen-Menü geschlossen (v1.190): nur nachfragen, nicht leeren. */
+  if(geteilt === 'abbruch' && !await new Promise(ok => {
+    frage('Wurde das Blatt verschickt?', 'Das Teilen-Menü wurde geschlossen. Erst nach „Ja“ gilt die Kontrolle als ausgegeben und wird geleert.',
+      'Ja, abschließen', () => ok(true));
+    $('#dlgNein').textContent = 'Nein, Kontrolle behalten';
+    $('#dlgNein').onclick = () => { $('#dlg').hidden = true; ok(false); };
+  })) return;
   /* Die Historie nimmt die Runde auf, bevor irgendetwas geleert wird: sie
      braucht auch die Stände des Vorquartals, wie sie VOR dieser Ausgabe
      standen – ein Zurückholen stellt sie wieder her. */
@@ -19596,7 +19682,10 @@ async function ausgeben(){
   delete DAT[offen];
   if(n.art === 'sprinkler') sprWocheMerken(d0);
   saveDat();
-  stack = []; go('home', false);
+  /* Zurück, wo die Kontrolle begann (v1.190): kam man über Anlagen › Typ,
+     steht danach wieder die Typseite da – mit dem neuen Stand. */
+  if(stack.includes('typseite') && typK === kAus){ stack = ['alle']; go('typseite', false); }
+  else { stack = []; go('home', false); }
   toast(histOk ? 'Blatt ausgegeben' : 'Ausgegeben – Blatt nicht in der App gespeichert');
   /* Nach Dauer und Utensilien fragen (v1.61), vorbelegt mit der gemessenen Zeit
      aus dem Tätigkeitsbuch. Der Sprinkler fragt schon je Kontrollgang. */
@@ -19651,6 +19740,7 @@ async function ableiten(pw, salzHex){
     const aus = $('#werkAus');
     aus.hidden = false; aus.value = 'wird berechnet …';
     aus.value = `const ZUGANG = { salz:'${salz}', pruef:'${await ableiten(pw, salz)}' };`;
+    $('#werkFeld').value = '';                  // das Passwort bleibt nicht stehen (v1.190)
     aus.select();
   };
 
