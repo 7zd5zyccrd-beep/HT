@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.187 08.10.2026 Bedienkonzept, Etappe 5 von 7: die Kontrolle. Unten nur
+         noch „Abschließen“: eine eigene Seite zeigt, was fehlt (ein Tipp
+         springt zur Karte), welche Mängel zu Aufgaben werden, nimmt die
+         Unterschrift (sie steht nicht mehr mitten in der Liste), zeigt das
+         Blatt und gibt erst dann aus – „Ausgeben und teilen“, auch aus der
+         Blattvorschau. Vorher wurde aus der Leiste sofort geteilt. In den
+         Karten tragen „Verlauf“ und „Grundriss“ ihr Wort; die Pfeile
+         erscheinen nur über „Reihenfolge ändern“ (Kontrolle, Ablesung,
+         Rundgang). „Zustand zurücksetzen“ statt des zweiten Tipps. Der
+         Sprinkler-Gang heißt „Gang fertig“. Im Grundriss gibt es neben dem
+         langen Druck „Andere Marke wählen“.
   v1.186 08.10.2026 Bedienkonzept, Etappe 4 von 7: die Aufgabe. Oben das Tun
          (Kopf, Wetter, offene Vorbereitung, Infos und Aktionen, Erledigen),
          darunter „Angaben“ als Zeilen wie in den iPhone-Einstellungen –
@@ -2528,6 +2539,13 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
   -webkit-appearance:none;appearance:none;
 }
 .pos .pfeile button[disabled]{opacity:.4}
+/* Werkzeuge mit Wort (v1.187): „Grundriss“ statt des Symbols allein. */
+.pos .pfeile button.mitWort{width:auto;padding:0 10px;display:flex;align-items:center;gap:5px;font-size:14px}
+.pos .pfeile button.mitWort .ortIcon{width:18px;height:18px}
+.verlaufKnopf svg{width:15px;height:15px}
+.name .verlaufKnopf{font-weight:400}
+.reihenKnopf{margin:4px 0 8px}
+.linkKnopf{display:block;background:none;border:0;padding:6px 0 0;color:var(--ink-soft);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer}
 /* Das Grundriss-Symbol (v1.117) mittig im Knopf; vor einem Wort („Grundriss“)
    auf dessen Zeile. */
 button > .ortIcon:only-child{display:block;margin:auto}
@@ -3205,7 +3223,7 @@ body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-ar
   -webkit-appearance:none;appearance:none;
   /* So groß wie die übrigen Symbolknöpfe (v1.118); der negative Rand hält
      die Titelzeile der Karte trotzdem niedrig. */
-  flex:0 0 auto;width:var(--feld-h);height:var(--feld-h);margin:-8px 0 0 0;padding:0;
+  flex:0 0 auto;height:var(--feld-h);margin:-8px 0 0 0;padding:0 10px;gap:5px;font:inherit;font-size:14px;
   border:1px solid var(--field-border);border-radius:12px;background:var(--surface);color:var(--ink);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
@@ -3606,6 +3624,9 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       </div>
     </section>
 
+    <!-- Abschließen einer Kontrolle (v1.187): prüfen, unterschreiben, ansehen, ausgeben -->
+    <section class="view" id="view-abschluss"><div id="abschlussBox"></div><div id="abschlussSig"></div><div id="abschlussEnde"></div></section>
+
     <!-- Grundriss -->
     <section class="view" id="view-plan">
       <div class="planKopf">
@@ -3626,6 +3647,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
             <button class="btn ghost klein" id="btnSchnittFertig" hidden>Fertig</button>
             <button class="btn ghost klein" id="btnPlanRicht" hidden>Abbrechen</button>
             <button class="btn ghost klein" id="btnPlanZieh">Verschieben</button>
+            <button class="btn ghost klein" id="btnPlanAndere" hidden>Andere Marke wählen</button>
           </div>
         </div>
         <div id="planRegler" role="slider" tabindex="0" aria-label="Grundriss"
@@ -3741,7 +3763,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.186';
+const VERSION = 'v1.187';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4975,7 +4997,7 @@ function ring(n, takt){
 }
 
 /* ---------- Ansichten ---------- */
-const TITEL = {home:'Heute', alle:'Anlagen', mehr:'Mehr', suche:'Suche', rundgang:'Rundgang', aufgabe:'Aufgabe', ablaeufe:'Abläufe', ablaufplan:'Ablauf', stufe:'Schritt', erledigt:'Erledigt', stoerungen:'Störungen', nachweis:'Kontrolle', blatt:'Blatt',
+const TITEL = {abschluss:'Abschließen', home:'Heute', alle:'Anlagen', mehr:'Mehr', suche:'Suche', rundgang:'Rundgang', aufgabe:'Aufgabe', ablaeufe:'Abläufe', ablaufplan:'Ablauf', stufe:'Schritt', erledigt:'Erledigt', stoerungen:'Störungen', nachweis:'Kontrolle', blatt:'Blatt',
                historie:'Ausgegebene Blätter', histnw:'Ausgegebene Blätter', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregel:'Auslöser',
@@ -5000,7 +5022,9 @@ function go(name, push = true){
   /* Entpackte Pläne nur so lange halten, wie die Grundrissansicht offen ist; in
      die Blattvorschau und zurück bleibt der Vorrat (v1.60). */
   if(current === 'plan' && name !== 'plan' && name !== 'blatt') planVorratFrei();
+  if(current === 'plan' && name !== 'plan') planWaehlen = false;
   if(push && current !== name) stack.push(current);
+  if(current !== name && !['plan', 'blatt', 'verlauf'].includes(name)) reihenModus = false;
   current = name;
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   $('#titel').textContent = name === 'nachweis' && offen ? NW(offen).label
@@ -5049,6 +5073,8 @@ function go(name, push = true){
   if(name === 'home')     renderHome();
   if(name === 'mehr')     renderMehr();
   if(name === 'typseite') renderTypSeite();
+  if(name === 'abschluss') renderAbschluss();
+  if(name === 'nachweis') sigZurueck();
   if(name === 'suche')    sucheOeffnen();
   if(name === 'alle')     renderAlle();
   if(name === 'aufgabe')  renderAufgabe();
@@ -6316,8 +6342,9 @@ function renderRundgang(){
 
   const pfeile = (w, mitPfeilen) => {
     const k = offene.indexOf(w);
+    mitPfeilen = mitPfeilen && reihenModus;
     return `<span class="pfeile">
-        <button type="button" data-ort="1" aria-label="Grundriss">${ORT_SVG}</button>${mitPfeilen ? `
+        <button type="button" data-ort="1" class="mitWort">${ORT_SVG}<span>Grundriss</span></button>${mitPfeilen ? `
         <button type="button" data-hoch="1" aria-label="nach oben"${k <= 0 ? ' disabled' : ''}>↑</button>
         <button type="button" data-runter="1" aria-label="nach unten"${k < 0 || k >= offene.length - 1 ? ' disabled' : ''}>↓</button>` : ''}
       </span>`;
@@ -6373,7 +6400,8 @@ function renderRundgang(){
       ${mittelZeile(`${o.k}|${o.id}`, o.id)}
     </div>`;
   };
-  $('#rgListe').innerHTML = [...fertig, ...offene].map(karte).join('');
+  $('#rgListe').innerHTML = [...fertig, ...offene].map(karte).join('') + reihenKnopfHtml('rg');
+  reihenKnopfVerdrahten(renderRundgang, 'rg');
 
   /* Am Ende: je Nachweis sein Stand und der Weg zur Ausgabe. */
   const iAus = info('Ausgegeben wird je Nachweis, mit Unterschrift, wo sie verlangt ist.', 'margin:-4px 0 8px');
@@ -10701,7 +10729,7 @@ function renderFremd(){
           ${nameMitVerlauf(esc(a))}${stoerHinweis(offen + '|' + a)}${kenn ? `<div class="muted small" style="margin:-2px 0 6px">${esc(kenn)}</div>` : ''}
           <div class="kopf">
             <input type="date" data-feld="datum" value="${esc(z.datum || '')}" aria-label="Prüfdatum">
-            <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">${ORT_SVG}</button></span>
+            <span class="pfeile"><button type="button" data-ort="1" class="mitWort">${ORT_SVG}<span>Grundriss</span></button></span>
           </div>
           <div class="muted small">${esc(fristText(f))}</div>
           <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem || '')}">
@@ -10749,7 +10777,7 @@ function akkuKarte(a, i, k){
     <div class="kopf" style="margin:0">
       <span class="muted small">Getauscht am</span>
       <input type="date" class="dat" data-feld="datum" value="${esc(z.akkuDatum || '')}" aria-label="Tauschdatum">
-      <span class="pfeile"><button type="button" data-ort="1" aria-label="Grundriss">${ORT_SVG}</button></span>
+      <span class="pfeile"><button type="button" data-ort="1" class="mitWort">${ORT_SVG}<span>Grundriss</span></button></span>
     </div>
     <div class="muted small stand" style="margin-top:8px">${esc(akkuText(z, j, f))}</div>
   </div>`;
@@ -11006,7 +11034,8 @@ function renderNachweis(){
   const nwK = offen;
   /* Bei Fremdprüfungen steht das Material in deren eigener Karte (v1.101). */
   if(n.art !== 'fremd') matKarte($('#nwMat'), o => o.nw === nwK);
-  $('#sigBlock').hidden = n.art === 'medien' || n.art === 'fremd';
+  /* Unterschrieben wird seit v1.187 unter „Abschließen“. */
+  $('#sigBlock').hidden = true;
   if(n.art === 'fremd'){     renderFremd();     return; }
   if(n.art === 'medien'){    renderMedien();    return; }
   if(n.art === 'sprinkler'){ renderSprinkler(); renderSig(); return; }
@@ -11049,7 +11078,7 @@ function renderNachweis(){
        zählt, die Pfeile. In der zugeklappten Karte steht davon nichts – dort
        geht es ums Nachsehen, nicht ums Ändern. */
     const pfeile = `<span class="pfeile">
-          <button type="button" data-ort="1" aria-label="Grundriss">${ORT_SVG}</button>${n.sortierbar && !z.n ? `
+          <button type="button" data-ort="1" class="mitWort">${ORT_SVG}<span>Grundriss</span></button>${n.sortierbar && !z.n && reihenModus ? `
           <button type="button" data-hoch="1" aria-label="nach oben"${nachbarOffen(i, -1) < 0 ? ' disabled' : ''}>↑</button>
           <button type="button" data-runter="1" aria-label="nach unten"${nachbarOffen(i, 1) < 0 ? ' disabled' : ''}>↓</button>` : ''}
         </span>`;
@@ -11075,6 +11104,7 @@ function renderNachweis(){
       </div>
       <div class="seg">${n.status.map(s =>
         `<button type="button" data-status="${esc(s)}" aria-pressed="${z.status === s}">${esc(s)}</button>`).join('')}</div>
+      ${z.status ? `<button type="button" class="linkKnopf" data-status="${esc(z.status)}">Zustand zurücksetzen</button>` : ''}
       <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem)}">
       ${vorschlagHtml(n, z.bem)}
       ${mittelZeile(offen + '|' + a, a)}
@@ -11126,7 +11156,7 @@ function renderNachweis(){
     box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
     box.querySelector('[data-feld="bem"]').oninput    = e => { z.bem   = e.target.value; saveDat(); vorschlagZeigen(box, n, z.bem); };
     vorschlagVerdrahten(box, n, z);
-    if(n.sortierbar && !z.n){
+    if(n.sortierbar && !z.n && reihenModus){
       const tausch = j => {
         if(j < 0 || j >= t.anlagen.length) return;
         const top = box.getBoundingClientRect().top;
@@ -11138,6 +11168,7 @@ function renderNachweis(){
       box.querySelector('[data-runter]').onclick = () => tausch(nachbarOffen(i, 1));
     }
   });
+  if(n.sortierbar){ $('#nwListe').insertAdjacentHTML('beforeend', reihenKnopfHtml()); reihenKnopfVerdrahten(renderNachweis); }
   renderSig();
   /* Erst jetzt springen: die Unterschrift unter der Liste trägt zur Höhe des
      Dokuments bei, ohne sie käme der Bildlauf womöglich nicht weit genug. */
@@ -11190,9 +11221,10 @@ function renderMedien(){
         <input inputmode="decimal" data-stand="1" value="${esc(d.stand[z.key] || '')}" placeholder="Zählerstand">
         <span class="muted small" style="flex:0 0 auto">${esc(z.einheit)}</span>
         <span class="pfeile">
-          <button type="button" data-ort="1" aria-label="Grundriss">${ORT_SVG}</button>
+          <button type="button" data-ort="1" class="mitWort">${ORT_SVG}<span>Grundriss</span></button>
+${reihenModus ? `
           <button type="button" data-hoch="1" aria-label="nach oben"${i === 0 ? ' disabled' : ''}>↑</button>
-          <button type="button" data-runter="1" aria-label="nach unten"${i === liste.length - 1 ? ' disabled' : ''}>↓</button>
+          <button type="button" data-runter="1" aria-label="nach unten"${i === liste.length - 1 ? ' disabled' : ''}>↓</button>` : ''}
         </span>
       </div>
       <div class="muted small" style="margin-top:6px">${
@@ -11207,7 +11239,8 @@ function renderMedien(){
       <input type="date" id="medDatum" class="schmal" value="${esc(d.datum)}"></label>
     <div class="eyebrow">Ablesereihenfolge</div>`;
   $('#nwListe').innerHTML = kopf + liste.map((z, i) =>
-    steht(z) && !offenKarten.has(z.key) ? kompaktHtml(z, i) : vollHtml(z, i)).join('');
+    steht(z) && !offenKarten.has(z.key) ? kompaktHtml(z, i) : vollHtml(z, i)).join('') + reihenKnopfHtml();
+  reihenKnopfVerdrahten(renderMedien);
 
   /* Auf- und Zuklappen per Neuaufbau; die Karte bleibt an ihrem Platz auf dem
      Schirm. */
@@ -11257,8 +11290,10 @@ function renderMedien(){
       folgeSpeichern(neu); renderMedien();
       lageHalten(top, () => $(`#nwListe .pos[data-i="${j}"]`));
     };
-    box.querySelector('[data-hoch]').onclick   = () => tausch(i - 1);
-    box.querySelector('[data-runter]').onclick = () => tausch(i + 1);
+    if(reihenModus){
+      box.querySelector('[data-hoch]').onclick   = () => tausch(i - 1);
+      box.querySelector('[data-runter]').onclick = () => tausch(i + 1);
+    }
     box.querySelector('[data-ort]').onclick = () => verorten(z.key, titel(z));
     box.querySelector('[data-verlauf]').onclick = e => {
       e.stopPropagation();
@@ -11315,7 +11350,7 @@ function gangKarte(art, punkte, g, idx){
       </div>`;
     }).join('')}
     <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
-      <button class="btn primary klein" data-abschluss="1"${voll ? '' : ' disabled'}${g.zu && voll ? ' hidden' : ''}>Abschließen</button>
+      <button class="btn primary klein" data-abschluss="1"${voll ? '' : ' disabled'}${g.zu && voll ? ' hidden' : ''}>Gang fertig</button>
       <button class="btn danger klein" data-weg="1">Löschen</button>
     </div>
   </div>`;
@@ -11437,11 +11472,13 @@ function renderSig(){
 $('#btnSigStart').onclick = () => {
   if(offen && DAT[offen] && DAT[offen].signatur){ DAT[offen].signatur = null; saveDat(); renderBar(); }
   sigAktiv = true; gezeichnet = false; renderSig();
+  if(current === 'abschluss'){ const x = $('#abAus'); if(x) x.disabled = true; }
 };
 $('#btnSigOk').onclick = () => {
   if(!gezeichnet){ toast('Noch nichts gezeichnet'); return; }
   DAT[offen].signatur = $('#sigpad').toDataURL('image/png');
-  saveDat(); sigAktiv = false; renderSig(); renderBar(); toast('Unterschrift übernommen');
+  saveDat(); sigAktiv = false; renderSig(); renderBar(); toast('Unterschrift gespeichert');
+  if(current === 'abschluss') renderAbschluss();
 };
 function initPad(){
   const cv = $('#sigpad'); if(!cv || drawing) return;
@@ -16572,6 +16609,7 @@ async function planZeigen(id, ziel){
 }
 /* Der Streifen über dem Plan: was gerade gilt und welche Knöpfe dazu passen. */
 const planGesetzt = () => !!planZiel && ortPlaene(planZiel.key).includes(planAktuell);
+let planWaehlen = false;
 function planHinweisen(ausRegler){
   const zeigen = ausRegler ? streifenLassen : streifenZeigen;
   /* Beginnt oder endet das Ausrichten, erscheint oder verschwindet der Regler
@@ -16583,6 +16621,7 @@ function planHinweisen(ausRegler){
   planWahlKnopf();
   const richt = $('#btnPlanRicht'), neu = $('#btnPlanRichtNeu');
   richt.hidden = neu.hidden = true;
+  $('#btnPlanAndere').hidden = true;
   ['#btnPlanSchnitt', '#btnSchnittGem', '#btnSchnittOhne', '#btnSchnittFertig'].forEach(k => { $(k).hidden = true; });
   $('#planStreifen').classList.toggle('umbruch', planSchnitt && !GROSSER_SCHIRM());
   if(planSchnitt){
@@ -16618,12 +16657,17 @@ function planHinweisen(ausRegler){
   }
   ob.hidden = au.hidden = true;
   $('#planHinweis').textContent =
-      planZiehen    ? 'Auf die neue Stelle tippen.'
+      planWaehlen   ? 'Andere Marke antippen.'
+    : planZiehen    ? 'Auf die neue Stelle tippen.'
     : planGesetzt() ? 'Zum Verschieben die Marke ziehen.'
                     : 'Auf die Stelle tippen, an der sich das Objekt befindet.';
   kn.hidden = true;                            // verschoben wird seit v1.82 durch Ziehen
+  /* Nachbarmarken derselben Art lassen sich wählen (v1.187). */
+  const andere = $('#btnPlanAndere');
+  andere.hidden = !planAktuell || !andereOrte(planAktuell, planZiel.key).length;
+  andere.textContent = planWaehlen ? 'Abbrechen' : 'Andere Marke wählen';
   /* Solange nichts steht, wird der Hinweis gebraucht – dann bleibt er. */
-  zeigen(!planGesetzt() || planZiehen);
+  zeigen(!planGesetzt() || planZiehen || planWaehlen || !andere.hidden);
 }
 /* Knopf oben rechts (v1.95): nur in der Übersicht, nicht beim Setzen einer
    Marke, beim Ausrichten oder Zuschneiden. */
@@ -16714,6 +16758,7 @@ $('#btnPlanObjekte').onclick = () => {
 /* Verschoben wird über den Knopf. Der lange Druck ist entfallen – er stritt
    sich mit Safaris eigenem Menü und mit dem Zoomen, und der Knopf sagt
    ohnehin deutlicher, was er tut. */
+$('#btnPlanAndere').onclick = () => { planWaehlen = !planWaehlen; planHinweisen(); };
 $('#btnPlanZieh').onclick = () => {
   planZiehen = true; markenZeichnen(planAktuell, true); planHinweisen();
 };
@@ -17051,6 +17096,17 @@ function zugBeginnen(e, x, y){
      unter den Finger, und das Fadenkreuz sitzt auf ihrer Mitte. */
   const q = z.el.getBoundingClientRect(), mx = q.left + q.width / 2, my = q.top + q.height / 2;
   zug = Object.assign(z, {x0:x, y0:y, ox:mx - x, oy:my - y, laeuft:false, id:e.pointerId});
+  /* „Andere Marke wählen“ (v1.187): der sichtbare Weg zum langen Druck – ein
+     Tipp auf die Nachbarmarke macht sie zur gewählten. */
+  if(z.fremd && planWaehlen){
+    planWaehlen = false;
+    planZiel = {key:z.fremd, titel:ortName(z.fremd)};
+    $('#planName').textContent = planZiel.titel;
+    planZiehen = false; tippWeg();
+    markenZeichnen(planAktuell, false); planHinweisen();
+    toast('Gewählt: ' + planZiel.titel);
+    return true;
+  }
   if(z.fremd){
     zug.uhr = setTimeout(() => { if(zug === z && z.fremd) markeUmschalten(z); }, UMSCHALT_MS);
     return true;
@@ -17575,16 +17631,13 @@ function barInhalt(){
       voll = medienVoll(d);
       const l0 = stellen(), off0 = l0.filter(z => String(d.stand[z.key] ?? '').trim() === '').length;
       const unb0 = unbestaetigtZahl(d);
+      void voll;
       b.innerHTML =
         `<p class="muted small barHinweis">${
            !d.datum ? 'Ablesedatum fehlt' : off0 ? `${off0} von ${l0.length} Zählern offen`
            : unb0 ? `${unb0} ${unb0 === 1 ? 'auffälliger Stand' : 'auffällige Stände'} nicht bestätigt` : 'Vollständig'}</p>
-         <div class="row barKnoepfe">
-           <button class="btn primary" id="barA"${voll ? '' : ' disabled'}>Nachweis ausgeben</button>
-           <button class="btn" id="barB">Blatt ansehen</button>
-         </div>`;
-      $('#barA').onclick = ausgeben;
-      $('#barB').onclick = () => { blattZeigen(); go('blatt'); };
+         <button class="btn primary" id="barA">Abschließen</button>`;
+      $('#barA').onclick = () => go('abschluss');
       return;
     }
     if(NW(offen).art === 'sprinkler'){
@@ -17597,15 +17650,12 @@ function barInhalt(){
       voll = !fehlt;
       hinweis = fehlt ? fehlt + (fehlt === 1 ? ' Objekt' : ' Objekte') + ' ohne Zustand' : '';
     }
-    const bereit = voll && !!d.signatur;
+    /* Seit v1.187 ein einziger Weg zum Ende: „Abschließen“ zeigt, was fehlt,
+       nimmt die Unterschrift, zeigt das Blatt und gibt es aus. */
     b.innerHTML =
       `<p class="muted small barHinweis">${hinweis || (d.signatur ? 'Vollständig' : 'Unterschrift fehlt')}</p>
-       <div class="row barKnoepfe">
-         <button class="btn primary" id="barA"${bereit ? '' : ' disabled'}>Nachweis ausgeben</button>
-         <button class="btn" id="barB">Blatt ansehen</button>
-       </div>`;
-    $('#barA').onclick = ausgeben;
-    $('#barB').onclick = () => { blattZeigen(); go('blatt'); };
+       <button class="btn primary" id="barA">Abschließen</button>`;
+    $('#barA').onclick = () => go('abschluss');
   }else if(current === 'arbeit'){
     b.innerHTML = `<button class="btn" id="barA">Blatt ansehen</button>`;
     $('#barA').onclick = () => { if(arbLetzt) arbBlattZeigen(arbLetzt.z, arbLetzt.liste); };
@@ -17615,6 +17665,11 @@ function barInhalt(){
     if(blattDatei){
       b.innerHTML = `<button class="btn primary" id="barA">Teilen</button>`;
       $('#barA').onclick = () => dateiTeilen(blattDatei.name, blattDatei.html);
+    }else if(offen && NW(offen) && NW(offen).art !== 'fremd'){
+      /* Vorschau einer Kontrolle (v1.187): von hier aus auch ausgeben. */
+      const st = abschlussStand(offen);
+      b.innerHTML = `<button class="btn primary" id="barA"${st.bereit ? '' : ' disabled'}>Ausgeben und teilen</button>`;
+      $('#barA').onclick = ausgeben;
     }else{
       /* Zurück zur Eingabe geht über den Pfeil oben links (v1.38). */
       b.innerHTML = '';
@@ -18727,11 +18782,83 @@ function renderStoerungen(){
     verlaufOeffnen(o.k, o.anlage, o.anlage);
   });
 }
-/* Titelzeile einer Karte mit dem Uhrsymbol rechts. Der Text kommt fertig
+/* ---------- Abschließen (v1.187, Etappe 5) ------------------------------------
+   Ein Weg zum Ende jeder Kontrolle: was noch fehlt (mit Sprung zur Karte),
+   welche Mängel zu Aufgaben werden, die Unterschrift, das Blatt – dann erst
+   „Ausgeben und teilen“. Vorher wurde aus der Leiste sofort geteilt, und die
+   Unterschrift stand mitten in der Liste. */
+function abschlussStand(k){
+  const n = NW(k), t = teilCfg(k), d = datenFuer(k);
+  const fehlt = [], maengel = [];
+  let hinweis = '', voll = false;
+  if(n.art === 'medien'){
+    const l = stellen(), namen = medienNamen();
+    l.forEach(z => { if(String(d.stand[z.key] ?? '').trim() === '') fehlt.push({id:z.key, text:`${z.partei} · ${namen[z.key] || z.medium}`}); });
+    const unb = unbestaetigtZahl(d);
+    voll = medienVoll(d);
+    hinweis = !d.datum ? 'Das Ablesedatum fehlt.' : fehlt.length ? `${fehlt.length} von ${l.length} Zählern sind noch nicht abgelesen.`
+      : unb ? `${unb} ${unb === 1 ? 'auffälliger Stand ist' : 'auffällige Stände sind'} nicht bestätigt.` : 'Alle Zähler sind abgelesen.';
+    return {n, fehlt, maengel, hinweis, voll, sig:false, bereit:voll};
+  }
+  if(n.art === 'sprinkler'){
+    voll = sprinklerVoll(d);
+    hinweis = !d.woch.length ? 'Noch kein wöchentlicher Kontrollgang.' : !d.mon.length ? 'Die monatliche Kontrolle fehlt.'
+      : !voll ? 'Noch nicht alle Punkte erfasst.' : 'Alle Kontrollgänge sind vollständig.';
+    [['woch', t.woch], ['mon', t.mon]].forEach(([art, punkte]) => (d[art] || []).forEach(g => punkte.forEach((pk, i) => {
+      if((g.w || {})[i] === 'mangel' && !maengel.some(m => m.text === pk)) maengel.push({text:pk});
+    })));
+  }else{
+    t.anlagen.forEach(a => {
+      const z = d.zeilen[a] || {};
+      if(!z.status) fehlt.push({id:a, text:a});
+      else if(istMangel(n, z.status)) maengel.push({text:a + (z.bem ? ' · ' + z.bem : '')});
+    });
+    voll = !fehlt.length;
+    hinweis = fehlt.length ? `${fehlt.length} ${fehlt.length === 1 ? 'Objekt hat' : 'Objekte haben'} noch keinen Zustand.` : 'Alle Objekte sind geprüft.';
+  }
+  return {n, fehlt, maengel, hinweis, voll, sig:true, bereit:voll && !!d.signatur};
+}
+function renderAbschluss(){
+  const box = $('#abschlussBox'), k = offen, st = k && NW(k) ? abschlussStand(k) : null;
+  if(!st){ box.innerHTML = ''; return; }
+  $('#titel').textContent = 'Abschließen';
+  box.innerHTML = `<div class="eyebrow" style="margin-top:0">${esc(st.n.label)}</div>
+    <div class="card"><p style="margin:0">${st.voll ? '✓ ' : ''}${esc(st.hinweis)}</p>
+      ${st.fehlt.slice(0, 12).map(f => `<button class="btn eintrag" data-fehlt="${esc(f.id)}" style="margin-top:8px"><span>${esc(f.text)}</span></button>`).join('')}
+      ${st.fehlt.length > 12 ? `<p class="muted small" style="margin:8px 0 0">und ${st.fehlt.length - 12} weitere</p>` : ''}</div>`
+    + (st.maengel.length ? `<div class="card"><div class="eyebrow" style="margin:0 0 4px">Wird zur Aufgabe</div>${
+        st.maengel.map(m => `<p class="small" style="margin:4px 0 0">${esc(m.text)}</p>`).join('')}</div>` : '');
+  box.querySelectorAll('[data-fehlt]').forEach(b => b.onclick = () => { zurueck(); zurKarte({k, id:b.dataset.fehlt}); });
+  /* Die Unterschrift wandert für diese Seite hierher und danach zurück. */
+  const sig = $('#sigBlock');
+  if(st.sig){ $('#abschlussSig').appendChild(sig); sig.hidden = false; renderSig(); }
+  $('#abschlussEnde').innerHTML = `<button class="btn" id="abBlatt" style="margin-top:16px">Blatt ansehen</button>
+    <button class="btn primary" id="abAus" style="margin-top:10px"${st.bereit ? '' : ' disabled'}>Ausgeben und teilen</button>
+    ${st.voll && st.sig && !datenFuer(k).signatur ? '<p class="muted small" style="margin:8px 0 0;text-align:center">Erst unterschreiben, dann ausgeben.</p>' : ''}`;
+  $('#abBlatt').onclick = () => { blattZeigen(); go('blatt'); };
+  $('#abAus').onclick = ausgeben;
+}
+/* Zurück in die Kontrolle: die Unterschrift steht dort wieder (ausgeblendet). */
+function sigZurueck(){
+  const sig = $('#sigBlock'), heim = $('#view-nachweis');
+  if(sig && heim && sig.parentNode !== heim) heim.appendChild(sig);
+}
+
+/* Reihenfolge ändern (v1.187): die Pfeile stehen nicht mehr in jeder Karte,
+   sondern nur, solange man die Reihenfolge ändert. Gilt für Kontrolle,
+   Ablesung und Rundgang; beim Verlassen der Seite endet der Modus. */
+let reihenModus = false;
+const reihenKnopfHtml = wo => `<button type="button" class="btn ghost klein reihenKnopf" data-reihe="${wo || 'nw'}">${
+  reihenModus ? 'Fertig mit der Reihenfolge' : 'Reihenfolge ändern'}</button>`;
+function reihenKnopfVerdrahten(neu, wo){
+  const b = document.querySelector(`[data-reihe="${wo || 'nw'}"]`);
+  if(b) b.onclick = () => { reihenModus = !reihenModus; const y = bildY(); neu(); bildNach(y); };
+}
+/* Titelzeile einer Karte mit „Verlauf“ rechts. Der Text kommt fertig
    maskiert herein. */
 const nameMitVerlauf = (html, zusatz = '') =>
   `<div class="name mitVerlauf${zusatz}"><span>${html}</span>`
-  + `<button type="button" class="verlaufKnopf" data-verlauf="1" aria-label="Verlauf">${UHR_SVG}</button></div>`;
+  + `<button type="button" class="verlaufKnopf" data-verlauf="1">${UHR_SVG}<span>Verlauf</span></button></div>`;
 
 /* ---------- Plausibilitätsprüfung der Zählerstände -------------------------
    Beim Verlassen des Zählerfeldes prüft die App den Stand. Auffällig ist:
