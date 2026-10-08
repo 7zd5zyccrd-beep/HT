@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.177 08.10.2026 Folgen im Ablauf (Jean): „in X Tagen/Wochen/Monaten“
+         landet immer auf einem Arbeitstag – fällt der Tag auf ein
+         Wochenende, einen Feiertag oder eine Abwesenheit, wird die Folge am
+         nächsten Arbeitstag danach fällig. „vor Abholung“ rückt weiter auf
+         den Arbeitstag davor.
   v1.176 08.10.2026 Aufgabe im Ablauf (Jean): unter dem Ergebnis steht
          hinter dem Datum der Folge jetzt auch die Regel, z. B. „Fr 09.10.
          (1 Tag vor der nächsten Abholung, Restabfall)“ – das Datum war als
@@ -3538,7 +3543,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.176';
+const VERSION = 'v1.177';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6324,9 +6329,18 @@ function abholungVor(art, vor, basis){
   const w = wirksamerTag(alsDatum(tagPlus(t.tag, -n)), alsDatum(basis)).tag;
   return w ? isoTag(w) : basis;
 }
+/* „in X Tagen/Wochen/Monaten“ landet auf einem Arbeitstag (v1.177, Jean):
+   Wochenende, Feiertag oder Abwesenheit schieben auf den nächsten danach –
+   eine Prüfung muss nicht vorgezogen werden. „sofort“ bleibt der Tag selbst. */
+function arbeitstagAb(iso){
+  const d = alsDatum(iso);
+  for(let i = 0; i < 400 && freiGrund(d); i++) d.setDate(d.getDate() + 1);
+  return isoTag(d);
+}
 const zielDatum = (basis, z) => datumWahl(z) ? basis
   : vorAbholung(z) ? abholungVor(z.abfall, z.vor, basis.slice(0, 10)) || basis
-  : +z.monate ? terminPlus(basis, Math.round(+z.monate), 'monat') : tagPlus(basis, Math.max(0, Math.round(+z.tage || 0)));
+  : +z.monate ? arbeitstagAb(terminPlus(basis, Math.round(+z.monate), 'monat'))
+  : +z.tage > 0 ? arbeitstagAb(tagPlus(basis, Math.round(+z.tage))) : tagPlus(basis, 0);
 const datumKurz = iso => iso === heute() ? 'heute' : iso === tagPlus(heute(), 1) ? 'morgen' : dText(iso);
 const stufeNeu = titel => ({id:neueId(), titel:titel || '', wichtig:'normal', notiz:'', schritte:[], ergebnisse:[]});
 /* „in Ordnung → 1 Zustand prüfen (in 90 Tagen)“ – für Übersicht und Aufgabe. */

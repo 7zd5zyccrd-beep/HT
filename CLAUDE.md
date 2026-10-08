@@ -329,6 +329,9 @@ steht.
   v1.176) – Jean hielt das Datum sonst für fest. Wiederholen „alle X
   Wochen ab Abschluss“ baut man mit Folgen zurück auf die erste Aufgabe
   („nicht voll → Füllstand prüfen in 2 Wochen“), keine eigene Funktion (Jean).
+  „in X Tagen/Monaten“ → `arbeitstagAb` (nächster Arbeitstag danach, über
+  `freiGrund`; v1.177, Jean), „sofort“ bleibt der Tag, „vor Abholung“ geht
+  auf den Arbeitstag davor.
 - Auslöser (v1.174, Jean): die Wetterregeln heißen sichtbar „Auslöser“,
   Liste `renderWetterregeln` in `#ausloeserBox` auf Übersicht › Abläufe (auf
   der Wetterseite nur ein Verweis). Intern weiter `CFG.wetterEigen`,
