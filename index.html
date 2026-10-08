@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.203 08.10.2026 Eine eintägige Abwesenheit steht auf Heute nur noch mit
+                    einem Datum („am Mo 12.10.“), mehrtägige als „Mo 12.10. –
+                    Fr 16.10.“ (Jean). Fenster: „Abbrechen“ in Auswahlen
+                    überall leise, Feldnamen statt Versalien im Dauerfenster,
+                    „Arbeitsmittel“ und „Neuer Eintrag“ als Titel, „Nein,
+                    behalten“ passt in den Knopf. Blätter: kein leerer Kasten
+                    „Checkliste“, bei Prüfungen der Firma keine leere Spalte
+                    „Zustand“, „Objekt“ statt „Anlage“, bei der Ablesung der
+                    Name unten rechts wie bei den Kontrollen.
   v1.202 08.10.2026 Gleichheit auf den Unterseiten (Jean). Überschriften stehen
                     über ihrem Kasten statt darin (Kontrolle, Objektseite,
                     Akkus, Arbeitsnachweis, Aufgabe, Termin …); der Typ im
@@ -4000,7 +4009,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.202';
+const VERSION = 'v1.203';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6309,7 +6318,7 @@ function abwesenheitsKarte(liste){
     }
   const zeilen = (titel, l) => l.length
     ? `<p class="muted small" style="margin:8px 0 2px">${titel}</p><p style="margin:0">${l.map(esc).join('<br>')}</p>` : '';
-  return `<div class="eyebrow">${esc(ab.text || 'Abwesenheit')} · ${esc(dText(ab.von))} bis ${esc(dText(ab.bis))}</div><div class="card">
+  return `<div class="eyebrow">${esc(ab.text || 'Abwesenheit')} · ${esc(spanneText(ab.von, ab.bis))}</div><div class="card">
     ${zeilen('Vorher erledigen', vorher)}${zeilen('Vertretung klären', vertretung)}
     ${!vorher.length && !vertretung.length ? '<p class="muted small" style="margin:0">Nichts, was vorher erledigt werden muss.</p>' : ''}
   </div>`;
@@ -8724,7 +8733,7 @@ function renderAufgabe(){
   if($('#erlDauer')) dauerWahl($('#erlDauer'), null, true, w => { erlDauer = w; });
   if($('#aufgTaet')) $('#aufgTaet').onclick = () => { taetAktiv = {key:tKeyA, name:a.titel || 'Aufgabe'}; go('taet'); };
   if($('#aufgEigen')) $('#aufgEigen').onclick = () => {
-    frage('Werkzeug und Material', '', 'Speichern', () => {
+    frage('Arbeitsmittel', '', 'Speichern', () => {
       ut.uebernehmen(a, true);
       if(!a.utensilien.length) delete a.utensilien;
       if(!a.material.length) delete a.material;
@@ -9471,8 +9480,9 @@ function taetFragen(o){
   $('#dlgNein').textContent = 'Später';
   const box = $('#dlgListe');
   box.hidden = false;
-  box.innerHTML = `<div class="eyebrow" style="margin:14px 0 8px">Dauer</div><div id="taetDauer"></div>
-    <div class="eyebrow" style="margin:16px 0 8px">Arbeitsmittel</div><div id="taetUt"></div>
+  /* Teile als Feldnamen wie in den übrigen Fenstern (v1.203). */
+  box.innerHTML = `<div class="field" style="margin:14px 0 0"><span>Dauer</span></div><div id="taetDauer"></div>
+    <div class="field" style="margin:16px 0 0"><span>Arbeitsmittel</span></div><div id="taetUt"></div>
     <label class="haken" style="margin:16px 0 0"><input type="checkbox" id="taetWieder" checked>
       <span>Beim nächsten Mal wieder fragen</span></label>`;
   wert = dauerWahl($('#taetDauer'), wert, false, w => { wert = w; }) || wert;
@@ -10550,6 +10560,14 @@ function vorschlaegeKarte(hinweise, gel, liste){
   return `<div class="eyebrow">Vorschläge${
     zeilen.length ? ` <span class="summe">· ${zeilen.length}</span>` : ''}</div><div class="card vorschlaege">${zeilen.join('')}${vorz}</div>`;
 }
+/* Zeitraum einer Abwesenheit (v1.203, Jean): ein einzelner Tag steht nur
+   einmal da („am Mo 12.10.“), sonst „Mo 12.10. – Fr 16.10.“. Das Jahr nur,
+   wenn es nicht das laufende ist. */
+function spanneText(von, bis){
+  const t = iso => { const d = alsDatum(iso); return `${WOCHENTAG[d.getDay()]} ${d.getFullYear() === new Date().getFullYear() ? ttmm(d) : dText(iso)}`; };
+  if(!von) return '';
+  return !bis || bis === von ? 'am ' + t(von) : `${t(von)} – ${t(bis)}`;
+}
 /* Schmale Zeilen oben auf Heute (v1.188) statt großer Karten. */
 /* Seit v1.199 (Jean) gebaut wie jeder Eintrag der Liste: oben der Titel,
    darunter grau die Angaben, rechts ›. Vorher fett mit angehängtem Text –
@@ -10831,7 +10849,7 @@ function renderArbeit(){
   arbLetzt = {z, liste};                       // für „Blatt ansehen“ in der Fußleiste
   $('#arbPlus').onclick = () => {
     const vorschlag = heute() >= z.von && heute() <= z.bisIso ? heute() : z.von;
-    dauerFenster('Eintrag hinzufügen', {m:60}, vorschlag, (w, datum, text) => {
+    dauerFenster('Neuer Eintrag', {m:60}, vorschlag, (w, datum, text) => {
       TAET.arb.eigen.push(Object.assign({id:kennung(), datum, text}, w));
       saveTaet(); renderArbeit(); toast('Ergänzt');
     }, '');
@@ -14412,7 +14430,7 @@ function typWahl(){
   liste.innerHTML = frei.map(knopf).join('')
     + (eigen.length ? `<p class="muted small" style="margin:16px 0 0">Eigene, früher angelegt:</p>` + eigen.map(knopf).join('') : '')
     + `<button class="btn" data-typ="*" style="margin-top:16px">Eigenen Anlagentyp anlegen …</button>`
-    + `<button class="btn ghost" data-typ="" style="margin-top:8px">Abbrechen</button>`;
+    + `<button class="btn abbrechen" data-typ="">Abbrechen</button>`;
   $('#dlg').hidden = false;
   liste.querySelectorAll('[data-typ]').forEach(b => b.onclick = () => {
     $('#dlg').hidden = true;
@@ -14679,7 +14697,7 @@ function setAbwesend(box){
       };
     });
     k.querySelector('[data-weg]').onclick = () => {
-      frage('Abwesenheit löschen', `${x.text || 'Abwesenheit'}${x.von ? ' vom ' + dText(x.von) : ''}${x.bis ? ' bis ' + dText(x.bis) : ''} wird gelöscht.`,
+      frage('Abwesenheit löschen', `${x.text || 'Abwesenheit'}${x.von ? ' ' + spanneText(x.von, x.bis) : ''} wird gelöscht.`,
         'Löschen', () => { CFG.abwesend.splice(+k.dataset.i, 1); saveCfg(); setAbwesend(box); });
     };
   });
@@ -18432,15 +18450,18 @@ function medienBlatt(k){
     ${kopf(i + 1)}
     ${teil.length ? `<table class="med">${tabkopf}<tbody>${teil.map(b => b.html).join('')}</tbody></table>` : ''}
     ${i === seiten.length - 1 ? wechselHtml : ''}
-    ${i === seiten.length - 1 && CFG.pruefer ? `<div class="meta">Abgelesen von ${esc(CFG.pruefer)}</div>` : ''}
+    ${i === seiten.length - 1 && CFG.pruefer ? `<div class="sig"><div><div class="lbl">Abgelesen von ${esc(CFG.pruefer)}</div></div></div>` : ''}
   </div>`).join('');
 }
 function blattHtml(k){
   if(NW(k).art === 'medien')    return medienBlatt(k);
   if(NW(k).art === 'sprinkler') return sprinklerBlatt(k);
   const n = NW(k), t = teilCfg(k), d = datenFuer(k);
+  /* Prüfungen der Firma haben keinen Zustand – die Spalte blieb immer leer
+     (v1.203); „Objekt“ wie in der App. */
+  const mitZustand = n.art !== 'fremd';
   const zeile = a => { const z = d.zeilen[a];
-    return `<tr><td>${esc(dText(z.datum))}</td><td>${esc(a)}</td><td>${esc(z.status)}</td><td>${esc(z.bem)}</td></tr>`; };
+    return `<tr><td>${esc(dText(z.datum))}</td><td>${esc(a)}</td>${mitZustand ? `<td>${esc(z.status)}</td>` : ''}<td>${esc(z.bem)}</td></tr>`; };
   const tabelle = liste => `<table>
       <!-- Breiten nachgerechnet: "26.08.2026" und "In Ordnung" brauchen je rund
            90 px, 13 % lassen beiden 103 – knapp, aber einzeilig. Der ganze Rest
@@ -18448,14 +18469,15 @@ function blattHtml(k){
            "Tür 1, Erdgeschoss, Gang neben Treppenhaus": 44 % fassen rund 45
            Zeichen je Zeile. Mehr wäre nur über eine kürzere Datumsangabe zu
            holen (das Jahr steht schon in der Überschrift). -->
-      <thead><tr><th style="width:13%">Datum</th><th style="width:44%">Anlage</th>
-        <th style="width:13%">Zustand</th><th>Bemerkung</th></tr></thead>
+      <thead><tr><th style="width:13%">Datum</th><th style="width:44%">Objekt</th>
+        ${mitZustand ? '<th style="width:13%">Zustand</th>' : ''}<th>Bemerkung</th></tr></thead>
       <tbody>${liste.map(zeile).join('')}</tbody></table>`;
   /* Der Prüfmonat gehört in die Überschrift, der Name des Prüfers nur unter die
      Unterschrift – über der Tabelle steht er sonst zweimal. */
   const kopf = seite => `<h2>${esc(n.titel)} – ${esc(monatText(k))}</h2>
     <div class="meta">${esc(CFG.objekt || '')}${seite}</div>`;
-  const fuss = `<div class="check">${checklisteHtml(t.checkliste)}</div>
+  /* Ohne Checkliste kein leerer Kasten (v1.203). */
+  const fuss = `${String(t.checkliste || '').trim() ? `<div class="check">${checklisteHtml(t.checkliste)}</div>` : ''}
     <div class="sig"><div>
       ${d.signatur ? `<img src="${d.signatur}" alt="Unterschrift">`
                    : `<div style="width:306px;height:102px;border-bottom:1px solid #000"></div>`}
@@ -20039,7 +20061,7 @@ async function ausgebenLauf(){
   if(geteilt === 'abbruch' && !await new Promise(ok => {
     frage('Wurde das Blatt verschickt?', 'Das Teilen-Menü wurde geschlossen. Erst nach „Ja“ gilt die Kontrolle als ausgegeben und wird geleert.',
       'Ja, abschließen', () => ok(true));
-    $('#dlgNein').textContent = 'Nein, Kontrolle behalten';
+    $('#dlgNein').textContent = 'Nein, behalten';
     $('#dlgNein').onclick = () => { $('#dlg').hidden = true; ok(false); };
   })) return;
   /* Die Historie nimmt die Runde auf, bevor irgendetwas geleert wird: sie
