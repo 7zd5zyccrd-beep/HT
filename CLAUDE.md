@@ -175,11 +175,10 @@ steht.
   „+“-Menü, „Auf einen Tag legen“ und die Wahl im Kalender.
 - „+ › Störung“ (E8): `stoerungNeu` (Typ → Objekt → Feld offen). Karte
   Störungen nur, wenn es welche gibt; vermerkt wird über den Weg oben.
-- Suche findet Seiten (`SEITEN`, `suchSeiten`). Grundriss öffnet wie früher in
-  der Höhe (v1.197, Jean); in der Übersicht lässt er sich über `planZoomMin()`
-  kleiner zoomen, bis er ganz sichtbar ist (`planZoom = 0` hieße „ganz“,
-  `zoomJetzt()`), beim Verorten (`planZiel`) kleinster Zoom 1;
-  der Gestenablauf selbst ist unverändert.
+- Suche findet Seiten (`SEITEN`, `suchSeiten`). Grundriss: Öffnen und Zoom wieder
+  genau wie vor v1.194 (v1.197/v1.198, Jean: weder ganz eingepasst noch
+  kleiner als die Höhe; `planZoomMin()` gibt 1).
+  Der Gestenablauf selbst blieb immer unverändert.
 - `Historie.alle()` merkt die Liste (`histMerk`), put/weg/leeren leeren sie.
 - Tests im Notizordner: `qs/test/t_*.js` (lib.js), `fuzz2.js SEED`,
   `qs/fix/t_ausgabe.js`. `t_leer.js` endet mit einer Zeitüberschreitung

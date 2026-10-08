@@ -10,6 +10,9 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.198 08.10.2026 Grundriss: Kleiner zoomen als die Höhe geht auch in der
+                    Übersicht nicht mehr – der Zoom ist wieder genau wie vor
+                    v1.194 (Jean).
   v1.197 08.10.2026 Grundriss: Auch die Übersicht öffnet wieder wie früher,
                     in der Höhe eingepasst (Jean). Kleiner zoomen, bis der
                     ganze Plan zu sehen ist, geht dort weiterhin.
@@ -3955,7 +3958,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.197';
+const VERSION = 'v1.198';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -15820,12 +15823,10 @@ let planZoom = 1;
    darf er so klein werden, dass auch die Breite hineinpasst, und ein Plan
    öffnet so (planZoom 0 = „ganz einpassen“, bis die erste Geste zoomt). Der
    Ablauf der Geste selbst bleibt, wie er ist. */
-function planZoomMin(){
-  const wrap = $('#planWrap'); if(!wrap || !wrap.clientWidth || planZiel) return 1;   // Verorten wie bisher (v1.196)
-  const st = $('#planStreifen'), oben = planSchnitt && st && !st.hidden ? st.offsetHeight + 6 : 0;
-  const breit = (wrap.clientHeight - oben) * (Rahmen.asp || 1);
-  return breit > wrap.clientWidth ? Math.max(.2, wrap.clientWidth / breit) : 1;
-}
+/* v1.198 (Jean): auch in der Übersicht nicht kleiner als die Höhe – wieder
+   genau wie vor v1.194. Die Funktion bleibt als eine Stelle für den
+   kleinsten Zoom. */
+function planZoomMin(){ return 1; }
 const zoomJetzt = () => planZoom || planZoomMin();
 function planZoomAnwenden(inGeste){
   const wrap = $('#planWrap'), box = $('#planBox');
