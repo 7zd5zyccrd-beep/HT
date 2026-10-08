@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.192 08.10.2026 Prüfteam, Paket 2: Zahlen, die zusammenpassen. Die
+                    freie Zeit heute ist überall dieselbe Zahl und heißt
+                    überall „frei ≈ …“ (Heute, Vorschläge, Kalender, Tag
+                    wählen). Der Kalender zeigt heute zuerst, was fällig ist;
+                    was er nur vorzieht, steht blass unter „Könnte heute mit“
+                    mit seinem Fälligkeitstag. Anlagen: Sprinkler nur noch
+                    einmal („Woche · Monat“), jede Kontrolle mit Stand
+                    („fällig Fr 30.10.“, „ausgegeben · nichts offen“).
+                    Objektseite: ein offener Mangel steht nur noch einmal da
+                    („Mangel: Motor brummt“), „Störung vermerken“ nur noch
+                    oben, die Karte Störungen nur, wenn es welche gibt.
   v1.191 08.10.2026 Prüfteam, Paket 3: Sicherheit beim Tippen. Nach
                     „Erledigt“, „Auf einen Tag legen“, „Übernehmen“ und dem
                     Löschen eines Zustands steht unten „Rückgängig“. Fragen
@@ -2770,6 +2781,8 @@ header .back[hidden]{display:none}
   padding:8px 12px;margin:0 0 8px;color:var(--ink);font:inherit;font-size:15px;line-height:1.35;cursor:pointer}
 .kopfHinweis span{color:var(--ink-soft);font-size:14px}
 .kopfHinweis.warn{border-left:5px solid #C0392B}
+.kalMit{margin:10px 0 4px}
+.btn.eintrag.blass{opacity:.6}
 .vorzZeile{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 0 2px;color:var(--ink);font:inherit;cursor:pointer}
 .vorschlaege .hzeile + .vorzZeile{border-top:1px solid var(--line);margin-top:4px;padding-top:10px}
 /* Angaben der Aufgabe als Zeilen (v1.186), wie in den iPhone-Einstellungen. */
@@ -3853,7 +3866,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.191';
+const VERSION = 'v1.192';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6149,7 +6162,7 @@ function heuteZeile(liste){
   if(auf.length) teile.push(`${auf.length} ${auf.length === 1 ? 'Aufgabe' : 'Aufgaben'}${min ? ' ≈ ' + dauerText({m:min}) : ''}`);
   const rest = frei ? (frei.art === 'wochenende' ? 'Wochenende' : frei.art === 'feiertag' ? 'Feiertag'
                         : (frei.ab && frei.ab.text) || 'Abwesend')
-    : `Arbeitszeit übrig ≈ ${dauerText({m:tagKap(h0)})}`;
+    : 'Heute ' + freiText(vorziehenRechnen(liste).frei);
   const cap = frei ? 0 : tagKap(h0), anteil = cap ? Math.min(100, Math.round(min / cap * 100)) : 0;
   return `<button type="button" class="heuteZeile" data-wplan="1">${
     esc([teile.length ? teile.join(' · ') : 'Nichts für heute', rest].join(' · '))} · Kalender ›</button>${
@@ -6209,12 +6222,6 @@ function renderHome(){
       g.vor.push(a);
     });
   }
-  const gelegen = gelegenheitKarte(gelegenheiten(liste));
-  /* „Zeit übrig? Vorziehen“ (v1.100) steht am Ende von „Heute“; ohne Heute
-     unter dem Überfälligen, sonst vor der ersten Gruppe. */
-  const vorz = vorziehenHtml(liste);
-  const vorzNach = gruppen.some(x => x.g === 'heute') ? 'heute' : gruppen.some(x => x.g === 'ueber') ? 'ueber' : '';
-  void gelegen; void vorz; void vorzNach;
   let inhalt = abwesenheitsKarte(liste)
     + gruppen.map(({g, titel, teil, vor}) => {
     /* Was die Gruppe an Zeit braucht (v1.63), aus den Erfahrungswerten. */
@@ -10255,6 +10262,10 @@ let vorziehenAuf = false, vorziehenAlle = false;
 const VORZ_AB = 60, VORZ_ZAHL = 5;
 /* Feld nach dem Tipp auf einen Mangel-Zustand anwählen (v1.191). Nur auf
    Touch-Geräten mit Tastatur sinnvoll; am Rechner schadet es nicht. */
+/* Freie Zeit heute (v1.192, Prüfteam): Arbeitszeit nach Terminen minus
+   Überfälliges und Heutiges – eine Rechnung für Heute, Vorschläge und
+   Kalender, überall „frei ≈ …“ auf die Viertelstunde abgerundet. */
+const freiText = min => 'frei ≈ ' + dauerText({m:Math.max(0, Math.floor(min / 15) * 15)});
 function bemFokus(f){
   if(!f) return;
   try{ f.focus({preventScroll:true}); }catch(e){ f.focus(); }
@@ -10293,31 +10304,6 @@ function vorziehenRechnen(liste){
   }
   return {frei, kand, vorschlaege};
 }
-function vorziehenHtml(liste){
-  const {frei, kand, vorschlaege} = vorziehenRechnen(liste);
-  if(!kand.length) return '';
-  const freiText = dauerText({m:Math.floor(frei / 15) * 15});
-  const knopf = `<button class="btn ghost klein" data-vorz="1" style="margin:14px 0 4px">${vorziehenAuf ? 'Zuklappen'
-    : frei >= VORZ_AB ? `Zeit übrig? ≈ ${esc(freiText)} frei – Vorziehen` : 'Zeit übrig? Vorziehen'}</button>`;
-  if(!vorziehenAuf) return knopf;
-  const zeigen = vorziehenAlle ? vorschlaege : vorschlaege.slice(0, VORZ_ZAHL);
-  const zeile = ({a, min, wetter}) => {
-    const ziel = a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${esc(a.aufg)}"`
-               : `data-nw="${esc(a.k)}" data-ziel="${esc(a.ziel || '')}"${a.akku ? ' data-akku="1"' : ''}`;
-    const termin = a.fenster ? `Zeitraum bis ${ttmm(a.faellig)}` : `fällig ${ttmm(a.faellig)}`;
-    return `<div class="hzeile">
-      <div ${ziel} style="cursor:pointer">
-        <p style="margin:0 0 2px"><b>${esc(a.titel)}</b></p>
-        <p class="muted small" style="margin:0${a.aufg ? ' 0 8px' : ''}">${esc(['≈ ' + dauerText({m:min}), wetter, termin].filter(Boolean).join(' · '))}</p></div>
-      ${a.aufg ? `<div class="hknoepfe"><button class="btn ghost klein" data-gja="${esc(a.aufg + '|' + heute())}">Heute einplanen</button></div>` : ''}
-    </div>`;
-  };
-  return `<div class="card" style="margin-top:14px"><div class="eyebrow" style="margin:0 0 6px">${frei >= VORZ_AB
-      ? `Heute noch ≈ ${esc(freiText)} frei` : 'Nach dem Plan ist heute nichts mehr frei – falls doch:'}</div>
-    ${zeigen.length ? zeigen.map(zeile).join('') : '<p class="muted small" style="margin:0">Nichts, was in die freie Zeit passt.</p>'}
-    ${zeigen.length < vorschlaege.length ? '<button class="btn ghost klein" data-vorzmehr="1" style="margin-top:10px">Mehr zeigen</button>' : ''}
-  </div>` + knopf;
-}
 /* Alle Vorschläge in einer Karte (v1.188, Etappe 6): Auslöser, Ergebnisse
    aus Abläufen, Gute Gelegenheit und Vorziehen – jeder mit „Übernehmen“ und
    „Nicht jetzt“. Vorher standen sie in drei Karten mit drei Bedienweisen. */
@@ -10333,15 +10319,14 @@ function vorschlaegeKarte(hinweise, gel, liste){
       return `<div class="hzeile"><div data-aufg="${esc(a.aufg)}" style="cursor:pointer">
         <p style="margin:0 0 2px"><b>${esc(a.titel)}</b> <span class="muted small">›</span></p>
         <p class="muted small" style="margin:0 0 8px">${esc([`Gute Gelegenheit: ${tag} ${TEIL_KURZ[g.teil]} gutes Wetter`,
-          `≈ ${dauerText({m:g.min})}, noch ${dauerText({m:Math.floor(g.frei / 15) * 15})} frei`].join(' · '))} – Vorschlag: ${esc(tag)} erledigen</p></div>
+          `≈ ${dauerText({m:g.min})}, ${tag} ${freiText(g.frei)}`].join(' · '))} – Vorschlag: ${esc(tag)} erledigen</p></div>
         <div class="hknoepfe"><button class="btn ghost klein" data-gja="${esc(a.aufg + '|' + g.tg.iso)}">Übernehmen</button>
           <button class="btn ghost klein" data-gnein="${esc(a.aufg + '|' + g.tg.iso)}">Nicht jetzt</button></div></div>`;
     }));
   let vorz = '';
   if(vz.kand.length){
-    const freiText = dauerText({m:Math.floor(vz.frei / 15) * 15});
     vorz = `<button type="button" class="hzeile vorzZeile" data-vorz="1"><b>Zeit übrig?</b> <span class="muted small">${
-      vz.frei >= VORZ_AB ? `heute noch ≈ ${esc(freiText)} frei – ` : ''}${vorziehenAuf ? 'zuklappen' : 'etwas vorziehen ›'}</span></button>`;
+      vz.frei >= VORZ_AB ? `heute ${esc(freiText(vz.frei))} – ` : ''}${vorziehenAuf ? 'zuklappen' : 'etwas vorziehen ›'}</span></button>`;
     if(vorziehenAuf){
       const zeigen = vorziehenAlle ? vz.vorschlaege : vz.vorschlaege.slice(0, VORZ_ZAHL);
       vorz += zeigen.map(({a, min, wetter}) => {
@@ -10381,24 +10366,7 @@ function auslastungZeile(liste){
   return `<button type="button" class="kopfHinweis" data-wplan="1"><b>Bis ${esc(planTagWort(p.bis))} wird es knapp</b> <span>≈ ${
     esc(dauerText({m:auf15(p.noetig)}))} offen, ${esc(dauerText({m:Math.floor(p.verf / 15) * 15}))} frei · Kalender ›</span></button>`;
 }
-function gelegenheitKarte(liste){
-  if(!liste.length) return '';
-  return `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Gute Gelegenheit</div>${liste.map(g => {
-    const tag = planTagWort(g.tg.t), a = g.a;
-    const termin = a.fenster ? `Zeitraum bis ${ttmm(a.faellig)}` : `fällig ${ttmm(a.faellig)}`;
-    /* Ein Tipp auf den Text öffnet die Aufgabe. */
-    return `<div class="hzeile">
-      <div data-aufg="${esc(a.aufg)}" style="cursor:pointer">
-        <p style="margin:0 0 2px"><b>${esc(a.titel)}</b></p>
-        <p class="muted small" style="margin:0 0 8px">${esc(
-          [`Wetter gut ${tag} ${TEIL_KURZ[g.teil]}`, `≈ ${dauerText({m:g.min})}, an dem Tag noch ${dauerText({m:Math.floor(g.frei / 15) * 15})} frei`, termin].join(' · '))}</p></div>
-      <div class="hknoepfe">
-        <button class="btn ghost klein" data-gja="${esc(a.aufg + '|' + g.tg.iso)}">${esc(tag.charAt(0).toUpperCase() + tag.slice(1))} einplanen</button>
-        <button class="btn ghost klein" data-gnein="${esc(a.aufg + '|' + g.tg.iso)}">Nicht jetzt</button>
-      </div></div>`;
-  }).join('')}</div>`;
-}
-const planKnopf = p => {
+const planKnopf = (p, blass) => {
   const a = p.a;
   /* Ein künftiger Sprinklergang (v1.143) lässt sich noch nicht erfassen –
      er öffnet nichts. */
@@ -10406,13 +10374,19 @@ const planKnopf = p => {
              : `data-nw="${esc(a.k)}" data-ziel="${esc(a.ziel || '')}"${a.akku ? ' data-akku="1"' : ''}`;
   /* Ohne Ziel kein Knopf (v1.183): er sah antippbar aus und tat nichts. */
   const tag = a.vorschau ? 'div' : 'button';
-  return `<${tag} class="btn eintrag${a.vorschau ? ' still' : ''}" ${ziel}><span class="etext">${esc(a.titel)}<small>${
-    esc(['≈ ' + dauerText({m:p.min})].concat(p.noten.concat(a.vorschau ? ['kommt noch'] : [])).join(' · '))}</small></span></${tag}>`;
+  return `<${tag} class="btn eintrag${a.vorschau ? ' still' : ''}${blass ? ' blass' : ''}" ${ziel}><span class="etext">${esc(a.titel)}<small>${
+    esc(['≈ ' + dauerText({m:p.min})].concat(p.noten.concat(a.vorschau ? ['kommt noch'] : [], blass && a.faellig ? ['fällig ' + ttmm(a.faellig)] : [])).join(' · '))}</small></span></${tag}>`;
 };
 function renderWochenplan(){
   const box = $('#wplanBox');
   if(!box) return;
-  const {tage, uebrig} = wochenplanRechnen();
+  const liste = aufgaben();
+  const {tage, uebrig} = wochenplanRechnen(liste);
+  /* Heute (v1.192, Prüfteam): Fälliges oben, was der Plan nur vorzieht,
+     blass unter „Könnte heute mit“ – es sah aus wie Fälliges. Die freie Zeit
+     ist dieselbe Zahl wie auf Heute. */
+  const heuteFrei = vorziehenRechnen(liste).frei;
+  const istFaellig = p => p.a.gruppe === 'ueber' || p.a.gruppe === 'heute';
   const i = info('Ein Vorschlag, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Eingeplantes an seinem Tag, Wetteraufgaben auf gute Halbtage. Termine stehen obenan und nehmen ihre Zeit vom Tag. Die Dauer ist der Durchschnitt der erfassten Dauern, ohne sie gelten 30 Minuten („geschätzt“). Die Zeit je Arbeitstag steht unter Einstellungen › Arbeitszeit.', 'margin:-2px 0 10px');
   const kopfVon = j => j === 0 && planTagWort(tage[j].t) === 'heute' ? `Heute ${ttmm(tage[j].t)}`
                                                                     : `${WOCHENTAG[tage[j].t.getDay()]} ${ttmm(tage[j].t)}`;
@@ -10454,15 +10428,19 @@ function renderWochenplan(){
       j = bis;
       continue;
     }
-    const belegt = tg.cap - tg.frei, anteil = tg.cap ? Math.min(100, Math.round(belegt / tg.cap * 100)) : 100;
-    const frei = tg.posten.length || tg.cap ? `${dauerText({m:belegt})} von ${dauerText({m:tg.cap})}` : 'keine Zeit frei';
+    const istHeute = tg.iso === heute();
+    const fest = istHeute ? tg.posten.filter(istFaellig) : tg.posten, mit = istHeute ? tg.posten.filter(p => !istFaellig(p)) : [];
+    const freiMin = istHeute ? heuteFrei : tg.frei;
+    const belegt = tg.cap - freiMin, anteil = tg.cap ? Math.min(100, Math.round(belegt / tg.cap * 100)) : 100;
+    const frei = tg.cap ? freiText(freiMin) : 'keine Zeit frei';
     html += `<div class="eyebrow">${esc(kopfVon(j))} <span class="summe">· ${esc([frei].concat(tagZusatz(tg.iso)).join(' · '))}</span></div>
         <div class="planBalken"><span style="width:${anteil}%"></span></div>`
-      + tg.termine.map(o => terminKnopf(o, true)).join('') + tg.posten.map(planKnopf).join('');
+      + tg.termine.map(o => terminKnopf(o, true)).join('') + fest.map(p => planKnopf(p)).join('')
+      + (mit.length ? `<p class="muted small kalMit">Könnte heute mit</p>` + mit.map(p => planKnopf(p, true)).join('') : '');
   }
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Nächste ${tage.length} Arbeitstage ${i.knopf}</div>${i.text}`
     + html
-    + (uebrig.length ? `<div class="eyebrow">Passt nicht mehr hinein</div>` + uebrig.map(planKnopf).join('') : '')
+    + (uebrig.length ? `<div class="eyebrow">Passt nicht mehr hinein</div>` + uebrig.map(p => planKnopf(p)).join('') : '')
     /* Die Termine gehören seit v1.184 zum Kalender, die Abwesenheiten seit v1.188. */
     + `<div class="eyebrow">Mehr</div><button class="btn eintrag" data-termine="1"><span class="etext mehrZeile"><span>Alle Termine</span>${
         termineKommend().length ? `<span class="zahl">${termineKommend().length} kommend</span>` : ''}</span></button>
@@ -10485,7 +10463,7 @@ function renderWochenplan(){
 const abwKommend = () => (CFG.abwesend || []).filter(x => x.bis && x.bis >= heute());
 function tagWaehlen(a, tage){
   wahlFenster('Erledigen am …', tage.map(tg => ({text:`${WOCHENTAG[tg.t.getDay()]} ${ttmm(tg.t)}${
-    tg.iso === heute() ? ' (heute)' : ''} · ${dauerText({m:Math.max(0, Math.floor(tg.frei / 15) * 15)})} frei`, iso:tg.iso})), e => {
+    tg.iso === heute() ? ' (heute)' : ''} · ${freiText(tg.iso === heute() ? vorziehenRechnen(aufgaben()).frei : tg.frei)}`, iso:tg.iso})), e => {
     const vor = a.geplant;
     a.geplant = e.iso; saveAufg(); renderWochenplan();
     toastRueck('Eingeplant für ' + planTagWort(alsDatum(e.iso)), () => {
@@ -10801,19 +10779,36 @@ function renderErledigt(){
 }
 /* Die frühere Startseite: alle Nachweise nach Takt, die Fremdprüfungen nach
    Abstand, darunter die eigene Wartung. */
+/* Stand je Anlagentyp wie auf Heute (v1.192, Prüfteam): was erfasst ist,
+   sonst ob ausgegeben, sonst wann die Kontrolle fällig ist. Ein roter Ring
+   hat so immer seinen Grund daneben. */
+function alleStand(n, liste){
+  const st = homeStand(n).replace(/^ · /, '');
+  if(st) return st;
+  if(ausgegebenJetzt(n)) return 'ausgegeben · nichts offen';
+  const a = liste.find(x => x.k === n.k && !x.aufg && !x.akku && x.faellig);
+  if(!a) return '';
+  if(a.tage < 0 || (a.fenster && a.fenster.von <= tagAnfang(new Date()))) return fristText0(Object.assign({}, a, {gruppe:''}));
+  if(a.fenster) return `Zeitraum ab ${ttmm(a.fenster.von)}`;
+  return a.tage === 0 ? 'fällig heute' : a.tage === 1 ? 'fällig morgen' : `fällig ${WOCHENTAG[a.faellig.getDay()]} ${ttmm(a.faellig)}`;
+}
 function renderAlle(){
+  const liste = aufgaben();
+  /* Der Sprinkler steht seit v1.192 nur einmal da, unter seinem kürzesten
+     Abstand, mit der knapperen Lage von Wochengang und Monatskontrolle. */
+  const RANG = {gruen:0, '':1, gelb:2, rot:3};
   const knopf = (n, t) => {
     if(n.spaeter) return `<button class="btn" disabled>${esc(n.label)} · folgt</button>`;
-    const ziel = n.art === 'sprinkler' ? (t === 'monat' ? 'mon' : 'woch') : '';
-    const r = ring(n, t);
-    const stand = homeStand(n).replace(/^ · /, '');
+    const r = n.art === 'sprinkler' ? ['woche', 'monat'].map(x => ring(n, x)).sort((x, y) => RANG[y] - RANG[x])[0] : ring(n, t);
+    const stand = [n.art === 'sprinkler' ? 'Woche · Monat' : '', alleStand(n, liste)].filter(Boolean).join(' · ');
     return `<button class="btn eintrag${r ? ' ring-' + r : ''}" data-typ="${n.k}"><span class="etext">${esc(n.label)}${
       stand ? `<small>${esc(stand)}</small>` : ''}</span></button>`;
   };
   const gruppen = [];
   TAKTE.forEach(([t, titel]) => {
     const teile = NACHWEISE.filter(n => n.art !== 'fremd'
-      && (n.takt || ['monat']).includes(t) && hatEintraege(n, t));
+      && (n.takt || ['monat']).includes(t) && hatEintraege(n, t)
+      && !(n.art === 'sprinkler' && TAKTE.find(([x]) => (n.takt || []).includes(x) && hatEintraege(n, x))[0] !== t));
     /* Leert sich eine ganze Gruppe, fällt ihre Überschrift mit weg – sonst
        stünde "Monatlich" über nichts. */
     if(teile.length) gruppen.push([titel, teile.map(n => knopf(n, t)).join('')]);
@@ -18842,7 +18837,9 @@ async function renderVerlauf(){
     </div>
     <div class="objWege">${wege}</div>`
     + (offen.length ? `<div class="eyebrow">Offen</div>` + offen.map(a =>
-        `<button class="btn eintrag" data-aufg="${esc(a.id)}"><span class="etext">${esc(aufgTitel(a))}<small>${esc(aufgStand(a))}</small></span></button>`).join('') : '')
+        /* Auf dem Objekt selbst genügt „Mangel: Motor brummt“ (v1.192). */
+        `<button class="btn eintrag" data-aufg="${esc(a.id)}"><span class="etext">${esc(a.art === 'mangel' && a.text ? 'Mangel: ' + a.text : aufgTitel(a))}<small>${
+          esc(a.art === 'mangel' ? ['festgestellt ' + dText(a.festgestellt), a.frist ? 'fällig ' + dText(a.frist) : ''].filter(Boolean).join(' · ') : aufgStand(a))}</small></span></button>`).join('') : '')
     + (art === 'bestand' ? '' : `<div class="eyebrow">Arbeitsmittel</div><div class="card" style="padding:4px 14px">${mittelZeile(ort, v.titel)}</div>`)
     + `<div class="eyebrow">Verlauf</div>`;
   const pruef = art === 'fremd'  ? verlaufFremd(v, liste)
@@ -18880,7 +18877,8 @@ function verlaufAnlage(v, liste){
     zeilen.push(vZeile(zeitraumVoll(e.zeitraum),
       [dText(r.datum), r.status || 'ohne Zustand', r.bem].filter(Boolean).join(' · ')));
   });
-  const maengel = AUFG.filter(a => a.art === 'mangel' && a.quelle === `${v.k}|${v.id}`)
+  /* Offene Mängel stehen oben unter „Offen“, hier nur die behobenen (v1.192). */
+  const maengel = AUFG.filter(a => a.art === 'mangel' && a.erledigt && a.quelle === `${v.k}|${v.id}`)
     .sort((a, b) => String(b.festgestellt).localeCompare(String(a.festgestellt)));
   const mz = maengel.map(a => vZeile(`Mangel vom ${dText(a.festgestellt)}`,
     [a.erledigt ? `erledigt am ${dText(a.erledigt)}` : 'offen',
@@ -18970,10 +18968,12 @@ function verlaufStoer(v){
       <button class="btn primary" id="stoerSpeichern">${f.id ? 'Speichern' : 'Störung vermerken'}</button>
       <button class="btn" id="stoerAbbruch">Abbrechen</button>
       ${f.id ? '<button class="btn ghost danger" id="stoerWeg2">Störung löschen</button>' : ''}</div>` : '';
+  /* Vermerkt wird über „Störung“ oben (v1.192, Prüfteam: der zweite Knopf
+     hier doppelte ihn); ohne Störungen fällt die Karte weg. */
+  if(!zeilen.length && !feld) return '';
   return `<div class="card" id="stoerKarte">
     <div class="eyebrow" style="margin:0 0 4px">Störungen${n >= STOER_GEHAEUFT ? ` · ${n} in 12 Monaten` : ''}</div>
-    ${zeilen.length ? zeilen.join('') : f ? '' : '<p class="muted small" style="margin:0">Noch keine Störung vermerkt.</p>'}
-    ${feld || '<button class="btn" id="stoerNeu" style="margin-top:10px">Störung vermerken</button>'}</div>`;
+    ${zeilen.join('')}${feld}</div>`;
 }
 function stoerVerdrahten(v){
   const karte = $('#stoerKarte');
@@ -19613,9 +19613,7 @@ async function objektInfo(o){
       const r = letzte.ergebnisse[o.id];
       zeilen.push(`Zuletzt (${zeitraumVoll(letzte.zeitraum)}): ${[dText(r.datum), r.status, r.bem].filter(Boolean).join(' · ')}`);
     }else zeilen.push('In dieser Kontrolle noch nicht geprüft');
-    const m = offenerMangel(o.ort);
-    if(m) zeilen.push(`Offener Mangel seit ${dText(m.festgestellt)}`);
-  }
+  }   // ein offener Mangel steht seit v1.192 nur noch unter „Offen“
   /* Akkus des Objekts, bei jedem Anlagentyp mit Akkutausch (v1.149). */
   if(akkuAktiv(o.k)){
     const za = akkuZeile(o.k, o.id), j = akkuMonate(za.akkuTyp);
