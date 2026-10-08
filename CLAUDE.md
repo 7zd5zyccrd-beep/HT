@@ -351,8 +351,8 @@ steht.
   `ergebnisseAnwenden` (sofort, beim Aufbau der Startseite nach den
   Auslösern), `ergebnisVorschlaege` (in der Karte „Vorschläge“, Schlüssel
   `erg:<Aufgabe>:<Ergebnis>`), `ergebnisAusfuehren` (Vermerk „Selbst
-  gewählt: …“, `wdhFolgeAnlegen`, `planWeiter`). Editor: „Selbst wählen“ im
-  `ergebnisFenster` über `bedFelderHtml`/`bedFeldSetzen` (auch die
+  gewählt: …“, `wdhFolgeAnlegen`, `planWeiter`). Editor: Karte „Bedingung“ (v1.178, vorher
+  „Selbst wählen“) im `ergebnisFenster` über `bedFelderHtml`/`bedFeldSetzen` (auch die
   Wetter-Aktion nutzt sie).
 
 ## Suche (v1.145)

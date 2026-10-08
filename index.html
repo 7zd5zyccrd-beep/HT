@@ -10,6 +10,8 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.178 08.10.2026 Ergebnis im Ablauf (Jean): die Karte „Selbst wählen“
+         heißt jetzt „Bedingung“.
   v1.177 08.10.2026 Folgen im Ablauf (Jean): „in X Tagen/Wochen/Monaten“
          landet immer auf einem Arbeitstag – fällt der Tag auf ein
          Wochenende, einen Feiertag oder eine Abwesenheit, wird die Folge am
@@ -3543,7 +3545,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.177';
+const VERSION = 'v1.178';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6918,7 +6920,7 @@ function ergebnisFenster(p, s, j){
   const ergBedHtml = () => {
     const reihen = w.bed.length ? hinweisReihen() : null;
     return `<div class="gruppe ergFolge" style="margin-top:12px">
-      <div class="eyebrow" style="margin:0 0 6px">Selbst wählen</div>
+      <div class="eyebrow" style="margin:0 0 6px">Bedingung</div>
       <p class="muted small" style="margin:0 0 8px">${w.bed.length ? 'Ist die Aufgabe fällig und trifft alles zu, wählt die App dieses Ergebnis.'
         : 'Mit Bedingungen aus Wetter oder Abfuhrterminen wählt die App dieses Ergebnis selbst.'}</p>
       ${w.bed.map((b, n) => { const e = bedPruefen(b, reihen);
