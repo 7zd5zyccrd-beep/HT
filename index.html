@@ -10,6 +10,18 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.191 08.10.2026 Prüfteam, Paket 3: Sicherheit beim Tippen. Nach
+                    „Erledigt“, „Auf einen Tag legen“, „Übernehmen“ und dem
+                    Löschen eines Zustands steht unten „Rückgängig“. Fragen
+                    zum Löschen haben einen roten Knopf; „Entfernen“-Knöpfe
+                    sind nicht mehr schwarz. Die untere Leiste ist nicht mehr
+                    durchsichtig, kleine Knöpfe und Zeilen sind größer zum
+                    Treffen. Beim Abschließen kann man gleich unterschreiben.
+                    „Zeit übrig?“: jede Aufgabe mit „Auf heute legen“ und
+                    „Nicht jetzt“, Kontrollen mit Hinweis. Bei einem Mangel
+                    springt der Cursor ins Feld „Was ist defekt?“; der erste
+                    Zählerstand setzt das Ablesedatum auf heute; die Leiste
+                    sagt „Alles erfasst – weiter mit Abschließen“.
   v1.190 08.10.2026 Prüfteam, Paket 1: Fehler. „→ Werkzeug“ bei einem
          Material stürzte ab, danach traf ein Tipp auf „Löschen“ das falsche
          Material – behoben. Ausgeben ist gegen Doppeltipp gesperrt (bisher
@@ -2332,6 +2344,7 @@ main{flex:1 0 auto;padding:16px var(--pad) calc(16px + max(env(safe-area-inset-b
 .btn.accent{background:var(--strong);color:var(--on-strong);border-color:var(--strong);font-weight:600}
 .btn.ghost{background:var(--surface)}   /* seit v1.118 wie alle: weiß */
 .btn.danger{color:var(--loeschen);border-color:var(--loeschen)}
+.btn.primary.gefahr{background:var(--loeschen);border-color:var(--loeschen);color:#fff}
 .btn[disabled]{opacity:.4;pointer-events:none}
 /* Eigene display-Angaben schlagen die eingebaute Regel für [hidden] – ohne
    diese beiden Zeilen bleiben ausgeblendete Knöpfe und Zeilen sichtbar (und
@@ -2584,6 +2597,16 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .verlaufKnopf svg{width:15px;height:15px}
 .name .verlaufKnopf{font-weight:400}
 .reihenKnopf{margin:4px 0 8px}
+/* Trefferflächen mindestens 44 pt (v1.191) – das Aussehen bleibt, ein
+   unsichtbarer Rand vergrößert die Fläche zum Tippen. */
+header .back,header .kopfKnopf{position:relative}
+header .back::before,header .kopfKnopf::before{content:'';position:absolute;inset:-6px}
+.info{position:relative}
+.info::before{content:'';position:absolute;inset:-8px -4px}
+.aufgTerminKnopf,.mittelZeile,.heuteZeile,.vorzZeile{min-height:44px}
+.mittelZeile{display:flex;align-items:center;margin-top:0}
+.linkKnopf{min-height:44px}
+.erlMehr summary,.aufgMehr > summary{min-height:44px;display:flex;align-items:center}
 .linkKnopf{display:block;background:none;border:0;padding:6px 0 0;color:var(--ink-soft);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer}
 /* Das Grundriss-Symbol (v1.117) mittig im Knopf; vor einem Wort („Grundriss“)
    auf dessen Zeile. */
@@ -2723,8 +2746,10 @@ button > .ortIcon:only-child{display:block;margin:auto}
   /* Liegt über dem unteren Rand von #bild, der Inhalt läuft weich darunter;
      #bild hält unten so viel Platz frei (--leiste-h), wie die Leiste hoch ist. */
   position:absolute;left:0;right:0;bottom:0;z-index:30;
-  padding:22px var(--pad) calc(18px + env(safe-area-inset-bottom));
-  background:linear-gradient(180deg,transparent 0%,var(--enclosure) 30%);
+  padding:10px var(--pad) calc(14px + env(safe-area-inset-bottom));
+  /* Deckend mit Trennlinie (v1.191): der halbdurchsichtige Verlauf ließ
+     Hinweis und Inhalt übereinander stehen. */
+  background:var(--enclosure);border-top:1px solid var(--line);
 }
 .actionbar[hidden]{display:none}
 /* Die vier Bereiche unten (v1.184). Ein eigenes Stück des Gerüsts unter #bild,
@@ -3828,7 +3853,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.190';
+const VERSION = 'v1.191';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5336,6 +5361,8 @@ function frage(titel, text, jaText, aufJa){
   $('#dlgTitel').textContent = titel;
   $('#dlgText').textContent  = text;
   $('#dlgJa').textContent    = jaText;
+  /* Endgültiges ist rot – auch der Knopf, der es auslöst (v1.191). */
+  $('#dlgJa').classList.toggle('gefahr', /löschen|^Ersetzen/i.test(jaText));
   $('#dlg').hidden = false;
   const zu = () => { $('#dlg').hidden = true; };
   $('#dlgJa').onclick   = () => { zu(); aufJa(); };
@@ -5350,6 +5377,7 @@ function hinweis(titel, text){
 function dlgZuruecksetzen(){
   $('#dlgNein').hidden = false;
   $('#dlgNein').textContent = 'Abbrechen';
+  $('#dlgJa').classList.remove('gefahr');
   $('#dlgText').hidden = false;
   $('#dlgKnoepfe').hidden = false;
   $('#dlgListe').hidden = true;
@@ -6226,11 +6254,20 @@ function renderHome(){
     vorziehenAuf = !vorziehenAuf; vorziehenAlle = false; renderHome();
   });
   $('#homeListe').querySelectorAll('[data-vorzmehr]').forEach(b => b.onclick = () => { vorziehenAlle = true; renderHome(); });
+  $('#homeListe').querySelectorAll('[data-vnein]').forEach(b => b.onclick = () => {
+    const x = AUFG.find(y => y.id === b.dataset.vnein);
+    if(!x) return;
+    x.vorzNein = heute(); saveAufg();
+    toastRueck('Heute nicht mehr vorgeschlagen', () => { delete x.vorzNein; saveAufg(); });
+  });
   $('#homeListe').querySelectorAll('[data-gja],[data-gnein]').forEach(b => b.onclick = () => {
     const [id, iso] = (b.dataset.gja || b.dataset.gnein).split('|');
     const x = AUFG.find(y => y.id === id);
     if(!x) return;
-    if(b.dataset.gja){ x.geplant = iso; toast('Eingeplant für ' + planTagWort(alsDatum(iso))); }
+    if(b.dataset.gja){
+      const vor = x.geplant; x.geplant = iso;
+      toastRueck('Eingeplant für ' + planTagWort(alsDatum(iso)), () => { if(vor) x.geplant = vor; else delete x.geplant; saveAufg(); });
+    }
     else x.gelegenheitNein = iso;
     saveAufg();
   });
@@ -6468,7 +6505,7 @@ function renderRundgang(){
       <div class="seg">${n.status.map(st =>
         `<button type="button" data-status="${esc(st)}" aria-pressed="${z.status === st}">${esc(st)}</button>`).join('')}</div>
       ${z.status ? `<button type="button" class="linkKnopf" data-status="${esc(z.status)}">Zustand zurücksetzen</button>` : ''}
-      <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem)}">
+      <input class="bem" data-feld="bem" placeholder="${istMangel(n, z.status) ? 'Was ist defekt?' : 'Bemerkung'}" value="${esc(z.bem)}">
       ${vorschlagHtml(n, z.bem)}
       ${mittelZeile(`${o.k}|${o.id}`, o.id)}
     </div>`;
@@ -6609,6 +6646,7 @@ function renderRundgang(){
       saveDat();
       /* Wandert die Karte nach oben, rückt die nächste offene an ihren Platz. */
       neuUndHalten(top, z.status && !mangel && nach ? nach : w);
+      if(z.status && mangel && !z.bem) bemFokus([...$$('#rgListe .pos')].find(x => x.dataset.w === w)?.querySelector('[data-feld="bem"]'));
     });
     box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
     box.querySelector('[data-feld="bem"]').oninput = e => { z.bem = e.target.value; saveDat(); vorschlagZeigen(box, n, z.bem); };
@@ -8499,8 +8537,20 @@ function renderAufgabe(){
   /* Erledigen, bei einem Ablauf mit Ergebnis j (v1.160): die Folgeaufgaben
      entstehen sofort mit den Daten, die auf den Knöpfen stehen. */
   const zielFest = {};
+  /* Rückgängig nach dem Erledigen (v1.191): der Stand davor kommt zurück,
+     eben angelegte Folgen (Wiederholung, Ablauf) gehen wieder weg – wie beim
+     Zurücknehmen im Fenster „Weiter“. */
+  const erledigtMeldung = (text, vorher, vorIds) => toastRueck(text, () => {
+    if(!$('#dlg').hidden){ $('#dlg').hidden = true; dlgZuruecksetzen(); }
+    AUFG = AUFG.filter(x => x === a || vorIds.has(x.id));
+    Object.keys(a).forEach(k => delete a[k]); Object.assign(a, vorher);
+    if(!AUFG.includes(a)) AUFG.push(a);
+    saveAufg(); stoerAusAufgabe(a, 'wieder'); toast('Wieder offen');
+    if(current === 'home') renderHome();
+  });
   const erledigenMit = j => {
     const vorher = JSON.parse(JSON.stringify(a));   // für Abbrechen im Fenster „Weiter“ (v1.165)
+    const vorIds = new Set(AUFG.map(x => x.id));
     a.erledigt = $('#erlDatum').value || heute();
     a.vermerk = $('#erlVermerk').value.trim();
     delete a.geplant;
@@ -8519,14 +8569,14 @@ function renderAufgabe(){
       planWeiter.neue = [];
       const pt = j == null ? '' : planWeiter(a, j, zielFest);
       saveAufg();
-      toast((fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · wieder fällig ${dText(folge.frist)}`) + (pt ? ' · ' + pt : ''));
+      erledigtMeldung((fz ? `Erledigt · nächster Zeitraum ${ttmm(alsDatum(fz.von))}–${dText(fz.bis)}` : `Erledigt · wieder fällig ${dText(folge.frist)}`) + (pt ? ' · ' + pt : ''), vorher, vorIds);
       zurueck(); weiterSofort(tFragen, vorher);
       return;
     }
     planWeiter.neue = [];
     /* Ohne Ergebnisse endet ein Ablauf hier – und beginnt ggf. von vorn (v1.182). */
     const pt = j == null ? (a.plan ? planWiederholen(a) : '') : planWeiter(a, j, zielFest);
-    saveAufg(); stoerAusAufgabe(a, 'erledigt'); toast(pt ? 'Erledigt · ' + pt : 'Als erledigt vermerkt'); zurueck();
+    saveAufg(); stoerAusAufgabe(a, 'erledigt'); erledigtMeldung(pt ? 'Erledigt · ' + pt : 'Erledigt', vorher, vorIds); zurueck();
     weiterSofort(tFragen, vorher);
   };
   /* Eine Folge, die gleich im Anschluss erledigt werden kann (v1.161). */
@@ -10203,6 +10253,12 @@ function gelegenheiten(liste){
    Reihenfolge. Bis fünf, dann „Mehr zeigen“. */
 let vorziehenAuf = false, vorziehenAlle = false;
 const VORZ_AB = 60, VORZ_ZAHL = 5;
+/* Feld nach dem Tipp auf einen Mangel-Zustand anwählen (v1.191). Nur auf
+   Touch-Geräten mit Tastatur sinnvoll; am Rechner schadet es nicht. */
+function bemFokus(f){
+  if(!f) return;
+  try{ f.focus({preventScroll:true}); }catch(e){ f.focus(); }
+}
 function vorziehenRechnen(liste){
   const h0 = tagAnfang(new Date());
   const heuteKap = freiGrund(h0) ? 0 : tagKap(h0);
@@ -10211,7 +10267,9 @@ function vorziehenRechnen(liste){
   const frei = Math.max(0, heuteKap - belegt);
   const rang = w => WICHTIG.findIndex(x => x[0] === w);
   const zeit = d => d ? d.getTime() : 0;
+  const nein = new Set(AUFG.filter(x => x.vorzNein === heute()).map(x => x.id));   // „Nicht jetzt“ gilt bis morgen (v1.191)
   const kand = liste.filter(a => a.gruppe !== 'ueber' && a.gruppe !== 'heute' && !a.geplant
+      && !(a.aufg && nein.has(a.aufg))
       && !(a.fenster && a.fenster.von > h0) && !(a.frueh && a.frueh > h0))
     .map(a => {
       const m = eintragMinuten(a);
@@ -10292,8 +10350,10 @@ function vorschlaegeKarte(hinweise, gel, liste){
         const termin = a.fenster ? `Zeitraum bis ${ttmm(a.faellig)}` : `fällig ${ttmm(a.faellig)}`;
         return `<div class="hzeile"><div ${ziel} style="cursor:pointer">
             <p style="margin:0 0 2px"><b>${esc(a.titel)}</b> <span class="muted small">›</span></p>
-            <p class="muted small" style="margin:0${a.aufg ? ' 0 8px' : ''}">${esc(['≈ ' + dauerText({m:min}), wetter, termin].filter(Boolean).join(' · '))}${a.aufg ? ' – Vorschlag: heute erledigen' : ''}</p></div>
-          ${a.aufg ? `<div class="hknoepfe"><button class="btn ghost klein" data-gja="${esc(a.aufg + '|' + heute())}">Übernehmen</button></div>` : ''}</div>`;
+            <p class="muted small" style="margin:0${a.aufg ? ' 0 8px' : ''}">${esc(['≈ ' + dauerText({m:min}), wetter, termin].filter(Boolean).join(' · '))}${
+              a.aufg ? ' – Vorschlag: heute erledigen' : ' – Kontrolle: antippen und gleich beginnen'}</p></div>
+          ${a.aufg ? `<div class="hknoepfe"><button class="btn ghost klein" data-gja="${esc(a.aufg + '|' + heute())}">Auf heute legen</button>
+            <button class="btn ghost klein" data-vnein="${esc(a.aufg)}">Nicht jetzt</button></div>` : ''}</div>`;
       }).join('') || '<p class="muted small" style="margin:6px 0 0">Nichts, was in die freie Zeit passt.</p>';
       if(zeigen.length < vz.vorschlaege.length) vorz += '<button class="btn ghost klein" data-vorzmehr="1" style="margin-top:10px">Mehr zeigen</button>';
     }
@@ -10426,8 +10486,11 @@ const abwKommend = () => (CFG.abwesend || []).filter(x => x.bis && x.bis >= heut
 function tagWaehlen(a, tage){
   wahlFenster('Erledigen am …', tage.map(tg => ({text:`${WOCHENTAG[tg.t.getDay()]} ${ttmm(tg.t)}${
     tg.iso === heute() ? ' (heute)' : ''} · ${dauerText({m:Math.max(0, Math.floor(tg.frei / 15) * 15)})} frei`, iso:tg.iso})), e => {
+    const vor = a.geplant;
     a.geplant = e.iso; saveAufg(); renderWochenplan();
-    toast('Eingeplant für ' + planTagWort(alsDatum(e.iso)));
+    toastRueck('Eingeplant für ' + planTagWort(alsDatum(e.iso)), () => {
+      if(vor) a.geplant = vor; else delete a.geplant; saveAufg(); if(current === 'wplan') renderWochenplan();
+    });
   });
 }
 /* --- Arbeitsnachweis (v1.65, Etappe D1) ------------------------------------------
@@ -11291,7 +11354,7 @@ function renderNachweis(){
       <div class="seg">${n.status.map(s =>
         `<button type="button" data-status="${esc(s)}" aria-pressed="${z.status === s}">${esc(s)}</button>`).join('')}</div>
       ${z.status ? `<button type="button" class="linkKnopf" data-status="${esc(z.status)}">Zustand zurücksetzen</button>` : ''}
-      <input class="bem" data-feld="bem" placeholder="Bemerkung" value="${esc(z.bem)}">
+      <input class="bem" data-feld="bem" placeholder="${istMangel(n, z.status) ? 'Was ist defekt?' : 'Bemerkung'}" value="${esc(z.bem)}">
       ${vorschlagHtml(n, z.bem)}
       ${mittelZeile(offen + '|' + a, a)}
     </div>`;
@@ -11338,6 +11401,8 @@ function renderNachweis(){
          bis zum nächsten Öffnen auf dem alten Stand. */
       saveDat(); renderNachweis(); renderBar();
       halten(top, wandert);
+      /* Bei einem Mangel gleich ins Feld „Was ist defekt?“ (v1.191). */
+      if(z.status && mangel && !z.bem) bemFokus($(`#nwListe .pos[data-i="${i}"] [data-feld="bem"]`));
     });
     box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
     box.querySelector('[data-feld="bem"]').oninput    = e => { z.bem   = e.target.value; saveDat(); vorschlagZeigen(box, n, z.bem); };
@@ -11444,7 +11509,11 @@ ${reihenModus ? `
     const feld = box.querySelector('[data-stand]');
     feld.oninput = e => {
       d.stand[z.key] = e.target.value.trim();
-      if(d.stand[z.key]) zeitMerken(d, z.key);        // fürs Tätigkeitsbuch
+      if(d.stand[z.key]){
+        zeitMerken(d, z.key);                         // fürs Tätigkeitsbuch
+        /* Erster Stand ohne Ablesedatum: heute eintragen (v1.191). */
+        if(!d.datum){ d.datum = heute(); const md = $('#medDatum'); if(md) md.value = d.datum; }
+      }
       saveDat(); renderBar();
       box.classList.toggle('fertig', !!d.stand[z.key]);
     };
@@ -11658,7 +11727,7 @@ function renderSig(){
 $('#btnSigStart').onclick = () => {
   if(offen && DAT[offen] && DAT[offen].signatur){ DAT[offen].signatur = null; saveDat(); renderBar(); }
   sigAktiv = true; gezeichnet = false; renderSig();
-  if(current === 'abschluss'){ const x = $('#abAus'); if(x) x.disabled = true; }
+  if(current === 'abschluss'){ const x = $('#abAus'); if(x) x.disabled = true; $('#btnSigStart').disabled = false; $('#btnSigStart').textContent = 'Feld leeren'; }
 };
 $('#btnSigOk').onclick = () => {
   if(!gezeichnet){ toast('Noch nichts gezeichnet'); return; }
@@ -12497,7 +12566,7 @@ function setAbfall(box){
     <p class="muted small" style="margin:0 0 10px">Auf der Abfallseite der Kommune den Knopf für die Kalenderdatei (iCal/ICS) <b>lange drücken</b>, „Link kopieren“ wählen und hier einfügen. Die App ruft ihn dann beim Öffnen einmal am Tag selbst ab und stellt ein Jahr im Link selbst weiter.</p>
     <label class="field"><span>Link</span><input id="abfLink" type="url" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
       placeholder="https://… oder webcal://…" value="${esc(ABFALL.url)}"></label>
-    <div class="knopfzeile abfKn" style="margin-top:0">${ABFALL.url ? `<button class="btn danger klein" id="abfLinkWeg">Link entfernen</button>` : ''}<button class="btn" id="abfAbruf">Abrufen</button></div>
+    <div class="knopfzeile abfKn" style="margin-top:0">${ABFALL.url ? `<button class="btn klein" id="abfLinkWeg">Link entfernen</button>` : ''}<button class="btn" id="abfAbruf">Abrufen</button></div>
     ${adrText(a) ? '' : `<p class="muted small" style="margin:18px 0 8px">Noch keine Adresse festgelegt.</p><button class="btn ghost klein" id="abfZurAdresse">Adresse festlegen</button>`}`;
   abfStandFuellen();
   $('#abfDatei').onclick = () => $('#abfDateiWahl').click();
@@ -14086,7 +14155,7 @@ function renderSetSub(){
   $('#setZuObjekte').onclick = () => setOeffnen('objekte', k);
   /* Ganz unten: den Typ wieder entfernen (v1.147). */
   dyn.insertAdjacentHTML('beforeend', `<div class="eyebrow" style="margin-top:24px">Anlagentyp</div>
-    <button class="btn danger klein" id="setTypWeg">Anlagentyp entfernen</button>
+    <button class="btn klein" id="setTypWeg">Anlagentyp entfernen</button>
     <p class="muted small" style="margin:8px 0 0">Verschwindet aus Aufgabenliste, Nachweisen und Grundrissen. Objekte, Erfasstes und Marken bleiben gespeichert – wer den Typ wieder hinzufügt, findet alles wieder.</p>`);
   $('#setTypWeg').onclick = () => typEntfernen(k);
 }
@@ -14197,7 +14266,7 @@ function setTypBau(box, k){
         <div id="tbZustaende">${n.status.map((st, i) => `<div class="row tbZustand" data-i="${i}">
             <input data-f="st" value="${esc(st)}" aria-label="Zustand">
             <label class="tbMangel"><input type="checkbox" data-f="mangel"${n.mangel.includes(st) ? ' checked' : ''}> Mangel</label>
-            <button type="button" class="btn ghost klein quadrat" data-weg="${i}" aria-label="Zustand löschen"${n.status.length <= 1 ? ' disabled' : ''}>×</button></div>`).join('')}</div>
+            <button type="button" class="btn ghost klein quadrat" data-weg="${i}" ${n.status.length <= 1 ? ' disabled' : ''}>Löschen</button></div>`).join('')}</div>
         <button type="button" class="btn ghost klein" id="tbZustandPlus" style="margin-top:6px">+ Zustand</button>
         <label class="field" style="margin-top:14px"><span>Kacheln für die Bemerkung</span>
           <input id="tbKacheln" value="${esc((n.vorschlaege || []).join(', '))}" placeholder="z. B. Gereinigt, Nachgefüllt"></label>
@@ -14252,9 +14321,11 @@ function setTypBau(box, k){
       };
       r.querySelector('[data-weg]').onclick = () => {
         if(n.status.length <= 1) return;
-        const st = n.status[i];
+        const st = n.status[i], warMangel = n.mangel.includes(st);
         n.status.splice(i, 1); n.mangel = n.mangel.filter(x => x !== st);
         sichern(); zeichnen();
+        /* Mit Rückgängig (v1.191) statt endgültig auf einen Tipp. */
+        toastRueck(`„${st}“ gelöscht`, () => { n.status.splice(i, 0, st); if(warMangel) n.mangel.push(st); sichern(); zeichnen(); });
       };
     });
     const plus = box.querySelector('#tbZustandPlus');
@@ -15055,7 +15126,7 @@ function setStellen(box, teil){
   if(teil === 'typ'){
     box.innerHTML = `<div id="setPlaus"></div>
      <div class="eyebrow" style="margin-top:20px">Alles zurücksetzen</div>
-     <button class="btn ghost klein danger" id="btnMedReset">Ablesewerte zurücksetzen</button>
+     <button class="btn ghost klein danger" id="btnMedReset">Ablesewerte löschen</button>
      <p class="muted small" style="margin:8px 0 0">Löscht die laufende Ablesung und die gemerkten Stände aller Zähler. Für einen einzelnen Tausch „Zähler getauscht“ auf der Seite des Zählers nehmen.</p>`;
     plausEinstellungen($('#setPlaus'));
     $('#btnMedReset').onclick = medienZuruecksetzen;
@@ -15286,7 +15357,7 @@ const tauscheIm = quartal => TAUSCH.filter(x => quartalVon(x.datum) === quartal)
 /* Das Zurücksetzen wirkt sofort, nicht erst mit "Speichern" – es ist kein
    Einstellwert, sondern ein Eingriff in die Daten. Deshalb auch die Rückfrage. */
 function medienZuruecksetzen(){
-  frage('Ablesewerte zurücksetzen',
+  frage('Ablesewerte löschen',
     'Laufende Ablesung, die gemerkten Stände des Vorquartals und die vermerkten '
     + 'Zählerwechsel werden gelöscht.\n\nDer Verbrauch wird danach erst mit der '
     + 'übernächsten Ablesung wieder ausgewiesen.',
@@ -17871,7 +17942,7 @@ function barInhalt(){
     /* Seit v1.187 ein einziger Weg zum Ende: „Abschließen“ zeigt, was fehlt,
        nimmt die Unterschrift, zeigt das Blatt und gibt es aus. */
     b.innerHTML =
-      `<p class="muted small barHinweis">${hinweis || (d.signatur ? 'Vollständig' : 'Unterschrift fehlt')}</p>
+      `<p class="muted small barHinweis">${hinweis || (d.signatur ? 'Vollständig' : 'Alles erfasst – weiter mit Abschließen')}</p>
        <button class="btn primary" id="barA">Abschließen</button>`;
     $('#barA').onclick = () => go('abschluss');
   }else if(current === 'arbeit'){
@@ -19049,7 +19120,15 @@ function renderAbschluss(){
   box.querySelectorAll('[data-fehlt]').forEach(b => b.onclick = () => { zurueck(); zurKarte({k, id:b.dataset.fehlt}); });
   /* Die Unterschrift wandert für diese Seite hierher und danach zurück. */
   const sig = $('#sigBlock');
-  if(st.sig){ $('#abschlussSig').appendChild(sig); sig.hidden = false; renderSig(); }
+  if(st.sig){
+    $('#abschlussSig').appendChild(sig); sig.hidden = false;
+    /* Hier ist Unterschreiben der bewusste letzte Schritt (v1.191): das Feld
+       ist gleich beschreibbar, der linke Knopf leert es bzw. beginnt neu. */
+    if(!datenFuer(k).signatur && !sigAktiv){ sigAktiv = true; gezeichnet = false; }
+    renderSig();
+    $('#btnSigStart').disabled = false;
+    $('#btnSigStart').textContent = datenFuer(k).signatur ? 'Neu unterschreiben' : 'Feld leeren';
+  }
   $('#abschlussEnde').innerHTML = `<button class="btn" id="abBlatt" style="margin-top:16px">Blatt ansehen</button>
     <button class="btn primary" id="abAus" style="margin-top:10px"${st.bereit ? '' : ' disabled'}>Ausgeben und teilen</button>
     ${st.voll && st.sig && !datenFuer(k).signatur ? '<p class="muted small" style="margin:8px 0 0;text-align:center">Erst unterschreiben, dann ausgeben.</p>' : ''}`;
@@ -19059,6 +19138,7 @@ function renderAbschluss(){
 /* Zurück in die Kontrolle: die Unterschrift steht dort wieder (ausgeblendet). */
 function sigZurueck(){
   const sig = $('#sigBlock'), heim = $('#view-nachweis');
+  $('#btnSigStart').textContent = 'Unterschreiben';
   if(sig && heim && sig.parentNode !== heim) heim.appendChild(sig);
 }
 
