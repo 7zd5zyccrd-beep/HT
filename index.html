@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.184 08.10.2026 Bedienkonzept, Etappe 2 von 7: fester Rahmen. Unten eine
+         Leiste mit vier Bereichen – Heute (die Aufgabenliste), Kalender
+         (bisher Wochenplan, unten „Alle Termine“), Anlagen (bisher „Alle
+         Nachweise“, dazu Grundrisse, Störungen, ausgegebene Blätter) und
+         Mehr (Abläufe, Auslöser, Erledigt, Arbeitsnachweis, Tätigkeiten,
+         Wetter, Abfuhr, Einstellungen, Sicherung – jeweils mit Stand). Die
+         „Übersicht“ unten auf der Startseite und das Zahnrad am Platz des
+         Zurück-Pfeils entfallen. Oben links auf den vier Seiten die Lupe
+         (Suche als eigene Seite), auf Heute und Kalender rechts das + für
+         Aufgabe, Termin oder Ablauf. Beim Tippen verschwindet die Leiste.
   v1.183 08.10.2026 Neues Bedienkonzept, Etappe 1 von 7 (Jean: alles
          umsetzen): Wörter und Knöpfe. Ein Wort für eine Sache – „Gebäude“
          für das Haus (vorher „Objekt und Prüfer“), „Objekt“ für jedes
@@ -2205,6 +2215,7 @@ header .kopfKnopf{
   display:flex;align-items:center;justify-content:center;
 }
 header .kopfKnopf svg{display:block}
+header #btnNeu{font-size:26px;font-weight:300;line-height:1;padding-bottom:3px}
 header .kopfKnopf.unsichtbar{visibility:hidden}
 /* Rechts steht in jeder Ansicht genau einer der beiden Knöpfe: der andere ist
    ganz weg, nicht bloß unsichtbar. Zwei Plätze nebeneinander machten die rechte
@@ -2637,6 +2648,20 @@ button > .ortIcon:only-child{display:block;margin:auto}
   background:linear-gradient(180deg,transparent 0%,var(--enclosure) 30%);
 }
 .actionbar[hidden]{display:none}
+/* Die vier Bereiche unten (v1.184). Ein eigenes Stück des Gerüsts unter #bild,
+   damit nichts darunter verschwindet; beim Tippen weg, die Tastatur braucht
+   den Platz. */
+#reiter{flex:0 0 auto;display:flex;background:var(--surface);border-top:1px solid var(--line);
+  padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+#reiter[hidden],body.tippt #reiter{display:none}
+#reiter button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:0;
+  padding:5px 0 3px;color:var(--ink-soft);font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+#reiter button[aria-current="page"]{color:var(--ink);font-weight:600}
+#reiter button svg{display:block}
+body.reiterAn main{padding-bottom:calc(16px + var(--leiste-h, 0px))}
+header .back[hidden]{display:none}
+.mehrZeile{display:flex;justify-content:space-between;gap:10px}
+.mehrZeile .zahl{white-space:nowrap}
 /* Nachweis: Hinweis klein oben, beide Knöpfe in einer Zeile (v1.40). Etwas
    weniger Polster, damit „Nachweis ausgeben“ auch auf schmalen Telefonen in
    eine Zeile passt. */
@@ -3403,28 +3428,35 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 <div class="app">
   <header>
     <button class="back" id="btnBack" aria-label="Zurück">←</button>
+    <button class="kopfKnopf" id="btnSuche" aria-label="Suchen" hidden></button>
     <h1 id="titel">Aufgaben</h1>
     <button class="kopfKnopf unsichtbar" id="btnPlanWahl" aria-hidden="true" tabindex="-1" aria-label="Objekte und Ausgabe"
       aria-haspopup="menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="m2 13 10 5 10-5"/></svg></button>
     <button class="kopfKnopf" id="btnNeuLaden" aria-label="Neu vom Server laden" hidden></button>
+    <button class="kopfKnopf" id="btnNeu" aria-label="Neu anlegen" hidden></button>
   </header>
 
   <div id="bild">
   <main>
     <!-- Startseite -->
     <section class="view active" id="view-home">
+      <!-- Die Überschriften kommen aus den Taktgruppen selbst, eine gemeinsame
+           gäbe es nicht mehr richtig: es sind nicht mehr nur monatliche. -->
+      <div id="homeListe"></div>
+    </section>
+
+    <!-- Suche (v1.184): eigene Seite hinter der Lupe oben links -->
+    <section class="view" id="view-suche">
       <!-- Das Suchfeld steht außerhalb der Liste: die baut sich nach jeder
            Speicherung neu auf und nähme Feld und Tastatur sonst mit. -->
       <div class="suchfeld"><svg class="lupe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><input type="search" id="suche" placeholder="Objekt, Aufgabe, Termin suchen"
         enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button type="button" id="sucheLeeren" aria-label="Suche leeren" hidden>×</button></div>
       <div id="sucheListe" hidden></div>
-      <!-- Die Überschriften kommen aus den Taktgruppen selbst, eine gemeinsame
-           gäbe es nicht mehr richtig: es sind nicht mehr nur monatliche. -->
-      <div id="homeListe"></div>
-      <p class="muted small" id="buildTag" style="margin-top:18px;opacity:.7"></p>
     </section>
+    <!-- Mehr (v1.184): alles, was nicht Heute, Kalender oder Anlagen ist -->
+    <section class="view" id="view-mehr"><div id="mehrBox"></div></section>
 
-    <!-- Alle Nachweise nach Takt – die frühere Startseite -->
+    <!-- Anlagen: alle Anlagentypen nach Takt – die frühere Startseite -->
     <section class="view" id="view-alle">
       <div id="alleListe"></div>
     </section>
@@ -3615,6 +3647,13 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
   </div>
 
   <div class="actionbar" id="bar"><div class="inner" id="barInner"></div></div>
+  <!-- Die vier Bereiche (v1.184), nur auf ihren Hauptseiten -->
+  <nav id="reiter" aria-label="Bereiche" hidden>
+    <button type="button" data-reiter="home"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span>Heute</span></button>
+    <button type="button" data-reiter="wplan"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span>Kalender</span></button>
+    <button type="button" data-reiter="alle"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11"/><path d="M9.5 20v-6h5v6"/></svg><span>Anlagen</span></button>
+    <button type="button" data-reiter="mehr"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg><span>Mehr</span></button>
+  </nav>
 </div>
 <!-- Zugangsabfrage. Liegt über allem und wird nach dem Öffnen aus dem Aufbau
      genommen. Sie steht schon im HTML, damit sie da ist, bevor Code läuft. -->
@@ -3655,7 +3694,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.183';
+const VERSION = 'v1.184';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -3670,6 +3709,7 @@ const ORT_SVG = '<svg class="ortIcon" viewBox="0 0 24 24" width="22" height="22"
   + '<path d="M17 2.5a4 4 0 0 0-4 4c0 3 4 6.5 4 6.5s4-3.5 4-6.5a4 4 0 0 0-4-4z"/><circle cx="17" cy="6.5" r="1.3" fill="currentColor" stroke="none"/></svg>';
 /* Uhr für den Verlauf einer Karte. */
 const UHR_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
+const LUPE_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>';
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -4887,11 +4927,11 @@ function ring(n, takt){
 }
 
 /* ---------- Ansichten ---------- */
-const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufgabe:'Aufgabe', ablaeufe:'Abläufe', ablaufplan:'Ablauf', stufe:'Schritt', erledigt:'Erledigt', stoerungen:'Störungen', nachweis:'Kontrolle', blatt:'Blatt',
+const TITEL = {home:'Heute', alle:'Anlagen', mehr:'Mehr', suche:'Suche', rundgang:'Rundgang', aufgabe:'Aufgabe', ablaeufe:'Abläufe', ablaufplan:'Ablauf', stufe:'Schritt', erledigt:'Erledigt', stoerungen:'Störungen', nachweis:'Kontrolle', blatt:'Blatt',
                historie:'Ausgegebene Blätter', histnw:'Ausgegebene Blätter', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregel:'Auslöser',
-               taeten:'Tätigkeiten', taet:'Tätigkeit', wplan:'Wochenplan', arbeit:'Arbeitsnachweis',
+               taeten:'Tätigkeiten', taet:'Tätigkeit', wplan:'Kalender', arbeit:'Arbeitsnachweis',
                termin:'Termin', termine:'Termine', abfall:'Abfuhr', ablaufneu:'Neuer Ablauf'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
@@ -4924,10 +4964,18 @@ function go(name, push = true){
                               /* Der Titel steht unter „Dann“; in der Kopfzeile bräche er um (v1.78). */
                               ? (eigeneRegel(regelAktiv.slice(6)) ? 'Auslöser' : 'Neuer Auslöser')
                               : hinweisRegel(regelAktiv).name) : TITEL[name];
-  const start = name === 'home', bb = $('#btnBack');
-  bb.innerHTML = start ? GEAR_SVG : '&#8592;';
-  bb.setAttribute('aria-label', start ? 'Einstellungen' : 'Zurück');
-  bb.disabled = !start && !stack.length;
+  /* Hauptseiten der vier Bereiche (v1.184): kein Zurück, sondern links die
+     Lupe, rechts auf Heute und Kalender das + für Neues. Die Einstellungen
+     liegen unter Mehr – das Zahnrad am Platz des Zurück-Pfeils ist weg. */
+  const haupt = HAUPT.includes(name), bb = $('#btnBack');
+  bb.innerHTML = '&#8592;';
+  bb.hidden = haupt;
+  bb.disabled = !stack.length;
+  $('#btnSuche').hidden = !haupt;
+  $('#btnNeu').hidden = !(name === 'home' || name === 'wplan');
+  $('#reiter').hidden = !haupt;
+  document.body.classList.toggle('reiterAn', haupt);
+  $$('#reiter [data-reiter]').forEach(b => b.dataset.reiter === name ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   /* Der Knopf rechts gehört allein der Grundrissansicht; sie zeigt ihn selbst,
      sobald feststeht, dass es überhaupt etwas zu wechseln gibt. */
   /* Rechts oben: in den Einstellungen das Neuladen, sonst ein leerer Platz.
@@ -4935,7 +4983,9 @@ function go(name, push = true){
      hält aber die Breite, damit der Titel mittig steht. */
   const inSettings = name === 'settings';
   $('#btnPlanWahl').classList.add('unsichtbar');
-  $('#btnPlanWahl').hidden = inSettings;
+  /* Rechts genau ein Platz (Titel mittig): auf den Hauptseiten das + oder ein
+     leerer Platz, in den Einstellungen das Neuladen, sonst der Planknopf. */
+  $('#btnPlanWahl').hidden = inSettings || name === 'home' || name === 'wplan';
   menueZu();
   /* Zurück in die Grundrissansicht (etwa aus der Blattvorschau): dort baut sich
      nichts neu auf, der Knopf oben rechts muss eigens wieder her (v1.98). */
@@ -4947,6 +4997,8 @@ function go(name, push = true){
   document.body.classList.toggle('blattAn', name === 'blatt');
   bildNach(0);
   if(name === 'home')     renderHome();
+  if(name === 'mehr')     renderMehr();
+  if(name === 'suche')    sucheOeffnen();
   if(name === 'alle')     renderAlle();
   if(name === 'aufgabe')  renderAufgabe();
   if(name === 'ablaeufe') renderAblaeufe();
@@ -5029,7 +5081,7 @@ window.addEventListener('resize', () => { if(current === 'blatt' && blattPasst) 
   w.addEventListener('touchend', e => { if(e.touches.length < 2) anker = null; }, {passive:true});
 })();
 function zurueck(){
-  if(current === 'home'){ go('settings'); return; }     // Startseite: Einstellungen
+  if(HAUPT.includes(current)) return;             // Hauptseiten haben kein Zurück (v1.184)
   /* Den Assistenten nicht aus Versehen verlassen (v1.182). */
   if(current === 'ablaufneu' && AS && AS.i > 0 && !zurueck.sicher){
     frage('Assistent verlassen', 'Der neue Ablauf ist noch nicht gespeichert; die Antworten gehen verloren.', 'Verlassen',
@@ -5044,6 +5096,23 @@ function zurueck(){
   if(p) go(p, false);
 }
 $('#btnBack').onclick = zurueck;
+/* Die vier Bereiche (v1.184): ein Tipp wechselt, der Weg dorthin beginnt neu. */
+const HAUPT = ['home', 'wplan', 'alle', 'mehr'];
+function bereich(name){
+  stack = []; setStack = [];
+  go(name, false);
+}
+$$('#reiter [data-reiter]').forEach(b => b.onclick = () => bereich(b.dataset.reiter));
+$('#btnSuche').innerHTML = LUPE_SVG;
+$('#btnSuche').onclick = () => {
+  go('suche');
+  /* Unter iOS geht die Tastatur nur auf, solange der Tipp noch läuft. */
+  const f = $('#suche'); f.focus();
+};
+$('#btnNeu').textContent = '+';
+$('#btnNeu').onclick = () => wahlFenster('Neu', [
+    {text:'Aufgabe', tu:aufgabeNeu}, {text:'Termin', tu:terminNeu}, {text:'Ablauf', tu:() => assistentStart()}],
+  e => e.tu());
 /* Dunkle Darstellung (v1.112): die App folgt dem Gerät, auch wenn es
    zwischendurch umschaltet (etwa abends automatisch). */
 (function dunkelFolgen(){
@@ -5097,6 +5166,8 @@ $('#btnBack').onclick = zurueck;
   const platzWeg = () => { if(platz){ platz.remove(); platz = null; } };
   document.addEventListener('focusin', e => {
     if(!istFeld(e.target)) return;
+    /* Beim Tippen braucht die Tastatur den Platz der Leiste unten (v1.184). */
+    if(touch) document.body.classList.add('tippt');
     if(touch && bild().contains(e.target)){
       if(!platz){ platz = document.createElement('div'); platz.className = 'tastaturPlatz'; platz.setAttribute('aria-hidden', 'true'); }
       platz.style.height = Math.round(window.innerHeight * .5) + 'px';
@@ -5104,7 +5175,7 @@ $('#btnBack').onclick = zurueck;
     }
     setTimeout(feldZeigen, 60); setTimeout(feldZeigen, 400);
   });
-  document.addEventListener('focusout', () => setTimeout(() => { if(!istFeld(document.activeElement)) platzWeg(); }, 200));
+  document.addEventListener('focusout', () => setTimeout(() => { if(!istFeld(document.activeElement)){ platzWeg(); document.body.classList.remove('tippt'); } }, 200));
 })();
 /* Kommt die App aus dem Hintergrund zurück, kann ein neuer Tag begonnen haben –
    Fristen und Gruppen der Liste rechnen dann neu. */
@@ -5906,7 +5977,7 @@ function heuteZeile(liste){
                         : (frei.ab && frei.ab.text) || 'Abwesend')
     : `Arbeitszeit übrig ≈ ${dauerText({m:tagKap(h0)})}`;
   return `<button type="button" class="heuteZeile" data-wplan="1">${
-    esc([teile.length ? teile.join(' · ') : 'Nichts für heute', rest].join(' · '))} · Wochenplan ›</button>`;
+    esc([teile.length ? teile.join(' · ') : 'Nichts für heute', rest].join(' · '))} · Kalender ›</button>`;
 }
 function renderHome(){
   listeGebaut = true;
@@ -5983,52 +6054,16 @@ function renderHome(){
         + teil.map(a => a.istTermin ? terminKnopf(a.o, g === 'heute' || g === 'morgen') : aufgabeKnopf(a)).join('') + (g === 'ueber' ? gelegen : '') + (g === vorzNach ? vorz : '');
   }).join('');
   if(!liste.length && !term.length) inhalt += gibt
-    ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Alle Nachweise“.</p>`
-    : `<p class="muted small">Noch nichts eingetragen. Über das Zahnrad oben links geht es in die Einstellungen – dort fügst du unter „Neuer Anlagentyp“ hinzu, was im Haus geprüft wird.</p>`;
-  /* Darunter der Weg zu allem Übrigen. Die Grundrisse hängen sich nach, sobald
-     der Bilderspeicher geantwortet hat. */
-  const erledigt = AUFG.filter(a => a.erledigt).length;
-  /* Die Zahl rechts sagt überall, wie viele Einträge die Seite hat (v1.76). */
-  const taetL = taetKandidaten();
-  const mehr = (gibt ? `<button class="btn eintrag" data-alle="1"><span>Alle Nachweise</span></button>` : '')
-    + (liste.length || term.length ? `<button class="btn eintrag" data-wplan="1"><span>Wochenplan</span></button>` : '')
-    + (TERM.length ? `<button class="btn eintrag" data-termine="1"><span>Termine</span><span class="zahl">${termineKommend().length}</span></button>` : '')
-    + (taetL.length ? `<button class="btn eintrag" data-taeten="1"><span>Tätigkeiten</span><span class="zahl">${taetL.length}</span></button>` : '')
-    + `<button class="btn eintrag" data-arbeit="1"><span>Arbeitsnachweis</span></button>`
-    + `<button class="btn eintrag" data-ablaeufe="1"><span>Abläufe</span>${plaeneListe().length ? `<span class="zahl">${plaeneListe().length}</span>` : ''}</button>`
-    + (STOER.length ? `<button class="btn eintrag" data-stoer="1"><span>Störungen</span><span class="zahl">${stoerObjekte().length}</span></button>` : '')
-    + (erledigt ? `<button class="btn eintrag" data-erledigt="1"><span>Erledigt</span><span class="zahl">${erledigt}</span></button>` : '')
-    + (CFG.wetter ? `<button class="btn eintrag" data-wetter="1"><span>Wetter</span></button>` : '')
-    + (ABFALL.termine.length || ABFALL.url ? `<button class="btn eintrag" data-abfall="1"><span>Abfuhr</span></button>` : '');
-  $('#homeListe').innerHTML = `<div class="row neuZeile"><button class="btn ghost klein" data-neuaufg="1">+ Aufgabe</button>
-      <button class="btn ghost klein" data-neutermin="1">+ Termin</button></div>`
-    + warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
-    + matStartHtml()
-    + '<div id="homeMehr">' + (mehr ? `<div class="eyebrow">Übersicht</div>${mehr}` : '') + '</div>';
+    ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Anlagen“.</p>`
+    : `<p class="muted small">Noch nichts eingetragen. Unter Mehr › Einstellungen fügst du mit „Neuer Anlagentyp“ hinzu, was im Haus geprüft wird.</p>`;
+  /* Neues über das + oben rechts, alles Übrige unter Mehr (v1.184). */
+  $('#homeListe').innerHTML = warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
+    + matStartHtml();
   knoepfeVerdrahten($('#homeListe'));
   matStartVerdrahten();
-  const alle = $('#homeListe [data-alle]');
-  if(alle) alle.onclick = () => go('alle');
-  const erl = $('#homeListe [data-erledigt]');
-  if(erl) erl.onclick = () => go('erledigt');
-  $('#homeListe [data-ablaeufe]').onclick = () => go('ablaeufe');
-  const sto = $('#homeListe [data-stoer]');
-  if(sto) sto.onclick = () => go('stoerungen');
-  const wet = $('#homeListe [data-wetter]');
-  if(wet){ wet.onclick = () => { go('wetter'); wetterAbrufen(); }; wetterStandZeigen(); }
-  const abf = $('#homeListe [data-abfall]');
-  if(abf) abf.onclick = () => { go('abfall'); abfallAbrufen(); };
-  $('#homeListe [data-neuaufg]').onclick = aufgabeNeu;
-  $('#homeListe [data-neutermin]').onclick = terminNeu;
-  const tl = $('#homeListe [data-termine]');
-  if(tl) tl.onclick = () => go('termine');
   const sich = $('#homeListe [data-sichern]');
   if(sich) sich.onclick = alsDateiSichern;
-  const ta = $('#homeListe [data-taeten]');
-  if(ta) ta.onclick = () => go('taeten');
   $('#homeListe').querySelectorAll('[data-wplan]').forEach(b => b.onclick = () => go('wplan'));
-  const arb = $('#homeListe [data-arbeit]');
-  if(arb) arb.onclick = () => { arbZeit = null; go('arbeit'); };
   const wk = $('#homeListe [data-warn]');
   if(wk) wk.onclick = () => { go('wetter'); wetterAbrufen(); };
   $('#homeListe').querySelectorAll('[data-hja]').forEach(b => b.onclick = () => {
@@ -6050,10 +6085,43 @@ function renderHome(){
     else x.gelegenheitNein = iso;
     saveAufg();
   });
-  $('#buildTag').textContent = BUILD;
-  hausKnopf();
-  renderSuche();
 }
+/* ---------- Mehr (v1.184) ----------------------------------------------------
+   Feste Gruppen statt der „Übersicht“ unten auf der Startseite, deren Einträge
+   kamen und gingen. Rechts steht jeweils der Stand. */
+function renderMehr(){
+  const zeile = (attr, text, stand) => `<button class="btn eintrag" ${attr}><span class="etext mehrZeile"><span>${esc(text)}</span>${
+    stand ? `<span class="zahl">${esc(stand)}</span>` : ''}</span></button>`;
+  const laufen = new Set(AUFG.filter(a => !a.erledigt && a.plan && planVon(a.plan)).map(a => a.kette || a.id)).size;
+  const regeln = alleRegeln().filter(r => !r.aus).length;
+  const erledigt = AUFG.filter(a => a.erledigt).length;
+  const taetL = taetKandidaten();
+  const l = letzteSicherung();
+  const naechste = ABFALL.termine.filter(t => t.tag >= heute()).sort((a, b) => a.tag < b.tag ? -1 : 1)[0];
+  $('#mehrBox').innerHTML =
+      '<div class="eyebrow" style="margin-top:0">Abläufe</div>'
+    + zeile('data-m="ablaeufe"', 'Abläufe', plaeneListe().length ? (laufen ? `${laufen} ${laufen === 1 ? 'läuft' : 'laufen'}` : `${plaeneListe().length}`) : '')
+    + zeile('data-m="ausloeser"', 'Auslöser', regeln ? `${regeln} an` : '')
+    + '<div class="eyebrow">Rückblick</div>'
+    + zeile('data-m="erledigt"', 'Erledigt', erledigt ? String(erledigt) : '')
+    + zeile('data-m="arbeit"', 'Arbeitsnachweis', '')
+    + zeile('data-m="taeten"', 'Tätigkeiten', taetL.length ? String(taetL.length) : '')
+    + '<div class="eyebrow">Umgebung</div>'
+    + zeile('data-m="wetter"', 'Wetter', CFG.wetter ? '' : 'Standort fehlt')
+    + zeile('data-m="abfall"', 'Abfuhr', naechste ? `${WOCHENTAG[alsDatum(naechste.tag).getDay()]} ${ttmm(alsDatum(naechste.tag))} ${naechste.art}` : (ABFALL.url ? '' : 'nicht eingerichtet'))
+    + '<div class="eyebrow">App</div>'
+    + zeile('data-m="settings"', 'Einstellungen', '')
+    + zeile('data-m="sicherung"', 'Sicherung', l ? dText(l) : 'noch nie')
+    + `<p class="muted small" style="margin-top:18px;opacity:.7">${esc(BUILD)}</p>`;
+  const ziel = {ablaeufe:() => go('ablaeufe'), ausloeser:() => { go('ablaeufe'); const b = $('#ausloeserBox'); if(b) bildNach(Math.max(0, imBild(b) - 8)); },
+    erledigt:() => go('erledigt'), arbeit:() => { arbZeit = null; go('arbeit'); }, taeten:() => go('taeten'),
+    wetter:() => { if(CFG.wetter){ go('wetter'); wetterAbrufen(); } else setOeffnen('adresse'); },
+    abfall:() => { go('abfall'); abfallAbrufen(); }, settings:() => go('settings'), sicherung:() => setOeffnen('geraet')};
+  $$('#mehrBox [data-m]').forEach(b => b.onclick = ziel[b.dataset.m]);
+}
+/* Die Suche hat seit v1.184 eine eigene Seite hinter der Lupe. */
+function sucheOeffnen(){ suchPlaeneHolen().then(renderSuche); renderSuche(); }
+
 /* ---------- Kombinierter Rundgang -------------------------------------------
    Die Runden mehrerer Nachweise als ein Weg durchs Haus. Welche mitmachen,
    steht je Nachweis in den Einstellungen. Der Weg (CFG.weg) umfasst alle
@@ -9830,7 +9898,7 @@ function planKarte(liste){
   return `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Auslastung</div>
     <p style="margin:0">Bis ${esc(planTagWort(p.bis))} wird es knapp: ≈ ${esc(dauerText({m:auf15(p.noetig)}))} offen, ${
       esc(dauerText({m:Math.floor(p.verf / 15) * 15}))} verfügbar.</p>
-    <button class="btn ghost klein" data-wplan="1" style="margin-top:10px">Wochenplan</button></div>`;
+    <button class="btn ghost klein" data-wplan="1" style="margin-top:10px">Kalender</button></div>`;
 }
 /* Der Wochenplan: die nächsten zehn Arbeitstage, auf die die offenen Zeilen
    der Liste verteilt werden. Früheste Frist zuerst, bei gleicher Frist die
@@ -10056,8 +10124,12 @@ function renderWochenplan(){
   }
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Nächste ${tage.length} Arbeitstage ${i.knopf}</div>${i.text}`
     + html
-    + (uebrig.length ? `<div class="eyebrow">Passt nicht mehr hinein</div>` + uebrig.map(planKnopf).join('') : '');
+    + (uebrig.length ? `<div class="eyebrow">Passt nicht mehr hinein</div>` + uebrig.map(planKnopf).join('') : '')
+    /* Die Termine gehören seit v1.184 zum Kalender. */
+    + `<div class="eyebrow">Termine</div><button class="btn eintrag" data-termine="1"><span class="etext mehrZeile"><span>Alle Termine</span>${
+        termineKommend().length ? `<span class="zahl">${termineKommend().length} kommend</span>` : ''}</span></button>`;
   knoepfeVerdrahten(box);
+  box.querySelector('[data-termine]').onclick = () => go('termine');
 }
 /* --- Arbeitsnachweis (v1.65, Etappe D1) ------------------------------------------
    Vorerst für Jean selbst, ohne Uhrzeiten; aber so gebaut, dass er einem
@@ -10399,9 +10471,17 @@ function renderAlle(){
   }).join('')]);
   const inhalt = gruppen.map(([titel, knoepfe]) =>
     `<div class="eyebrow">${esc(titel)}</div>` + knoepfe).join('');
-  $('#alleListe').innerHTML = (inhalt || `<p class="muted small">Noch nichts eingetragen. Über die Einstellungen legst du je Nachweis an, was im Haus steht.</p>`)
-    + '<div id="alleHist"></div>';
+  $('#alleListe').innerHTML = (inhalt || `<p class="muted small">Noch nichts eingetragen. Unter Mehr › Einstellungen legst du an, was im Haus steht.</p>`)
+    /* Die Überschrift erscheint erst, wenn darunter etwas steht – Grundrisse
+       und Blätter kommen verzögert aus dem Bilderspeicher. */
+    + `<div id="alleWeiter"><div class="eyebrow" hidden>Übersicht</div><div id="alleGrund"></div>`
+    + (STOER.length ? `<button class="btn eintrag" data-stoer="1"><span>Störungen</span><span class="zahl">${stoerObjekte().length}</span></button>` : '')
+    + '<div id="alleHist"></div></div>';
+  alleWeiterZeigen();
   knoepfeVerdrahten($('#alleListe'));
+  const sto = $('#alleListe [data-stoer]');
+  if(sto) sto.onclick = () => go('stoerungen');
+  hausKnopf();
   histKnopf();
 }
 /* Die Grundrisse gehören inzwischen zum täglichen Handwerkszeug und sollen
@@ -10409,16 +10489,19 @@ function renderAlle(){
    Bilderspeicher und stehen erst nach dem Aufbau der Startseite fest – der
    Knopf hängt sich deshalb nach. Ohne Pläne bleibt er ganz weg, statt ins
    Leere zu führen. */
+function alleWeiterZeigen(sicher){
+  const w = $('#alleWeiter'); if(!w) return;
+  w.querySelector('.eyebrow').hidden = !(sicher || w.querySelector('button'));
+}
 async function hausKnopf(){
   let liste = [];
   try{ liste = (await Bilder.alle()) || []; }catch(e){ return; }
-  const box = $('#homeMehr');
-  if(!liste.length || current !== 'home' || !box || box.querySelector('[data-plaene]')) return;
+  /* Seit v1.184 unter Anlagen, mit Störungen und ausgegebenen Blättern. */
+  const box = $('#alleGrund');
+  if(!liste.length || current !== 'alle' || !box || box.querySelector('[data-plaene]')) return;
   liste = planSortieren(liste);
-  /* Ohne Nachweise fehlt die Überschrift des Blocks – dann bringt sie der Knopf mit. */
-  box.insertAdjacentHTML('beforeend',
-    (box.querySelector('.eyebrow') ? '' : `<div class="eyebrow">Übersicht</div>`)
-    + `<button class="btn eintrag" data-plaene="1"><span>Grundrisse</span><span class="zahl">${liste.length}</span></button>`);
+  box.innerHTML = `<button class="btn eintrag" data-plaene="1"><span>Grundrisse</span><span class="zahl">${liste.length}</span></button>`;
+  alleWeiterZeigen();
   box.querySelector('[data-plaene]').onclick = () => {
     planListe = liste;                        // von hier aus wird geblättert
     /* Bei einem einzigen Plan wäre die Wahl eine Frage mit nur einer Antwort. */
@@ -13855,7 +13938,7 @@ function setAbwesend(box){
   const iFei = info('Gerechnet werden die landesweiten Feiertage. Regionale – etwa Fronleichnam in Teilen Sachsens und Thüringens oder Mariä Himmelfahrt in Teilen Bayerns – trägst du unten als Abwesenheit ein.', 'margin:-2px 0 10px');
   const iAbw = info('Fällt eine Frist aufs Wochenende, einen Feiertag oder in eine Abwesenheit, gilt der Arbeitstag davor. Zwei Wochen vorher zeigt die Startseite, was vorher zu erledigen ist.', 'margin:-2px 0 10px');
   /* Zeit je Arbeitstag für die Aufgaben der App (v1.63), in halben Stunden. */
-  const iAz = info('So viel Zeit steht an einem Arbeitstag für die Aufgaben der App zur Verfügung. Danach rechnen der Wochenplan und die Auslastung; eine Dauer von einem Tag zählt ebenso viel. Wird es neben anderer Arbeit zu viel, hier herabsetzen.', 'margin:-2px 0 10px');
+  const iAz = info('So viel Zeit steht an einem Arbeitstag für die Aufgaben der App zur Verfügung. Danach rechnen der Kalender und die Auslastung; eine Dauer von einem Tag zählt ebenso viel. Wird es neben anderer Arbeit zu viel, hier herabsetzen.', 'margin:-2px 0 10px');
   box.innerHTML = `
     <div class="eyebrow mitInfo" style="margin-top:0">Arbeitszeit ${iAz.knopf}</div>${iAz.text}
     <div class="field"><span>Zeit je Arbeitstag</span><div class="dauerWahl"><div class="stufe">
@@ -18076,8 +18159,8 @@ async function histKnopf(){
   try{ runden = historieOrdnen(await Historie.alle()); }catch(e){ return; }
   const box = $('#alleHist');
   if(!box || current !== 'alle' || !runden.length) return;
-  box.innerHTML = `<div class="eyebrow">Ausgegebene Blätter</div>
-    <button class="btn eintrag" data-hist="1"><span>Ausgegebene Blätter</span><span class="zahl">${runden.length}</span></button>`;
+  alleWeiterZeigen(true);
+  box.innerHTML = `<button class="btn eintrag" data-hist="1"><span>Ausgegebene Blätter</span><span class="zahl">${runden.length}</span></button>`;
   box.querySelector('[data-hist]').onclick = () => go('historie');
 }
 async function renderHistorie(){
@@ -18829,7 +18912,6 @@ function renderSuche(){
   const q = feld.value.trim();
   $('#sucheLeeren').hidden = !feld.value;
   box.hidden = !q;
-  $('#homeListe').hidden = !!q;
   if(!q){ box.innerHTML = ''; suchListe = []; return; }
   /* Ohne Plannamen erst holen, dann noch einmal (v1.145). */
   if(!suchPlaene){ suchPlaene = new Map(); suchPlaeneHolen().then(renderSuche); }
