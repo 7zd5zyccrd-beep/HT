@@ -10,6 +10,8 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.208 08.10.2026 „Zeit übrig?“ auf Heute ist nicht mehr höher als die
+                    Einträge darunter (Jean: zu hoch).
   v1.207 08.10.2026 Die Seite eines Anlagentyps rechnet nur noch dessen eigene
                     Objekte statt aller – schneller bei vielen Objekten,
                     sichtbar ändert sich nichts.
@@ -2942,12 +2944,14 @@ header .back[hidden]{display:none}
 /* Typ über dem Titel einer Kopfkarte (v1.202): leise, ohne Versalien. */
 .kopfTyp{margin:0 0 4px;font-size:14px;color:var(--ink-soft)}
 .btn.eintrag.blass{opacity:.6}
-.vorzZeile{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;padding:4px 0 2px;color:var(--ink);font:inherit;font-weight:500;cursor:pointer}
+.vorzZeile{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;padding:0;color:var(--ink);font:inherit;font-weight:500;cursor:pointer}
 .vorzZeile .etext{flex:1;min-width:0}
 .vorzZeile small{display:block;margin-top:3px;font-size:14px;font-weight:400;color:var(--ink-soft)}
 .vorzZeile::after{content:'›';flex:0 0 auto;font-size:22px;line-height:1;color:var(--ink-soft)}
 .vorzZeile[aria-expanded="true"]::after{transform:rotate(90deg)}
 .vorschlaege b{font-weight:500}
+/* „Zeit übrig?“ so hoch wie ein Eintrag der Liste (v1.208, Jean: zu hoch). */
+.card.vorschlaege{padding-top:11px;padding-bottom:11px}
 /* Antippbare Vorschläge wie Einträge: › rechts am Rand (v1.200). */
 .vsZiel{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500}
 .vsZiel .etext{flex:1;min-width:0}
@@ -4049,7 +4053,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.207';
+const VERSION = 'v1.208';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
