@@ -10,6 +10,9 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.197 08.10.2026 Grundriss: Auch die Übersicht öffnet wieder wie früher,
+                    in der Höhe eingepasst (Jean). Kleiner zoomen, bis der
+                    ganze Plan zu sehen ist, geht dort weiterhin.
   v1.196 08.10.2026 Grundriss: Nur die Übersicht öffnet ganz eingepasst.
                     Beim Verorten einer Marke öffnet der Plan wieder wie
                     bisher in der Höhe eingepasst und zoomt nicht kleiner –
@@ -3952,7 +3955,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.196';
+const VERSION = 'v1.197';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -16993,9 +16996,10 @@ async function planZeigen(id, ziel){
      dem bisherigen Zuschnitt oder der gemeinsamen Fläche. */
   if(planSchnitt) schnittRechteck = Object.assign({}, schnittAuf(id) || schnittGemeinsam(id));
   planAktuell = id;
-  /* Übersicht ganz eingepasst (v1.194), beim Verorten wie bisher die Höhe
-     (v1.196, Jean: sonst ist die Marke zum Setzen zu klein). */
-  planZoom = ziel ? 1 : 0;
+  /* Ein neuer Rahmen beginnt in der Höhe eingepasst, wie vor v1.194 – auch
+     die Übersicht (v1.197, Jean). Dort lässt er sich aber weiter kleiner
+     zoomen, bis er ganz zu sehen ist. */
+  planZoom = 1;
   scharfWeg(); scharfPlan = null; tippWeg();
   /* Von außen geöffnet: die Bildverweise der vorigen Sitzung freigeben. Vom
      Regler aus bleiben sie – der Nachbar wird gleich wieder gebraucht. */
