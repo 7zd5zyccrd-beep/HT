@@ -10,6 +10,10 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.196 08.10.2026 Grundriss: Nur die Übersicht öffnet ganz eingepasst.
+                    Beim Verorten einer Marke öffnet der Plan wieder wie
+                    bisher in der Höhe eingepasst und zoomt nicht kleiner –
+                    sonst war die Marke zum Setzen zu klein (Jean).
   v1.195 08.10.2026 Prüfteam, Paket 6: Kleine Hilfen. Die Suche findet auch
                     Seiten („Urlaub“ → Abwesenheiten, „Passwort“ → Zugang,
                     „Müll“ → Abholtage …). Ein Grundriss öffnet ganz
@@ -3948,7 +3952,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.195';
+const VERSION = 'v1.196';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -15814,7 +15818,7 @@ let planZoom = 1;
    öffnet so (planZoom 0 = „ganz einpassen“, bis die erste Geste zoomt). Der
    Ablauf der Geste selbst bleibt, wie er ist. */
 function planZoomMin(){
-  const wrap = $('#planWrap'); if(!wrap || !wrap.clientWidth) return 1;
+  const wrap = $('#planWrap'); if(!wrap || !wrap.clientWidth || planZiel) return 1;   // Verorten wie bisher (v1.196)
   const st = $('#planStreifen'), oben = planSchnitt && st && !st.hidden ? st.offsetHeight + 6 : 0;
   const breit = (wrap.clientHeight - oben) * (Rahmen.asp || 1);
   return breit > wrap.clientWidth ? Math.max(.2, wrap.clientWidth / breit) : 1;
@@ -16989,7 +16993,9 @@ async function planZeigen(id, ziel){
      dem bisherigen Zuschnitt oder der gemeinsamen Fläche. */
   if(planSchnitt) schnittRechteck = Object.assign({}, schnittAuf(id) || schnittGemeinsam(id));
   planAktuell = id;
-  planZoom = 0;                                // ein neuer Rahmen beginnt ganz (v1.194: ganz eingepasst)
+  /* Übersicht ganz eingepasst (v1.194), beim Verorten wie bisher die Höhe
+     (v1.196, Jean: sonst ist die Marke zum Setzen zu klein). */
+  planZoom = ziel ? 1 : 0;
   scharfWeg(); scharfPlan = null; tippWeg();
   /* Von außen geöffnet: die Bildverweise der vorigen Sitzung freigeben. Vom
      Regler aus bleiben sie – der Nachbar wird gleich wieder gebraucht. */

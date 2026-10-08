@@ -176,7 +176,7 @@ steht.
 - „+ › Störung“ (E8): `stoerungNeu` (Typ → Objekt → Feld offen). Karte
   Störungen nur, wenn es welche gibt; vermerkt wird über den Weg oben.
 - Suche findet Seiten (`SEITEN`, `suchSeiten`). Grundriss öffnet ganz
-  eingepasst: `planZoom = 0` heißt „ganz“, `zoomJetzt()`, `planZoomMin()`;
+  eingepasst: `planZoom = 0` heißt „ganz“, `zoomJetzt()`, `planZoomMin()`; beim Verorten (`planZiel`) wie bisher Höhe und kleinster Zoom 1 (v1.196, Jean);
   der Gestenablauf selbst ist unverändert.
 - `Historie.alle()` merkt die Liste (`histMerk`), put/weg/leeren leeren sie.
 - Tests im Notizordner: `qs/test/t_*.js` (lib.js), `fuzz2.js SEED`,
