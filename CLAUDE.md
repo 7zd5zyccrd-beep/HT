@@ -198,6 +198,27 @@ steht.
   kleiner als die Höhe; `planZoomMin()` gibt 1).
   Der Gestenablauf selbst blieb immer unverändert.
 - `Historie.alle()` merkt die Liste (`histMerk`), put/weg/leeren leeren sie.
+- Nachlese (v1.206/207): `:active` dämpft Knöpfe (iOS braucht den leeren
+  `touchstart`-Hörer), `user-select:none` in Leisten/Knöpfen; `body.tippt`
+  nur bei echter Tastatur (nicht Datum/Uhrzeit/Auswahl), `go()` verlässt ein
+  Feld beim Seitenwechsel. Objektwege mit `TAUSCH_SVG`/`STOER_SVG`/`PLUS_SVG`.
+  Ein ⓘ ohne Nachbarn über `infoKopf(titel, text)`. Kalender: „~“ vor der
+  Dauer statt „geschätzt“. `suchObjekte(nurK)` für die Typseite.
+- Schreibweise (Jean): „z.B.“ ohne Leerzeichen, in allen sichtbaren Texten.
+- Von Jean abgelehnt: kräftigerer aktiver Reiter unten (D9), weiße statt
+  graue Unterschriftfläche nach dem Unterschreiben (D8), „Zurücknehmen“
+  bleibt im Fenster „Weiter“. Zurückgestellt: iPad-Feinschliff (E9).
+- Offen / nur auf dem iPhone prüfbar: Leiste unter dem Home-Balken,
+  Tastatur nach Datumswahl, Lupe öffnet Tastatur, Doppeltipp „Ausgeben“,
+  Unterschreiben ohne Mitrollen, ⚠/♻ schwarz-weiß, Tempo auf alten Geräten,
+  Schrift der Blätter (iOS nimmt Avenir Next Condensed). Grundriss-Blatt
+  ließ sich im Testbrowser nicht bauen. Werksregel und eigener Auslöser
+  haben weiter getrennte Editoren.
+- Prüfmethode, die sich bewährt hat: alle Seiten/Fenster/Blätter per
+  Skript öffnen, Bilder nebeneinanderlegen und messen (Schriftgröße/-stärke,
+  Versalien, Überschrift im Kasten, einzelne Wege, „›“ im Text) –
+  Skripte `t_unter.js`, `t_fenster.js`, `t_blaetter.js`, `t_typen.js` im
+  Notizordner (gehen mit der Sitzung verloren, Muster siehe oben).
 - Tests im Notizordner: `qs/test/t_*.js` (lib.js), `fuzz2.js SEED`,
   `qs/fix/t_ausgabe.js`. `t_leer.js` endet mit einer Zeitüberschreitung
   (klickt einen verborgenen Zurück-Knopf) – kein Fehler der App.
