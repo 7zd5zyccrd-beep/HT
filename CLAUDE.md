@@ -165,7 +165,11 @@ steht.
   Liste), Text `freiText` („frei ≈ …“). Kalender heute: Fälliges oben,
   Vorgezogenes blass unter „Könnte heute mit“ (`planKnopf(p, true)`).
 - Ringe (E3): rot = überfällig, `ring-heute` (dunkel) = heute fällig, gelb
-  wie bisher. Farben `--dringend`, `--bald` mit Dunkelwert.
+  wie bisher. Unter Anlagen seit v1.201 dieselben Ringe (`wieHeute` in
+  `renderAlle`: Ring des Listeneintrags, sonst knappes Rot → dunkel).
+- Reine Wege zu anderen Seiten stehen als `gliste` (Mehr, Einstellungen,
+  „Weiteres“ in Kalender, Anlagen, Typseite; nachgeladene Einträge in
+  `div`s mit `display:contents`). Listen mit Ringen bleiben einzelne Kästen. Farben `--dringend`, `--bald` mit Dunkelwert.
 - Schriften (E1): `<style id="schriften">` mit Barlow Condensed 500/600
   (latin, OFL) als data-URL, Fließtext Systemschrift. `blattDokument` lässt
   diesen Block weg, `blattFreigeben` entfernt alte Google-Verweise.

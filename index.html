@@ -10,6 +10,14 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.201 08.10.2026 Gleichheit auf allen Hauptseiten (Jean). Kalender: heute
+                    „Heute · Do 08.10.“ wie auf Heute, zusammengefasste Tage
+                    immer mit „–“, „Weiteres“ als gruppierte Liste. Anlagen:
+                    jeder Typ hat eine zweite Zeile („nächste Ablesung
+                    Dezember“), „Übersicht“ heißt „Weiteres“ und ist eine
+                    gruppierte Liste (auch auf der Typseite). Die Ringe unter
+                    Anlagen folgen Heute: Rot nur, wenn etwas zu spät ist,
+                    sonst dunkel oder gelb.
   v1.200 08.10.2026 Heute: In den Vorschlägen steht das › jetzt rechts am Rand
                     wie bei allen Einträgen, nicht mehr direkt hinter dem
                     Titel (Jean).
@@ -2438,8 +2446,9 @@ main{flex:1 0 auto;padding:16px var(--pad) calc(16px + max(env(safe-area-inset-b
 .btn.primary[disabled]{background:var(--ink-soft);border-color:var(--ink-soft);color:var(--on-strong);opacity:.6}
 /* Gruppierte Listen (v1.194, E7): ein Kasten, Zeilen mit Trennlinie. */
 .gliste{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 0 6px}
-.gliste > .btn.eintrag{border:0;border-top:1px solid var(--line);border-radius:0;margin:0;background:none;min-height:48px}
-.gliste > .btn.eintrag:first-child{border-top:0}
+.gliste > div{display:contents}   /* nachgeladene Einträge (Anlagen, Typseite) gehören mit hinein */
+.gliste .btn.eintrag{border:0;border-top:1px solid var(--line);border-radius:0;margin:-1px 0 0;background:none;min-height:48px}
+.gliste:not(:has(.btn)){display:none}
 /* Eigene display-Angaben schlagen die eingebaute Regel für [hidden] – ohne
    diese beiden Zeilen bleiben ausgeblendete Knöpfe und Zeilen sichtbar (und
    dann stehen dort Knöpfe, die nichts mehr tun). */
@@ -3978,7 +3987,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.200';
+const VERSION = 'v1.201';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10551,7 +10560,7 @@ function renderWochenplan(){
   const heuteFrei = vorziehenRechnen(liste).frei;
   const istFaellig = p => p.a.gruppe === 'ueber' || p.a.gruppe === 'heute';
   const i = info('Ein Plan, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Eingeplantes an seinem Tag, Wetteraufgaben auf gute Halbtage. Termine stehen obenan und nehmen ihre Zeit vom Tag. Die Dauer ist der Durchschnitt der erfassten Dauern, ohne sie gelten 30 Minuten („geschätzt“). Was nicht fällig ist und nur vorgezogen wird, steht heute blass unter „Könnte heute mit“. Die Zeit je Arbeitstag steht unter Mehr › Einstellungen › Arbeitszeit.', 'margin:-2px 0 10px');
-  const kopfVon = j => j === 0 && planTagWort(tage[j].t) === 'heute' ? `Heute ${ttmm(tage[j].t)}`
+  const kopfVon = j => j === 0 && planTagWort(tage[j].t) === 'heute' ? `Heute · ${WOCHENTAG[tage[j].t.getDay()]} ${ttmm(tage[j].t)}`   // wie auf Heute (v1.201)
                                                                     : `${WOCHENTAG[tage[j].t.getDay()]} ${ttmm(tage[j].t)}`;
   /* Leere Tage am Stück stehen in einer Zeile (v1.73), ohne Balken – zehnmal
      „Nichts eingeplant“ untereinander sagte nichts. */
@@ -10587,7 +10596,7 @@ function renderWochenplan(){
         while(bis + 1 < tage.length && leer(tage[bis + 1]) && !tagZusatz(tage[bis + 1].iso).length
               && !luecke(tage[bis].t, tage[bis + 1].t)) bis++;
       const zs = bis === j ? tagZusatz(tg.iso) : [];
-      html += `<div class="eyebrow">${esc(kopfVon(j))}${bis > j ? ' bis ' + esc(kopfVon(bis)) : ''} <span class="summe">· ${esc(['nichts eingeplant'].concat(zs).join(' · '))}</span></div>`;
+      html += `<div class="eyebrow">${esc(kopfVon(j))}${bis > j ? ' – ' + esc(kopfVon(bis)) : ''} <span class="summe">· ${esc(['nichts eingeplant'].concat(zs).join(' · '))}</span></div>`;
       j = bis;
       continue;
     }
@@ -10605,10 +10614,10 @@ function renderWochenplan(){
     + html
     + (uebrig.length ? `<div class="eyebrow">Passt nicht mehr hinein</div>` + uebrig.map(p => planKnopf(p)).join('') : '')
     /* Die Termine gehören seit v1.184 zum Kalender, die Abwesenheiten seit v1.188. */
-    + `<div class="eyebrow">Weiteres</div><button class="btn eintrag" data-termine="1"><span class="etext mehrZeile"><span>Alle Termine</span>${
+    + `<div class="eyebrow">Weiteres</div><div class="gliste"><button class="btn eintrag" data-termine="1"><span class="etext mehrZeile"><span>Alle Termine</span>${
         termineKommend().length ? `<span class="zahl">${termineKommend().length} kommend</span>` : ''}</span></button>
        <button class="btn eintrag" data-abw="1"><span class="etext mehrZeile"><span>Abwesenheiten</span>${
-        abwKommend().length ? `<span class="zahl">${abwKommend().length} geplant</span>` : ''}</span></button>`;
+        abwKommend().length ? `<span class="zahl">${abwKommend().length} geplant</span>` : ''}</span></button></div>`;
   knoepfeVerdrahten(box);
   box.querySelector('[data-termine]').onclick = () => go('termine');
   box.querySelector('[data-abw]').onclick = () => setOeffnen('abwesend');
@@ -10950,7 +10959,14 @@ function alleStand(n, liste){
   if(st) return st;
   if(ausgegebenJetzt(n)) return 'ausgegeben · nichts offen';
   const a = liste.find(x => x.k === n.k && !x.aufg && !x.akku && x.faellig);
-  if(!a) return '';
+  if(!a){
+    /* Noch nichts fällig: wann die nächste ansteht (v1.201) – sonst fehlte
+       die zweite Zeile, etwa bei den Medienverbräuchen. */
+    if(n.art === 'fremd' || n.art === 'bestand') return '';
+    const zr = n.art === 'medien' ? jetztZeitraum(true) : n.art === 'sprinkler' ? jetztZeitraum('monat') : jetztZeitraum(taktVon(n));
+    const e = zeitraumEnde(zr);
+    return `${n.art === 'medien' ? 'nächste Ablesung' : 'nächste Kontrolle'} ${MONATE[e.getMonth()]}`;
+  }
   if(a.tage < 0 || (a.fenster && a.fenster.von <= tagAnfang(new Date()))) return fristText0(Object.assign({}, a, {gruppe:''}));
   if(a.fenster) return `Zeitraum ab ${ttmm(a.fenster.von)}`;
   return a.tage === 0 ? 'fällig heute' : a.tage === 1 ? 'fällig morgen' : `fällig ${WOCHENTAG[a.faellig.getDay()]} ${ttmm(a.faellig)}`;
@@ -10959,10 +10975,19 @@ function renderAlle(){
   const liste = aufgaben();
   /* Der Sprinkler steht seit v1.192 nur einmal da, unter seinem kürzesten
      Abstand, mit der knapperen Lage von Wochengang und Monatskontrolle. */
-  const RANG = {gruen:0, '':1, gelb:2, rot:3};
+  const RANG = {gruen:0, '':1, gelb:2, heute:2.5, rot:3};
+  /* Ringe wie auf Heute (v1.201, Jean): Rot nur, wenn etwas zu spät ist.
+     Steht der Typ in der Liste, gilt deren Ring; sonst wird ein „knappes“
+     Rot zum dunklen Ring. Grün (erledigt) bleibt. */
+  const wieHeute = (k, r, akku) => {
+    if(r === 'gruen') return r;
+    const l = liste.filter(x => x.k === k && !x.aufg && !!x.akku === !!akku && x.ring);
+    if(l.length) return l.map(x => x.ring).sort((x, y) => RANG[y] - RANG[x])[0];
+    return r === 'rot' ? 'heute' : r;
+  };
   const knopf = (n, t) => {
     if(n.spaeter) return `<button class="btn" disabled>${esc(n.label)} · folgt</button>`;
-    const r = n.art === 'sprinkler' ? ['woche', 'monat'].map(x => ring(n, x)).sort((x, y) => RANG[y] - RANG[x])[0] : ring(n, t);
+    const r = wieHeute(n.k, n.art === 'sprinkler' ? ['woche', 'monat'].map(x => ring(n, x)).sort((x, y) => RANG[y] - RANG[x])[0] : ring(n, t));
     const stand = [n.art === 'sprinkler' ? 'Woche · Monat' : '', alleStand(n, liste)].filter(Boolean).join(' · ');
     return `<button class="btn eintrag${r ? ' ring-' + r : ''}" data-typ="${esc(n.k)}"><span class="etext">${esc(n.label)}${
       stand ? `<small>${esc(stand)}</small>` : ''}</span></button>`;
@@ -10985,7 +11010,7 @@ function renderAlle(){
      seinen eigenen Knopf (v1.149), solange es dort Objekte gibt. */
   const akkus = akkuTypenMit();
   if(akkus.length) gruppen.push(['Eigene Wartung', akkus.map(n => {
-    const r = akkuRing(n.k), st = akkuStand(n.k);
+    const r = wieHeute(n.k, akkuRing(n.k), true), st = akkuStand(n.k);
     return `<button class="btn eintrag${r ? ' ring-' + r : ''}" data-nw="${esc(n.k)}" data-ziel="" data-akku="1"><span class="etext">${esc(akkuTitel(n.k))}${
       st ? `<small>${esc(st.replace(/^ · /, ''))}</small>` : ''}</span></button>`;
   }).join('')]);
@@ -10999,9 +11024,9 @@ function renderAlle(){
       <button class="btn primary" id="alleTypNeu">+ Neuer Anlagentyp</button>`)
     /* Die Überschrift erscheint erst, wenn darunter etwas steht – Grundrisse
        und Blätter kommen verzögert aus dem Bilderspeicher. */
-    + `<div id="alleWeiter"><div class="eyebrow" hidden>Übersicht</div><div id="alleGrund"></div>`
+    + `<div id="alleWeiter"><div class="eyebrow" hidden>Weiteres</div><div class="gliste"><div id="alleGrund"></div>`
     + (STOER.length ? `<button class="btn eintrag" data-stoer="1"><span>Störungen</span><span class="zahl">${stoerObjekte().length}</span></button>` : '')
-    + '<div id="alleHist"></div></div>';
+    + '<div id="alleHist"></div></div></div>';
   alleWeiterZeigen();
   knoepfeVerdrahten($('#alleListe'));
   if($('#alleTypNeu')) $('#alleTypNeu').onclick = typWahl;
@@ -11039,8 +11064,8 @@ function renderTypSeite(){
       ${akkuAktiv(k) ? `<button class="btn" data-takku="1" style="margin-top:8px">${esc(akkuTitel(k))}</button>` : ''}</div>` : '')
     + `<div class="eyebrow">${wort}${art === 'sprinkler' ? '' : ` <span class="summe">· ${objekte.length}</span>`}</div>${liste}
        <button class="btn ghost klein" data-tbearb="1" style="margin:6px 0 0">${wort} bearbeiten</button>
-       <div class="eyebrow">Weiteres</div><div id="typHist"></div>
-       <button class="btn eintrag" data-tset="1"><span>Einstellungen des Typs</span></button>`;
+       <div class="eyebrow">Weiteres</div><div class="gliste"><div id="typHist"></div>
+       <button class="btn eintrag" data-tset="1"><span>Einstellungen des Typs</span></button></div>`;
   const b = sel => box.querySelector(sel);
   if(b('[data-tk]')) b('[data-tk]').onclick = () => nachweisOeffnen(k);
   if(b('[data-takku]')) b('[data-takku]').onclick = () => akkuOeffnen(k);
