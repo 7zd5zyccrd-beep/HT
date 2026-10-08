@@ -53,6 +53,14 @@ steht.
   nach dem Element, das oben klebt (im E-Assistenten v1.132 gelernt: ohne
   `sticky` kam der Schleier zurück). Neu anlegen des Symbols ist dafür nicht
   nötig.
+- **Tastatur (v1.180):** `hoeheBinden` setzt `--app-h` = visualViewport und
+  holt das Feld über `feldZeigen` hoch (auch bei `focusin`, also beim
+  Feldwechsel mit offener Tastatur; in `.dlgbox` rollt das Fenster selbst).
+  Auf Touch-Geräten hängt während der Eingabe `.tastaturPlatz` (halbe
+  Bildschirmhöhe) unten an `#bild`, weil iOS ein Feld auf kurzen Seiten sonst
+  nicht hochrollen kann (Jean); weg bei `focusout`. `#dlg` ist so hoch wie
+  `--app-h`. Im Testbrowser nur nachstellbar, indem `visualViewport.height`
+  überschrieben und `resize` ausgelöst wird.
 - **Speicher unter iOS:** Die App vom Home-Bildschirm hat einen eigenen
   Speicher, getrennt von Safari. Symbol entfernen löscht alle Daten – vorher
   immer über Einstellungen › Sicherung sichern lassen.

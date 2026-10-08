@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.180 08.10.2026 Tastatur (Jean): auf kurzen Seiten blieb das Feld mit
+         dem Cursor hinter der Tastatur – iOS kann es nur so weit hochholen,
+         wie die Seite darunter noch rollen kann. Solange ein Feld aktiv ist,
+         hält die App unten unsichtbaren Platz frei; beim Wechsel von Feld zu
+         Feld rückt sie auch nach, wenn die Tastatur schon offen ist; Fenster
+         stehen im sichtbaren Teil über der Tastatur. Sonst ändert sich an der
+         Darstellung nichts.
   v1.179 08.10.2026 Abläufe neu geordnet (Jean: „nicht übersichtlich und
          selbsterklärend“). Im Ablauf heißt es „Schritt“ statt „Aufgabe“ –
          Aufgabe ist nur noch, was in der Liste steht. Die Seite eines
@@ -2606,9 +2613,13 @@ button > .ortIcon:only-child{display:block;margin:auto}
 
 #dlg{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.45);
   display:flex;align-items:center;justify-content:center;padding:var(--pad)}
+/* Mit offener Tastatur steht das Fenster im sichtbaren Teil darüber (v1.180),
+   statt in der Mitte des ganzen Bildschirms, halb unter der Tastatur. */
+#dlg{bottom:auto;height:var(--app-h, 100%);box-sizing:border-box}
+.tastaturPlatz{flex:none}
 #dlg[hidden]{display:none}
 .dlgbox{background:var(--surface);border-radius:14px;padding:16px;width:100%;max-width:460px;
-  max-height:80vh;overflow:auto}
+  max-height:80vh;max-height:min(80vh, 100%);overflow:auto}
 .dlgtitel{font-weight:600;margin-bottom:8px}
 .dlgtext{white-space:pre-wrap;font-size:15px;line-height:1.45}
 /* --- Zugangsabfrage --------------------------------------------------------- */
@@ -3577,7 +3588,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.179';
+const VERSION = 'v1.180';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4973,20 +4984,53 @@ $('#btnBack').onclick = zurueck;
    das Feld mit dem Cursor bleibt im Bild. */
 (function hoeheBinden(){
   const vv = window.visualViewport;
+  const istFeld = el => !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)
+    && !/^(checkbox|radio|button|submit|file|range|color|hidden)$/.test(el.type || '');
+  /* Das Feld mit dem Cursor über die Tastatur holen – in #bild oder in einem
+     Fenster (.dlgbox). Sichtbar ist, was über der Tastatur und über einer
+     Leiste unten (.actionbar) liegt. */
+  const feldZeigen = () => {
+    const f = document.activeElement;
+    if(!istFeld(f)) return;
+    const imDlg = f.closest('.dlgbox'), box = imDlg || (bild().contains(f) ? bild() : null);
+    if(!box) return;
+    const r = f.getBoundingClientRect(), b = box.getBoundingClientRect();
+    let unten = Math.min(b.bottom, vv ? vv.offsetTop + vv.height : window.innerHeight);
+    const leiste = !imDlg && document.querySelector('.view.active .actionbar:not([hidden])');
+    if(leiste) unten = Math.min(unten, leiste.getBoundingClientRect().top + 12);
+    const y = imDlg ? box.scrollTop : bildY(), nach = v => imDlg ? (box.scrollTop = v) : bildNach(v);
+    if(r.bottom > unten - 8) nach(y + r.bottom - unten + 24);
+    else if(r.top < b.top + 8) nach(y - (b.top - r.top) - 24);
+  };
   const setzen = () => {
     const h = vv ? vv.height : window.innerHeight;
     document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
     if(window.scrollY) window.scrollTo(0, 0);
-    const f = document.activeElement;
-    if(f && f !== document.body && bild().contains(f) && /INPUT|TEXTAREA|SELECT/.test(f.tagName)){
-      const r = f.getBoundingClientRect(), b = bild().getBoundingClientRect();
-      if(r.bottom > b.bottom - 8) bildNach(bildY() + r.bottom - b.bottom + 24);
-      else if(r.top < b.top + 8) bildNach(bildY() - (b.top - r.top) - 24);
-    }
+    feldZeigen();
   };
   if(vv){ vv.addEventListener('resize', setzen); vv.addEventListener('scroll', () => { if(window.scrollY) window.scrollTo(0, 0); }); }
   window.addEventListener('resize', setzen);
   setzen();
+  /* Kurze Seiten (v1.180, Jean): iOS schiebt ein Feld nur so weit hoch, wie
+     #bild darunter noch rollen kann – auf einer kurzen Seite blieb es hinter
+     der Tastatur. Solange ein Feld den Cursor hat, hängt darum unten an #bild
+     unsichtbarer Platz (eine halbe Bildschirmhöhe); er fällt weg, sobald kein
+     Feld mehr aktiv ist. Nur auf Touch-Geräten, sonst ändert sich nichts.
+     Auch beim Wechsel von Feld zu Feld, wenn die Tastatur schon offen ist und
+     kein resize mehr kommt, wird nachgerückt. */
+  const touch = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  let platz = null;
+  const platzWeg = () => { if(platz){ platz.remove(); platz = null; } };
+  document.addEventListener('focusin', e => {
+    if(!istFeld(e.target)) return;
+    if(touch && bild().contains(e.target)){
+      if(!platz){ platz = document.createElement('div'); platz.className = 'tastaturPlatz'; platz.setAttribute('aria-hidden', 'true'); }
+      platz.style.height = Math.round(window.innerHeight * .5) + 'px';
+      if(platz.parentNode !== bild() || platz !== bild().lastElementChild) bild().appendChild(platz);
+    }
+    setTimeout(feldZeigen, 60); setTimeout(feldZeigen, 400);
+  });
+  document.addEventListener('focusout', () => setTimeout(() => { if(!istFeld(document.activeElement)) platzWeg(); }, 200));
 })();
 /* Kommt die App aus dem Hintergrund zurück, kann ein neuer Tag begonnen haben –
    Fristen und Gruppen der Liste rechnen dann neu. */
