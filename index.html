@@ -10,6 +10,21 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.193 08.10.2026 Prüfteam, Paket 4: Texte. Die Erklärtexte (i) nennen
+                    die heutigen Wege („Mehr › Auslöser“, „Heute“ statt
+                    „Startseite“). Im Grundriss heißt der Knopf „Blatt
+                    ansehen“, in der Vorschau immer „Ausgeben“. „Übernehmen“
+                    nur noch bei Vorschlägen: „Sicherung einlesen“ mit rotem
+                    „Ersetzen“, „Eintragen“, „Fertig“, „Standort verwenden“.
+                    Wörter statt Zeichen: „Datum ändern“, „Entfernen“,
+                    „‹ Davor“/„Danach ›“, „Zählertausch“. Einheitlich
+                    „Arbeitsmittel“, „Kontrollen und Aufgaben“, „Abholtage“,
+                    „Gemeinsamer Rundgang“, „Version“, „Zählerstände prüfen“,
+                    „Filtervlies“; neue Dinge mit „+ Neuer …/Neue …“. Der
+                    Assistent fragt nach dem Anlagentyp, ein Schritt ohne
+                    Titel heißt „Schritt“. Nach einer offenen Störung sagt
+                    die Meldung, welche Aufgabe angelegt wurde; sie heißt
+                    jetzt „RWA 1: Klappe öffnet nicht“.
   v1.192 08.10.2026 Prüfteam, Paket 2: Zahlen, die zusammenpassen. Die
                     freie Zeit heute ist überall dieselbe Zahl und heißt
                     überall „frei ≈ …“ (Heute, Vorschläge, Kalender, Tag
@@ -2589,7 +2604,7 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .seg.arbArt{margin:0 0 10px}
 .arbKopf{display:flex;align-items:center;gap:10px;margin:0 0 12px}
 .arbKopf b{flex:1;text-align:center}
-.arbKopf .btn{flex:0 0 44px;width:44px;margin:0;padding:0;font-size:20px}
+.arbKopf .btn{flex:0 0 auto;width:auto;margin:0;padding:0 10px}
 .zeile.taetDauer .etext{flex:1;min-width:0}
 .pos .punkt{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 .pos .punkt .ptext{font-size:14px;margin-bottom:6px}
@@ -3420,6 +3435,7 @@ a.ablaufSchritt{display:flex;align-items:center;justify-content:center;text-deco
 .ergebnisKnopf{font-weight:700;border-width:2px}
 .ergebnisZiel{display:flex;align-items:center;gap:8px;margin-top:6px}
 .ergebnisZiel .small{flex:1;min-width:0}
+.ergebnisZiel .zielAendern{flex:0 0 auto;width:auto;margin:0;padding:0 10px}
 .ergFolge{margin-top:10px}
 .ergDatum{display:block;margin:0 0 8px}
 .ergDatum span{display:block;margin:0 0 4px}
@@ -3727,7 +3743,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
           <p id="planHinweis"></p>
           <div class="knoepfe">
             <button class="btn ghost klein" id="btnPlanObjekte" hidden>Objekte</button>
-            <button class="btn ghost klein" id="btnPlanBlatt" hidden>Ausgeben</button>
+            <button class="btn ghost klein" id="btnPlanBlatt" hidden>Blatt ansehen</button>
             <button class="btn ghost klein" id="btnPlanRichtNeu" hidden>Beide neu setzen</button>
             <button class="btn ghost klein" id="btnPlanSchnitt" hidden>Zuschneiden</button>
             <button class="btn ghost klein" id="btnSchnittGem" hidden>Gemeinsame Fläche</button>
@@ -3779,16 +3795,16 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       <div id="blockPlaene" hidden>
         <div class="infozeile"><span class="muted small"></span><button type="button" class="info" aria-label="Erklärung" aria-expanded="false" aria-controls="infPlaene"><span>i</span></button></div>
         <p class="muted small infotext" id="infPlaene" hidden style="margin:-2px 0 12px">Bild oder PDF; eine mehrseitige PDF ergibt einen Plan je Seite, zum Umwandeln ist einmal Netz nötig. Die Reihenfolge folgt der Etage im Namen, mit den Pfeilen legst du sie selbst fest. „Ausrichten“: auf jedem Plan dieselben zwei Stellen antippen, etwa zwei Ecken des Treppenhauses – dann sitzen Aufzugsmarken auf allen Etagen richtig, und am Regler wird zwischen den Plänen überblendet. Die Pläne reisen mit der Sicherung.</p>
-        <button class="btn ghost klein" id="btnPlanNeu" style="margin:0 0 10px">+ Grundriss hinzufügen</button>
+        <button class="btn ghost klein" id="btnPlanNeu" style="margin:0 0 10px">+ Neuer Grundriss</button>
         <div id="planListe"><p class="muted small">wird geladen …</p></div>
         <input type="file" id="planFile" accept="image/*,application/pdf,.pdf" hidden>
       </div>
 
       <div id="blockGeraet" hidden>
         <div class="infozeile"><span class="small" id="sicherStand"></span><button type="button" class="info" aria-label="Erklärung" aria-expanded="false" aria-controls="infGeraet"><span>i</span></button></div>
-        <p class="muted small infotext" id="infGeraet" hidden style="margin:-2px 0 12px">Die Datei enthält alles: Einstellungen, laufende Nachweise, Stände, Zählerwechsel, Grundrisse und Historie. Auf einem neuen Gerät dieselbe Datei mit „Aus Datei übernehmen“ einlesen. 30 Tage nach der letzten Sicherung erinnert die Startseite.</p>
+        <p class="muted small infotext" id="infGeraet" hidden style="margin:-2px 0 12px">Die Datei enthält alles: Einstellungen, laufende Kontrollen, Stände, Zählerwechsel, Grundrisse und ausgegebene Blätter. Auf einem neuen Gerät dieselbe Datei mit „Sicherung einlesen“ öffnen. 30 Tage nach der letzten Sicherung erinnert Heute daran.</p>
         <button class="btn primary" id="btnCfgAus">Jetzt sichern</button>
-        <button class="btn ghost klein" id="btnCfgEin" style="margin-top:10px">Aus Datei übernehmen</button>
+        <button class="btn ghost klein" id="btnCfgEin" style="margin-top:10px">Sicherung einlesen</button>
         <input type="file" id="cfgFile" accept="application/json,.json" hidden>
       </div>
 
@@ -3811,7 +3827,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       <!-- Über die App (v1.189): Fassung und Neu laden, bisher ein Symbol oben rechts -->
       <div id="blockApp" hidden>
         <p class="small" id="appFassung" style="margin:0 0 12px"></p>
-        <button class="btn ghost klein" id="btnAppNeu">Neueste Fassung laden</button>
+        <button class="btn ghost klein" id="btnAppNeu">Neueste Version laden</button>
         <p class="muted small" style="margin:8px 0 0">Lädt die App neu vom Server. Deine Daten bleiben, wie sie sind.</p>
       </div>
     </section>
@@ -3866,7 +3882,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.192';
+const VERSION = 'v1.193';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4229,10 +4245,10 @@ const VORLAGEN = [
 
 Überprüfung des:
 
-1. Filterfließ auf Verschmutzung.
+1. Filtervlies auf Verschmutzung.
      – bei hoher Verschmutzung weiterdrehen oder Wechsel der Filterrolle
 
-2. Korrekten Sitz des Filterfliesses in der Anlage.`
+2. Korrekten Sitz des Filtervlieses in der Anlage.`
   },
   {
     k:'feststell', label:'Feststellanlagen', datei:'Prüfung Feststellanlagen', takt:['monat'],
@@ -5104,8 +5120,8 @@ const TITEL = {ausloeser:'Auslöser', abschluss:'Abschließen', home:'Heute', al
                historie:'Ausgegebene Blätter', histnw:'Ausgegebene Blätter', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregel:'Auslöser',
-               taeten:'Dauern und Arbeitsmittel', taet:'Tätigkeit', wplan:'Kalender', arbeit:'Arbeitsnachweis',
-               termin:'Termin', termine:'Termine', abfall:'Abfuhr', ablaufneu:'Neuer Ablauf'};
+               taeten:'Dauern und Arbeitsmittel', taet:'Dauer und Arbeitsmittel', wplan:'Kalender', arbeit:'Arbeitsnachweis',
+               termin:'Termin', termine:'Termine', abfall:'Abholtage', ablaufneu:'Neuer Ablauf'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
    nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
@@ -5689,7 +5705,8 @@ function stoerAufgabe(s){
     if(a && !a.erledigt){ a.text = s.was; }
     else if(!a){
       const t = {id:neueId(), art:'eigen', quelle:'', k:s.k, anlage:s.anlage, punkt:'',
-        titel:'Störung ' + s.anlage, text:s.was, notiz:'', zeitraum:'', festgestellt:'', angelegt:heute(),
+        titel:s.was ? `${s.anlage}: ${s.was}` : 'Störung ' + s.anlage, text:s.was,   // Titel mit dem Was (v1.193)
+        notiz:'', zeitraum:'', festgestellt:'', angelegt:heute(),
         frist:tagPlus(heute(), 7), wichtig:wichtigVon(s.k), erneut:[], erledigt:'', vermerk:'', stoerung:s.id};
       AUFG.push(t); s.aufg = t.id;
     }
@@ -6301,7 +6318,7 @@ function renderMehr(){
     + zeile('data-m="taeten"', 'Dauern und Arbeitsmittel', taetL.length ? String(taetL.length) : '')
     + '<div class="eyebrow">Umgebung</div>'
     + zeile('data-m="wetter"', 'Wetter', CFG.wetter ? '' : 'Standort fehlt')
-    + zeile('data-m="abfall"', 'Abfuhr', naechste ? `${WOCHENTAG[alsDatum(naechste.tag).getDay()]} ${ttmm(alsDatum(naechste.tag))} ${naechste.art}` : (ABFALL.url ? '' : 'nicht eingerichtet'))
+    + zeile('data-m="abfall"', 'Abholtage', naechste ? `${WOCHENTAG[alsDatum(naechste.tag).getDay()]} ${ttmm(alsDatum(naechste.tag))} ${naechste.art}` : (ABFALL.url ? '' : 'nicht eingerichtet'))
     + '<div class="eyebrow">App</div>'
     + zeile('data-m="settings"', 'Einstellungen', '')
     + zeile('data-m="sicherung"', 'Sicherung', l ? dText(l) : 'noch nie')
@@ -6521,8 +6538,8 @@ function renderRundgang(){
   reihenKnopfVerdrahten(renderRundgang, 'rg');
 
   /* Am Ende: je Nachweis sein Stand und der Weg zur Ausgabe. */
-  const iAus = info('Ausgegeben wird je Nachweis, mit Unterschrift, wo sie verlangt ist.', 'margin:-4px 0 8px');
-  const iWeg = info('Ordnet den Weg neu nach den Reihenfolgen der Nachweise und den Marken im Grundriss – sinnvoll, wenn viele Marken dazugekommen sind.', 'margin:-4px 0 8px');
+  const iAus = info('Ausgegeben wird je Anlagentyp, mit Unterschrift, wo sie verlangt ist.', 'margin:-4px 0 8px');
+  const iWeg = info('Ordnet den Weg neu nach den Reihenfolgen der Anlagentypen und den Marken im Grundriss – sinnvoll, wenn viele Marken dazugekommen sind.', 'margin:-4px 0 8px');
   $('#rgEnde').innerHTML = `<div class="eyebrow mitInfo">Ausgeben ${iAus.knopf}</div>${iAus.text}`
     + teile.map(t => {
       const rest = t.objekte.filter(o => o.offen).length;
@@ -6536,7 +6553,7 @@ function renderRundgang(){
   knoepfeVerdrahten($('#rgEnde'));
   $('#rgNeuBilden').onclick = () =>
     frage('Weg neu bilden',
-      'Der Weg entsteht neu aus den Reihenfolgen der Nachweise und den Marken im Grundriss.\n\nWas du mit den Pfeilen verschoben hast, geht dabei verloren. Erfasste Ergebnisse bleiben erhalten.',
+      'Der Weg entsteht neu aus den Reihenfolgen der Anlagentypen und den Marken im Grundriss.\n\nWas du mit „Reihenfolge ändern“ verschoben hast, geht dabei verloren. Erfasste Ergebnisse bleiben erhalten.',
       'Neu bilden', () => {
         CFG.weg = []; saveCfg();
         renderRundgang(); bildNach(0);
@@ -6765,7 +6782,7 @@ const stufeNeu = titel => ({id:neueId(), titel:titel || '', wichtig:'normal', no
 const ergName = e => { const t = String((e && e.text) || '').trim(); return t && t !== 'Ergebnis' ? t : 'Erledigt'; };
 function ergebnisText(p, e){
   const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
-  return `${ergName(e)} → ${z.length ? z.map(x => `${stufeVon(p, x.stufe).titel || 'Aufgabe'} ${wannText(x)}`).join(' und ') : 'Ende'}`;
+  return `${ergName(e)} → ${z.length ? z.map(x => `${stufeVon(p, x.stufe).titel || 'Schritt'} ${wannText(x)}`).join(' und ') : 'Ende'}`;
 }
 /* Platzhalter in Adresse, Betreff und Text: {Datum}, {Objekt}, {Titel}. */
 const ablaufEinsetzen = (t, a) => String(t || '').replace(/\{(Datum|Objekt|Titel)\}/g, (_, w) =>
@@ -6959,17 +6976,17 @@ function ergebnisseHtml(a){
     return `<p class="muted small ergSelbst">${ok ? '✓' : '✗'} ${esc(e.auto === 'sofort' ? 'selbst' : 'Vorschlag')}, wenn ${esc(e.bed.map(bedKurz).join(' und '))}${ok ? ' – trifft zu' : ''}</p>`; };
   return `<div class="ergebnisse">${s.ergebnisse.map((e, j) => ergebnisBlockHtml(p, e, j,
     `<button class="btn ergebnisKnopf" data-erg="${j}">${esc(ergName(e))}</button>` + selbst(e),
-    y => `<div class="ergebnisZiel"><span class="small">→ ${esc(y.st.titel || 'Aufgabe')} · <b data-zd="${j}:${y.i}"></b>${
+    y => `<div class="ergebnisZiel"><span class="small">→ ${esc(y.st.titel || 'Schritt')} · <b data-zd="${j}:${y.i}"></b>${
       /* Die Regel dahinter (v1.176, Jean): das Datum ist nur die Vorschau
          für dieses Mal, gerechnet wird es beim Erledigen neu. */
       wannText(y.x) === 'sofort' ? '' : ` <span class="muted">(${esc(wannText(y.x).replace(/^in /, 'in ').replace(/ \((.*)\)$/, ', $1'))})</span>`}</span>
-        <button type="button" class="btn quadrat" data-zedit="${j}:${y.i}" aria-label="Datum ändern">✎</button></div>`)).join('')}
+        <button type="button" class="btn ghost klein zielAendern" data-zedit="${j}:${y.i}">Datum ändern</button></div>`)).join('')}
   </div>`;
 }
 /* „Datum wählen“ (v1.164, Jean): das Feld steht gleich unter dem Ergebnis –
    kein zweites Fenster mehr, dessen „Abbrechen“ missverständlich war. */
-const zielDatumFeld = (st, key) => `<label class="ergDatum"><span class="small">${esc(st.titel || 'Aufgabe')} am</span>
-  <input type="date" class="schmal" data-zw="${esc(key)}" value="${esc(tagPlus(heute(), 7))}" min="${esc(heute())}" aria-label="${esc(st.titel || 'Aufgabe')} am"></label>`;
+const zielDatumFeld = (st, key) => `<label class="ergDatum"><span class="small">${esc(st.titel || 'Schritt')} am</span>
+  <input type="date" class="schmal" data-zw="${esc(key)}" value="${esc(tagPlus(heute(), 7))}" min="${esc(heute())}" aria-label="${esc(st.titel || 'Schritt')} am"></label>`;
 /* Erst den Tag wählen, dann aufs Ergebnis tippen: die Felder stehen über dem
    Knopf, die übrigen Folgen wie gewohnt darunter. */
 function ergebnisBlockHtml(p, e, j, knopf, zeile){
@@ -7001,7 +7018,7 @@ function ergebnisseVerdrahten(a, fest, erledigen){
   $$('[data-zedit]').forEach(b => b.onclick = () => {
     const [j, i] = b.dataset.zedit.split(':').map(Number), z = s.ergebnisse[j].ziele[i];
     const st = stufeVon(p, z.stufe), wert = fest[b.dataset.zedit] || zielDatum(basis(), z);
-    frage('Fällig am', st ? st.titel || 'Aufgabe' : '', 'Übernehmen', () => {
+    frage('Fällig am', st ? st.titel || 'Schritt' : '', 'Fertig', () => {
       const v = $('#zielFrist') && $('#zielFrist').value;
       if(v){ fest[b.dataset.zedit] = v; zeigen(); }
     });
@@ -7123,7 +7140,7 @@ function sofortFenster(n, danach, rueck){
   /* Unten Abbrechen und Speichern (v1.165, Jean): Speichern erledigt mit dem
      gewählten Ergebnis und den eingetragenen Tagen, Abbrechen nimmt nichts
      an und führt zurück, wo man herkam. */
-  frage('Weiter: ' + (s.titel || 'Aufgabe'), n.anlage ? anlageName(n) : '', 'Speichern', () => {});
+  frage('Weiter: ' + (s.titel || 'Schritt'), n.anlage ? anlageName(n) : '', 'Speichern', () => {});
   /* „Abbrechen“ hieße: nichts geschieht. Der Knopf nimmt aber auch das
      Erledigen davor zurück – so heißt er seit v1.183 auch. */
   $('#dlgNein').textContent = 'Zurücknehmen';
@@ -7141,7 +7158,7 @@ function sofortFenster(n, danach, rueck){
       ${er.length > 1 ? `<div class="chips sofortWahl" style="margin-top:12px">${er.map((x, j) =>
         `<button type="button" data-serg="${j}" aria-pressed="${j === wahl}">${esc(ergName(x))}</button>`).join('')}</div>` : ''}
       ${e ? ergebnisBlockHtml(p, e, wahl, '',
-        y => `<p class="muted small" style="margin:4px 0 0">→ ${esc(y.st.titel || 'Aufgabe')} · ${esc(datumKurz(zielDatum(heute(), y.x)))}</p>`) : ''}`;
+        y => `<p class="muted small" style="margin:4px 0 0">→ ${esc(y.st.titel || 'Schritt')} · ${esc(datumKurz(zielDatum(heute(), y.x)))}</p>`) : ''}`;
     box.querySelectorAll('[data-zw]').forEach(f => { if(werte[f.dataset.zw]) f.value = werte[f.dataset.zw]; });
     hilfenVerdrahten(box, n);
     box.querySelectorAll('[data-serg]').forEach(b => b.onclick = () => { wahl = +b.dataset.serg; aufbauen(); });
@@ -7362,7 +7379,7 @@ function renderAblaufPlan(){
            <select id="pWdhE">${[['tage', 'Tagen'], ['wochen', 'Wochen'], ['monate', 'Monaten']].map(([v, t]) => `<option value="${v}"${p.wdh.einh === v ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
            <p class="muted small" style="margin:6px 0 0">Gezählt ab dem Tag, an dem der Ablauf endet.</p>` : ''}</div>
        <button class="btn primary" id="ablaufLos" style="margin-top:16px">Starten</button>
-       ${lauf.length ? `<p class="muted small" style="margin:8px 0 0">${lauf.length === 1 ? 'Läuft gerade einmal' : `Läuft gerade ${lauf.length}-mal`} – unter Übersicht › Abläufe.</p>` : ''}
+       ${lauf.length ? `<p class="muted small" style="margin:8px 0 0">${lauf.length === 1 ? 'Läuft gerade einmal' : `Läuft gerade ${lauf.length}-mal`} – unter Mehr › Abläufe.</p>` : ''}
        <div class="knopfzeile"><button class="btn danger klein" id="ablaufWeg">Ablauf löschen</button></div>`;
   $('#ablaufName').oninput = e => { p.name = e.target.value; saveCfg(); };
   $('#ablaufLos').onclick = () => planStarten(p);
@@ -7669,7 +7686,7 @@ function renderAssistent(){
     ${f.modus === 'abh' ? `<div class="row ablaufReihe ergNach"><input type="number" inputmode="numeric" min="0" data-fn="vor" value="${esc(f.vor)}" aria-label="Tage vorher"><span class="muted small">Tag(e) vor der nächsten Abholung von</span></div>
       <div class="chips" style="margin-top:6px">${arten.concat(f.abfall && !arten.includes(f.abfall) ? [f.abfall] : []).map(a => chip(`data-fart="${esc(a)}"`, f.abfall === a, a)).join('')}${chip('data-fart=""', f.abfall === '', 'jeder Art')}</div>
       <p class="muted small" style="margin:6px 0 0">Fällt der Tag auf keinen Arbeitstag, gilt der davor.</p>
-      <label class="haken" style="margin:10px 0 0"><input type="checkbox" data-finfo="1"${f.info ? ' checked' : ''}><span>Abfuhrtermine bei „${esc(s.titel || 'diesem Schritt')}“ als Info zeigen</span></label>` : ''}
+      <label class="haken" style="margin:10px 0 0"><input type="checkbox" data-finfo="1"${f.info ? ' checked' : ''}><span>Abholtage bei „${esc(s.titel || 'diesem Schritt')}“ als Info zeigen</span></label>` : ''}
     ${f.modus === 'datum' ? '<p class="muted small" style="margin:6px 0 0">Den Tag trägst du jedes Mal beim Erledigen ein.</p>' : ''}`;
   const bedListe = (liste, attr) => { const reihen = liste.length ? hinweisReihen() : null;
     return liste.map((b, n) => { const r = bedPruefen(b, reihen);
@@ -7687,7 +7704,7 @@ function renderAssistent(){
     hilfe = 'Freiwillig – alles lässt sich auch später ändern.';
     const blk = (k, html) => an(k) ? `<div class="gruppe asExtra">${html}</div>` : '';
     inhalt = `<div class="ergFrage klein">Infos zum Entscheiden</div><div class="chips">${chip('data-x="abfall"', an('abfall'), '♻ Abfuhr')}${chip('data-x="wetter"', an('wetter'), '☁ Wetter')}</div>
-      ${blk('abfall', `<div class="small" style="margin:0 0 6px">Abfuhrtermine von (keine gewählt = alle)</div><div class="chips">${arten.map(a => chip(`data-xart="${esc(a)}"`, ((x.abfall || {}).arten || []).includes(a), a)).join('') || '<span class="muted small">Noch kein Abfallkalender – einzurichten unter Einstellungen › Online-Dienste.</span>'}</div>`)}
+      ${blk('abfall', `<div class="small" style="margin:0 0 6px">Abholtage von (keine gewählt = alle)</div><div class="chips">${arten.map(a => chip(`data-xart="${esc(a)}"`, ((x.abfall || {}).arten || []).includes(a), a)).join('') || '<span class="muted small">Noch kein Abfallkalender – einzurichten unter Einstellungen › Online-Dienste.</span>'}</div>`)}
       ${blk('wetter', bedFelderHtml(x.wetter ? x.wetter.bed : bedingungStd(), 'data-xw="0"', false) + `<label class="haken" style="margin:0"><input type="checkbox" data-xgrenze="1"${x.wetter && x.wetter.grenze ? ' checked' : ''}><span>Mit ✓ oder ✗ zeigen, ob es zutrifft</span></label>`)}
       <div class="ergFrage klein">Aktionen zum Ausführen</div><div class="chips">${chip('data-x="tel"', an('tel'), '✆ Anruf')}${chip('data-x="mail"', an('mail'), '✉ E-Mail')}${chip('data-x="link"', an('link'), '↗ Link')}${chip('data-x="haken"', an('haken'), '☐ Haken')}</div>
       ${blk('tel', feld('data-xf="tel.text"', x.tel && x.tel.text, 'Beschriftung, z. B. Hausmeisterdienst') + feld('data-xf="tel.nummer"', x.tel && x.tel.nummer, 'Nummer', 'type="tel" style="margin-top:8px"'))}
@@ -7704,7 +7721,7 @@ function renderAssistent(){
     inhalt = wahl('data-ea="einfach"', !mehr, 'Nur „erledigt“', 'Es geht immer gleich weiter')
       + wahl('data-ea="mehr"', mehr, 'Verschiedene Ergebnisse', 'z. B. „voll“ und „nicht voll“, „in Ordnung“ und „Mangel“')
       + (mehr ? s.erg.liste.map((x, n) => `<div class="row ablaufReihe asErgZeile">${feld(`data-et="${n}"`, x.text, n === 0 ? 'z. B. in Ordnung' : n === 1 ? 'z. B. Mangel' : 'weiteres Ergebnis')}${
-          s.erg.liste.length > 2 ? `<button type="button" class="btn quadrat" data-eweg="${n}" aria-label="Entfernen">✕</button>` : ''}</div>`).join('')
+          s.erg.liste.length > 2 ? `<button type="button" class="btn ghost klein" data-eweg="${n}" style="width:auto;margin:0">Entfernen</button>` : ''}</div>`).join('')
         + `<button type="button" class="btn ghost klein" id="asErgPlus" style="margin-top:8px">+ weiteres Ergebnis</button>` : '');
   }else if(q.t === 'folge'){
     const f = e.folge, einfach = s.erg.art !== 'mehr';
@@ -7733,7 +7750,7 @@ function renderAssistent(){
     const b = AS.beginn;
     titel = 'Wie soll der Ablauf beginnen?';
     inhalt = wahl('data-ba="0"', !b.auto, 'Von Hand', AS.aufgabe ? 'Mit der Aufgabe, von der du kommst' : 'Über „Starten“ – jetzt gleich oder später')
-      + wahl('data-ba="1"', b.auto, 'Zusätzlich von selbst, wenn …', 'Wetter oder Abfuhrtermin – ein Auslöser')
+      + wahl('data-ba="1"', b.auto, 'Zusätzlich von selbst, wenn …', 'Wetter oder Abholtag – ein Auslöser')
       + (b.auto ? `<div class="gruppe asExtra">${bedListe([b.bed], 'data-bb')}
           <div class="ergFrage klein">Erster Schritt fällig</div><div class="chips">${chip('data-bfr="heute"', b.fristArt === 'heute', 'gleich')}${chip('data-bfr="vorher"', b.fristArt === 'vorher', 'am Arbeitstag vorher')}</div>
           <div class="ergFrage klein">Wenn es zutrifft</div><div class="seg asSeg">${chip('data-bm="vorschlag"', b.modus === 'vorschlag', 'Vorschlagen')}${chip('data-bm="sofort"', b.modus === 'sofort', 'Gleich starten')}</div></div>` : '');
@@ -7743,7 +7760,7 @@ function renderAssistent(){
     titel = 'So läuft es ab';
     inhalt = `<div class="card abBaum">${baumHtml(p)}${AS.beginn.auto ? `<div class="bWdh">⚡ Beginnt auch von selbst, wenn ${esc(bedKurz(AS.beginn.bed))}</div>` : ''}</div>
       <label class="field"><span>Name des Ablaufs</span><input id="asName" value="${esc(AS.name)}" placeholder="${esc(p.name)}"></label>
-      ${AS.aufgabe ? '' : `<label class="field"><span>Objekt (freiwillig)</span><select id="asNw"><option value="">– ohne Objekt –</option>${
+      ${AS.aufgabe ? '' : `<label class="field"><span>Anlagentyp (freiwillig)</span><select id="asNw"><option value="">– ohne Anlagentyp –</option>${
           nachweise.map(x => `<option value="${x.k}"${x.k === AS.k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
         ${anl.length ? `<label class="field"><span>Welches</span><select id="asAnl"><option value="">– wählen –</option>${anl.map(x =>
           `<option value="${esc(x.wert)}"${x.wert === AS.anlage ? ' selected' : ''}>${esc(x.text)}</option>`).join('')}</select></label>` : ''}
@@ -7876,7 +7893,7 @@ function planStarten(p){
   const s = (p.stufen || [])[0];
   if(!s){ toast('Der Ablauf hat noch keinen Schritt'); return; }
   let k = '', anlage = '';
-  frage('Ablauf starten', `„${p.name || 'Ablauf'}“ beginnt mit „${s.titel || 'Aufgabe'}“.`, 'Starten', () => {
+  frage('Ablauf starten', `„${p.name || 'Ablauf'}“ beginnt mit „${s.titel || 'Schritt'}“.`, 'Starten', () => {
     const frist = ($('#startFrist') && $('#startFrist').value) || heute();
     const wahl = bezugsAnlagen(k).find(x => x.wert === anlage);
     const n = {id:neueId(), art:'eigen', quelle:'', k, anlage:wahl ? wahl.wert : '', anlageText:wahl ? wahl.text : '',
@@ -7893,8 +7910,8 @@ function planStarten(p){
   const nachweise = VORLAGEN.filter(x => aktiv(x.k) && bezugsAnlagen(x.k).length);
   const zeichnen = () => {
     const anl = bezugsAnlagen(k);
-    box.innerHTML = `<label class="field" style="margin-top:8px"><span>Objekt (freiwillig)</span>
-        <select id="startNw"><option value="">– ohne Objekt –</option>${nachweise.map(x =>
+    box.innerHTML = `<label class="field" style="margin-top:8px"><span>Anlagentyp (freiwillig)</span>
+        <select id="startNw"><option value="">– ohne Anlagentyp –</option>${nachweise.map(x =>
           `<option value="${x.k}"${x.k === k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
       ${anl.length ? `<label class="field"><span>Welches</span><select id="startAnl"><option value="">– wählen –</option>${anl.map(x =>
           `<option value="${esc(x.wert)}"${x.wert === anlage ? ' selected' : ''}>${esc(x.text)}</option>`).join('')}</select></label>` : ''}
@@ -7972,7 +7989,7 @@ function renderStufe(){
   const box = $('#stufeBox'), p = planVon(planAktiv), s = stufeVon(p, stufeAktiv);
   if(!p || !s){ box.innerHTML = '<p class="muted small">Diesen Schritt gibt es nicht mehr.</p>'; return; }
   const l = s.schritte = s.schritte || [], nr = stufeNr(p, s.id);
-  const iPl = info('Infos zeigen auf der Aufgabe den Stand von jetzt (Wetter, Abfuhrtermine), Aktionen sind Knöpfe zum Ausführen (Link, Anruf, E-Mail) oder Haken zum Abhaken. In Adresse, Betreff und Text werden {Datum}, {Objekt} und {Titel} beim Ausführen ersetzt.', 'margin:-4px 0 10px');
+  const iPl = info('Infos zeigen auf der Aufgabe den Stand von jetzt (Wetter, Abholtage), Aktionen sind Knöpfe zum Ausführen (Link, Anruf, E-Mail) oder Haken zum Abhaken. In Adresse, Betreff und Text werden {Datum}, {Objekt} und {Titel} beim Ausführen ersetzt.', 'margin:-4px 0 10px');
   const feld = (i, f, titel, wert, extra = '') => `<label class="field"><span>${titel}</span><input data-i="${i}" data-f="${f}" value="${esc(wert || '')}" ${extra}></label>`;
   /* Je Gruppe ihre eigenen Arten; ↑ ↓ ordnen innerhalb der Gruppe. */
   const gruppe = info => l.map((x, i) => ({x, i})).filter(({x}) => istInfo(x) === info);
@@ -7995,7 +8012,7 @@ function renderStufe(){
   const ziel = (p.stufen || []).some(x => (x.ergebnisse || []).some(e => (e.ziele || []).some(z => z.stufe === s.id)));
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">${esc(p.name || 'Ablauf')} · Schritt ${nr} ${iPl.knopf}</div>${iPl.text}
     <label class="field"><span>Titel</span><input id="stTitel" value="${esc(s.titel || '')}" placeholder="z. B. Zustand prüfen"></label>
-    <div class="eyebrow">Infos</div>${inf.length ? '' : '<p class="muted small" style="margin:0 0 6px">Wetter oder Abfuhrtermine, die beim Entscheiden helfen.</p>'}
+    <div class="eyebrow">Infos</div>${inf.length ? '' : '<p class="muted small" style="margin:0 0 6px">Wetter oder Abholtage, die beim Entscheiden helfen.</p>'}
     ${inf.map(karte).join('')}
     <button class="btn ghost klein" id="infoNeu" style="margin:6px 0 4px">+ Info</button>
     <div class="eyebrow">Aktionen</div>${akt.length ? '' : '<p class="muted small" style="margin:0 0 6px">Ein Link, eine Nummer, eine vorbereitete E-Mail oder etwas zum Abhaken.</p>'}
@@ -8284,14 +8301,14 @@ function renderAufgabe(){
   const nurMat = '<p class="muted small" style="margin:0">Material steht unter „Vorbereiten“.</p>';
   /* Seit v1.70 auch ohne Erfahrungswerte: sonst ließe sich Material für eine
      neue wiederkehrende Aufgabe nur über Übersicht › Tätigkeiten eintragen. */
-  const erfKarte = tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Dauer, Werkzeug und Material</div>${
+  const erfKarte = tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Dauer und Arbeitsmittel</div>${
       erfA || (matVon(tKeyA).length ? nurMat : '<p class="muted small" style="margin:0">Noch nichts eingetragen.</p>')}
       <button class="btn ghost klein" id="aufgTaet" style="margin-top:10px">${erfA || matVon(tKeyA).length ? 'Bearbeiten' : 'Eintragen'}</button></div>` : '';
   /* Einmalige Aufgaben und Mängel (v1.71): dieselbe Karte, nur ohne Dauer –
      die Listen liegen an der Aufgabe, bearbeitet wird im Fenster. */
   const eigenA = !neu && !a.erledigt && !tKeyA ? eigenText(a, true) : '';
   const eigenMat = (a.material || []).some(m => m && m.name);
-  const eigenKarte = !neu && !a.erledigt && !tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Werkzeug und Material</div>${
+  const eigenKarte = !neu && !a.erledigt && !tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Arbeitsmittel</div>${
       eigenA || (eigenMat ? nurMat : '<p class="muted small" style="margin:0">Noch nichts eingetragen.</p>')}
       <button class="btn ghost klein" id="aufgEigen" style="margin-top:10px">${eigenA || eigenMat ? 'Bearbeiten' : 'Eintragen'}</button></div>` : '';
   let erlDauer = null;
@@ -8349,8 +8366,8 @@ function renderAufgabe(){
   const angaben = (neu ? '' : (mangel ? '' : angZeile('titel', 'Titel und Objekt', kopf)) + angZeile('frist', 'Fällig', terminFeld) + (planFeld ? angZeile('geplant', 'Eingeplant für', planFeld) : ''))
     + angZeile('wichtig', 'Wichtigkeit', wichtigFeld)
     + (mangel ? '' : angZeile('wdh', 'Wiederholen', wdhFeld) + angZeile('wetter', 'Wetter', wetterFeld) + angZeile('vorb', 'Vorbereitung', vorbFeld))
-    + (tKeyA ? aktZeile('aufgTaet', 'Dauer, Werkzeug und Material', mittelWert)
-       : !neu && !a.erledigt ? aktZeile('aufgEigen', 'Werkzeug und Material', mittelWert) : '')
+    + (tKeyA ? aktZeile('aufgTaet', 'Dauer und Arbeitsmittel', mittelWert)
+       : !neu && !a.erledigt ? aktZeile('aufgEigen', 'Arbeitsmittel', mittelWert) : '')
     + (mangel || a.erledigt ? '' : pl && stufeDerAufgabe(a)
        ? angZeile('ablauf', 'Ablauf', ablaufMehrHtml(a)).replace(`<span class="angWert">${esc(angWerte.ablauf)}</span>`, `<span class="angWert">${esc(pl.name || 'Ablauf')}</span>`)
        : aktZeile('ablaufStart', 'Ablauf', 'festlegen'))
@@ -8907,7 +8924,7 @@ function renderTermine(){
     return `<button class="btn eintrag" data-termin="${esc(t.id)}"><span class="etext">${esc(t.titel || 'Termin')}<small>${
       esc([dText(t.von), terminArt(t), t.mit ? 'mit ' + t.mit : '', kurz(t.notiz)].filter(Boolean).join(' · '))}</small></span></button>`;
   };
-  $('#termineBox').innerHTML = `<button class="btn ghost klein" data-neutermin="1" style="margin:0 0 12px">+ Termin</button>`
+  $('#termineBox').innerHTML = `<button class="btn ghost klein" data-neutermin="1" style="margin:0 0 12px">+ Neuer Termin</button>`
     + (kommend.length ? `<div class="eyebrow" style="margin-top:0">Kommende</div>` + kommend.map(o => terminKnopf(o, false)).join('')
                       : '<p class="muted small">Keine kommenden Termine.</p>')
     + (vorbei.length ? `<div class="eyebrow">Vergangene</div>` + vorbei.map(zeileVorbei).join('') : '');
@@ -9159,7 +9176,7 @@ function utensilWahl(box, gewaehlt, bei, material){
     <div class="utMengen"></div>
     <div class="row utNeu"><input data-neu="mat" placeholder="Neues Material, z. B. Filtervlies" aria-label="Neues Verbrauchsmaterial">
       <button type="button" class="btn ghost klein" data-plus="mat">Hinzufügen</button></div>
-    <p class="muted small utHinweis" hidden>Ein Tipp markiert, ein zweiter löscht – aus der Liste und aus allen Tätigkeiten.</p>
+    <p class="muted small utHinweis" hidden>Ein Tipp markiert, ein zweiter löscht – aus der Liste und überall, wo es eingetragen ist.</p>
     <button type="button" class="btn ghost klein utBearb">Liste bearbeiten</button>`;
   const chipsW = box.querySelector('[data-teil="wz"]'), chipsM = box.querySelector('[data-teil="mat"]');
   const feldW = box.querySelector('[data-neu="wz"]'), feldM = box.querySelector('[data-neu="mat"]');
@@ -9277,7 +9294,7 @@ function taetFragen(o){
   const box = $('#dlgListe');
   box.hidden = false;
   box.innerHTML = `<div class="eyebrow" style="margin:14px 0 8px">Dauer</div><div id="taetDauer"></div>
-    <div class="eyebrow" style="margin:16px 0 8px">Werkzeug und Material</div><div id="taetUt"></div>
+    <div class="eyebrow" style="margin:16px 0 8px">Arbeitsmittel</div><div id="taetUt"></div>
     <label class="haken" style="margin:16px 0 0"><input type="checkbox" id="taetWieder" checked>
       <span>Beim nächsten Mal wieder fragen</span></label>`;
   wert = dauerWahl($('#taetDauer'), wert, false, w => { wert = w; }) || wert;
@@ -9468,7 +9485,7 @@ function taetKarteZeigen(box, zeilen, objUt){
       <button class="btn ghost klein" data-taetkey="${j}" style="margin-top:8px">${text || mat ? 'Bearbeiten' : 'Eintragen'}</button>`;
   };
   box.innerHTML = `<div class="card" style="margin-top:12px"><div class="eyebrow" style="margin:0 0 6px">${
-    ohne ? 'Werkzeug und Material' : 'Dauer, Werkzeug und Material'}</div>${zeilen.map(teil).join('')}${obj}</div>`;
+    ohne ? 'Arbeitsmittel' : 'Dauer und Arbeitsmittel'}</div>${zeilen.map(teil).join('')}${obj}</div>`;
   box.querySelectorAll('[data-taetkey]').forEach(b => b.onclick = () => {
     const [key, , name] = zeilen[+b.dataset.taetkey];
     taetAktiv = {key, name}; go('taet');
@@ -9492,7 +9509,7 @@ function erfDetailHtml(key){
 function renderTaeten(){
   const box = $('#taetenBox');
   if(!box) return;
-  const i = info('Nach jeder wiederkehrenden Tätigkeit fragt die App nach Dauer, Werkzeug und Material, solange „Nach dem Erledigen nach der Dauer fragen“ angehakt ist. Der Durchschnitt nimmt die letzten zehn Angaben. Die Listen von Werkzeug und Material stehen in den Einstellungen unter „Arbeitsmittel“ – der Knopf unten führt hin.', 'margin:-2px 0 10px');
+  const i = info('Nach jeder wiederkehrenden Kontrolle oder Aufgabe fragt die App nach Dauer und Arbeitsmitteln, solange „Nach dem Erledigen nach der Dauer fragen“ angehakt ist. Der Durchschnitt nimmt die letzten zehn Angaben. Die Listen der Arbeitsmittel (Werkzeug und Material) stehen weiter unten.', 'margin:-2px 0 10px');
   const liste = taetKandidaten();
   const zusatz = t => {
     const e = TAET.t[t.key], n = ((e && e.dauern) || []).length, s = taetSchnitt(t.key);
@@ -9502,10 +9519,10 @@ function renderTaeten(){
             dinge.length > 3 ? dinge.slice(0, 3).join(', ') + ` +${dinge.length - 3}` : dinge.join(', '),
             e && e.fragen === false && !OHNE_DAUER.has(t.key) ? 'fragt nicht mehr' : ''].filter(Boolean).join(' · ');
   };
-  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Tätigkeiten ${i.knopf}</div>${i.text}`
+  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Kontrollen und Aufgaben ${i.knopf}</div>${i.text}`
     + (liste.length
         ? liste.map((t, j) => `<button class="btn eintrag" data-t="${j}"><span class="etext">${esc(t.name)}<small>${esc(zusatz(t))}</small></span></button>`).join('')
-        : '<p class="muted small">Noch keine wiederkehrenden Tätigkeiten.</p>')
+        : '<p class="muted small">Noch keine wiederkehrenden Kontrollen oder Aufgaben.</p>')
     + `<button class="btn eintrag" id="taetZuListen" style="margin-top:18px"><span>Arbeitsmittel</span></button>`;
   box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
     const t = liste[+b.dataset.t];
@@ -9519,13 +9536,13 @@ function renderTaeten(){
    Umbenennen und Löschen wirken auf alle Tätigkeiten und Aufgaben, die den
    Eintrag führen. */
 function setWerkMat(box){
-  box.innerHTML = infoZeile('Werkzeug nimmt man mit, Verbrauchsmaterial wird vorher beschafft. Beide Listen gelten für alle Tätigkeiten und Aufgaben; Umbenennen und Löschen wirken überall, mit „→ Material“ bzw. „→ Werkzeug“ wechselt ein Eintrag die Liste. Die Einheit steht am Material, die Menge an der Tätigkeit.')
+  box.innerHTML = infoZeile('Werkzeug nimmt man mit, Verbrauchsmaterial wird vorher beschafft. Beide Listen gelten für alle Kontrollen und Aufgaben; Umbenennen und Löschen wirken überall, mit „→ Material“ bzw. „→ Werkzeug“ wechselt ein Eintrag die Liste. Die Einheit steht am Material, die Menge an der Tätigkeit.')
     + `<div class="eyebrow">Werkzeug</div><div id="werkzeugListe"></div>`
     + `<div class="eyebrow">Verbrauchsmaterial</div><div id="materialListe"></div>`;
   const neu = () => setWerkMat(box);
   listeBauen($('#werkzeugListe'), {
     wort:'Werkzeug', liste:() => TAET.werkzeug,
-    loeschHinweis:'Es verschwindet damit auch aus allen Tätigkeiten.',
+    loeschHinweis:'Es verschwindet damit überall, wo es eingetragen ist.',
     /* Wechsel zum Verbrauchsmaterial (v1.68) – nur an gespeicherten Zeilen. */
     nachZeichnen:b => b.querySelectorAll('.zeile').forEach(r => {
       const j = +r.dataset.i;
@@ -9562,10 +9579,10 @@ function materialListeBauen(box, neuAufbau){
     </div>`;
   const zeichnen = mitNeuer => {
     verworfen = false;
-    box.innerHTML = `<button class="btn ghost klein" data-plus="1" style="margin:0 0 10px">+ Material hinzufügen</button>`
+    box.innerHTML = `<button class="btn ghost klein" data-plus="1" style="margin:0 0 10px">+ Neues Material</button>`
       + (mitNeuer ? zeile({name:'', einheit:'Stück'}, -1) : '')
       + (TAET.material.length || mitNeuer ? anzeigeFolge(TAET.material.length, basis).map(i => zeile(TAET.material[i], i)).join('')
-         : '<p class="muted small">Noch keines. Material lässt sich auch direkt an einer Tätigkeit eintragen.</p>');
+         : '<p class="muted small">Noch keines. Material lässt sich auch direkt an einer Kontrolle oder Aufgabe eintragen.</p>');
     box.querySelectorAll('.matZeile').forEach(r => {
       const i = +r.dataset.i, neu = i < 0, ta = r.querySelector('textarea'), fE = r.querySelector('[data-einheit]');
       feldHoehe(ta);
@@ -9608,7 +9625,7 @@ function materialListeBauen(box, neuAufbau){
         const j = +r.dataset.i;
         if(j < 0){ zeichnen(false); return; }
         const name = TAET.material[j].name;
-        frage('Material löschen', `„${name}“ verschwindet aus der Liste.\n\nEs verschwindet damit auch aus allen Tätigkeiten.`,
+        frage('Material löschen', `„${name}“ verschwindet aus der Liste.\n\nEs verschwindet damit überall, wo es eingetragen ist.`,
           'Löschen', () => { utensilLoeschen(name, true); toast('Gelöscht'); zeichnen(false); });
       };
       const wechsel = r.querySelector('[data-wechsel]');
@@ -9637,7 +9654,7 @@ function dauerFenster(titel, start, datum, beiJa, text){
   $('#dlgText').hidden = true;
   const box = $('#dlgListe');
   box.hidden = false;
-  box.innerHTML = (text !== undefined ? `<label class="field" style="margin:0 0 12px"><span>Tätigkeit</span>
+  box.innerHTML = (text !== undefined ? `<label class="field" style="margin:0 0 12px"><span>Was</span>
       <input id="dfText" value="${esc(text)}" placeholder="Was wurde gemacht?"></label>` : '')
     + `<label class="field" style="margin:0 0 12px"><span>Datum</span>
       <input type="date" id="dfDatum" class="dat" value="${esc(datum || heute())}"></label>
@@ -9658,7 +9675,7 @@ function renderTaet(){
       ${e ? `<div class="knopfzeile"><button class="btn danger klein" id="taetZurueck">Alles löschen</button></div>` : ''}`;
     const ut0 = utensilWahl($('#taetUtSeite'), e ? e.utensilien : [], () => { ut0.uebernehmen(holen(), false); saveTaet(); }, e ? e.material : []);
     if($('#taetZurueck')) $('#taetZurueck').onclick = () => frage('Alles löschen',
-      `Werkzeug und Material von „${name}“ werden gelöscht.`, 'Löschen',
+      `Die Arbeitsmittel von „${name}“ werden gelöscht.`, 'Löschen',
       () => { delete TAET.t[key]; saveTaet(); renderTaet(); toast('Gelöscht'); });
     return;
   }
@@ -9667,7 +9684,7 @@ function renderTaet(){
         n ? `<span class="muted small"> · aus ${Math.min(n, 10)} ${Math.min(n, 10) === 1 ? 'Angabe' : 'Angaben'}${n > 10 ? `, ${n} erfasst` : ''}</span>` : ''}</p></div>
     <label class="haken" style="margin:4px 0 6px"><input type="checkbox" id="taetFragenHaken"${!e || e.fragen !== false ? ' checked' : ''}>
       <span>Nach dem Erledigen nach der Dauer fragen</span></label>
-    <div class="eyebrow">Werkzeug und Material</div><div id="taetUtSeite"></div>
+    <div class="eyebrow">Arbeitsmittel</div><div id="taetUtSeite"></div>
     <div class="eyebrow">Erfasste Dauern</div>
     <button class="btn ghost klein" id="taetPlus" style="margin:0 0 10px">+ Dauer hinzufügen</button>
     ${n ? dauern.map(({d, i}) => `<div class="zeile taetDauer" data-i="${i}">
@@ -9923,7 +9940,7 @@ function matStartHtml(){
     x.posten.forEach(p => { const l = m.get(p.o.name) || []; if(!l.includes(p.o.wann)) l.push(p.o.wann); m.set(p.o.name, l); });
     return [...m].map(([n, w]) => w.length > 2 ? `${n} (${w.length}×)` : `${n} ${w.join(', ')}`).join(' · ');
   };
-  const i = info('Verbrauchsmaterial für alles, was bis Ende des nächsten Monats ansteht – zusammengezählt, damit sich gesammelt bestellen oder einkaufen lässt. Was da ist, abhaken: es verschwindet dann auch an der Aufgabe bzw. am Nachweis. Mengen stehen an der Tätigkeit, Einheiten unter Einstellungen › Arbeitsmittel.', 'margin:-4px 0 8px');
+  const i = info('Verbrauchsmaterial für alles, was bis Ende des nächsten Monats ansteht – zusammengezählt, damit sich gesammelt bestellen oder einkaufen lässt. Was da ist, abhaken: es verschwindet dann auch an der Aufgabe bzw. an der Kontrolle. Mengen und Einheiten stehen unter Mehr › Dauern und Arbeitsmittel.', 'margin:-4px 0 8px');
   return `<div class="eyebrow mitInfo">Material bereitlegen ${i.knopf}</div>${i.text}
     <div class="card matKarte" id="homeMat">${matStartListe.map((x, j) => matZeile(j, x.name, x.menge, wofuer(x))).join('')}</div>`;
 }
@@ -10387,7 +10404,7 @@ function renderWochenplan(){
      ist dieselbe Zahl wie auf Heute. */
   const heuteFrei = vorziehenRechnen(liste).frei;
   const istFaellig = p => p.a.gruppe === 'ueber' || p.a.gruppe === 'heute';
-  const i = info('Ein Vorschlag, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Eingeplantes an seinem Tag, Wetteraufgaben auf gute Halbtage. Termine stehen obenan und nehmen ihre Zeit vom Tag. Die Dauer ist der Durchschnitt der erfassten Dauern, ohne sie gelten 30 Minuten („geschätzt“). Die Zeit je Arbeitstag steht unter Einstellungen › Arbeitszeit.', 'margin:-2px 0 10px');
+  const i = info('Ein Plan, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Eingeplantes an seinem Tag, Wetteraufgaben auf gute Halbtage. Termine stehen obenan und nehmen ihre Zeit vom Tag. Die Dauer ist der Durchschnitt der erfassten Dauern, ohne sie gelten 30 Minuten („geschätzt“). Was nicht fällig ist und nur vorgezogen wird, steht heute blass unter „Könnte heute mit“. Die Zeit je Arbeitstag steht unter Mehr › Einstellungen › Arbeitszeit.', 'margin:-2px 0 10px');
   const kopfVon = j => j === 0 && planTagWort(tage[j].t) === 'heute' ? `Heute ${ttmm(tage[j].t)}`
                                                                     : `${WOCHENTAG[tage[j].t.getDay()]} ${ttmm(tage[j].t)}`;
   /* Leere Tage am Stück stehen in einer Zeile (v1.73), ohne Balken – zehnmal
@@ -10442,7 +10459,7 @@ function renderWochenplan(){
     + html
     + (uebrig.length ? `<div class="eyebrow">Passt nicht mehr hinein</div>` + uebrig.map(p => planKnopf(p)).join('') : '')
     /* Die Termine gehören seit v1.184 zum Kalender, die Abwesenheiten seit v1.188. */
-    + `<div class="eyebrow">Mehr</div><button class="btn eintrag" data-termine="1"><span class="etext mehrZeile"><span>Alle Termine</span>${
+    + `<div class="eyebrow">Weiteres</div><button class="btn eintrag" data-termine="1"><span class="etext mehrZeile"><span>Alle Termine</span>${
         termineKommend().length ? `<span class="zahl">${termineKommend().length} kommend</span>` : ''}</span></button>
        <button class="btn eintrag" data-abw="1"><span class="etext mehrZeile"><span>Abwesenheiten</span>${
         abwKommend().length ? `<span class="zahl">${abwKommend().length} geplant</span>` : ''}</span></button>`;
@@ -10596,7 +10613,7 @@ function renderArbeit(){
   const tage = [];
   liste.forEach(r => { const t = tage[tage.length - 1]; if(t && t.datum === r.datum) t.l.push(r); else tage.push({datum:r.datum, l:[r]}); });
   const gesamt = liste.reduce((sum, r) => sum + min(r), 0), ohne = liste.filter(r => !r.w).length;
-  const i = info('Die Einträge kommen von selbst: erfasste Dauern der Tätigkeiten, erledigte Aufgaben, Störungen und ausgegebene Nachweise. Wo keine Dauer erfasst ist, steht der Durchschnitt der Tätigkeit („Schnitt“). „Ändern“ ändert den Wert an der Quelle, ein Schnitt wird so zur erfassten Dauer. „Löschen“ nimmt einen Eintrag nur aus dem Arbeitsnachweis – die erfassten Dauern der Tätigkeit bleiben. Ein Tag zählt die Arbeitszeit je Tag.', 'margin:-2px 0 10px');
+  const i = info('Die Einträge kommen von selbst: erfasste Dauern der Kontrollen, erledigte Aufgaben, Störungen und ausgegebene Blätter. Wo keine Dauer erfasst ist, steht der Durchschnitt („Schnitt“). „Ändern“ ändert den Wert an der Quelle, ein Schnitt wird so zur erfassten Dauer. „Löschen“ nimmt einen Eintrag nur aus dem Arbeitsnachweis – die erfassten Dauern bleiben. Ein Tag zählt die Arbeitszeit je Tag.', 'margin:-2px 0 10px');
   const zeile = r => `<div class="zeile taetDauer" data-id="${esc(r.id)}">
       <span class="etext">${esc(r.name)}<br><span class="muted small">${
         r.w ? esc(dauerText(r.w)) : 'ohne Dauer'}${r.schnitt ? ' · Schnitt' : ''}${r.eigen ? ' · ergänzt' : ''}</span></span>
@@ -10605,14 +10622,14 @@ function renderArbeit(){
   box.innerHTML = `<div class="seg arbArt" role="group" aria-label="Zeitraum">
       <button type="button" data-art="monat" aria-pressed="${arbZeit.art === 'monat'}">Monat</button>
       <button type="button" data-art="woche" aria-pressed="${arbZeit.art === 'woche'}">Woche</button></div>
-    <div class="arbKopf"><button type="button" class="btn ghost klein quadrat" data-blatt="-1" aria-label="zurück">‹</button>
+    <div class="arbKopf"><button type="button" class="btn ghost klein" data-blatt="-1">‹ Davor</button>
       <b>${esc(z.titel)}</b>
-      <button type="button" class="btn ghost klein quadrat" data-blatt="1" aria-label="weiter">›</button></div>
+      <button type="button" class="btn ghost klein" data-blatt="1">Danach ›</button></div>
     <div class="card"><div class="eyebrow mitInfo" style="margin:0 0 6px">Summe ${i.knopf}</div>${i.text}
       <p style="margin:0"><b>≈ ${esc(dauerText({m:gesamt}))}</b>${
         tage.length ? ` <span class="muted small">· an ${tage.length} ${tage.length === 1 ? 'Tag' : 'Tagen'}${
           ohne ? `, ${ohne} ohne Dauer` : ''}</span>` : ''}</p></div>
-    <button class="btn ghost klein" id="arbPlus" style="margin:0 0 10px">+ Eintrag hinzufügen</button>`
+    <button class="btn ghost klein" id="arbPlus" style="margin:0 0 10px">+ Neuer Eintrag</button>`
     + (tage.length ? tage.map(t => {
         const dt = alsDatum(t.datum), sum = t.l.reduce((s2, r) => s2 + min(r), 0);
         return `<div class="eyebrow">${esc(WOCHENTAG[dt.getDay()] + ' ' + dText(t.datum))} <span class="summe">· ${esc(dauerText({m:sum}))}</span></div>`
@@ -10656,7 +10673,7 @@ function renderArbeit(){
       });
     };
     row.querySelector('[data-weg]').onclick = () => frage('Eintrag löschen',
-      `„${r.name}“ am ${dText(r.datum)} verschwindet aus dem Arbeitsnachweis.` + (r.eigen ? '' : '\n\nDie erfassten Dauern der Tätigkeit bleiben, wie sie sind.'),
+      `„${r.name}“ am ${dText(r.datum)} verschwindet aus dem Arbeitsnachweis.` + (r.eigen ? '' : '\n\nDie erfassten Dauern bleiben, wie sie sind.'),
       'Löschen', () => {
         if(r.eigen) TAET.arb.eigen = TAET.arb.eigen.filter(x => x !== r.x);
         else if(r.quelle === 'ablauf') r.teile.forEach(x => TAET.arb.weg.push(x.id));
@@ -10876,7 +10893,7 @@ function renderTypSeite(){
       ${akkuAktiv(k) ? `<button class="btn" data-takku="1" style="margin-top:8px">${esc(akkuTitel(k))}</button>` : ''}</div>` : '')
     + `<div class="eyebrow">${wort}${art === 'sprinkler' ? '' : ` <span class="summe">· ${objekte.length}</span>`}</div>${liste}
        <button class="btn ghost klein" data-tbearb="1" style="margin:6px 0 0">${wort} bearbeiten</button>
-       <div class="eyebrow">Mehr</div><div id="typHist"></div>
+       <div class="eyebrow">Weiteres</div><div id="typHist"></div>
        <button class="btn eintrag" data-tset="1"><span>Einstellungen des Typs</span></button>`;
   const b = sel => box.querySelector(sel);
   if(b('[data-tk]')) b('[data-tk]').onclick = () => nachweisOeffnen(k);
@@ -10984,11 +11001,11 @@ function renderFremd(){
     const tag = $('#alleDatum').value;
     if(!tag){ toast('Kein Datum gewählt'); return; }
     frage('Für alle eintragen',
-      `Alle ${t.anlagen.length} Objekte bekommen den ${dText(tag)} als Prüfdatum.\n\n`
+      `${t.anlagen.length === 1 ? 'Das Objekt bekommt' : `Alle ${t.anlagen.length} Objekte bekommen`} den ${dText(tag)} als Prüfdatum.\n\n`
       + 'Bereits eingetragene Daten werden dabei ersetzt; das bisherige Datum bleibt im Verlauf.',
-      'Übernehmen', () => {
+      'Eintragen', () => {
         t.anlagen.forEach(a => datumAbloesen('pruefung', offen, a, d.zeilen[a], 'datum', 'seit', tag));
-        saveDat(); toast('Übernommen'); renderNachweis(); renderBar();
+        saveDat(); toast('Eingetragen'); renderNachweis(); renderBar();
       });
   };
   $$('#nwListe .pos').forEach(box => {
@@ -11104,9 +11121,9 @@ function renderAkku(){
     frage('Für alle eintragen',
       `${betroffen.length === 1 ? 'Ein Objekt bekommt' : betroffen.length + ' Objekte bekommen'} den ${dText(tag)} als Tauschdatum.\n\n`
       + 'Objekte ohne gewählten Akkutyp bleiben unberührt.',
-      'Übernehmen', () => {
+      'Eintragen', () => {
         betroffen.forEach(a => datumAbloesen('akku', k, a, akkuZ(k, a), 'akkuDatum', 'akkuSeit', tag));
-        saveAkku(); toast('Übernommen'); renderAkku();
+        saveAkku(); toast('Eingetragen'); renderAkku();
       });
   };
   $$('#akkuListe .pos').forEach(akkuVerdrahten);
@@ -11611,7 +11628,7 @@ function renderSprinkler(){
     const gaenge = d[art];
     return `<div class="eyebrow" id="ab-${art}">${titel}</div>`
       + (gaenge.length < max
-          ? `<button class="btn ghost klein" data-neu="${art}" style="margin:0 0 10px">+ Kontrollgang hinzufügen</button>`
+          ? `<button class="btn ghost klein" data-neu="${art}" style="margin:0 0 10px">+ Neuer Kontrollgang</button>`
           : max > 1 ? `<p class="muted small" style="margin:0 0 10px">Mehr als ${max} sind nicht vorgesehen.</p>` : '')
       + gaenge.map((g, i) => gangKarte(art, punkte, g, i)).join('');
   };
@@ -12126,7 +12143,7 @@ function setWetter(box){
   $('#wZurAdresse').onclick = () => setOeffnen('adresse');
   wetterEinstAnhaengen(box);
   box.insertAdjacentHTML('beforeend',
-    `<p class="muted small" style="margin:18px 0 0">Die Auslöser, die aus dem Wetter Aufgaben machen, stehen auf der Startseite unter „Übersicht › Abläufe“.</p>`);
+    `<p class="muted small" style="margin:18px 0 0">Die Auslöser, die aus dem Wetter Aufgaben machen, stehen unter Mehr › Auslöser.</p>`);
 }
 
 /* ---------- Online-Dienste: Adresse (v1.170) -------------------------------
@@ -12206,7 +12223,7 @@ function setAdresse(box){
     <div class="suchfeld"><svg class="lupe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><input type="search" id="adrSuche" placeholder="Straße Hausnummer, Ort"
       enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
     <div id="adrTreffer"></div>
-    <button class="btn ghost klein" id="adrHier">Aktuellen Standort übernehmen</button>
+    <button class="btn ghost klein" id="adrHier">Aktuellen Standort verwenden</button>
     <div class="eyebrow" style="margin-top:22px">Adresse</div>
     <div class="adrZeile">${feld('adrStrasse', 'Straße', a.strasse)}${feld('adrHnr', 'Nr.', a.hnr)}</div>
     <div class="adrZeile plz">${feld('adrPlz', 'PLZ', a.plz, ' inputmode="numeric"')}${feld('adrOrt', 'Ort', a.ort)}</div>
@@ -12280,7 +12297,7 @@ function setAdresse(box){
       }
     }, err => {
       toast(err && err.code === 1 ? 'Standortfreigabe abgelehnt' : 'Standort nicht bestimmbar');
-      b.disabled = false; b.textContent = 'Aktuellen Standort übernehmen';
+      b.disabled = false; b.textContent = 'Aktuellen Standort verwenden';
     }, {enableHighAccuracy:true, timeout:15000, maximumAge:60 * 1000});
   };
 }
@@ -12521,7 +12538,7 @@ function abfallDateiLesen(datei){
     ABFALL = Object.assign(abfallPruefen(null), {quelle:'datei', datei:datei.name || '', termine,
                                                  abgerufen:Date.now(), versuch:Date.now()});
     saveAbfall();
-    toast(`${termine.length} Termine übernommen` + (hatteLink ? ' – der Link ist entfernt' : ''));
+    toast(`${termine.length} Abholtage eingelesen` + (hatteLink ? ' – der Link ist entfernt' : ''));
     if(current === 'setsub' && setSeite.art === 'abfall') setAbfall($('#setSubDyn'));
   }).catch(() => toast('Die Datei ließ sich nicht lesen'));
 }
@@ -12548,7 +12565,7 @@ function abfStandFuellen(){
 }
 function setAbfall(box){
   const a = adresse();
-  const i = info('Fast jeder Entsorger bietet seinen Abfuhrkalender im Kalenderformat an (.ics, „iCal“) – als Datei zum Herunterladen oder als Link zum Abonnieren. Die App liest beides. Aufgaben entstehen daraus nicht; die Termine stehen auf der Startseite unter „Übersicht › Abfall“.', 'margin:-2px 0 10px');
+  const i = info('Fast jeder Entsorger bietet seinen Abfuhrkalender im Kalenderformat an (.ics, „iCal“) – als Datei zum Herunterladen oder als Link zum Abonnieren. Die App liest beides. Aufgaben entstehen daraus nicht; die Abholtage stehen unter Mehr › Abholtage und im Kalender.', 'margin:-2px 0 10px');
   box.innerHTML = `
     <div class="eyebrow mitInfo" style="margin-top:0">Stand ${i.knopf}</div>${i.text}
     <div id="abfStand"></div>
@@ -12595,7 +12612,7 @@ function renderAbfall(){
     + (fehler ? `<p class="small" style="margin:8px 0 0"><b>${esc(fehler)}</b></p>` : '');
   if(!kommend.length){
     box.innerHTML = `<p class="muted small" style="margin-top:0">${ABFALL.termine.length
-        ? 'Keine kommenden Abfuhrtermine – der Kalender ist abgelaufen. Bitte den neuen einlesen.'
+        ? 'Keine kommenden Abholtage – der Kalender ist abgelaufen. Bitte den neuen einlesen.'
         : 'Noch kein Abfallkalender eingerichtet.'}</p>${fuss}
       <button class="btn primary" id="abfZuEinst" style="margin-top:14px">Abfallkalender einstellen</button>`;
     $('#abfZuEinst').onclick = () => setOeffnen('abfall');
@@ -12925,7 +12942,7 @@ function wetterListenText(r, a){
 function aufgWetterKarteHtml(a){
   const r = aufgWetter(a);
   if(!r) return '';
-  const i = info('Bewertet wird jeder Arbeitstag vormittags und nachmittags bis zur Fälligkeit, soweit die Vorhersage reicht. Fett: gut. Die Grenzwerte und die Halbtage stehen unter Einstellungen › Wetter.', 'margin:-2px 0 8px');
+  const i = info('Bewertet wird jeder Arbeitstag vormittags und nachmittags bis zur Fälligkeit, soweit die Vorhersage reicht. Fett: gut. Die Grenzwerte und die Halbtage stehen unter Mehr › Einstellungen › Wetter.', 'margin:-2px 0 8px');
   let inhalt, knoepfe = '';
   if(r.fehlt === 'ort'){
     inhalt = `<p class="muted small" style="margin:0">Noch kein Standort festgelegt.</p>`;
@@ -13365,14 +13382,14 @@ function renderWetterregeln(){
   }
   const box = $('#ausloeserBox');
   if(!box) return;
-  const i = info('Auslöser machen aus Wetter und Abfuhrterminen Aufgaben oder starten einen Ablauf. Einer schlägt entweder vor – dann steht er auf der Startseite unter „Vorschläge“ – oder er legt gleich an. Geprüft wird beim Öffnen der App.', 'margin:-2px 0 10px');
+  const i = info('Auslöser machen aus Wetter und Abholtagen Aufgaben oder starten einen Ablauf. Einer schlägt entweder vor – dann steht er auf Heute unter „Vorschläge“ – oder er legt gleich an. Geprüft wird beim Öffnen der App.', 'margin:-2px 0 10px');
   const zeile = r => `<button class="btn eintrag" data-regel="${esc(r.k)}"><span>${esc(r.name)}</span><span class="zahl">${
     r.aus ? 'aus' : r.modus === 'sofort' ? 'legt gleich an' : 'schlägt vor'}</span></button>`;
   /* Seit v1.189 alle Auslöser auf einer Seite (Mehr › Auslöser): die
      eigenen, auch die, die einen Ablauf starten, und die ab Werk. */
   const eigene = eigeneRegeln().map(eigenAlsRegel);
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Eigene ${i.knopf}</div>${i.text}`
-    + `<button class="btn ghost klein" id="regelPlus" style="margin:0 0 10px">+ Auslöser</button>`
+    + `<button class="btn ghost klein" id="regelPlus" style="margin:0 0 10px">+ Neuer Auslöser</button>`
     + (eigene.length ? eigene.map(zeile).join('') : `<p class="muted small" style="margin:0 0 10px">Noch keiner.</p>`)
     + `<div class="eyebrow">Ab Werk (Wetter)</div>`
     + HINWEIS_STD.map(std => zeile(hinweisRegel(std.k))).join('');
@@ -14106,7 +14123,7 @@ function renderSetSub(){
   dyn.innerHTML = '';
   if(a === 'plaene'){ renderPlaene(); return; }
   if(a === 'bedienung'){ $('#tonHaken').checked = tonAn(); $('#einrastHaken').checked = einrastenAn(); return; }
-  if(a === 'app'){ $('#appFassung').textContent = 'Fassung ' + BUILD; return; }
+  if(a === 'app'){ $('#appFassung').textContent = 'Version ' + BUILD; return; }
   if(a === 'geraet'){ sicherStandZeigen(); return; }
   /* Das Werkzeug zum Prüfwert steht jedes Mal leer und zu da (v1.190). */
   if(a === 'zugang'){ const w = $('#schlossWerk'); if(w && $('#zugWerk').contains(w)){ w.hidden = true; $('#werkFeld').value = ''; $('#werkAus').value = ''; $('#werkAus').hidden = true; } return; }
@@ -14408,7 +14425,7 @@ function setAbwesend(box){
         <label class="field"><span>bis</span><input type="date" data-f="bis" value="${esc(x.bis || '')}"></label></div>
     </div>`;
   const iFei = info('Gerechnet werden die landesweiten Feiertage. Regionale – etwa Fronleichnam in Teilen Sachsens und Thüringens oder Mariä Himmelfahrt in Teilen Bayerns – trägst du unten als Abwesenheit ein.', 'margin:-2px 0 10px');
-  const iAbw = info('Fällt eine Frist aufs Wochenende, einen Feiertag oder in eine Abwesenheit, gilt der Arbeitstag davor. Zwei Wochen vorher zeigt die Startseite, was vorher zu erledigen ist.', 'margin:-2px 0 10px');
+  const iAbw = info('Fällt eine Frist aufs Wochenende, einen Feiertag oder in eine Abwesenheit, gilt der Arbeitstag davor. Zwei Wochen vorher zeigt Heute, was vorher zu erledigen ist.', 'margin:-2px 0 10px');
   /* Zeit je Arbeitstag für die Aufgaben der App (v1.63), in halben Stunden. */
   const iAz = info('So viel Zeit steht an einem Arbeitstag für die Aufgaben der App zur Verfügung. Danach rechnen der Kalender und die Auslastung; eine Dauer von einem Tag zählt ebenso viel. Wird es neben anderer Arbeit zu viel, hier herabsetzen.', 'margin:-2px 0 10px');
   box.innerHTML = `
@@ -14423,7 +14440,7 @@ function setAbwesend(box){
       ${BUNDESLAENDER.map(([k, t]) => `<option value="${k}"${CFG.bundesland === k ? ' selected' : ''}>${t}</option>`).join('')}
     </select></label>
     <div class="eyebrow mitInfo">Abwesenheiten ${iAbw.knopf}</div>${iAbw.text}
-    <button class="btn ghost klein" id="abwNeu" style="margin:0 0 10px">+ Abwesenheit hinzufügen</button>
+    <button class="btn ghost klein" id="abwNeu" style="margin:0 0 10px">+ Neue Abwesenheit</button>
     <div id="abwKommend">${kommend.map(karte).join('')}</div>
     ${vorbei.length ? `<div class="eyebrow">Vergangen</div><div id="abwVorbei">${vorbei.map(karte).join('')}</div>` : ''}`;
   $('#abwLand').onchange = e => { CFG.bundesland = e.target.value; saveCfg(); };
@@ -14461,10 +14478,10 @@ function setAbwesend(box){
   });
 }
 function rundgangWahl(box, k){
-  const i = info('Sind mindestens zwei integrierte Nachweise offen, steht auf der Startseite ein gemeinsamer Rundgang, geordnet nach deinen Wegen und der Lage im Grundriss. Zurechtschieben geht dort mit den Pfeilen.'
+  const i = info('Sind mindestens zwei dieser Anlagentypen offen, steht auf Heute ein gemeinsamer Rundgang, geordnet nach deinen Wegen und der Lage im Grundriss. Zurechtschieben geht dort mit „Reihenfolge ändern“.'
     + (k === 'medien' ? ' Die Zähler kommen im letzten Monat des Quartals dazu.' : ''), 'margin:0 0 14px');
   box.innerHTML = `<div class="mitInfo" style="margin:0 0 6px"><label class="haken" style="margin:0"><input type="checkbox" id="rgHaken"${imRundgang(k) ? ' checked' : ''}>
-      <span>In kombinierte Rundgänge integrieren</span></label>${i.knopf}</div>${i.text}
+      <span>Im gemeinsamen Rundgang</span></label>${i.knopf}</div>${i.text}
     <div style="height:8px"></div>`;
   $('#rgHaken').onchange = e => { teilCfg(k).rundgang = e.target.checked; saveCfg(); };
 }
@@ -14934,7 +14951,7 @@ function objektKarten(box, k){
   const zeichnen = mitNeuer => {
     verworfen = false;
     const liste = teilCfg(k).anlagen;
-    box.innerHTML = `<button class="btn ghost klein" data-plus="1" style="margin:0 0 10px">+ Objekt hinzufügen</button>`
+    box.innerHTML = `<button class="btn ghost klein" data-plus="1" style="margin:0 0 10px">+ Neues Objekt</button>`
       + (mitNeuer ? karte('', -1, liste.length) : '')
       + anzeigeFolge(liste.length, basis).map(i => karte(liste[i], i, liste.length)).join('');
     /* Die bewegte Karte bleibt auf dem Schirm stehen, die anderen wandern daran
@@ -15029,7 +15046,7 @@ function objektKarten(box, k){
 function setAkkus(box){
   box.innerHTML =
     infoZeile('Die Akkutypen gelten für alle Anlagentypen mit Akkutausch, der Abstand steht in Monaten (48 = vier Jahre). Welcher Typ in welchem Objekt steckt und wie viele, stellst du auf der Seite des Anlagentyps bei den Objekten ein.')
-    + `<button class="btn ghost klein" id="akkuTypPlus" style="margin:0 0 10px">+ Akkutyp hinzufügen</button>
+    + `<button class="btn ghost klein" id="akkuTypPlus" style="margin:0 0 10px">+ Neuer Akkutyp</button>
      <div id="akkuTypListe"></div>`;
   akkuTypBasis = akkuTypen().length;
   $('#akkuTypPlus').onclick = () => {
@@ -15129,7 +15146,7 @@ function setStellen(box, teil){
   }
   box.innerHTML =
     `<div class="eyebrow mitInfo" style="margin-top:0">Zähler ${iSt.knopf}</div>${iSt.text}
-     <button class="btn ghost klein" id="setStellePlus" style="margin:0 0 10px">+ Zähler hinzufügen</button>
+     <button class="btn ghost klein" id="setStellePlus" style="margin:0 0 10px">+ Neuer Zähler</button>
      <div id="setStellenListe"></div>
      <div class="eyebrow mitInfo" style="margin-top:20px">Zählertausch ${iTa.knopf}</div>${iTa.text}
      <button class="btn eintrag" id="setZuTausch"><span>Zähler getauscht</span></button>`;
@@ -17654,7 +17671,7 @@ $('#btnNeuLaden').onclick = () => {
      unberührt; replace statt Zuweisung, damit der Zurück-Weg nicht zuwächst. */
   location.replace(location.pathname + '?v=' + Date.now());
 };
-$('#btnAppNeu').onclick = () => frage('Neueste Fassung laden', 'Die App lädt sich neu vom Server. Deine Daten bleiben, wie sie sind.', 'Laden', () => $('#btnNeuLaden').onclick());
+$('#btnAppNeu').onclick = () => frage('Neueste Version laden', 'Die App lädt sich neu vom Server. Deine Daten bleiben, wie sie sind.', 'Laden', () => $('#btnNeuLaden').onclick());
 $('#btnZugWerk').onclick = () => { const w = $('#schlossWerk'); if(w) w.hidden = !w.hidden; };
 $('#btnPlanNeu').onclick = () => $('#planFile').click();
 $('#planFile').onchange = async e => {
@@ -17882,11 +17899,11 @@ $('#cfgFile').onchange = e => {
     let paket = null;
     try{ paket = JSON.parse(leser.result); }catch(x){ /* unten abgefangen */ }
     if(!paket || paket.format !== CFG_FORMAT){ toast('Keine Datei dieser App'); return; }
-    frage('Alles übernehmen',
+    frage('Sicherung einlesen',
       `Die Datei vom ${dText(paket.stand || '')} ersetzt sämtliche Einstellungen und Daten `
       + 'dieses Geräts: Gebäude, Prüfer, Objektlisten, Checklisten, Zähler, laufende '
       + 'Kontrollen, Stände des Vorquartals, vermerkte Zählerwechsel und die ausgegebenen Blätter.',
-      'Übernehmen', () => paketUebernehmen(paket));
+      'Ersetzen', () => paketUebernehmen(paket));
   };
   leser.readAsText(f);
 };
@@ -17947,12 +17964,12 @@ function barInhalt(){
     /* Das Planblatt entsteht auf Zuruf und wird von hier aus geteilt; das Blatt
        eines Nachweises geht dagegen über die Leiste der Liste hinaus. */
     if(blattDatei){
-      b.innerHTML = `<button class="btn primary" id="barA">Teilen</button>`;
+      b.innerHTML = `<button class="btn primary" id="barA">Ausgeben</button>`;
       $('#barA').onclick = () => dateiTeilen(blattDatei.name, blattDatei.html);
     }else if(offen && NW(offen) && NW(offen).art !== 'fremd'){
       /* Vorschau einer Kontrolle (v1.187): von hier aus auch ausgeben. */
       const st = abschlussStand(offen);
-      b.innerHTML = `<button class="btn primary" id="barA"${st.bereit ? '' : ' disabled'}>Ausgeben und teilen</button>`;
+      b.innerHTML = `<button class="btn primary" id="barA"${st.bereit ? '' : ' disabled'}>Ausgeben</button>`;
       $('#barA').onclick = ausgeben;
     }else{
       /* Zurück zur Eingabe geht über den Pfeil oben links (v1.38). */
@@ -18828,7 +18845,7 @@ async function renderVerlauf(){
   const wege = [
     art === 'bestand' ? '' : `<button type="button" data-ow="kontrolle"><i>${HAKEN_SVG}</i>${art === 'fremd' ? 'Prüfung' : 'Kontrolle'}</button>`,
     `<button type="button" data-ow="plan"><i>${ORT_SVG}</i>Grundriss</button>`,
-    art === 'medien' ? `<button type="button" data-ow="tausch"><i>⇄</i>Getauscht</button>` : `<button type="button" data-ow="stoer"><i>⚠</i>Störung</button>`,
+    art === 'medien' ? `<button type="button" data-ow="tausch"><i>⇄</i>Zählertausch</button>` : `<button type="button" data-ow="stoer"><i>⚠</i>Störung</button>`,
     `<button type="button" data-ow="aufgabe"><i>+</i>Aufgabe</button>`].filter(Boolean).join('');
   const offen = AUFG.filter(a => !a.erledigt && a.k === v.k && (a.anlage === v.id || a.quelle === ort));
   const kopf = `<div class="card objKopf">
@@ -19010,8 +19027,10 @@ function stoerVerdrahten(v){
     f.vermerk = $('#stoerVermerk').value.trim();
     if(!f.was && !f.weg){ toast('Bitte eintragen, was war'); return; }
     const akkuVorher = f.weg === 'akku';
-    stoerSpeichern(v, f);
-    toast(akkuVorher && akkuAktiv(v.k) ? 'Vermerkt · Akkutausch eingetragen' : 'Vermerkt');
+    const erg = stoerSpeichern(v, f), na = erg && erg.neueAufgabe;
+    /* Sagen, dass eine Aufgabe entstanden ist (v1.193, Prüfteam). */
+    toast(na ? `Störung vermerkt – Aufgabe „${na.titel}“ angelegt${na.frist ? ', fällig ' + datumKurz(na.frist) : ''}`
+      : akkuVorher && akkuAktiv(v.k) ? 'Störung vermerkt · Akkutausch eingetragen' : 'Störung vermerkt');
     stoerForm = null;
     renderVerlauf();
   };
@@ -19040,8 +19059,10 @@ function stoerSpeichern(v, f){
     }
     s.akkuGesetzt = true;
   }
+  const vorAufg = s.aufg;
   stoerAufgabe(s);
   saveStoer();
+  return {s, neueAufgabe:s.aufg && s.aufg !== vorAufg ? AUFG.find(a => a.id === s.aufg) : null};
 }
 /* Alle Objekte mit Störungen, die häufigsten der letzten zwölf Monate zuerst. */
 function stoerObjekte(){
@@ -19065,7 +19086,7 @@ function renderStoerungen(){
       `<button class="btn eintrag" data-si="${i}"><span class="etext">${esc(o.anlage)}<small>${esc([NW(o.k).label,
         o.jahr ? `${o.jahr} in 12 Monaten` : '', o.jahr >= STOER_GEHAEUFT ? 'gehäuft' : '',
         'zuletzt ' + dText(o.zuletzt)].filter(Boolean).join(' · '))}</small></span><span class="zahl">${o.alle}</span></button>`).join('')
-    : `<p class="muted small">Noch keine Störung vermerkt. Eingetragen wird im Verlauf eines Objekts.</p>`;
+    : `<p class="muted small">Noch keine Störung vermerkt. Eingetragen wird auf der Seite eines Objekts über „Störung“.</p>`;
   $$('#stoerListe [data-si]').forEach(b => b.onclick = () => {
     const o = l[+b.dataset.si];
     verlaufOeffnen(o.k, o.anlage, o.anlage);
@@ -19130,7 +19151,7 @@ function renderAbschluss(){
     $('#btnSigStart').textContent = datenFuer(k).signatur ? 'Neu unterschreiben' : 'Feld leeren';
   }
   $('#abschlussEnde').innerHTML = `<button class="btn" id="abBlatt" style="margin-top:16px">Blatt ansehen</button>
-    <button class="btn primary" id="abAus" style="margin-top:10px"${st.bereit ? '' : ' disabled'}>Ausgeben und teilen</button>
+    <button class="btn primary" id="abAus" style="margin-top:10px"${st.bereit ? '' : ' disabled'}>Ausgeben</button>
     ${st.voll && st.sig && !datenFuer(k).signatur ? '<p class="muted small" style="margin:8px 0 0;text-align:center">Erst unterschreiben, dann ausgeben.</p>' : ''}`;
   $('#abBlatt').onclick = () => { blattZeigen(); go('blatt'); };
   $('#abAus').onclick = ausgeben;
@@ -19336,7 +19357,7 @@ function plausEinstellungen(box){
   const p = plaus();
   const einheit = m => /wasser/i.test(m) ? 'm³' : 'kWh';
   const i = info('Auffällig ist ein Verbrauch, der um mehr als die Prozentzahl vom gleichen Quartal des Vorjahres abweicht und dabei die Mindestmenge überschreitet; MWh-Zähler rechnen sie um. Ein Stand unter dem Vorquartal, eine Stelle mehr vor dem Komma und ein Verbrauch von null werden immer gemeldet.', 'margin:-4px 0 10px');
-  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:20px">Plausibilitätsprüfung ${i.knopf}</div>${i.text}
+  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:20px">Zählerstände prüfen ${i.knopf}</div>${i.text}
     <label class="field"><span>Abweichung in %</span>
       <input inputmode="decimal" class="schmal" id="plProzent" value="${esc(zahlText(p.prozent))}"></label>
     ${MEDIEN.map(m => `<label class="field"><span>Mindestmenge ${esc(m)} (${einheit(m)})</span>
