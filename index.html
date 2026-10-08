@@ -10,6 +10,9 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.207 08.10.2026 Die Seite eines Anlagentyps rechnet nur noch dessen eigene
+                    Objekte statt aller – schneller bei vielen Objekten,
+                    sichtbar ändert sich nichts.
   v1.206 08.10.2026 Übersehenes aus dem Prüfbericht (Jean). Knöpfe und Zeilen
                     dämpfen sich beim Antippen, langes Drücken markiert in
                     Leisten keinen Text mehr. Die Leiste unten verschwindet
@@ -4046,7 +4049,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.206';
+const VERSION = 'v1.207';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -11149,7 +11152,7 @@ function renderTypSeite(){
   const box = $('#typBox'), n = typK && NW(typK);
   if(!box || !n){ if(box) box.innerHTML = ''; return; }
   const k = n.k, art = n.art;
-  const objekte = suchObjekte().filter(o => o.k === k);
+  const objekte = suchObjekte(k);
   /* Was gerade ansteht, wie in der Liste unter Anlagen. */
   const stand = art === 'bestand' ? '' : art === 'fremd' ? (fristGrund(fristen(k), 'Prüfdatum') || '') : homeStand(n).replace(/^ · /, '');
   const los = art !== 'fremd' && art !== 'bestand' && begonnen(n);
@@ -19830,9 +19833,11 @@ function suchPlanText(ort, k, id){
 }
 /* Arbeitsmittel eines Objekts (v1.145): Werkzeug und Material. */
 const suchMittel = key => { const m = mittelVon(key); return m.ut.concat(m.mat.map(x => x.name)).join(', '); };
-function suchObjekte(){
+/* nurK (v1.207): nur die Objekte eines Typs – die Typseite rechnete bis dahin
+   alle Typen durch und warf die fremden weg. */
+function suchObjekte(nurK){
   const l = [];
-  TYPEN_AKTIV.forEach(n => {                       // auch „Nur Bestand“ (v1.148)
+  TYPEN_AKTIV.filter(n => !nurK || n.k === nurK).forEach(n => {     // auch „Nur Bestand“ (v1.148)
     if(n.spaeter || n.art === 'sprinkler') return;
     if(n.art === 'medien'){
       const namen = medienNamen();
