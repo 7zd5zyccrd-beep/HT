@@ -10,6 +10,9 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.200 08.10.2026 Heute: In den Vorschlägen steht das › jetzt rechts am Rand
+                    wie bei allen Einträgen, nicht mehr direkt hinter dem
+                    Titel (Jean).
   v1.199 08.10.2026 Heute: „Vorschläge“ steht als Überschrift über seinem
                     Kasten wie alle anderen Abschnitte. „Sicherung fällig“,
                     „Bis … wird es knapp“, die Wetterwarnung und „Zeit
@@ -2874,6 +2877,12 @@ header .back[hidden]{display:none}
 .vorzZeile::after{content:'›';flex:0 0 auto;font-size:22px;line-height:1;color:var(--ink-soft)}
 .vorzZeile[aria-expanded="true"]::after{transform:rotate(90deg)}
 .vorschlaege b{font-weight:500}
+/* Antippbare Vorschläge wie Einträge: › rechts am Rand (v1.200). */
+.vsZiel{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500}
+.vsZiel .etext{flex:1;min-width:0}
+.vsZiel small{display:block;margin-top:3px;font-size:14px;font-weight:400;color:var(--ink-soft)}
+.vsZiel::after{content:'›';flex:0 0 auto;font-size:22px;line-height:1;color:var(--ink-soft)}
+.hzeile .vsZiel + .hknoepfe{margin-top:8px}
 .vorschlaege .hzeile + .vorzZeile{border-top:1px solid var(--line);margin-top:4px;padding-top:10px}
 /* Angaben der Aufgabe als Zeilen (v1.186), wie in den iPhone-Einstellungen. */
 .angListe{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 0 6px}
@@ -3969,7 +3978,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.199';
+const VERSION = 'v1.200';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10469,10 +10478,8 @@ function vorschlaegeKarte(hinweise, gel, liste){
         <button class="btn ghost klein" data-hnein="${esc(h.schluessel)}">Nicht jetzt</button></div></div>`)
     .concat(gel.map(g => {
       const tag = planTagWort(g.tg.t), a = g.a;
-      return `<div class="hzeile"><div data-aufg="${esc(a.aufg)}" style="cursor:pointer">
-        <p style="margin:0 0 2px"><b>${esc(a.titel)}</b> <span class="muted small">›</span></p>
-        <p class="muted small" style="margin:0 0 8px">${esc([`Gute Gelegenheit: ${tag} ${TEIL_KURZ[g.teil]} gutes Wetter`,
-          `≈ ${dauerText({m:g.min})}, ${tag} ${freiText(g.frei)}`].join(' · '))} – Vorschlag: ${esc(tag)} erledigen</p></div>
+      return `<div class="hzeile"><div class="vsZiel" data-aufg="${esc(a.aufg)}"><span class="etext">${esc(a.titel)}<small>${esc([`Gute Gelegenheit: ${tag} ${TEIL_KURZ[g.teil]} gutes Wetter`,
+          `≈ ${dauerText({m:g.min})}, ${tag} ${freiText(g.frei)}`].join(' · '))} – Vorschlag: ${esc(tag)} erledigen</small></span></div>
         <div class="hknoepfe"><button class="btn ghost klein" data-gja="${esc(a.aufg + '|' + g.tg.iso)}">Übernehmen</button>
           <button class="btn ghost klein" data-gnein="${esc(a.aufg + '|' + g.tg.iso)}">Nicht jetzt</button></div></div>`;
     }));
@@ -10486,10 +10493,8 @@ function vorschlaegeKarte(hinweise, gel, liste){
         const ziel = a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${esc(a.aufg)}"`
                    : `data-nw="${esc(a.k)}" data-ziel="${esc(a.ziel || '')}"${a.akku ? ' data-akku="1"' : ''}`;
         const termin = a.fenster ? `Zeitraum bis ${ttmm(a.faellig)}` : `fällig ${ttmm(a.faellig)}`;
-        return `<div class="hzeile"><div ${ziel} style="cursor:pointer">
-            <p style="margin:0 0 2px"><b>${esc(a.titel)}</b> <span class="muted small">›</span></p>
-            <p class="muted small" style="margin:0${a.aufg ? ' 0 8px' : ''}">${esc(['≈ ' + dauerText({m:min}), wetter, termin].filter(Boolean).join(' · '))}${
-              a.aufg ? ' – Vorschlag: heute erledigen' : ' – Kontrolle: antippen und gleich beginnen'}</p></div>
+        return `<div class="hzeile"><div class="vsZiel" ${ziel}><span class="etext">${esc(a.titel)}<small>${esc(['≈ ' + dauerText({m:min}), wetter, termin].filter(Boolean).join(' · '))}${
+              a.aufg ? ' – Vorschlag: heute erledigen' : ' – Kontrolle: antippen und gleich beginnen'}</small></span></div>
           ${a.aufg ? `<div class="hknoepfe"><button class="btn ghost klein" data-gja="${esc(a.aufg + '|' + heute())}">Auf heute legen</button>
             <button class="btn ghost klein" data-vnein="${esc(a.aufg)}">Nicht jetzt</button></div>` : ''}</div>`;
       }).join('') || '<p class="muted small" style="margin:6px 0 0">Nichts, was in die freie Zeit passt.</p>';
