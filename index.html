@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.186 08.10.2026 Bedienkonzept, Etappe 4 von 7: die Aufgabe. Oben das Tun
+         (Kopf, Wetter, offene Vorbereitung, Infos und Aktionen, Erledigen),
+         darunter „Angaben“ als Zeilen wie in den iPhone-Einstellungen –
+         Titel und Objekt, Fällig, Eingeplant für, Wichtigkeit, Wiederholen,
+         Wetter, Vorbereitung, Werkzeug und Material, Ablauf, Notiz –, jede
+         mit ihrem Wert; ein Tipp öffnet das Feld darunter. „Mehr“ und das
+         darin verschachtelte „Angaben bearbeiten“ entfallen, „Aufgabe
+         löschen“ steht unten. Neue Aufgabe: Titel, Objekt und Fällig offen,
+         der Rest als „Weitere Angaben“; „Von selbst anlegen lassen“ ersetzt
+         die dritte Wahl „Wetterregel“ neben dem Datum.
   v1.185 08.10.2026 Bedienkonzept, Etappe 3 von 7: Anlagen und Objektseite.
          Unter Anlagen öffnet jeder Typ seine eigene Seite: oben „Kontrolle
          beginnen“ bzw. „Weiter mit der Kontrolle“ (Fremdprüfung: „Prüfung
@@ -2673,6 +2683,22 @@ button > .ortIcon:only-child{display:block;margin:auto}
 body.reiterAn main{padding-bottom:calc(16px + var(--leiste-h, 0px))}
 header .back[hidden]{display:none}
 .mehrZeile{display:flex;justify-content:space-between;gap:10px}
+/* Angaben der Aufgabe als Zeilen (v1.186), wie in den iPhone-Einstellungen. */
+.angListe{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 0 6px}
+.angZeile{display:flex;width:100%;align-items:baseline;justify-content:space-between;gap:12px;padding:11px 14px;
+  background:none;border:0;border-top:1px solid var(--line);color:var(--ink);font:inherit;font-size:16px;text-align:left;cursor:pointer}
+.angListe > .angZeile:first-child{border-top:0}
+.angZeile > span:first-child{flex:0 0 auto}
+.angWert{flex:1;min-width:0;text-align:right;color:var(--ink-soft);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.angZeile::after{content:'›';color:var(--ink-soft);font-size:20px;line-height:1;flex:0 0 auto}
+.angZeile[aria-expanded="true"]::after{content:'⌄'}
+.angFeld{padding:4px 14px 6px;border-top:1px solid var(--line);background:var(--enclosure-2)}
+.angFeld .gruppe{border:0;padding:0;margin:0}
+.angFeld > .card{margin:8px 0}
+/* Die Zeile nennt das Feld schon – die Beschriftung darüber entfällt. */
+:is([data-af="wichtig"],[data-af="wetter"],[data-af="notiz"],[data-af="geplant"]) > .field > span:first-child,
+[data-af="wdh"] > .gruppe > .field:first-child > span:first-child,[data-af="wdh"] > .field:first-child > span:first-child{display:none}
+.angFeld > .field,.angFeld > .gruppe{margin-top:8px}
 /* Wege der Objektseite: Symbol mit Wort, nebeneinander (v1.184). */
 .objWege{display:flex;gap:8px;margin:0 0 6px}
 .objWege button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 7px;
@@ -3715,7 +3741,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.185';
+const VERSION = 'v1.186';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -7918,9 +7944,9 @@ let aufgAktiv = null;
 /* Welche Aufgabe ihre Angaben aufgeklappt hat (v1.75) – beim Öffnen einer
    Aufgabe sind sie zu, auf der Seite bleiben sie offen, auch über einen
    Neuaufbau hinweg. */
-let angabenAuf = '';
+let angabenAuf = '', angAuf = new Set();   // angAuf: offene Angaben-Zeilen (v1.186)
 function aufgabeOeffnen(id){
-  angabenAuf = '';
+  angabenAuf = ''; angAuf = new Set();
   aufgAktiv = AUFG.find(a => a.id === id) || null;
   if(aufgAktiv) go('aufgabe');
 }
@@ -7928,6 +7954,7 @@ function aufgabeNeu(vorgabe){
   aufgAktiv = Object.assign({id:neueId(), art:'eigen', quelle:'', k:'', anlage:'', punkt:'', titel:'', text:'',
     notiz:'', zeitraum:'', festgestellt:'', angelegt:heute(), frist:tagPlus(heute(), 7),
     wichtig:'normal', erneut:[], erledigt:'', vermerk:'', entwurf:true}, vorgabe && vorgabe.k ? vorgabe : {});
+  angAuf = new Set();
   go('aufgabe');
 }
 /* Termin einer Aufgabe für die Kopfkarte: der Tag und wie weit er weg ist. */
@@ -7981,10 +8008,9 @@ function aufgKopfZeigen(a, mangelKopf){
       <button class="btn ghost klein" data-weg="nw">Zur Kontrolle ›</button></div>` : ''}</div>`;
   const zt = box.querySelector('[data-zumtermin]');
   if(zt) zt.onclick = () => {
-    const ang = $('#aufgAngaben'), feld = $('#aufgVon') || $('#aufgFrist');
-    if(!ang || !feld) return;
-    if($('#aufgMehr')){ $('#aufgMehr').open = true; mehrAuf = a.id; }
-    ang.open = true; angabenAuf = a.id;
+    const feld = $('#aufgVon') || $('#aufgFrist'), z = $('#aufgBox [data-az="frist"]');
+    if(!feld || !z) return;
+    if(!angAuf.has('frist')) z.click();
     /* Nur hinscrollen, nicht fokussieren – sonst ginge unter iOS sofort die
        Datumswahl auf. */
     const zeile = feld.closest('.field') || feld;
@@ -8078,10 +8104,11 @@ function renderAufgabe(){
   }
   /* Wiederholung und Vorbereitung gibt es nur bei eigenen Aufgaben. */
   const w = a.wdh || null, v = a.vorb || {text:'', wochen:4};
-  const planung = mangel ? '' : `
+  const wetterFeld = mangel ? '' : `
     <label class="field"><span>Wetterprofil</span>
       <select id="aufgWetter"><option value="">– nicht wetterabhängig –</option>${
-        WETTER_PROFILE.map(([k, t]) => `<option value="${k}"${a.wetter === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+        WETTER_PROFILE.map(([k, t]) => `<option value="${k}"${a.wetter === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>`;
+  const wdhFeld = mangel ? '' : `
     ${gerahmt(w && !a.von, `<label class="field"><span>Wiederholen</span>
       <div class="row wdhZeile">
         <span class="wdhAlle"${w ? '' : ' hidden'}>alle</span>
@@ -8094,7 +8121,8 @@ function renderAufgabe(){
     ${w && !a.von ? `<div class="field segfeld"><span>Nächste Fälligkeit zählt ab</span><div class="seg">
         <button type="button" data-basis="termin" aria-pressed="${w.basis !== 'erledigt'}">letzter Fälligkeit</button>
         <button type="button" data-basis="erledigt" aria-pressed="${w.basis === 'erledigt'}">Erledigung</button>
-      </div></div>` : ''}`)}
+      </div></div>` : ''}`)}`;
+  const vorbFeld = mangel ? '' : `
     <div id="vorbGruppe"${String(v.text || '').trim() ? ' class="gruppe"' : ''}><label class="field"><span>Vorbereitung</span>
       <input id="vorbText" value="${esc(v.text)}" placeholder="z. B. Firma beauftragen"></label>
     <label class="field" id="vorbWochenFeld"${String(v.text || '').trim() ? '' : ' hidden'}><span>Vorlauf in Wochen${a.von && !mangel ? ' vor Beginn' : ''}</span>
@@ -8142,7 +8170,6 @@ function renderAufgabe(){
     : `<div class="field segfeld terminFeld gruppe"><div class="seg">
          <button type="button" data-tart="termin" aria-pressed="${!zr}">Fällig am</button>
          <button type="button" data-tart="zeitraum" aria-pressed="${zr}">Zeitraum</button>
-         ${a.entwurf ? '<button type="button" data-tart="wetter" aria-pressed="false">Von selbst</button>' : ''}
        </div>${zr
          ? `<div class="vonBis">
               <label class="field"><span>von</span><input type="date" id="aufgVon" value="${esc(a.von)}"></label>
@@ -8154,13 +8181,36 @@ function renderAufgabe(){
     : `<label class="field"><span>Eingeplant für</span><div class="row" style="align-items:center">
          <input type="date" id="aufgGeplant" class="schmal" value="${esc(a.geplant || '')}" min="${heute()}">
          <button type="button" class="btn ghost klein" id="aufgGeplantWeg" style="width:auto;margin:0"${a.geplant ? '' : ' hidden'}>Entfernen</button></div></label>`;
-  const felder = kopf
-    + `${terminFeld}
-       ${planFeld}
-       <div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
-         WICHTIG.map(([w, t]) => `<button type="button" data-w="${w}" aria-pressed="${a.wichtig === w}">${t}</button>`).join('')}</div></div>
-       ${planung}
-       <label class="field"><span>Notiz</span><textarea id="aufgNotiz" style="min-height:90px">${esc(a.notiz)}</textarea></label>`;
+  const wichtigFeld = `<div class="field wichtig"><span>Wichtigkeit</span><div class="seg">${
+         WICHTIG.map(([w, t]) => `<button type="button" data-w="${w}" aria-pressed="${a.wichtig === w}">${t}</button>`).join('')}</div></div>`;
+  const notizFeld = `<label class="field"><span>Notiz</span><textarea id="aufgNotiz" style="min-height:90px">${esc(a.notiz)}</textarea></label>`;
+  /* Angaben als Zeilen (v1.186, Etappe 4): jede zeigt ihren Wert, ein Tipp
+     öffnet das Feld darunter. Ersetzt „Mehr“ mit dem darin verschachtelten
+     „Angaben bearbeiten“. Die Felder bleiben immer im Aufbau (nur verborgen),
+     damit ihre Bindungen unten unverändert greifen. */
+  const wp = WETTER_PROFILE.find(x => x[0] === a.wetter), wi = WICHTIG.find(x => x[0] === a.wichtig);
+  const anl = !mangel && a.anlage ? (bezugsAnlagen(a.k).find(x => x.wert === a.anlage) || {}).text || a.anlage : '';
+  const angWerte = {
+    titel:[a.titel || '–', n ? n.label : '', anl].filter(Boolean).join(' · '),
+    frist:aufgTerminText(a), geplant:a.geplant ? planTagWort(alsDatum(a.geplant)) : '–',
+    wichtig:wi ? wi[1] : 'Normal', wdh:a.wdh ? wdhText(a.wdh) : 'nein', wetter:wp ? wp[1] : 'nicht wetterabhängig',
+    vorb:String(v.text || '').trim() || '–', notiz:String(a.notiz || '').trim().split('\n')[0] || '–'};
+  const angZeile = (key, label, feld) => `<button type="button" class="angZeile" data-az="${key}" aria-expanded="${angAuf.has(key)}"><span>${esc(label)}</span><span class="angWert">${esc(angWerte[key])}</span></button>
+      <div class="angFeld" data-af="${key}"${angAuf.has(key) ? '' : ' hidden'}>${feld}</div>`;
+  const aktZeile = (id, label, wert) => `<button type="button" class="angZeile" id="${id}"><span>${esc(label)}</span><span class="angWert">${esc(wert)}</span></button>`;
+  const pl = a.plan ? planVon(a.plan) : null;
+  const mittelWert = tKeyA ? (aufgMehrText(a).replace(/^Mehr:? ?/, '') || '–') : (eigenA ? eigenA.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '–');
+  const angaben = (neu ? '' : (mangel ? '' : angZeile('titel', 'Titel und Objekt', kopf)) + angZeile('frist', 'Fällig', terminFeld) + (planFeld ? angZeile('geplant', 'Eingeplant für', planFeld) : ''))
+    + angZeile('wichtig', 'Wichtigkeit', wichtigFeld)
+    + (mangel ? '' : angZeile('wdh', 'Wiederholen', wdhFeld) + angZeile('wetter', 'Wetter', wetterFeld) + angZeile('vorb', 'Vorbereitung', vorbFeld))
+    + (tKeyA ? aktZeile('aufgTaet', 'Dauer, Werkzeug und Material', mittelWert)
+       : !neu && !a.erledigt ? aktZeile('aufgEigen', 'Werkzeug und Material', mittelWert) : '')
+    + (mangel || a.erledigt ? '' : pl && stufeDerAufgabe(a)
+       ? angZeile('ablauf', 'Ablauf', ablaufMehrHtml(a)).replace(`<span class="angWert">${esc(angWerte.ablauf)}</span>`, `<span class="angWert">${esc(pl.name || 'Ablauf')}</span>`)
+       : aktZeile('ablaufStart', 'Ablauf', 'festlegen'))
+    + angZeile('notiz', 'Notiz', notizFeld)
+    + (neu ? `<button type="button" class="angZeile" data-tart="wetter"><span>Von selbst anlegen lassen</span><span class="angWert">Auslöser</span></button>` : '');
+  const angListe = `<div class="eyebrow">${neu ? 'Weitere Angaben' : 'Angaben'}</div><div class="angListe">${angaben}</div>`;
   /* Seit v1.75 oben, was jetzt zu tun ist – Kopfkarte, Wetter, Vorbereiten,
      Erledigen –, darunter Dauer und Werkzeug, die Angaben zugeklappt. Der
      Entwurf einer neuen Aufgabe hat noch nichts zusammenzufassen: dort stehen
@@ -8170,24 +8220,37 @@ function renderAufgabe(){
      offen), Hilfen und Erledigen; alles Übrige unter „▸ Mehr“. */
   const ablauf = !mangel && !a.erledigt ? ablaufHilfenHtml(a) : '';
   const vorbOffen = !neu && !a.erledigt && aufgVorbOffen(a);
-  box.innerHTML = neu ? felder + ablaufMehrHtml(a) + erledigung
+  /* Neue Aufgabe (v1.186): Titel, Fällig und Objekt offen, alles Übrige als
+     Zeilen. Bestehende: oben das Tun (Kopf, Wetter, Vorbereitung, Infos und
+     Aktionen, Erledigen), darunter die Angaben, ganz unten Löschen. */
+  box.innerHTML = neu ? kopf + terminFeld + angListe + erledigung
     : `<div id="aufgKopf"></div>`
     + (!mangel && !a.erledigt && a.wetter ? `<div id="aufgWetterKarte">${aufgWetterKarteHtml(a)}</div>` : '')
-    + (vorbOffen ? '<div id="aufgVorb"></div>' : '') + ablauf + erledigung
-    + `<details class="aufgMehr" id="aufgMehr"${mehrAuf === a.id ? ' open' : ''}><summary>${esc(aufgMehrText(a))}</summary>`
-    + (vorbOffen ? '' : '<div id="aufgVorb"></div>') + (mangel ? '' : ablaufMehrHtml(a)) + erfKarte + eigenKarte
-    + (aufgInfoZeile(a) ? `<p class="muted small" style="margin:0 0 10px">${esc(aufgInfoZeile(a))}</p>` : '')
-    + `<details class="angaben" id="aufgAngaben"${angabenAuf === a.id ? ' open' : ''}><summary>Angaben bearbeiten</summary>${felder}</details>`
-    + (!mangel ? `<div class="knopfzeile"><button class="btn danger klein" id="aufgWeg">Löschen</button></div>` : '') + '</details>';
-  if($('#aufgMehr')) $('#aufgMehr').ontoggle = e => { mehrAuf = e.target.open ? a.id : ''; };
+    + '<div id="aufgVorb"></div>' + ablauf + erledigung
+    + angListe
+    + (erfA ? `<div class="card" style="margin-top:12px"><div class="eyebrow" style="margin:0 0 6px">Erfahrung</div>${erfA}</div>` : '')
+    + (!mangel ? `<button class="btn danger klein" id="aufgWeg" style="margin-top:18px">Aufgabe löschen</button>` : '');
   aufgKopfZeigen(a, mangelKopf);
-  /* Beim Zuklappen zieht die Kopfkarte nach (v1.103) – während die Angaben
-     offen sind, baut sich über den Feldern nichts neu auf (v1.104). */
-  if($('#aufgAngaben')) $('#aufgAngaben').ontoggle = e => { angabenAuf = e.target.open ? a.id : ''; if(!e.target.open) kopfNeu(); };
   const kopfNeu = () => aufgKopfZeigen(a, mangelKopf);
+  /* Zeilen auf- und zuklappen; beim Zuklappen zieht die Kopfkarte nach, offen
+     baut sich über den Feldern nichts neu auf (v1.104). */
+  box.querySelectorAll('[data-az]').forEach(z => z.onclick = () => {
+    const k = z.dataset.az, f = box.querySelector(`[data-af="${k}"]`), auf = f.hidden;
+    f.hidden = !auf; z.setAttribute('aria-expanded', String(auf));
+    if(auf) angAuf.add(k); else { angAuf.delete(k); angWertNeu(); kopfNeu(); }
+  });
+  const angWertNeu = () => {
+    const wi2 = WICHTIG.find(x => x[0] === a.wichtig), wp2 = WETTER_PROFILE.find(x => x[0] === a.wetter);
+    const werte = {titel:[a.titel || '–', a.k && NW(a.k) ? NW(a.k).label : ''].filter(Boolean).join(' · '),
+      frist:aufgTerminText(a), geplant:a.geplant ? planTagWort(alsDatum(a.geplant)) : '–', wichtig:wi2 ? wi2[1] : 'Normal',
+      wdh:a.wdh ? wdhText(a.wdh) : 'nein', wetter:wp2 ? wp2[1] : 'nicht wetterabhängig',
+      vorb:String((a.vorb || {}).text || '').trim() || '–', notiz:String(a.notiz || '').trim().split('\n')[0] || '–'};
+    box.querySelectorAll('[data-az]').forEach(z => { if(werte[z.dataset.az] != null && z.dataset.az !== 'ablauf') z.querySelector('.angWert').textContent = werte[z.dataset.az]; });
+  };
 
-  /* Vorbereiten (v1.74) – nur die offene, gespeicherte Aufgabe. */
-  if(!neu && !a.erledigt) aufgVorbKarte($('#aufgVorb'), a);
+  /* Vorbereiten (v1.74) – nur die offene, gespeicherte Aufgabe, und seit
+     v1.186 nur, solange noch etwas offen ist. */
+  if(!neu && !a.erledigt && vorbOffen) aufgVorbKarte($('#aufgVorb'), a);
   ablaufVerdrahten(a, () => { if(current === 'aufgabe' && aufgAktiv === a) renderAufgabe(); });
   if(!mangel){
     $('#aufgTitel').oninput = e => { a.titel = e.target.value; sichern(); };
