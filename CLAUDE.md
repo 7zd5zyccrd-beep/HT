@@ -355,6 +355,30 @@ steht.
   „Selbst wählen“) im `ergebnisFenster` über `bedFelderHtml`/`bedFeldSetzen` (auch die
   Wetter-Aktion nutzt sie).
 
+## Abläufe neu geordnet (v1.179, Jean: „nicht selbsterklärend“)
+
+- Sichtbar „Schritt“ statt „Aufgabe“ im Ablauf (intern weiter `stufen`,
+  Seite `stufe`, Titel „Schritt“); „Aufgabe“ = nur, was in der Liste steht.
+- `renderAblaufPlan`: Name, „So läuft es ab“ (`ablaufSatz`), „Beginnt“
+  (von Hand + `ablaufAusloeser(p)` = eigene Regeln mit `dann:'ablauf'`,
+  `#trigNeu` legt einen Auslöser-Entwurf mit diesem Plan an), Schritte immer
+  offen (`.abSchritt`, Kopf `data-stbearb`, Ergebniszeilen `.abErg` mit
+  `data-st/data-e`), „+ Schritt“, „Starten“, „Ablauf löschen“. Kein `abAuf`,
+  keine ↑↓ mehr; der Anfang über „Mit diesem Schritt beginnen“ (`#stufeVorn`).
+- `ergebnisFenster` als drei Fragen; im Fenster je Ziel `modus`
+  'gleich'|'nach'|'abh'|'datum' (+ `n`/`einh` Tage|Wochen|Monate), gespeichert
+  wie bisher {tage|monate|abfall+vor|wahl}. Zugleich-Folgen und Bedingung
+  (`#bedAuf`) eingeklappt. `WANN` wird nicht mehr angezeigt.
+- `renderStufe`: Titel, „Infos“ (wetter/abfall, `istInfo`, `#infoNeu`),
+  „Aktionen“ (link/tel/mail/haken), Notiz, `<details>` „Mehr“
+  (Wichtigkeit, Dauer, sofort). Jean lehnte „Zur Hand“ ab: der Name soll zu
+  dem passen, was darunter steht. Auf der Aufgabe kommen Infos zuerst.
+- „+ Neuer Ablauf“ (`ablaufNeu`): leer oder `ablaufBeispiel()` „Regelmäßig
+  prüfen“ (Jean: ein Beispiel genügt).
+- Übersicht › Abläufe: Auslöser nur für einzelne Aufgaben (an einen
+  vorhandenen Plan gebundene stehen beim Ablauf), Wetter ab Werk in
+  `<details>` (`werkAuf`).
+
 ## Suche (v1.145)
 
 - `suchObjekte`: Text je Objekt = Name (+ Löscherangaben) + Name der Anlage
