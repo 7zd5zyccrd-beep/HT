@@ -381,12 +381,26 @@ steht.
   „Aktionen“ (link/tel/mail/haken), Notiz, `<details>` „Mehr“
   (Wichtigkeit, Dauer, sofort). Jean lehnte „Zur Hand“ ab: der Name soll zu
   dem passen, was darunter steht. Auf der Aufgabe kommen Infos zuerst.
-- „+ Neuer Ablauf“ (`ablaufNeu`): leer oder `ablaufBeispiel()` „Regelmäßig
-  prüfen“ (Jean: ein Beispiel genügt).
+- „+ Neuer Ablauf“ öffnet seit v1.182 den Assistenten (das Beispiel
+  „Regelmäßig prüfen“ aus v1.179 ist weg).
 - Auf der Aufgabe „Ablauf festlegen“ (v1.181, vorher „Ablauf starten“):
   `ablaufStarten` → `wahlFenster` mit „Bestehenden Ablauf wählen“ / „Neuen
   Ablauf anlegen“ / Abbrechen; `ablaufWahlListe` zeigt je Plan Schritte,
   „läuft …“ und 🗑 (`ablaufLoeschen`, auch von der Ablaufseite).
+- Assistent (v1.182, Jean: „auch beim ersten Mal selbsterklärend“): Seite
+  `ablaufneu` (`#abNeuBox`), Zustand `AS` {steps, start, wdh, beginn, …};
+  `asFragen()` rechnet die Fragen jedes Mal aus den Antworten (start, je
+  Schritt aus `asReihe()` extra/erg/folge, dann wdh, beginn, fertig),
+  `asPlan()` baut den Plan, `assistentFertig` speichert (Auslöser bei
+  „von selbst“, Start oder Zuordnung zur Aufgabe `AS.aufgabe`). Alles
+  Weitere freiwillig im Assistenten (Jean: „umfassend“). „vor der Abholung“
+  setzt die Abfuhr-Info am Schritt (abwählbar). Verlassen mit Rückfrage
+  (`zurueck.sicher`). Neuer Ablauf überall über `assistentStart`.
+- Wiederholen am Plan (v1.182, freiwillig): `p.wdh {n, einh}`;
+  `planWiederholen(a)` in `planWeiter` (keine Folge) und beim Erledigen ohne
+  Ergebnisse; nur wenn in der Kette nichts mehr offen ist; Ablaufseite
+  „Danach“. Baum `baumHtml(p)` auf Ablaufseite und am Ende des Assistenten.
+  „Erledigen ohne Folge“ entfällt (Jean: wer nicht mehr will, löscht).
 - Übersicht › Abläufe: Auslöser nur für einzelne Aufgaben (an einen
   vorhandenen Plan gebundene stehen beim Ablauf), Wetter ab Werk in
   `<details>` (`werkAuf`).

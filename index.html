@@ -10,6 +10,19 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.182 08.10.2026 Neuer Ablauf mit Assistent (Jean: auch beim ersten Mal
+         selbsterklärend). Frage für Frage: Was ist als Erstes zu tun? Was
+         brauchst du dafür (freiwillig: Abfuhrtermine, Wetter, Anruf, E-Mail,
+         Link, Abhaken, Notiz, Wichtigkeit)? Was kann herauskommen? Was
+         passiert dann (nichts, eine neue Aufgabe mit „Wann“, oder weiter mit
+         einer genannten – dazu wahlweise eine Bedingung)? – das für jede
+         neue Aufgabe –, dann: wieder von vorn? Beginnt er auch von selbst?
+         Zum Schluss der Ablauf als Baum, Name, Objekt und erster Tag.
+         „Wieder von vorn nach …“ ist neu und freiwillig: endet der Ablauf,
+         beginnt er nach der eingestellten Zeit neu (auch auf der Ablaufseite
+         unter „Danach“). Die Ablaufseite zeigt den Ablauf als Baum.
+         „Erledigen ohne Folge“ entfällt – wer einen Ablauf nicht mehr will,
+         löscht ihn. Das Beispiel „Regelmäßig prüfen“ entfällt.
   v1.181 08.10.2026 Aufgabe (Jean): „Ablauf starten“ heißt „Ablauf
          festlegen“. Das Fenster bietet nur noch „Bestehenden Ablauf wählen“,
          „Neuen Ablauf anlegen“ und „Abbrechen“; die bestehenden stehen im
@@ -3185,6 +3198,30 @@ a.ablaufSchritt{display:flex;align-items:center;justify-content:center;text-deco
 .abWahlZeile{margin-top:8px;align-items:stretch;gap:8px}
 .abWahlZeile .eintrag{flex:1;min-width:0;margin:0}
 .abWahlZeile .quadrat{align-self:center}
+.abBaum{font-size:15px}
+.bTitel{font-weight:700}
+.bAst{margin:6px 0 0 4px;padding-left:12px;border-left:2px solid var(--line)}
+.bZeile small{display:block;color:var(--ink-soft);font-size:13px}
+.bErg{font-weight:600}
+.bWdh{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+/* Assistent v1.182 */
+.asKopf{font-size:13px;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px}
+.asBalken{height:4px;background:var(--line);border-radius:2px;margin:0 0 16px;overflow:hidden}
+.asBalken i{display:block;height:100%;background:var(--strong)}
+.asFrage{font-size:21px;line-height:1.25;margin:0 0 8px}
+.asWahl{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--field-border);border-radius:12px;padding:11px 14px;margin:0 0 8px;font:inherit;color:inherit;cursor:pointer}
+.asWahl small{display:block;color:var(--ink-soft);font-size:14px;margin-top:2px}
+.asWahl[aria-pressed="true"]{border:2px solid var(--strong);padding:10px 13px}
+.asInhalt input:not([type=checkbox]),.asInhalt textarea{width:100%}
+.asErgZeile{margin-top:8px}
+.asErgZeile input{flex:1}
+.asExtra{margin:8px 0 4px}
+.asSeg{display:flex;border:1px solid var(--field-border);border-radius:10px;overflow:hidden}
+.asSeg button{flex:1;min-width:0;height:var(--feld-h);border:0;border-left:1px solid var(--field-border);background:var(--surface);font:inherit;font-size:15px;color:inherit;cursor:pointer}
+.asSeg button:first-child{border-left:0}
+.asSeg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
+.asUnten{margin-top:22px}
+.asUnten .row .btn{flex:1;margin:0}
 .ergZeile span:last-child{color:var(--ink-soft);white-space:nowrap}
 .sofortHilfen .ablaufSchritt:first-child{margin-top:4px}
 /* Ergebnisse im Erledigen (v1.160). */
@@ -3387,6 +3424,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
     <section class="view" id="view-ablaeufe"><div id="ablaeufeBox"></div></section>
     <section class="view" id="view-ablaufplan"><div id="ablaufPlanBox"></div></section>
     <section class="view" id="view-stufe"><div id="stufeBox"></div></section>
+    <section class="view" id="view-ablaufneu"><div id="abNeuBox"></div></section>
 
     <!-- Ein Termin und die Übersicht der Termine (v1.103) -->
     <section class="view" id="view-termin">
@@ -3597,7 +3635,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.181';
+const VERSION = 'v1.182';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4834,7 +4872,7 @@ const TITEL = {home:'Aufgaben', alle:'Alle Nachweise', rundgang:'Rundgang', aufg
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregel:'Regel',
                taeten:'Tätigkeiten', taet:'Tätigkeit', wplan:'Wochenplan', arbeit:'Arbeitsnachweis',
-               termin:'Termin', termine:'Termine', abfall:'Abfall'};
+               termin:'Termin', termine:'Termine', abfall:'Abfall', ablaufneu:'Neuer Ablauf'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
    nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
@@ -4894,6 +4932,7 @@ function go(name, push = true){
   if(name === 'ablaeufe') renderAblaeufe();
   if(name === 'ablaufplan') renderAblaufPlan();
   if(name === 'stufe')    renderStufe();
+  if(name === 'ablaufneu') renderAssistent();
   if(name === 'termin')   renderTermin();
   if(name === 'termine')  renderTermine();
   if(name === 'rundgang') renderRundgang();
@@ -4971,6 +5010,12 @@ window.addEventListener('resize', () => { if(current === 'blatt' && blattPasst) 
 })();
 function zurueck(){
   if(current === 'home'){ go('settings'); return; }     // Startseite: Einstellungen
+  /* Den Assistenten nicht aus Versehen verlassen (v1.182). */
+  if(current === 'ablaufneu' && AS && AS.i > 0 && !zurueck.sicher){
+    frage('Assistent verlassen', 'Der neue Ablauf ist noch nicht gespeichert; die Antworten gehen verloren.', 'Verlassen',
+      () => { AS = null; zurueck.sicher = true; zurueck(); zurueck.sicher = false; });
+    return;
+  }
   const p = stack.pop();
   /* Führt der Weg auf eine Unterseite der Einstellungen zurück, muss auch deren
      Zustand zurück – sonst stünde dort die zuletzt geöffnete Seite. */
@@ -6574,12 +6619,8 @@ function ablaufStarten(a, neuZeichnen){
     a.plan = p.id; a.stufe = p.stufen[0].id; a.kette = a.kette || a.id; a.ablaufStand = {};
     if(!a.entwurf) saveAufg();
   };
-  const neu = () => {
-    const s = stufeNeu(a.titel || ''); s.wichtig = a.wichtig || 'normal';
-    const p = {id:neueId(), name:a.titel || 'Neuer Ablauf', stufen:[s]};
-    plaeneListe().push(p); saveCfg(); zuweisen(p);
-    planOeffnen(p.id);
-  };
+  /* Neu über den Assistenten; der Titel der Aufgabe ist die erste Antwort. */
+  const neu = () => assistentStart({titel:a.titel || '', aufgabe:a});
   /* Drei Wege (v1.181, Jean): bestehender Ablauf, neuer Ablauf, Abbrechen –
      die Liste der bestehenden kommt erst im zweiten Fenster. */
   const vorhanden = () => plaeneListe().filter(p => (p.stufen || []).length);
@@ -6638,7 +6679,7 @@ function ergebnisseHtml(a){
          für dieses Mal, gerechnet wird es beim Erledigen neu. */
       wannText(y.x) === 'sofort' ? '' : ` <span class="muted">(${esc(wannText(y.x).replace(/^in /, 'in ').replace(/ \((.*)\)$/, ', $1'))})</span>`}</span>
         <button type="button" class="btn quadrat" data-zedit="${j}:${y.i}" aria-label="Datum ändern">✎</button></div>`)).join('')}
-  <button class="btn ghost klein" id="erlSetzen" style="margin-top:10px">Erledigen ohne Folge</button></div>`;
+  </div>`;
 }
 /* „Datum wählen“ (v1.164, Jean): das Feld steht gleich unter dem Ergebnis –
    kein zweites Fenster mehr, dessen „Abbrechen“ missverständlich war. */
@@ -6650,7 +6691,7 @@ function ergebnisBlockHtml(p, e, j, knopf, zeile){
   const z = (e.ziele || []).map((x, i) => ({x, i, st:stufeVon(p, x.stufe)})).filter(y => y.st);
   const wahl = z.filter(y => datumWahl(y.x)), sonst = z.filter(y => !datumWahl(y.x));
   return `<div class="ergebnisBlock">${wahl.map(y => zielDatumFeld(y.st, j + ':' + y.i)).join('')}${knopf}
-    ${sonst.map(zeile).join('')}${z.length ? '' : '<p class="muted small" style="margin:4px 0 0">→ Ende des Ablaufs</p>'}</div>`;
+    ${sonst.map(zeile).join('')}${z.length ? '' : `<p class="muted small" style="margin:4px 0 0">→ Ende des Ablaufs${planWdhText(p.wdh) ? ` · danach wieder von vorn, ${esc(planWdhText(p.wdh))}` : ''}</p>`}</div>`;
 }
 /* Die eingetragenen Tage eines Ergebnisses in fest übernehmen. */
 function zielFelderLesen(box, j, fest, basis){
@@ -6777,8 +6818,9 @@ function planWeiter(a, j, fest){
     AUFG.push(n); a.planFolgen[i] = n.id; planWeiter.neue.push(n);
     raus.push(`${st.titel || 'Aufgabe'} ${datumKurz(frist)}`);
   });
+  const wieder = raus.length ? '' : planWiederholen(a);
   saveAufg();
-  return raus.length ? 'weiter: ' + raus.join(', ') : 'Ablauf beendet';
+  return raus.length ? 'weiter: ' + raus.join(', ') : wieder ? 'Ablauf beendet · ' + wieder : 'Ablauf beendet';
 }
 planWeiter.neue = [];
 /* „Gleich im Anschluss“ (v1.161, Jean): ist eine eben entstandene Folge als
@@ -6955,26 +6997,9 @@ function renderAblaeufe(){
   $('#ablaufNeu').onclick = ablaufNeu;
   renderWetterregeln();
 }
-/* Neuer Ablauf (v1.179, Jean: eine Vorlage als Beispiel genügt): leer oder
-   mit dem Beispiel „Regelmäßig prüfen“, das zeigt, wie Ergebnisse, Folgen
-   und der Weg zurück zusammenspielen. */
-function ablaufBeispiel(){
-  const s1 = stufeNeu('Prüfen'), s2 = stufeNeu('Mangel beheben');
-  s1.notiz = 'Beispiel – Namen, Schritte und Zeiten lassen sich frei ändern.';
-  s1.ergebnisse = [{id:neueId(), text:'in Ordnung', ziele:[{stufe:s1.id, monate:3}]},
-                   {id:neueId(), text:'Mangel', ziele:[{stufe:s2.id, tage:0}]}];
-  s2.ergebnisse = [{id:neueId(), text:'behoben', ziele:[{stufe:s1.id, monate:3}]}];
-  return {id:neueId(), name:'Regelmäßig prüfen', stufen:[s1, s2]};
-}
-function ablaufNeu(){
-  const anlegen = p => { plaeneListe().push(p); saveCfg(); planOeffnen(p.id); };
-  frage('Neuer Ablauf', 'Ein Beispiel zeigt, wie ein Ablauf gebaut ist. Namen, Schritte und Zeiten lassen sich danach ändern.',
-    'Leer beginnen', () => anlegen({id:neueId(), name:'', stufen:[stufeNeu('')]}));
-  const box = $('#dlgListe');
-  box.hidden = false;
-  box.innerHTML = `<button class="btn eintrag" id="abBeispiel" style="margin-top:12px"><span class="etext">Beispiel: Regelmäßig prüfen<small>Prüfen → in Ordnung: nach 3 Monaten wieder · Mangel: Mangel beheben, danach wieder prüfen</small></span></button>`;
-  $('#abBeispiel').onclick = () => { $('#dlg').hidden = true; anlegen(ablaufBeispiel()); };
-}
+/* Neuer Ablauf: der Assistent (v1.182; das Beispiel aus v1.179 entfällt,
+   der Assistent erklärt sich selbst – Jean). */
+const ablaufNeu = () => assistentStart();
 const HILFE_ZEICHEN = {link:'↗', tel:'✆', mail:'✉', haken:'☐', wetter:'☁', abfall:'♻'};
 /* Aktionen führt man aus, Infos liest man (v1.179, Jean: der Name soll zu
    dem passen, was darunter steht). Gespeichert bleibt beides in s.schritte. */
@@ -7023,11 +7048,11 @@ function renderAblaufPlan(){
     const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
     return `<button type="button" class="abErg" data-st="${i}" data-e="${j}"><span class="abEw">${esc(ergName(e))}</span><span class="abEd">${
       z.length ? z.map(x => `→ <b>${nrVon(x.stufe)}</b> ${esc(stufeVon(p, x.stufe).titel || 'Schritt')}<small>${esc(wannText(x) === 'sofort' ? 'gleich' : wannText(x))}</small>`).join('')
-        : '→ Ende des Ablaufs'}${
+        : `→ Ende des Ablaufs${planWdhText(p.wdh) ? `<small>danach wieder von vorn, ${esc(planWdhText(p.wdh))}</small>` : ''}`}${
       (e.bed || []).length ? `<small>⚙ ${esc(e.auto === 'sofort' ? 'erledigt selbst' : 'schlägt vor')}, wenn ${esc(e.bed.map(bedKurz).join(' und '))}</small>` : ''}</span></button>`;
   };
   box.innerHTML = `<label class="field" style="margin-top:0"><span>Name des Ablaufs</span><input id="ablaufName" value="${esc(p.name || '')}" placeholder="z. B. Dachrinne"></label>
-    <div class="card abSatz"><b>So läuft es ab:</b> ${esc(ablaufSatz(p))}</div>
+    <div class="card abBaum"><div class="eyebrow" style="margin:0 0 8px">So läuft es ab</div>${baumHtml(p)}</div>
     <div class="eyebrow">Beginnt</div>
     <div class="card abBeginn"><p class="small" style="margin:0">▶ Von Hand mit „Starten“ unten</p>
       ${trig.map(r => `<button type="button" class="abErg" data-trig="${esc(r.id)}"><span class="abEw">⚡ von selbst</span><span class="abEd">wenn ${esc(wennKurz(r))}<small>${
@@ -7043,11 +7068,23 @@ function renderAblaufPlan(){
           || '<p class="muted small" style="margin:8px 0 0">Ohne Ergebnis endet der Ablauf nach diesem Schritt.</p>'}
         <button type="button" class="btn ghost klein abPlus" data-eneu="${i}">+ Ergebnis</button></div>`).join('')
     + `<button class="btn ghost" id="stufeNeu" style="margin-top:2px">+ Schritt</button>
+       <div class="eyebrow">Danach</div>
+       <div class="card"><div class="seg asSeg">${['0', '1'].map(v => `<button type="button" data-pwdh="${v}" aria-pressed="${(v === '1') === !!p.wdh}">${v === '1' ? 'Wieder von vorn' : 'Einmalig'}</button>`).join('')}</div>
+         ${p.wdh ? `<div class="row ablaufReihe ergNach"><span class="muted small">nach</span><input type="number" inputmode="numeric" min="1" id="pWdhN" value="${esc(p.wdh.n)}" aria-label="Anzahl">
+           <select id="pWdhE">${[['tage', 'Tagen'], ['wochen', 'Wochen'], ['monate', 'Monaten']].map(([v, t]) => `<option value="${v}"${p.wdh.einh === v ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
+           <p class="muted small" style="margin:6px 0 0">Gezählt ab dem Tag, an dem der Ablauf endet.</p>` : ''}</div>
        <button class="btn primary" id="ablaufLos" style="margin-top:16px">Starten</button>
        ${lauf.length ? `<p class="muted small" style="margin:8px 0 0">${lauf.length === 1 ? 'Läuft gerade einmal' : `Läuft gerade ${lauf.length}-mal`} – unter Übersicht › Abläufe.</p>` : ''}
        <div class="knopfzeile"><button class="btn danger klein" id="ablaufWeg">Ablauf löschen</button></div>`;
   $('#ablaufName').oninput = e => { p.name = e.target.value; saveCfg(); };
   $('#ablaufLos').onclick = () => planStarten(p);
+  /* Wiederholen am ganzen Ablauf (v1.182). */
+  box.querySelectorAll('[data-pwdh]').forEach(b => b.onclick = () => {
+    if(b.dataset.pwdh === '1') p.wdh = p.wdh || {n:2, einh:'wochen'}; else delete p.wdh;
+    saveCfg(); const y = bildY(); renderAblaufPlan(); bildNach(y);
+  });
+  if($('#pWdhN')) $('#pWdhN').onchange = e => { p.wdh.n = Math.max(1, Math.round(+e.target.value || 1)); saveCfg(); const y = bildY(); renderAblaufPlan(); bildNach(y); };
+  if($('#pWdhE')) $('#pWdhE').onchange = e => { p.wdh.einh = e.target.value; saveCfg(); const y = bildY(); renderAblaufPlan(); bildNach(y); };
   box.querySelectorAll('[data-stbearb]').forEach(b => b.onclick = () => { stufeAktiv = l[+b.dataset.stbearb].id; go('stufe'); });
   box.querySelectorAll('[data-e]').forEach(b => b.onclick = () => ergebnisFenster(p, l[+b.dataset.st], +b.dataset.e));
   box.querySelectorAll('[data-eneu]').forEach(b => b.onclick = () => ergebnisFenster(p, l[+b.dataset.eneu], -1));
@@ -7195,6 +7232,350 @@ function ergebnisFenster(p, s, j){
     if($('#ergWeg')) $('#ergWeg').onclick = () => { $('#dlg').hidden = true; s.ergebnisse.splice(j, 1); saveCfg(); renderAblaufPlan(); };
   };
   zeichnen();
+}
+/* ---------- Wiederholen am ganzen Ablauf (v1.182, Jean) ---------------------
+   p.wdh = {n, einh 'tage'|'wochen'|'monate'}, freiwillig. Endet der Ablauf –
+   ein Ergebnis ohne Folge, und in der Kette ist nichts mehr offen –, beginnt
+   er von vorn: die erste Aufgabe, gezählt ab dem Tag des Endes, auf einem
+   Arbeitstag. Wer einen Ablauf nicht mehr möchte, löscht ihn (Jean). */
+const einhText = (n, e) => e === 'monate' ? (n === 1 ? 'Monat' : 'Monaten') : e === 'wochen' ? (n === 1 ? 'Woche' : 'Wochen') : (n === 1 ? 'Tag' : 'Tagen');
+const planWdhText = w => w && +w.n > 0 ? `nach ${+w.n} ${einhText(+w.n, w.einh)}` : '';
+function planWiederholen(a){
+  const p = a.plan ? planVon(a.plan) : null;
+  if(!p || !p.wdh || !(+p.wdh.n > 0) || !(p.stufen || []).length) return '';
+  const kette = a.kette || a.id;
+  if(AUFG.some(x => x !== a && x.kette === kette && !x.erledigt)) return '';
+  const s = p.stufen[0], n = Math.round(+p.wdh.n);
+  const frist = zielDatum(a.erledigt || heute(), p.wdh.einh === 'monate' ? {monate:n} : {tage:p.wdh.einh === 'wochen' ? n * 7 : n});
+  const neu = {id:neueId(), art:'eigen', quelle:'', k:a.k || '', anlage:a.anlage || '', anlageText:a.anlageText || '',
+    punkt:'', titel:s.titel || 'Aufgabe', text:'', notiz:s.notiz || '', zeitraum:'', festgestellt:'',
+    angelegt:heute(), frist, wichtig:s.wichtig || 'normal', erneut:[], erledigt:'', vermerk:'', plan:p.id, stufe:s.id};
+  neu.kette = neu.id;
+  AUFG.push(neu);
+  return `wieder von vorn ${datumKurz(frist)}`;
+}
+/* Der Ablauf als Baum (v1.182): eingerückt je Ergebnis, was folgt; ein
+   Schritt, der schon oben steht, erscheint als „zurück zu …“. */
+function baumHtml(p){
+  const l = p.stufen || [];
+  if(!l.length) return '<p class="muted small" style="margin:0">Noch leer.</p>';
+  const gesehen = new Set();
+  const knoten = (s, mitTitel = true) => {
+    gesehen.add(s.id);
+    const erg = s.ergebnisse || [];
+    const ast = erg.map(e => {
+      const z = (e.ziele || []).filter(x => stufeVon(p, x.stufe));
+      const bed = (e.bed || []).length ? `<small>⚙ ${esc(e.auto === 'sofort' ? 'erledigt selbst' : 'schlägt vor')}, wenn ${esc(e.bed.map(bedKurz).join(' und '))}</small>` : '';
+      if(!z.length) return `<div class="bAst"><div class="bZeile"><span class="bErg">${esc(ergName(e))}</span> → <span class="muted">Ende</span>${bed}</div></div>`;
+      return z.map(x => {
+        const st = stufeVon(p, x.stufe), w = wannText(x) === 'sofort' ? 'gleich' : wannText(x), zurueck = gesehen.has(st.id);
+        return `<div class="bAst"><div class="bZeile"><span class="bErg">${esc(ergName(e))}</span> → ${zurueck ? `zurück zu „${esc(st.titel || 'Schritt')}“` : `<b>${esc(st.titel || 'Schritt')}</b>`}<small>${esc(w)}</small>${bed}</div>${zurueck ? '' : knoten(st, false)}</div>`;
+      }).join('');
+    }).join('');
+    return (mitTitel ? `<div class="bTitel">${esc(s.titel || 'Schritt ohne Titel')}</div>` : '') + (ast || '<div class="bAst"><div class="bZeile muted">→ Ende</div></div>');
+  };
+  let h = knoten(l[0]);
+  const rest = l.filter(s => !gesehen.has(s.id));
+  if(rest.length) h += `<p class="muted small" style="margin:8px 0 0">Ohne Verbindung: ${esc(rest.map(s => s.titel || 'Schritt').join(', '))}</p>`;
+  if(planWdhText(p.wdh)) h += `<div class="bWdh">↻ Danach wieder von vorn – ${esc(planWdhText(p.wdh))}</div>`;
+  return h;
+}
+
+/* ---------- Assistent: neuer Ablauf Frage für Frage (v1.182, Jean) ----------
+   Für den, der es zum ersten Mal macht: je Bildschirm eine Frage, und alles
+   Weitere (Infos, Aktionen, Notiz, Bedingung, Auslöser) lässt sich freiwillig
+   gleich mit festlegen – später auf der Ablaufseite änderbar. Die Fragen
+   rechnen sich jedes Mal neu aus den Antworten (asFragen): erst die erste
+   Aufgabe, dann je Schritt (in der Reihenfolge, in der sie entstehen) „Was
+   brauchst du dafür?“, „Was kann herauskommen?“ und je Ergebnis „Was
+   passiert dann?“, am Ende Wiederholen, Beginn und Zusammenfassung. Wer
+   zurückgeht und eine Antwort ändert, verliert nur, was daran hing. */
+let AS = null;
+function asSchritt(titel){
+  const s = {id:neueId(), titel:titel || '', wichtig:'normal', notiz:'', extra:{}, erg:{art:'einfach', liste:[asErgebnis('erledigt')]}};
+  AS.steps[s.id] = s;
+  return s;
+}
+function asErgebnis(text){
+  return {id:neueId(), text, folge:{art:'ende', neu:'', ziel:'', modus:'gleich', n:2, einh:'wochen', abfall:'', vor:1, info:true},
+          bed:[], auto:'vorschlag', bedAuf:false};
+}
+function assistentStart(opt = {}){
+  AS = {i:0, steps:{}, start:'', aufgabe:opt.aufgabe || null, fertigDann:opt.fertig || null,
+    wdh:{an:false, n:2, einh:'wochen'}, name:'', frist:heute(), k:'', anlage:'',
+    beginn:{auto:false, bed:Object.assign(bedingungStd(), ABFALL.termine.length ? {groesse:'abfuhr', tage:1} : {groesse:'regen24', vgl:'ab', wert:20, richtung:'zurueck', tage:1}),
+            fristArt:'heute', modus:'vorschlag'}};
+  AS.start = asSchritt(opt.titel || '').id;
+  go('ablaufneu');
+}
+/* Die Schritte, die vom Anfang aus erreicht werden, in ihrer Entstehung. */
+function asReihe(){
+  const r = [], seen = new Set(), q = [AS.start];
+  while(q.length){
+    const id = q.shift(), s = AS.steps[id];
+    if(!s || seen.has(id)) continue;
+    seen.add(id); r.push(s);
+    s.erg.liste.forEach(e => { if(e.folge.art === 'neu' && e.folge.neu) q.push(e.folge.neu); });
+  }
+  return r;
+}
+function asFragen(){
+  const f = [{t:'start'}];
+  asReihe().forEach(s => {
+    f.push({t:'extra', s}, {t:'erg', s});
+    s.erg.liste.forEach(e => f.push({t:'folge', s, e}));
+  });
+  return f.concat([{t:'wdh'}, {t:'beginn'}, {t:'fertig'}]);
+}
+const asZiel = f => f.modus === 'datum' ? {wahl:true}
+  : f.modus === 'abh' ? {abfall:f.abfall || '', vor:Math.max(0, Math.round(+f.vor || 0))}
+  : f.modus === 'nach' ? (f.einh === 'monate' ? {monate:Math.max(1, Math.round(+f.n || 1))} : {tage:Math.max(1, Math.round(+f.n || 1)) * (f.einh === 'wochen' ? 7 : 1)})
+  : {tage:0};
+/* Aus den Antworten der fertige Ablauf, so wie er gespeichert wird. */
+function asPlan(){
+  const p = {id:AS.planId || (AS.planId = neueId()), name:'', stufen:[]};
+  asReihe().forEach(s => {
+    const x = s.extra, schritte = [];
+    const mitAbh = s.erg.liste.find(e => e.folge.art !== 'ende' && e.folge.modus === 'abh' && e.folge.info);
+    if(x.abfall && x.abfall.an) schritte.push({id:neueId(), art:'abfall', text:'', arten:(x.abfall.arten || []).slice()});
+    else if(mitAbh) schritte.push({id:neueId(), art:'abfall', text:'', arten:mitAbh.folge.abfall ? [mitAbh.folge.abfall] : []});
+    if(x.wetter && x.wetter.an) schritte.push({id:neueId(), art:'wetter', text:'', bed:Object.assign({}, x.wetter.bed), grenze:!!x.wetter.grenze});
+    ['tel', 'mail', 'link', 'haken'].forEach(art => { const y = x[art];
+      if(y && y.an) schritte.push(Object.assign({id:neueId(), art}, art === 'tel' ? {text:y.text || '', nummer:y.nummer || ''}
+        : art === 'mail' ? {text:y.text || '', an:y.an_ || '', betreff:y.betreff || '', inhalt:y.inhalt || ''}
+        : art === 'link' ? {text:y.text || '', url:y.url || ''} : {text:y.text || ''})); });
+    p.stufen.push({id:s.id, titel:(s.titel || '').trim() || 'Schritt', wichtig:s.wichtig || 'normal', notiz:(s.notiz || '').trim(), schritte,
+      ergebnisse:s.erg.liste.filter(e => String(e.text).trim()).map(e => {
+        const f = e.folge, ziel = f.art === 'neu' ? f.neu : f.art === 'vorh' ? f.ziel : '';
+        const r = {id:e.id, text:String(e.text).trim(), ziele:ziel && AS.steps[ziel] ? [Object.assign({stufe:ziel}, asZiel(f))] : []};
+        if(e.bed.length){ r.bed = e.bed.map(b => Object.assign({}, b)); r.auto = e.auto; }
+        return r;
+      })});
+  });
+  p.name = (AS.name || '').trim() || (p.stufen[0] && p.stufen[0].titel) || 'Ablauf';
+  if(AS.wdh.an && +AS.wdh.n > 0) p.wdh = {n:Math.round(+AS.wdh.n), einh:AS.wdh.einh};
+  return p;
+}
+function renderAssistent(){
+  const box = $('#abNeuBox');
+  if(!AS){ box.innerHTML = '<p class="muted small">Kein Ablauf in Arbeit.</p>'; return; }
+  const fragen = asFragen();
+  AS.i = Math.max(0, Math.min(AS.i, fragen.length - 1));
+  const q = fragen[AS.i], s = q.s, e = q.e;
+  const chip = (attr, an, text) => `<button type="button" ${attr} aria-pressed="${!!an}">${esc(text)}</button>`;
+  const wahl = (attr, an, text, klein = '') => `<button type="button" class="asWahl" ${attr} aria-pressed="${!!an}">${esc(text)}${klein ? `<small>${esc(klein)}</small>` : ''}</button>`;
+  const feld = (attr, wert, ph = '', extra = '') => `<input ${attr} value="${esc(wert || '')}" placeholder="${esc(ph)}" ${extra}>`;
+  const arten = abfallArten().map(x => x.art);
+  const wannHtml = f => `<div class="ergFrage klein">Wann?</div><div class="chips">${chip('data-wm="gleich"', f.modus === 'gleich', 'gleich')}${
+      chip('data-wm="nach"', f.modus === 'nach', 'nach …')}${arten.length || f.modus === 'abh' ? chip('data-wm="abh"', f.modus === 'abh', 'vor der Abholung') : ''}${
+      chip('data-wm="datum"', f.modus === 'datum', 'Datum selbst wählen')}</div>
+    ${f.modus === 'nach' ? `<div class="row ablaufReihe ergNach"><input type="number" inputmode="numeric" min="1" data-fn="n" value="${esc(f.n)}" aria-label="Anzahl">
+      <select data-fs="einh">${[['tage', 'Tagen'], ['wochen', 'Wochen'], ['monate', 'Monaten']].map(([v, t]) => `<option value="${v}"${f.einh === v ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
+      <p class="muted small" style="margin:6px 0 0">Gezählt ab dem Tag des Erledigens; fällt er auf keinen Arbeitstag, gilt der nächste.</p>` : ''}
+    ${f.modus === 'abh' ? `<div class="row ablaufReihe ergNach"><input type="number" inputmode="numeric" min="0" data-fn="vor" value="${esc(f.vor)}" aria-label="Tage vorher"><span class="muted small">Tag(e) vor der nächsten Abholung von</span></div>
+      <div class="chips" style="margin-top:6px">${arten.concat(f.abfall && !arten.includes(f.abfall) ? [f.abfall] : []).map(a => chip(`data-fart="${esc(a)}"`, f.abfall === a, a)).join('')}${chip('data-fart=""', f.abfall === '', 'jeder Art')}</div>
+      <p class="muted small" style="margin:6px 0 0">Fällt der Tag auf keinen Arbeitstag, gilt der davor.</p>
+      <label class="haken" style="margin:10px 0 0"><input type="checkbox" data-finfo="1"${f.info ? ' checked' : ''}><span>Abfuhrtermine bei „${esc(s.titel || 'diesem Schritt')}“ als Info zeigen</span></label>` : ''}
+    ${f.modus === 'datum' ? '<p class="muted small" style="margin:6px 0 0">Den Tag trägst du jedes Mal beim Erledigen ein.</p>' : ''}`;
+  const bedListe = (liste, attr) => { const reihen = liste.length ? hinweisReihen() : null;
+    return liste.map((b, n) => { const r = bedPruefen(b, reihen);
+      return `${n ? '<div class="bedUnd">und</div>' : ''}${bedFelderHtml(b, `${attr}="${n}"`, true)}
+        <p class="small" style="margin:-4px 0 6px">${r.ok ? '✓' : '✗'} <span class="muted">${esc(r.text)}</span></p>`; }).join(''); };
+  let titel = '', hilfe = '', inhalt = '';
+  if(q.t === 'start'){
+    const st = AS.steps[AS.start];
+    titel = 'Was ist als Erstes zu tun?';
+    hilfe = 'Das wird die erste Aufgabe, z. B. „Füllstand prüfen“ oder „Dachrinne kontrollieren“.';
+    inhalt = feld('id="asTitel" data-titel="1"', st.titel, 'Titel der Aufgabe');
+  }else if(q.t === 'extra'){
+    const x = s.extra, an = k => x[k] && x[k].an;
+    titel = `Brauchst du bei „${s.titel || 'diesem Schritt'}“ etwas Bestimmtes?`;
+    hilfe = 'Freiwillig – alles lässt sich auch später ändern.';
+    const blk = (k, html) => an(k) ? `<div class="gruppe asExtra">${html}</div>` : '';
+    inhalt = `<div class="ergFrage klein">Infos zum Entscheiden</div><div class="chips">${chip('data-x="abfall"', an('abfall'), '♻ Abfuhrtermine')}${chip('data-x="wetter"', an('wetter'), '☁ Wetter')}</div>
+      ${blk('abfall', `<div class="small" style="margin:0 0 6px">Abfuhrtermine von (keine gewählt = alle)</div><div class="chips">${arten.map(a => chip(`data-xart="${esc(a)}"`, ((x.abfall || {}).arten || []).includes(a), a)).join('') || '<span class="muted small">Noch kein Abfallkalender – einzurichten unter Einstellungen › Online-Dienste.</span>'}</div>`)}
+      ${blk('wetter', bedFelderHtml(x.wetter ? x.wetter.bed : bedingungStd(), 'data-xw="0"', false) + `<label class="haken" style="margin:0"><input type="checkbox" data-xgrenze="1"${x.wetter && x.wetter.grenze ? ' checked' : ''}><span>Mit ✓ oder ✗ zeigen, ob es zutrifft</span></label>`)}
+      <div class="ergFrage klein">Aktionen zum Ausführen</div><div class="chips">${chip('data-x="tel"', an('tel'), '✆ Anruf')}${chip('data-x="mail"', an('mail'), '✉ E-Mail')}${chip('data-x="link"', an('link'), '↗ Link')}${chip('data-x="haken"', an('haken'), '☐ Abhaken')}</div>
+      ${blk('tel', feld('data-xf="tel.text"', x.tel && x.tel.text, 'Beschriftung, z. B. Hausmeisterdienst') + feld('data-xf="tel.nummer"', x.tel && x.tel.nummer, 'Nummer', 'type="tel" style="margin-top:8px"'))}
+      ${blk('mail', feld('data-xf="mail.an_"', x.mail && x.mail.an_, 'An', 'type="email" autocapitalize="off"') + feld('data-xf="mail.betreff"', x.mail && x.mail.betreff, 'Betreff', 'style="margin-top:8px"')
+        + `<textarea data-xf="mail.inhalt" placeholder="Text – {Datum}, {Objekt} und {Titel} werden ersetzt" style="margin-top:8px;min-height:80px">${esc(x.mail && x.mail.inhalt || '')}</textarea>`)}
+      ${blk('link', feld('data-xf="link.text"', x.link && x.link.text, 'Beschriftung') + feld('data-xf="link.url"', x.link && x.link.url, 'Adresse, z. B. portal.beispiel.de', 'inputmode="url" autocapitalize="off" style="margin-top:8px"'))}
+      ${blk('haken', feld('data-xf="haken.text"', x.haken && x.haken.text, 'Was abzuhaken ist'))}
+      <div class="ergFrage klein">Notiz</div><textarea data-sn="1" placeholder="freiwillig" style="min-height:70px">${esc(s.notiz || '')}</textarea>
+      <div class="ergFrage klein">Wichtigkeit</div><div class="seg asSeg">${WICHTIG.map(([w, t]) => chip(`data-sw="${w}"`, (s.wichtig || 'normal') === w, t)).join('')}</div>`;
+  }else if(q.t === 'erg'){
+    titel = `Was kann bei „${s.titel || 'diesem Schritt'}“ herauskommen?`;
+    hilfe = 'Je Ergebnis kann es anders weitergehen.';
+    const mehr = s.erg.art === 'mehr';
+    inhalt = wahl('data-ea="einfach"', !mehr, 'Nur „erledigt“', 'Es geht immer gleich weiter')
+      + wahl('data-ea="mehr"', mehr, 'Verschiedene Ergebnisse', 'z. B. „voll“ und „nicht voll“, „in Ordnung“ und „Mangel“')
+      + (mehr ? s.erg.liste.map((x, n) => `<div class="row ablaufReihe asErgZeile">${feld(`data-et="${n}"`, x.text, n === 0 ? 'z. B. in Ordnung' : n === 1 ? 'z. B. Mangel' : 'weiteres Ergebnis')}${
+          s.erg.liste.length > 2 ? `<button type="button" class="btn quadrat" data-eweg="${n}" aria-label="Entfernen">✕</button>` : ''}</div>`).join('')
+        + `<button type="button" class="btn ghost klein" id="asErgPlus" style="margin-top:8px">+ weiteres Ergebnis</button>` : '');
+  }else if(q.t === 'folge'){
+    const f = e.folge, einfach = s.erg.art !== 'mehr';
+    titel = einfach ? `Was passiert nach „${s.titel || 'diesem Schritt'}“?` : `Was passiert bei „${e.text}“?`;
+    hilfe = einfach ? '' : `Ergebnis von „${s.titel || 'diesem Schritt'}“`;
+    const andere = asReihe();
+    inhalt = wahl('data-fa="ende"', f.art === 'ende', 'Nichts weiter', 'Der Ablauf endet hier')
+      + wahl('data-fa="neu"', f.art === 'neu', 'Es folgt eine neue Aufgabe')
+      + (f.art === 'neu' ? feld('id="asNeu" data-fneu="1"', (AS.steps[f.neu] || {}).titel, 'Titel der neuen Aufgabe', 'style="margin:0 0 4px"') + wannHtml(f) : '')
+      + wahl('data-fa="vorh"', f.art === 'vorh', 'Es geht mit einer genannten Aufgabe weiter', 'z. B. wieder von vorn prüfen')
+      + (f.art === 'vorh' ? `<div class="chips">${andere.map(y => chip(`data-fz="${esc(y.id)}"`, f.ziel === y.id, (y.id === s.id ? 'wieder ' : '') + (y.titel || 'Schritt'))).join('')}</div>` + (f.ziel ? wannHtml(f) : '') : '')
+      + (e.bedAuf || e.bed.length ? `<div class="gruppe ergFolge" style="margin-top:14px"><div class="eyebrow" style="margin:0 0 6px">Bedingung</div>
+          <p class="muted small" style="margin:0 0 8px">Ist der Schritt fällig und trifft alles zu, wählt die App dieses Ergebnis – als Vorschlag oder gleich erledigt.</p>
+          ${bedListe(e.bed, 'data-eb')}
+          <button type="button" class="btn ghost klein" id="asBedPlus">${e.bed.length ? '+ und …' : '+ Bedingung'}</button>
+          ${e.bed.length ? `<button type="button" class="btn ghost klein" id="asBedWeg" style="margin-top:6px">Bedingungen entfernen</button>
+            <div class="field segfeld" style="margin:10px 0 0"><span>Wenn es zutrifft</span><div class="seg">${chip('data-eauto="vorschlag"', e.auto === 'vorschlag', 'Vorschlagen')}${chip('data-eauto="sofort"', e.auto === 'sofort', 'Erledigen')}</div></div>` : ''}</div>`
+        : `<button type="button" class="ergZeile" id="asBedAuf"><span>Soll die App das Ergebnis selbst erkennen?</span><span>Bedingung ›</span></button>`);
+  }else if(q.t === 'wdh'){
+    titel = 'Soll es danach wieder von vorn beginnen?';
+    hilfe = 'Gezählt ab dem Tag, an dem der Ablauf endet.';
+    inhalt = wahl('data-wa="0"', !AS.wdh.an, 'Nein, einmalig') + wahl('data-wa="1"', AS.wdh.an, 'Ja, wieder von vorn')
+      + (AS.wdh.an ? `<div class="row ablaufReihe ergNach"><span class="muted small">nach</span><input type="number" inputmode="numeric" min="1" data-wn="1" value="${esc(AS.wdh.n)}" aria-label="Anzahl">
+        <select data-we="1">${[['tage', 'Tagen'], ['wochen', 'Wochen'], ['monate', 'Monaten']].map(([v, t]) => `<option value="${v}"${AS.wdh.einh === v ? ' selected' : ''}>${t}</option>`).join('')}</select></div>` : '');
+  }else if(q.t === 'beginn'){
+    const b = AS.beginn;
+    titel = 'Wie soll der Ablauf beginnen?';
+    inhalt = wahl('data-ba="0"', !b.auto, 'Von Hand', AS.aufgabe ? 'Mit der Aufgabe, von der du kommst' : 'Über „Starten“ – jetzt gleich oder später')
+      + wahl('data-ba="1"', b.auto, 'Zusätzlich von selbst, wenn …', 'Wetter oder Abfuhrtermin – ein Auslöser')
+      + (b.auto ? `<div class="gruppe asExtra">${bedListe([b.bed], 'data-bb')}
+          <div class="ergFrage klein">Erste Aufgabe fällig</div><div class="chips">${chip('data-bfr="heute"', b.fristArt === 'heute', 'gleich')}${chip('data-bfr="vorher"', b.fristArt === 'vorher', 'am Arbeitstag vorher')}</div>
+          <div class="ergFrage klein">Wenn es zutrifft</div><div class="seg asSeg">${chip('data-bm="vorschlag"', b.modus === 'vorschlag', 'Vorschlagen')}${chip('data-bm="sofort"', b.modus === 'sofort', 'Gleich starten')}</div></div>` : '');
+  }else{
+    const p = asPlan();
+    const nachweise = VORLAGEN.filter(x => aktiv(x.k) && bezugsAnlagen(x.k).length), anl = AS.k ? bezugsAnlagen(AS.k) : [];
+    titel = 'So läuft es ab';
+    inhalt = `<div class="card abBaum">${baumHtml(p)}${AS.beginn.auto ? `<div class="bWdh">⚡ Beginnt auch von selbst, wenn ${esc(bedKurz(AS.beginn.bed))}</div>` : ''}</div>
+      <label class="field"><span>Name des Ablaufs</span><input id="asName" value="${esc(AS.name)}" placeholder="${esc(p.name)}"></label>
+      ${AS.aufgabe ? '' : `<label class="field"><span>Objekt (freiwillig)</span><select id="asNw"><option value="">– ohne Objekt –</option>${
+          nachweise.map(x => `<option value="${x.k}"${x.k === AS.k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
+        ${anl.length ? `<label class="field"><span>Welches</span><select id="asAnl"><option value="">– wählen –</option>${anl.map(x =>
+          `<option value="${esc(x.wert)}"${x.wert === AS.anlage ? ' selected' : ''}>${esc(x.text)}</option>`).join('')}</select></label>` : ''}
+        <label class="field"><span>Erstes Mal fällig</span><input type="date" id="asFrist" class="schmal" value="${esc(AS.frist)}"></label>`}`;
+  }
+  const letzte = q.t === 'fertig';
+  box.innerHTML = `<div class="asKopf"><span>${letzte ? 'Fertig' : `Frage ${AS.i + 1}`}</span></div>
+    <div class="asBalken"><i style="width:${Math.round(100 * (AS.i + 1) / fragen.length)}%"></i></div>
+    <h2 class="asFrage">${esc(titel)}</h2>${hilfe ? `<p class="muted small" style="margin:-4px 0 14px">${esc(hilfe)}</p>` : ''}
+    <div class="asInhalt">${inhalt}</div>
+    <div class="asUnten">${letzte
+      ? (AS.aufgabe ? `<button class="btn primary" id="asSpeichern">Speichern und übernehmen</button>`
+        : `<button class="btn primary" id="asStarten">Speichern und starten</button><button class="btn" id="asSpeichern">Nur speichern</button>`)
+        + (AS.i ? '<button class="btn ghost" id="asZurueck">Zurück</button>' : '')
+      : `<div class="row ablaufReihe"><button class="btn" id="asZurueck"${AS.i ? '' : ' disabled'}>Zurück</button><button class="btn primary" id="asWeiter">Weiter</button></div>`}</div>`;
+  /* --- Verdrahten: Eingaben ohne Neuaufbau, Kacheln mit (Stelle bleibt). */
+  const neu = () => { const y = bildY(); renderAssistent(); bildNach(y); };
+  const $b = sel => box.querySelectorAll(sel);
+  if(q.t === 'start') $('#asTitel').oninput = ev => { AS.steps[AS.start].titel = ev.target.value; };
+  if(q.t === 'extra'){
+    const x = s.extra;
+    $b('[data-x]').forEach(b => b.onclick = () => { const k = b.dataset.x;
+      x[k] = x[k] || (k === 'wetter' ? {bed:Object.assign(bedingungStd(), {groesse:'regen24', vgl:'ab', wert:10, richtung:'voraus', tage:3})} : k === 'abfall' ? {arten:[]} : {});
+      x[k].an = !x[k].an; neu(); });
+    $b('[data-xart]').forEach(b => b.onclick = () => { const a = b.dataset.xart, l = x.abfall.arten = x.abfall.arten || [];
+      x.abfall.arten = l.includes(a) ? l.filter(y => y !== a) : l.concat(a); neu(); });
+    $b('[data-xw]').forEach(el => el.onchange = () => { bedFeldSetzen(x.wetter.bed, el.dataset.bf, el); neu(); });
+    $b('[data-xgrenze]').forEach(el => el.onchange = () => { x.wetter.grenze = el.checked; });
+    $b('[data-xf]').forEach(el => el.oninput = () => { const [k, f] = el.dataset.xf.split('.'); x[k][f] = el.value; });
+    $b('[data-sn]').forEach(el => el.oninput = () => { s.notiz = el.value; });
+    $b('[data-sw]').forEach(b => b.onclick = () => { s.wichtig = b.dataset.sw; neu(); });
+  }
+  if(q.t === 'erg'){
+    $b('[data-ea]').forEach(b => b.onclick = () => {
+      s.erg.art = b.dataset.ea;
+      if(s.erg.art === 'einfach') s.erg.liste = [s.erg.liste.find(y => y.text === 'erledigt') || asErgebnis('erledigt')];
+      else { s.erg.liste = s.erg.liste.filter(y => y.text !== 'erledigt'); while(s.erg.liste.length < 2) s.erg.liste.push(asErgebnis('')); }
+      neu(); });
+    $b('[data-et]').forEach(el => el.oninput = () => { s.erg.liste[+el.dataset.et].text = el.value; });
+    $b('[data-eweg]').forEach(b => b.onclick = () => { s.erg.liste.splice(+b.dataset.eweg, 1); neu(); });
+    if($('#asErgPlus')) $('#asErgPlus').onclick = () => { s.erg.liste.push(asErgebnis('')); neu(); };
+  }
+  if(q.t === 'folge'){
+    const f = e.folge;
+    $b('[data-fa]').forEach(b => b.onclick = () => { f.art = b.dataset.fa;
+      if(f.art === 'neu' && !AS.steps[f.neu]) f.neu = asSchritt('').id;
+      neu(); if(f.art === 'neu' && $('#asNeu') && !$('#asNeu').value) $('#asNeu').focus(); });
+    if($('#asNeu')) $('#asNeu').oninput = ev => { AS.steps[f.neu].titel = ev.target.value; };
+    $b('[data-fz]').forEach(b => b.onclick = () => { f.ziel = b.dataset.fz; if(f.ziel === s.id && f.modus === 'gleich'){ f.modus = 'nach'; } neu(); });
+    $b('[data-wm]').forEach(b => b.onclick = () => { f.modus = b.dataset.wm; if(f.modus === 'abh' && !f.abfall && arten.length) f.abfall = arten[0]; neu(); });
+    $b('[data-fn]').forEach(el => el.oninput = () => { f[el.dataset.fn] = Math.max(el.dataset.fn === 'vor' ? 0 : 1, Math.round(+el.value || 0)); });
+    $b('[data-fs]').forEach(el => el.onchange = () => { f.einh = el.value; });
+    $b('[data-fart]').forEach(b => b.onclick = () => { f.abfall = b.dataset.fart; neu(); });
+    $b('[data-finfo]').forEach(el => el.onchange = () => { f.info = el.checked; });
+    if($('#asBedAuf')) $('#asBedAuf').onclick = () => { e.bedAuf = true; neu(); };
+    if($('#asBedPlus')) $('#asBedPlus').onclick = () => { e.bed.push(Object.assign(bedingungStd(), ABFALL.termine.length && !CFG.wetter
+      ? {groesse:'abfuhr', tage:1} : {groesse:'regen24', vgl:'unter', wert:2, richtung:'voraus', tage:3})); neu(); };
+    if($('#asBedWeg')) $('#asBedWeg').onclick = () => { e.bed = []; e.bedAuf = false; neu(); };
+    $b('[data-eb]').forEach(el => el.onchange = () => { bedFeldSetzen(e.bed[+el.dataset.eb], el.dataset.bf, el); neu(); });
+    $b('[data-eauto]').forEach(b => b.onclick = () => { e.auto = b.dataset.eauto; neu(); });
+  }
+  if(q.t === 'wdh'){
+    $b('[data-wa]').forEach(b => b.onclick = () => { AS.wdh.an = b.dataset.wa === '1'; neu(); });
+    $b('[data-wn]').forEach(el => el.oninput = () => { AS.wdh.n = Math.max(1, Math.round(+el.value || 1)); });
+    $b('[data-we]').forEach(el => el.onchange = () => { AS.wdh.einh = el.value; });
+  }
+  if(q.t === 'beginn'){
+    const b = AS.beginn;
+    $b('[data-ba]').forEach(x => x.onclick = () => { b.auto = x.dataset.ba === '1'; neu(); });
+    $b('[data-bb]').forEach(el => el.onchange = () => { bedFeldSetzen(b.bed, el.dataset.bf, el); neu(); });
+    $b('[data-bfr]').forEach(x => x.onclick = () => { b.fristArt = x.dataset.bfr; neu(); });
+    $b('[data-bm]').forEach(x => x.onclick = () => { b.modus = x.dataset.bm; neu(); });
+  }
+  if(letzte){
+    $('#asName').oninput = ev => { AS.name = ev.target.value; };
+    if($('#asNw')) $('#asNw').onchange = ev => { AS.k = ev.target.value; AS.anlage = ''; neu(); };
+    if($('#asAnl')) $('#asAnl').onchange = ev => { AS.anlage = ev.target.value; };
+    if($('#asFrist')) $('#asFrist').oninput = ev => { AS.frist = ev.target.value || heute(); };
+    if($('#asStarten')) $('#asStarten').onclick = () => assistentFertig(true);
+    if($('#asSpeichern')) $('#asSpeichern').onclick = () => assistentFertig(false);
+  }
+  /* Weiter prüft, was die Frage braucht. */
+  if($('#asWeiter')) $('#asWeiter').onclick = () => {
+    if(q.t === 'start' && !AS.steps[AS.start].titel.trim()){ toast('Bitte eintragen, was als Erstes zu tun ist'); return; }
+    if(q.t === 'erg' && s.erg.art === 'mehr'){
+      const voll = s.erg.liste.filter(y => String(y.text).trim());
+      if(voll.length < 2){ toast('Bitte mindestens zwei Ergebnisse eintragen'); return; }
+      s.erg.liste = voll;
+    }
+    if(q.t === 'folge' && e.folge.art === 'neu' && !String((AS.steps[e.folge.neu] || {}).titel || '').trim()){ toast('Bitte die neue Aufgabe benennen'); return; }
+    if(q.t === 'folge' && e.folge.art === 'vorh' && !e.folge.ziel){ toast('Bitte wählen, mit welcher Aufgabe es weitergeht'); return; }
+    AS.i++; bildNach(0); renderAssistent();
+  };
+  if($('#asZurueck')) $('#asZurueck').onclick = () => { AS.i = Math.max(0, AS.i - 1); bildNach(0); renderAssistent(); };
+  if(q.t === 'start' && !AS.steps[AS.start].titel) setTimeout(() => { const t = $('#asTitel'); if(t) t.focus(); }, 50);
+}
+function assistentFertig(starten){
+  const p = asPlan(), A = AS;
+  plaeneListe().push(p);
+  if(A.beginn.auto){
+    const r = Object.assign(regelStd(''), {dann:'ablauf', plan:p.id, bed:[Object.assign({}, A.beginn.bed, {fall:0})],
+      fristArt:A.beginn.fristArt, modus:A.beginn.modus, ruhe:A.beginn.bed.groesse === 'abfuhr' ? 0 : 14});
+    eigeneRegeln();
+    CFG.wetterEigen.push(r);
+  }
+  saveCfg();
+  AS = null;
+  if(A.aufgabe){
+    const a = A.aufgabe;
+    a.plan = p.id; a.stufe = p.stufen[0].id; a.kette = a.kette || a.id; a.ablaufStand = {};
+    if(!a.entwurf) saveAufg();
+    toast(`Ablauf „${p.name}“ festgelegt`);
+    zurueck();
+    return;
+  }
+  if(starten){
+    const s = p.stufen[0], wahl = bezugsAnlagen(A.k).find(x => x.wert === A.anlage);
+    const n = {id:neueId(), art:'eigen', quelle:'', k:A.k, anlage:wahl ? wahl.wert : '', anlageText:wahl ? wahl.text : '',
+      punkt:'', titel:s.titel || 'Aufgabe', text:'', notiz:s.notiz || '', zeitraum:'', festgestellt:'',
+      angelegt:heute(), frist:A.frist || heute(), wichtig:s.wichtig || 'normal', erneut:[], erledigt:'', vermerk:'', plan:p.id, stufe:s.id};
+    n.kette = n.id;
+    AUFG.push(n); saveAufg();
+    toast(`Gestartet · ${s.titel} fällig ${datumKurz(n.frist)}`);
+  }else toast('Ablauf gespeichert');
+  planAktiv = p.id;
+  go('ablaufplan', false);
 }
 /* Starten von der Seite des Ablaufs: Objekt (freiwillig) und Datum. */
 function planStarten(p){
@@ -7852,7 +8233,8 @@ function renderAufgabe(){
       return;
     }
     planWeiter.neue = [];
-    const pt = j == null ? '' : planWeiter(a, j, zielFest);
+    /* Ohne Ergebnisse endet ein Ablauf hier – und beginnt ggf. von vorn (v1.182). */
+    const pt = j == null ? (a.plan ? planWiederholen(a) : '') : planWeiter(a, j, zielFest);
     saveAufg(); stoerAusAufgabe(a, 'erledigt'); toast(pt ? 'Erledigt · ' + pt : 'Als erledigt vermerkt'); zurueck();
     weiterSofort(tFragen, vorher);
   };
