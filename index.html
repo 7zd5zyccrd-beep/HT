@@ -10,6 +10,17 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.202 08.10.2026 Gleichheit auf den Unterseiten (Jean). Überschriften stehen
+                    über ihrem Kasten statt darin (Kontrolle, Objektseite,
+                    Akkus, Arbeitsnachweis, Aufgabe, Termin …); der Typ im
+                    Kopf einer Objekt- oder Mangelseite ist eine leise
+                    Zeile. Wege als gruppierte Listen (Auslöser, Dauern und
+                    Arbeitsmittel, Einstellungen eines Typs, „Auslöser
+                    dazu“). Daten in Listen und Wettertage nicht mehr fett,
+                    Feldnamen der Wetter-Einstellungen ohne Versalien. In
+                    der Kontrolle „Dauer und Arbeitsmittel“ als Zeile wie
+                    die Angaben einer Aufgabe. „Zur Kontrolle“ ohne ›, alter
+                    Hinweis bei den Akkus berichtigt.
   v1.201 08.10.2026 Gleichheit auf allen Hauptseiten (Jean). Kalender: heute
                     „Heute · Do 08.10.“ wie auf Heute, zusammengefasste Tage
                     immer mit „–“, „Weiteres“ als gruppierte Liste. Anlagen:
@@ -2879,6 +2890,8 @@ header .back[hidden]{display:none}
 .btn.kopfHinweis + .btn.kopfHinweis{margin-top:0}
 .kopfHinweis.warn{border-left:5px solid var(--dringend)}
 .kalMit{margin:10px 0 4px}
+/* Typ über dem Titel einer Kopfkarte (v1.202): leise, ohne Versalien. */
+.kopfTyp{margin:0 0 4px;font-size:14px;color:var(--ink-soft)}
 .btn.eintrag.blass{opacity:.6}
 .vorzZeile{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;padding:4px 0 2px;color:var(--ink);font:inherit;font-weight:500;cursor:pointer}
 .vorzZeile .etext{flex:1;min-width:0}
@@ -3436,7 +3449,7 @@ body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-ar
 .hist .row{margin-top:10px}
 .vzeile{padding:7px 0}
 .vzeile + .vzeile{border-top:1px solid var(--line)}
-.vzeile .vwann{font-weight:600;font-size:15px}
+.vzeile .vwann{font-size:15px}   /* Datum in normaler Stärke (v1.202) */
 /* Ablauf (v1.157): Schritte als Knöpfe, erledigte gedämpft. */
 a.ablaufSchritt{display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:8px}
 .ablaufSchritt.fertig{color:var(--ink-soft)}
@@ -3585,7 +3598,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 /* Ein Tipp zeigt die Stunden – das „›“ sagt es (v1.189). */
 .wtag .wkopf::after{content:'›';margin-left:auto;color:var(--ink-soft);font-size:18px;line-height:1}
 .wtag .wzeile[aria-expanded="true"] .wkopf::after{content:'⌄'}
-.wdat{font-weight:600;font-size:15px;white-space:nowrap}
+.wdat{font-size:15px;white-space:nowrap}
 .wtend{font-size:13px;color:var(--ink-soft);white-space:nowrap}
 .wlage{margin-left:auto;font-size:15px;text-align:right}
 .wwerte{display:block;margin-top:2px;font-size:14px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
@@ -3654,8 +3667,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 .angaben > summary .zfass{flex:1;min-width:0;line-height:1.35;padding-right:10px}
 .wgZeile{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0}
 .wgZeile + .wgZeile{border-top:1px solid var(--line)}
-.wgZeile > span:first-child{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;
-  font-size:13px;color:var(--ink-soft)}
+.wgZeile > span:first-child{font-size:14px;color:var(--ink-soft)}   /* Feldname ohne Versalien (v1.202) */
+.wgZeile > span:first-child::first-letter{text-transform:uppercase}
 .wgWerte{flex:0 0 auto;white-space:nowrap;font-size:15px}
 .wgWerte input{width:4.2em;padding:8px;text-align:right;font-size:16px}
 .wgWerte select{padding:8px;font-size:16px}
@@ -3987,7 +4000,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.201';
+const VERSION = 'v1.202';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6296,8 +6309,7 @@ function abwesenheitsKarte(liste){
     }
   const zeilen = (titel, l) => l.length
     ? `<p class="muted small" style="margin:8px 0 2px">${titel}</p><p style="margin:0">${l.map(esc).join('<br>')}</p>` : '';
-  return `<div class="card">
-    <div class="eyebrow" style="margin:0 0 6px">${esc(ab.text || 'Abwesenheit')} · ${esc(dText(ab.von))} bis ${esc(dText(ab.bis))}</div>
+  return `<div class="eyebrow">${esc(ab.text || 'Abwesenheit')} · ${esc(dText(ab.von))} bis ${esc(dText(ab.bis))}</div><div class="card">
     ${zeilen('Vorher erledigen', vorher)}${zeilen('Vertretung klären', vertretung)}
     ${!vorher.length && !vertretung.length ? '<p class="muted small" style="margin:0">Nichts, was vorher erledigt werden muss.</p>' : ''}
   </div>`;
@@ -6444,6 +6456,26 @@ function renderHome(){
    einer Gruppe in einem Kasten mit Trennlinien, wie in den iPhone-
    Einstellungen und wie die Angaben einer Aufgabe. */
 const gliste = html => html ? `<div class="gliste">${html}</div>` : '';
+/* Dasselbe nachträglich (v1.202): Wege, die als einzelne Kästen untereinander
+   stehen, kommen in eine gruppierte Liste. Ein Eintrag mit eigenem Abstand
+   nach oben beginnt eine neue Gruppe; Einträge mit Ring und solche in Karten
+   bleiben, wie sie sind. Die Knöpfe behalten ihre Bindungen. */
+function eintraegeGruppieren(root){
+  if(!root) return;
+  const passt = b => b && b.matches && b.matches('.btn.eintrag') && !/\bring-/.test(b.className)
+    && !b.closest('.gliste, .card, .gruppe') && !b.hidden;
+  [...root.querySelectorAll('.btn.eintrag')].forEach(b => {
+    if(!passt(b) || b.closest('.gliste')) return;
+    const lauf = [b];
+    let nx = b.nextElementSibling;
+    while(passt(nx) && !parseFloat(nx.style.marginTop)){ lauf.push(nx); nx = nx.nextElementSibling; }
+    const g = document.createElement('div');
+    g.className = 'gliste';
+    if(b.style.marginTop) g.style.marginTop = b.style.marginTop;
+    b.before(g);
+    lauf.forEach(x => { x.style.marginTop = ''; g.appendChild(x); });
+  });
+}
 function renderMehr(){
   const zeile = (attr, text, stand) => `<button class="btn eintrag" ${attr}><span class="etext mehrZeile"><span>${esc(text)}</span>${
     stand ? `<span class="zahl">${esc(stand)}</span>` : ''}</span></button>`;
@@ -7030,7 +7062,7 @@ function ablaufMehrHtml(a){
   const p = a.plan ? planVon(a.plan) : null, s = stufeDerAufgabe(a);
   if(!p || !s) return a.art === 'mangel' || a.erledigt ? '' : `<button class="btn ghost klein" id="ablaufStart" style="margin:0 0 10px">Ablauf festlegen</button>`;
   const bisher = ketteVon(a);
-  return `<div class="card"><div class="eyebrow" style="margin:0 0 4px">Ablauf · ${esc(p.name || 'Ablauf')}</div>
+  return `<div class="eyebrow">Ablauf · ${esc(p.name || 'Ablauf')}</div><div class="card">
     ${bisher.length ? bisher.map(x => `<p class="small" style="margin:2px 0">${esc(ketteZeile(x))}</p>`).join('')
       : '<p class="muted small" style="margin:0">Erster Schritt des Ablaufs.</p>'}
     <button class="btn ghost klein" id="ablaufBearb" style="margin-top:10px">Ablauf ansehen und bearbeiten</button></div>`;
@@ -7437,7 +7469,7 @@ function renderAblaeufe(){
       const lauf = laufendIn(p.id).sort((x, y) => String(x.frist).localeCompare(String(y.frist)));
       return `<div class="card ablaufListe"><button class="btn eintrag" data-pi="${i}"><span class="etext">${esc(p.name || 'Ablauf')}<small>${
           esc(`${(p.stufen || []).length} ${(p.stufen || []).length === 1 ? 'Schritt' : 'Schritte'}`)}</small></span></button>
-        ${lauf.length ? `<div class="eyebrow" style="margin:8px 0 2px">Läuft gerade</div>` + lauf.map(a =>
+        ${lauf.length ? `<p class="kopfTyp" style="margin:10px 0 4px">Läuft gerade</p>` + lauf.map(a =>
           `<button class="btn eintrag laufEintrag" data-aufg="${esc(a.id)}"><span class="etext">${esc(laufZeile(a))}</span></button>`).join('') : ''}</div>`;
     }).join('')
     + `<button class="btn ghost klein" id="ablaufNeu" style="margin-top:10px">+ Neuer Ablauf</button>`
@@ -7446,6 +7478,7 @@ function renderAblaeufe(){
   knoepfeVerdrahten(box);
   $('#ablaufNeu').onclick = ablaufNeu;
   $('#zuAusl').onclick = () => go('ausloeser');
+  eintraegeGruppieren(box);
 }
 /* Neuer Ablauf: der Assistent (v1.182; das Beispiel aus v1.179 entfällt,
    der Assistent erklärt sich selbst – Jean). */
@@ -7502,7 +7535,7 @@ function renderAblaufPlan(){
       (e.bed || []).length ? `<small>⚙ ${esc(e.auto === 'sofort' ? 'erledigt selbst' : 'schlägt vor')}, wenn ${esc(e.bed.map(bedKurz).join(' und '))}</small>` : ''}</span></button>`;
   };
   box.innerHTML = `<label class="field" style="margin-top:0"><span>Name des Ablaufs</span><input id="ablaufName" value="${esc(p.name || '')}" placeholder="z. B. Dachrinne"></label>
-    <div class="card abBaum"><div class="eyebrow" style="margin:0 0 8px">So läuft es ab</div>${baumHtml(p)}</div>
+    <div class="eyebrow">So läuft es ab</div><div class="card abBaum">${baumHtml(p)}</div>
     <div class="eyebrow">Beginnt</div>
     <div class="card abBeginn"><p class="small" style="margin:0">▶ Von Hand mit „Starten“ unten</p>
       ${trig.map(r => `<button type="button" class="abErg" data-trig="${esc(r.id)}"><span class="abEw">⚡ von selbst</span><span class="abEd">wenn ${esc(wennKurz(r))}<small>${
@@ -8313,7 +8346,7 @@ function aufgKopfZeigen(a, mangelKopf){
     ${String(a.notiz || '').trim() ? `<p class="aufgText"><span class="muted">Notiz:</span> ${esc(a.notiz)}</p>` : ''}
     ${a.k && n ? `<div class="kopfZeichen">
       ${aufgOrt(a) ? `<button class="btn ghost klein" data-weg="plan">${ORT_SVG}Grundriss</button>` : ''}
-      <button class="btn ghost klein" data-weg="nw">Zur Kontrolle ›</button></div>` : ''}</div>`;
+      <button class="btn ghost klein" data-weg="nw">Zur Kontrolle</button></div>` : ''}</div>`;
   const zt = box.querySelector('[data-zumtermin]');
   if(zt) zt.onclick = () => {
     const feld = $('#aufgVon') || $('#aufgFrist'), z = $('#aufgBox [data-az="frist"]');
@@ -8392,7 +8425,7 @@ function renderAufgabe(){
   let kopf = '';
   if(mangel){
     mangelKopf = `
-      <div class="eyebrow" style="margin:0 0 6px">${esc([n ? n.label : '', 'Kontrolle ' + zeitraumText(a.zeitraum)].filter(Boolean).join(' · '))}</div>
+      <p class="kopfTyp">${esc([n ? n.label : '', 'Kontrolle ' + zeitraumText(a.zeitraum)].filter(Boolean).join(' · '))}</p>
       <p class="aufgKopf">${esc(a.titel)}</p>
       ${a.text ? `<p class="aufgText">${esc(a.text)}</p>` : `<p class="muted small" style="margin:6px 0 0">Keine Bemerkung eingetragen.</p>`}
       <p class="muted small" style="margin:8px 0 0">Festgestellt am ${esc(dText(a.festgestellt))}</p>
@@ -8446,20 +8479,20 @@ function renderAufgabe(){
   const nurMat = '<p class="muted small" style="margin:0">Material steht unter „Vorbereiten“.</p>';
   /* Seit v1.70 auch ohne Erfahrungswerte: sonst ließe sich Material für eine
      neue wiederkehrende Aufgabe nur über Übersicht › Tätigkeiten eintragen. */
-  const erfKarte = tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Dauer und Arbeitsmittel</div>${
+  const erfKarte = tKeyA ? `<div class="eyebrow">Dauer und Arbeitsmittel</div><div class="card">${
       erfA || (matVon(tKeyA).length ? nurMat : '<p class="muted small" style="margin:0">Noch nichts eingetragen.</p>')}
       <button class="btn ghost klein" id="aufgTaet" style="margin-top:10px">${erfA || matVon(tKeyA).length ? 'Bearbeiten' : 'Eintragen'}</button></div>` : '';
   /* Einmalige Aufgaben und Mängel (v1.71): dieselbe Karte, nur ohne Dauer –
      die Listen liegen an der Aufgabe, bearbeitet wird im Fenster. */
   const eigenA = !neu && !a.erledigt && !tKeyA ? eigenText(a, true) : '';
   const eigenMat = (a.material || []).some(m => m && m.name);
-  const eigenKarte = !neu && !a.erledigt && !tKeyA ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Arbeitsmittel</div>${
+  const eigenKarte = !neu && !a.erledigt && !tKeyA ? `<div class="eyebrow">Arbeitsmittel</div><div class="card">${
       eigenA || (eigenMat ? nurMat : '<p class="muted small" style="margin:0">Noch nichts eingetragen.</p>')}
       <button class="btn ghost klein" id="aufgEigen" style="margin-top:10px">${eigenA || eigenMat ? 'Bearbeiten' : 'Eintragen'}</button></div>` : '';
   let erlDauer = null;
   const erledigung = neu ? `<button class="btn primary" id="aufgAnlegen">Aufgabe anlegen</button>`
     : a.erledigt
-      ? `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Erledigt</div>
+      ? `<div class="eyebrow">Erledigt</div><div class="card">
            <p style="margin:0">am ${esc(dText(a.erledigt))}${a.dauer ? ' · ' + esc(dauerText(a.dauer)) : ''}</p>
            ${a.vermerk ? `<p class="aufgText">${esc(a.vermerk)}</p>` : ''}
            <button class="btn ghost klein" id="aufgWieder" style="margin-top:10px">Wieder öffnen</button></div>`
@@ -8536,7 +8569,7 @@ function renderAufgabe(){
     + (!mangel && !a.erledigt && a.wetter ? `<div id="aufgWetterKarte">${aufgWetterKarteHtml(a)}</div>` : '')
     + '<div id="aufgVorb"></div>' + ablauf + erledigung
     + angListe
-    + (erfA ? `<div class="card" style="margin-top:12px"><div class="eyebrow" style="margin:0 0 6px">Erfahrung</div>${erfA}</div>` : '')
+    + (erfA ? `<div class="eyebrow">Erfahrung</div><div class="card">${erfA}</div>` : '')
     + (!mangel ? `<button class="btn danger klein" id="aufgWeg" style="margin-top:18px">Aufgabe löschen</button>` : '');
   aufgKopfZeigen(a, mangelKopf);
   const kopfNeu = () => aufgKopfZeigen(a, mangelKopf);
@@ -8965,7 +8998,7 @@ function renderTermin(){
       </div></label>
     <label class="field"><span>Notiz und Ergebnis</span><textarea id="tmNotiz" style="min-height:90px" placeholder="Worum es geht, was besprochen wurde">${esc(t.notiz)}</textarea></label>`;
   const kalender = `
-    <div class="card"><div class="eyebrow" style="margin:0 0 6px">iPhone-Kalender</div>
+    <div class="eyebrow">iPhone-Kalender</div><div class="card">
       <label class="haken"><input type="checkbox" id="tmKal"${t.kalender ? ' checked' : ''}> In den Kalender übernehmen</label>
       <div id="tmKalTeil"${t.kalender ? '' : ' hidden'}>
         <label class="field" style="margin:8px 0 0"><span>Erinnerung</span><select id="tmErinnern">${
@@ -9614,23 +9647,24 @@ function taetKarteZeigen(box, zeilen, objUt){
   if(!box) return;
   /* Werkzeug einzelner Objekte (v1.101) steht mit darunter – bei Fremdprüfungen
      ist es das Einzige. */
-  const obj = (objUt || []).length ? `<p class="muted small" style="margin:${zeilen.length ? '12px' : '0'} 0 0">An einzelnen Objekten: ${esc(objUt.join(', '))}</p>` : '';
+  const obj = (objUt || []).length ? `<p class="muted small" style="margin:6px 0 0">An einzelnen Objekten: ${esc(objUt.join(', '))}</p>` : '';
   if(!zeilen.length){
-    box.innerHTML = obj ? `<div class="card" style="margin-top:12px"><div class="eyebrow" style="margin:0 0 6px">Werkzeug</div>${obj}</div>` : '';
+    box.innerHTML = obj ? `<div class="eyebrow">Werkzeug</div>${obj}` : '';
     return;
   }
+  /* Seit v1.202 (Jean) als Zeilen wie die Angaben einer Aufgabe:
+     „Dauer und Arbeitsmittel – noch nichts ›“ statt Text und Knopf. Beim
+     Sprinkler je Teil eine Zeile unter einer gemeinsamen Überschrift. */
   const ohne = zeilen.every(([key]) => OHNE_DAUER.has(key));
+  const wort = ohne ? 'Arbeitsmittel' : 'Dauer und Arbeitsmittel';
   const teil = ([key, was], j) => {
     const e = TAET.t[key] || {}, sch = OHNE_DAUER.has(key) ? null : taetSchnitt(key);
     const ut = e.utensilien || [], mat = matVon(key).length;
-    const text = [sch ? '≈ ' + dauerText(sch) : '', ut.length ? 'Werkzeug: ' + ut.join(', ') : ''].filter(Boolean).join(' · ');
-    return `${was ? `<p style="margin:${j ? '14px' : '0'} 0 2px"><b>${esc(was)}</b></p>` : ''}
-      <p class="${text ? '' : 'muted small'}" style="margin:0">${text ? esc(text)
-        : mat ? 'Material steht unter „Vorbereiten“.' : 'Noch nichts eingetragen.'}</p>
-      <button class="btn ghost klein" data-taetkey="${j}" style="margin-top:8px">${text || mat ? 'Bearbeiten' : 'Eintragen'}</button>`;
+    const wert = [sch ? '≈ ' + dauerText(sch) : '', ut.length ? ut.join(', ') : '', mat ? `${mat} Material` : ''].filter(Boolean).join(' · ') || 'noch nichts';
+    return `<button type="button" class="angZeile" data-taetkey="${j}"><span>${esc(zeilen.length > 1 ? was : wort)}</span><span class="angWert">${esc(wert)}</span></button>`;
   };
-  box.innerHTML = `<div class="card" style="margin-top:12px"><div class="eyebrow" style="margin:0 0 6px">${
-    ohne ? 'Arbeitsmittel' : 'Dauer und Arbeitsmittel'}</div>${zeilen.map(teil).join('')}${obj}</div>`;
+  box.innerHTML = (zeilen.length > 1 ? `<div class="eyebrow">${wort}</div>` : '<div style="height:12px"></div>')
+    + `<div class="angListe">${zeilen.map(teil).join('')}</div>${obj}`;
   box.querySelectorAll('[data-taetkey]').forEach(b => b.onclick = () => {
     const [key, , name] = zeilen[+b.dataset.taetkey];
     taetAktiv = {key, name}; go('taet');
@@ -9675,6 +9709,7 @@ function renderTaeten(){
     go('taet');
   });
   $('#taetZuListen').onclick = () => setOeffnen('werkmat');
+  eintraegeGruppieren(box);
 }
 /* Einstellungen › Arbeitsmittel (v1.76, vorher unter Tätigkeiten) – ein Wort,
    weil „Werkzeug und Material“ in der Kopfzeile umbräche.
@@ -9824,7 +9859,7 @@ function renderTaet(){
       () => { delete TAET.t[key]; saveTaet(); renderTaet(); toast('Gelöscht'); });
     return;
   }
-  box.innerHTML = `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Durchschnitt</div>
+  box.innerHTML = `<div class="eyebrow" style="margin-top:0">Durchschnitt</div><div class="card">
       <p style="margin:0">${s ? '≈ ' + esc(dauerText(s)) : 'noch keine Angabe'}${
         n ? `<span class="muted small"> · aus ${Math.min(n, 10)} ${Math.min(n, 10) === 1 ? 'Angabe' : 'Angaben'}${n > 10 ? `, ${n} erfasst` : ''}</span>` : ''}</p></div>
     <label class="haken" style="margin:4px 0 6px"><input type="checkbox" id="taetFragenHaken"${!e || e.fragen !== false ? ' checked' : ''}>
@@ -10133,8 +10168,8 @@ function vorbKarteZeigen(box, zeilen, kopf){
   if(!box) return;
   if(!zeilen.length){ box.innerHTML = ''; return; }
   const fertig = zeilen.filter(z => z.an).length;
-  box.innerHTML = `<div class="card matKarte vorbKarte"><div class="eyebrow" style="margin:0 0 4px">Vorbereiten${
-      zeilen.length > 1 ? ` <span class="summe">· ${fertig} von ${zeilen.length} erledigt</span>` : ''}</div>${kopf || ''}${
+  box.innerHTML = `<div class="eyebrow">Vorbereiten${
+      zeilen.length > 1 ? ` <span class="summe">· ${fertig} von ${zeilen.length} erledigt</span>` : ''}</div><div class="card matKarte vorbKarte">${kopf || ''}${
     zeilen.map((z, i) => `<label class="haken matPosten${z.an ? ' erledigt' : ''}"><input type="checkbox" data-v="${i}"${z.an ? ' checked' : ''}>
       <span class="etext">${z.html}${z.unten ? `<small>${esc(z.unten)}</small>` : ''}</span></label>${
       z.an && z.vermerk ? `<input class="vorbVermerk" data-vm="${i}" value="${esc(z.vermerk.wert || '')}"
@@ -10307,7 +10342,7 @@ const planTagWort = t => {
 function planKarte(liste){
   const p = planPruefen(liste);
   if(!p) return '';
-  return `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Auslastung</div>
+  return `<div class="eyebrow">Auslastung</div><div class="card">
     <p style="margin:0">Bis ${esc(planTagWort(p.bis))} wird es knapp: ≈ ${esc(dauerText({m:auf15(p.noetig)}))} offen, ${
       esc(dauerText({m:Math.floor(p.verf / 15) * 15}))} verfügbar.</p>
     <button class="btn ghost klein" data-wplan="1" style="margin-top:10px">Kalender</button></div>`;
@@ -10780,14 +10815,15 @@ function renderArbeit(){
     <div class="arbKopf"><button type="button" class="btn ghost klein" data-blatt="-1">‹ Davor</button>
       <b>${esc(z.titel)}</b>
       <button type="button" class="btn ghost klein" data-blatt="1">Danach ›</button></div>
-    <div class="card"><div class="eyebrow mitInfo" style="margin:0 0 6px">Summe ${i.knopf}</div>${i.text}
+    <div class="eyebrow mitInfo">Summe ${i.knopf}</div>${i.text}<div class="card">
       <p style="margin:0"><b>≈ ${esc(dauerText({m:gesamt}))}</b>${
         tage.length ? ` <span class="muted small">· an ${tage.length} ${tage.length === 1 ? 'Tag' : 'Tagen'}${
           ohne ? `, ${ohne} ohne Dauer` : ''}</span>` : ''}</p></div>
     <button class="btn ghost klein" id="arbPlus" style="margin:0 0 10px">+ Neuer Eintrag</button>`
     + (tage.length ? tage.map(t => {
         const dt = alsDatum(t.datum), sum = t.l.reduce((s2, r) => s2 + min(r), 0);
-        return `<div class="eyebrow">${esc(WOCHENTAG[dt.getDay()] + ' ' + dText(t.datum))} <span class="summe">· ${esc(dauerText({m:sum}))}</span></div>`
+        /* Ohne Jahr wie überall, außer bei einem anderen Jahr (v1.202). */
+        return `<div class="eyebrow">${esc(WOCHENTAG[dt.getDay()] + ' ' + (dt.getFullYear() === new Date().getFullYear() ? ttmm(dt) : dText(t.datum)))} <span class="summe">· ${esc(dauerText({m:sum}))}</span></div>`
           + t.l.map(zeile).join('');
       }).join('') : '<p class="muted small">In diesem Zeitraum ist nichts eingetragen.</p>');
   box.querySelectorAll('[data-art]').forEach(b => b.onclick = () => arbArt(b.dataset.art));
@@ -11145,8 +11181,7 @@ function renderFremd(){
   const summe = offen === 'loescher' ? loeSumme() : null;
   $('#nwListe').innerHTML = (summe ? `<p class="muted small" style="margin:0 0 10px">${summe} Löscher</p>` : '')
     + '<div id="vorbFremd"></div>' +
-    `<div class="card">
-       <div class="eyebrow mitInfo" style="margin:0 0 6px">Die Firma war da ${iFirma.knopf}</div>${iFirma.text}
+    `<div class="eyebrow mitInfo">Die Firma war da ${iFirma.knopf}</div>${iFirma.text}<div class="card">
        <div class="row">
          <input type="date" id="alleDatum" value="${heute()}" aria-label="Prüfdatum">
          <button class="btn" id="alleSetzen">Für alle eintragen</button>
@@ -11217,7 +11252,7 @@ function akkuKarte(a, i, k){
 /* Woran man ist: wie viele Akkus welchen Typs, und wann sie fällig sind. */
 function akkuText(z, j, f){
   const anz = akkuAnzahl(z);
-  if(!j) return (anz > 1 ? anz + ' Akkus · ' : '') + 'kein Akkutyp gewählt – das steht in den Einstellungen';
+  if(!j) return (anz > 1 ? anz + ' Akkus · ' : '') + 'kein Akkutyp gewählt – das geht unter „Objekte bearbeiten“';
   return `${anz} × ${z.akkuTyp} · `
     + (f.offen   ? `noch kein Tausch vermerkt · alle ${monateText(j)}`
      : f.faellig ? 'überfällig seit ' + dText(f.ziel)
@@ -11269,8 +11304,7 @@ function renderAkku(){
   $('#akkuListe').innerHTML =
     (typen.length ? '' : `<p class="muted small">Noch kein Akkutyp angelegt – das geht unter Mehr › Einstellungen › Akkutypen.</p>`)
     + `<div id="akkuWerk"></div><div id="vorbPlatz"></div>`
-    + `<div class="card">
-       <div class="eyebrow mitInfo" style="margin:0 0 6px">Alle getauscht ${iAlle.knopf}</div>${iAlle.text}
+    + `<div class="eyebrow mitInfo">Alle getauscht ${iAlle.knopf}</div>${iAlle.text}<div class="card">
        <div class="row">
          <input type="date" class="dat" id="akkuAlleDatum" value="${heute()}" aria-label="Tauschdatum">
          <button class="btn" id="akkuAlleSetzen">Für alle eintragen</button>
@@ -12811,6 +12845,7 @@ function renderAbfall(){
     + `<button class="btn eintrag" id="abfZuAusl" style="margin-top:14px"><span class="etext">Auslöser dazu<small>Was aus Wetter und Abholterminen von selbst Aufgaben macht</small></span></button>`;
   $('#abfZuEinst').onclick = () => setOeffnen('abfall');
   $('#abfZuAusl').onclick = () => go('ausloeser');
+  eintraegeGruppieren(box);
 }
 
 /* ---------- DWD über Bright Sky (v1.53) -------------------------------------
@@ -12927,8 +12962,7 @@ function warnKarte(){
   const l = dwdWarnungen();
   if(!l.length) return '';
   const w = l[0];
-  return `<div class="card warnKarte" data-warn="1">
-    <div class="eyebrow" style="margin:0 0 6px">Amtliche Warnung · DWD</div>
+  return `<div class="eyebrow">Amtliche Warnung · DWD</div><div class="card warnKarte" data-warn="1">
     <p style="margin:0 0 4px"><b>${esc(w.kopf || w.ereignis || 'Warnung')}</b></p>
     <p class="muted small" style="margin:0">${esc([DWD_STUFE_TEXT[w.stufe] || '', warnZeitraum(w),
       l.length > 1 ? `${l.length - 1} weitere` : ''].filter(Boolean).join(' · '))}</p>
@@ -13134,7 +13168,7 @@ function aufgWetterKarteHtml(a){
       + `<p class="muted small" style="margin:8px 0 0">Stand ${esc(wetterWann(r.stand))}</p>`;
   }
   if(r.fehlt !== 'ort') knoepfe = `<button class="btn ghost klein" data-wseite="1" style="margin-top:10px">Wetterseite</button>`;
-  return `<div class="card"><div class="eyebrow mitInfo" style="margin:0 0 6px">Wetter · ${esc(profilName(a.wetter))} ${i.knopf}</div>${i.text}${inhalt}${knoepfe}</div>`;
+  return `<div class="eyebrow mitInfo">Wetter · ${esc(profilName(a.wetter))} ${i.knopf}</div>${i.text}<div class="card">${inhalt}${knoepfe}</div>`;
 }
 function aufgWetterKarteBinden(box){
   const s = box.querySelector('[data-wseite]');
@@ -13471,8 +13505,7 @@ function hinweisFrist(r, zeit){
 /* Die Karte auf der Startseite. */
 function hinweisKarte(liste){
   if(!liste.length) return '';
-  return `<div class="card">
-    <div class="eyebrow" style="margin:0 0 6px">Vorschläge</div>
+  return `<div class="eyebrow">Vorschläge</div><div class="card">
     ${liste.map(h => `<div class="hzeile">
       <p style="margin:0 0 2px"><b>${esc(h.titel || dannText(h.regel))}</b></p>
       <p class="muted small" style="margin:0 0 8px">${esc(h.grund)}</p>
@@ -13550,6 +13583,7 @@ function renderWetterregeln(){
   if(wbox){
     wbox.innerHTML = `<button class="btn eintrag" id="zuAusloesern" style="margin-top:14px"><span class="etext">Auslöser dazu<small>Was aus Wetter und Abholterminen von selbst Aufgaben macht</small></span></button>`;
     $('#zuAusloesern').onclick = () => go('ausloeser');
+    eintraegeGruppieren(wbox);
   }
   const box = $('#ausloeserBox');
   if(!box) return;
@@ -13570,6 +13604,7 @@ function renderWetterregeln(){
     regelAktiv = b.dataset.regel;
     go('wregel');
   });
+  eintraegeGruppieren(box);
 }
 function renderWetterregel(){
   const box = $('#wregelBox');
@@ -14098,8 +14133,7 @@ function setEigenRegel(box, r, neu){
     </div>
     </details>
 
-    <div class="card">
-      <div class="eyebrow" style="margin:0 0 6px">So liest sich der Auslöser</div>
+    <div class="eyebrow">So liest sich der Auslöser</div><div class="card">
       <p id="regSatz" style="margin:0 0 8px"></p>
       <p class="muted small" id="regProbe" style="margin:0"></p>
     </div>
@@ -14336,6 +14370,7 @@ function renderSetSub(){
     n.art === 'sprinkler' ? 'Prüfpunkte' : n.art === 'medien' ? 'Zähler' : 'Objekte'} bearbeiten</span>${
     n.art === 'sprinkler' ? '' : `<span class="zahl">${n.art === 'medien' ? stellen().length : (teilCfg(k).anlagen || []).length}</span>`}</span></button>`);
   $('#setZuObjekte').onclick = () => setOeffnen('objekte', k);
+  eintraegeGruppieren(dyn);
   /* Ganz unten: den Typ wieder entfernen (v1.147). */
   dyn.insertAdjacentHTML('beforeend', `<div class="eyebrow" style="margin-top:24px">Anlagentyp</div>
     <button class="btn klein" id="setTypWeg">Anlagentyp entfernen</button>
@@ -17936,8 +17971,7 @@ function sicherungsKarte(gibt){
   const l = letzteSicherung(), h = heute();
   if(l && tagPlus(l, SICHERUNG_TAGE) > h) return '';
   const tage = l ? Math.round((alsDatum(h) - alsDatum(l)) / 86400000) : 0;
-  return `<div class="card">
-    <div class="eyebrow" style="margin:0 0 6px">Sicherung fällig</div>
+  return `<div class="eyebrow">Sicherung fällig</div><div class="card">
     <p style="margin:0 0 10px">${l ? `Letzte Sicherung am ${esc(dText(l))}, vor ${tage} Tagen.` : 'Auf diesem Gerät wurde noch nicht gesichert.'}</p>
     <button class="btn primary" data-sichern="1">Jetzt sichern</button>
   </div>`;
@@ -19038,8 +19072,8 @@ function stoerungNeu(){
 }
 const vZeile = (wann, text) => `<div class="vzeile"><div class="vwann">${esc(wann)}</div>${
   text ? `<div class="small">${esc(text)}</div>` : ''}</div>`;
-const vAbschnitt = (titel, zeilen, leer) => `<div class="card">
-  <div class="eyebrow" style="margin:0 0 4px">${esc(titel)}</div>
+/* Überschrift über dem Kasten wie überall (v1.202). */
+const vAbschnitt = (titel, zeilen, leer) => `<div class="eyebrow">${esc(titel)}</div><div class="card">
   ${zeilen.length ? zeilen.join('') : `<p class="muted small" style="margin:0">${esc(leer)}</p>`}</div>`;
 const LEER_RUNDEN = 'Noch nichts vermerkt. Einträge entstehen mit der nächsten Ausgabe.';
 
@@ -19062,7 +19096,7 @@ async function renderVerlauf(){
     `<button type="button" data-ow="aufgabe"><i>+</i>Aufgabe</button>`].filter(Boolean).join('');
   const offen = AUFG.filter(a => !a.erledigt && a.k === v.k && (a.anlage === v.id || a.quelle === ort));
   const kopf = `<div class="card objKopf">
-      <div class="eyebrow" style="margin:0 0 2px">${esc(n.label)}</div>
+      <p class="kopfTyp">${esc(n.label)}</p>
       ${info.zeilen.length ? `<p class="small" style="margin:0;white-space:pre-line">${esc(info.zeilen.join('\n'))}</p>` : ''}
     </div>
     <div class="objWege">${wege}</div>`
@@ -19071,7 +19105,7 @@ async function renderVerlauf(){
         `<button class="btn eintrag" data-aufg="${esc(a.id)}"><span class="etext">${esc(a.art === 'mangel' && a.text ? 'Mangel: ' + a.text : aufgTitel(a))}<small>${
           esc(a.art === 'mangel' ? ['festgestellt ' + dText(a.festgestellt), a.frist ? 'fällig ' + dText(a.frist) : ''].filter(Boolean).join(' · ') : aufgStand(a))}</small></span></button>`).join('') : '')
     + (art === 'bestand' ? '' : `<div class="eyebrow">Arbeitsmittel</div><div class="card" style="padding:4px 14px">${mittelZeile(ort, v.titel)}</div>`)
-    + `<div class="eyebrow">Verlauf</div>`;
+    ;   // die Abschnitte des Verlaufs tragen seit v1.202 eigene Überschriften
   const pruef = art === 'fremd'  ? verlaufFremd(v, liste)
               : art === 'medien' ? verlaufZaehler(v, liste)
               : art === 'bestand' ? ''
@@ -19201,9 +19235,10 @@ function verlaufStoer(v){
   /* Vermerkt wird über „Störung“ oben (v1.192, Prüfteam: der zweite Knopf
      hier doppelte ihn); ohne Störungen fällt die Karte weg. */
   if(!zeilen.length && !feld) return '';
-  return `<div class="card" id="stoerKarte">
-    <div class="eyebrow" style="margin:0 0 4px">Störungen${n >= STOER_GEHAEUFT ? ` · ${n} in 12 Monaten` : ''}</div>
-    ${zeilen.join('')}${feld}</div>`;
+  /* Überschrift über dem Kasten (v1.202); #stoerKarte umfasst beides, weil die
+     Karte als Ganzes ausgetauscht wird. */
+  return `<div id="stoerKarte"><div class="eyebrow">Störungen${n >= STOER_GEHAEUFT ? ` <span class="summe">· ${n} in 12 Monaten</span>` : ''}</div>
+    <div class="card">${zeilen.join('')}${feld}</div></div>`;
 }
 function stoerVerdrahten(v){
   const karte = $('#stoerKarte');
@@ -19349,7 +19384,7 @@ function renderAbschluss(){
     <div class="card"><p style="margin:0">${st.voll ? '✓ ' : ''}${esc(st.hinweis)}</p>
       ${st.fehlt.slice(0, 12).map(f => `<button class="btn eintrag" data-fehlt="${esc(f.id)}" style="margin-top:8px"><span>${esc(f.text)}</span></button>`).join('')}
       ${st.fehlt.length > 12 ? `<p class="muted small" style="margin:8px 0 0">und ${st.fehlt.length - 12} weitere</p>` : ''}</div>`
-    + (st.maengel.length ? `<div class="card"><div class="eyebrow" style="margin:0 0 4px">Wird zur Aufgabe</div>${
+    + (st.maengel.length ? `<div class="eyebrow">Wird zur Aufgabe</div><div class="card">${
         st.maengel.map(m => `<p class="small" style="margin:4px 0 0">${esc(m.text)}</p>`).join('')}</div>` : '');
   box.querySelectorAll('[data-fehlt]').forEach(b => b.onclick = () => { zurueck(); zurKarte({k, id:b.dataset.fehlt}); });
   /* Die Unterschrift wandert für diese Seite hierher und danach zurück. */

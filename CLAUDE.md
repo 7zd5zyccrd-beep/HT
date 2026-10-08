@@ -169,7 +169,13 @@ steht.
   `renderAlle`: Ring des Listeneintrags, sonst knappes Rot → dunkel).
 - Reine Wege zu anderen Seiten stehen als `gliste` (Mehr, Einstellungen,
   „Weiteres“ in Kalender, Anlagen, Typseite; nachgeladene Einträge in
-  `div`s mit `display:contents`). Listen mit Ringen bleiben einzelne Kästen. Farben `--dringend`, `--bald` mit Dunkelwert.
+  `div`s mit `display:contents`). Listen mit Ringen bleiben einzelne Kästen.
+- Unterseiten (v1.202): Abschnittsüberschriften stehen über dem Kasten, nie
+  als erste Zeile darin (`vAbschnitt`, `#stoerKarte` umfasst Überschrift und
+  Karte). Typ im Kopf einer Objekt-/Mangelseite: `.kopfTyp`. Einzelne
+  Wege nachträglich gruppieren: `eintraegeGruppieren(box)`. In der Kontrolle
+  „Dauer und Arbeitsmittel“ als `.angListe`-Zeile (`taetKarteZeigen`).
+  Fett nur der Titel einer Karte; Daten in Listen normal. Farben `--dringend`, `--bald` mit Dunkelwert.
 - Schriften (E1): `<style id="schriften">` mit Barlow Condensed 500/600
   (latin, OFL) als data-URL, Fließtext Systemschrift. `blattDokument` lässt
   diesen Block weg, `blattFreigeben` entfernt alte Google-Verweise.
