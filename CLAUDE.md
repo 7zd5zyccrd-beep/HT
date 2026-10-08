@@ -325,6 +325,10 @@ steht.
   `abholungVor`, in `zielDatum`/`wannText`); erste Abholung der Art, deren
   Tag minus `vor` ≥ Basis; sonst die Basis selbst. Kein Arbeitstag →
   `wirksamerTag` davor, nie vor der Basis (v1.173, Jean).
+  Auf der Aufgabe steht hinter dem Vorschau-Datum die Regel (`wannText`,
+  v1.176) – Jean hielt das Datum sonst für fest. Wiederholen „alle X
+  Wochen ab Abschluss“ baut man mit Folgen zurück auf die erste Aufgabe
+  („nicht voll → Füllstand prüfen in 2 Wochen“), keine eigene Funktion (Jean).
 - Auslöser (v1.174, Jean): die Wetterregeln heißen sichtbar „Auslöser“,
   Liste `renderWetterregeln` in `#ausloeserBox` auf Übersicht › Abläufe (auf
   der Wetterseite nur ein Verweis). Intern weiter `CFG.wetterEigen`,

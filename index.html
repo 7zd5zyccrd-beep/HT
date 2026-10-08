@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.176 08.10.2026 Aufgabe im Ablauf (Jean): unter dem Ergebnis steht
+         hinter dem Datum der Folge jetzt auch die Regel, z. B. „Fr 09.10.
+         (1 Tag vor der nächsten Abholung, Restabfall)“ – das Datum war als
+         fest missverstanden worden; es ist nur die Vorschau für dieses Mal
+         und wird beim Erledigen neu gerechnet.
   v1.175 07.10.2026 Abläufe (Jean): ein Ergebnis kann Bedingungen aus Wetter
          und Abfuhrterminen tragen („Selbst wählen“ im Ergebnis). Ist die
          Aufgabe fällig und trifft alles zu, wählt die App das Ergebnis –
@@ -3533,7 +3538,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.175';
+const VERSION = 'v1.176';
 const BUILD   = VERSION + ' · 07.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6490,7 +6495,10 @@ function ergebnisseHtml(a){
     return `<p class="muted small ergSelbst">${ok ? '✓' : '✗'} ${esc(e.auto === 'sofort' ? 'selbst' : 'Vorschlag')}, wenn ${esc(e.bed.map(bedKurz).join(' und '))}${ok ? ' – trifft zu' : ''}</p>`; };
   return `<div class="ergebnisse">${s.ergebnisse.map((e, j) => ergebnisBlockHtml(p, e, j,
     `<button class="btn ergebnisKnopf" data-erg="${j}">${esc(ergName(e))}</button>` + selbst(e),
-    y => `<div class="ergebnisZiel"><span class="small">→ ${esc(y.st.titel || 'Aufgabe')} · <b data-zd="${j}:${y.i}"></b></span>
+    y => `<div class="ergebnisZiel"><span class="small">→ ${esc(y.st.titel || 'Aufgabe')} · <b data-zd="${j}:${y.i}"></b>${
+      /* Die Regel dahinter (v1.176, Jean): das Datum ist nur die Vorschau
+         für dieses Mal, gerechnet wird es beim Erledigen neu. */
+      wannText(y.x) === 'sofort' ? '' : ` <span class="muted">(${esc(wannText(y.x).replace(/^in /, 'in ').replace(/ \((.*)\)$/, ', $1'))})</span>`}</span>
         <button type="button" class="btn quadrat" data-zedit="${j}:${y.i}" aria-label="Datum ändern">✎</button></div>`)).join('')}
   <button class="btn ghost klein" id="erlSetzen" style="margin-top:10px">Erledigen ohne Folge</button></div>`;
 }
@@ -6516,7 +6524,8 @@ function ergebnisseVerdrahten(a, fest, erledigen){
   const basis = () => ($('#erlDatum') && $('#erlDatum').value) || heute();
   const zeigen = () => $$('[data-zd]').forEach(el => {
     const [j, i] = el.dataset.zd.split(':').map(Number), z = s.ergebnisse[j].ziele[i];
-    el.textContent = fest[el.dataset.zd] ? datumKurz(fest[el.dataset.zd]) : datumWahl(z) ? 'Datum wählen' : datumKurz(zielDatum(basis(), z));
+    const tag = iso => { const d = datumKurz(iso); return /^\d/.test(d) ? `${WOCHENTAG[alsDatum(iso).getDay()]} ${ttmm(alsDatum(iso))}` : d; };
+    el.textContent = fest[el.dataset.zd] ? tag(fest[el.dataset.zd]) : datumWahl(z) ? 'Datum wählen' : tag(zielDatum(basis(), z));
   });
   zeigen();
   if($('#erlDatum')) $('#erlDatum').addEventListener('input', zeigen);
