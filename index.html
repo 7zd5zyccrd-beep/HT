@@ -10,6 +10,18 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.195 08.10.2026 Prüfteam, Paket 6: Kleine Hilfen. Die Suche findet auch
+                    Seiten („Urlaub“ → Abwesenheiten, „Passwort“ → Zugang,
+                    „Müll“ → Abholtage …). Ein Grundriss öffnet ganz
+                    sichtbar und lässt sich so klein zoomen, dass auch ein
+                    querformatiger ganz aufs iPhone passt. „+ › Abwesenheit“
+                    öffnet gleich eine neue; ohne Bundesland sagt die Seite,
+                    dass keine Feiertage zählen. Neu im „+“: „Störung“ –
+                    Anlagentyp und Objekt wählen, dann steht das Feld offen.
+                    Das „+“-Menü und „Auf einen Tag legen“ kommen als Blatt
+                    von unten. Technik: Heute rechnet die freie Zeit nur
+                    einmal, ausgegebene Blätter werden nicht mehr bei jedem
+                    Zählen neu geladen, Kennungen geschützt eingesetzt.
   v1.194 08.10.2026 Prüfteam, Paket 5: Erscheinungsbild. Schriften: Fließtext
                     in der Systemschrift des iPhones, die schmale
                     Überschriftenschrift steckt jetzt in der App (ohne Netz
@@ -2888,6 +2900,9 @@ header .back[hidden]{display:none}
 .dlgbox{background:var(--surface);border-radius:14px;padding:16px;width:100%;max-width:460px;
   max-height:80vh;max-height:min(80vh, 100%);overflow:auto}
 .dlgtitel{font-weight:600;margin-bottom:8px}
+#dlg.unten{align-items:flex-end;padding:0 8px calc(8px + env(safe-area-inset-bottom))}
+#dlg.unten .dlgbox{animation:vonUnten .18s ease-out}
+@keyframes vonUnten{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
 /* Dunkel: Kante und tiefere Abdunklung (v1.194). „Abbrechen“ in Auswahlen
    leiser und abgesetzt – es sah aus wie eine weitere Wahl. */
 html.dunkel #dlg{background:rgba(0,0,0,.72)}
@@ -3933,7 +3948,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.194';
+const VERSION = 'v1.195';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4038,11 +4053,20 @@ const Bilder = {
    akku     – dasselbe für den Akkutausch der RWA.
    Keine Blobs, nur Text und Zahlen (siehe v0.72). */
 setTimeout(() => Bilder.belegeLeeren(), 4000);     // nach dem Start, ohne ihn aufzuhalten (v1.156)
+/* Die Blätter werden für Typseite, Anlagen und Objektseite oft gelesen, aber
+   selten geschrieben: seit v1.194 einmal geladen und gemerkt, bis sich etwas
+   ändert. Jeder Aufruf bekommt seine eigene Liste (die Einträge selbst sind
+   geteilt; wer einen ändert, schreibt ihn ohnehin mit put zurück). */
+let histMerk = null;
 const Historie = {
-  put(o){   return Bilder.lauf('readwrite', st => st.put(o),     'historie'); },
-  alle(){   return Bilder.lauf('readonly',  st => st.getAll(),   'historie').then(l => l || []); },
-  weg(id){  return Bilder.lauf('readwrite', st => st.delete(id), 'historie'); },
-  leeren(){ return Bilder.lauf('readwrite', st => st.clear(),    'historie'); }
+  put(o){   histMerk = null; return Bilder.lauf('readwrite', st => st.put(o),     'historie').finally(() => { histMerk = null; }); },
+  alle(){
+    if(!histMerk) histMerk = Bilder.lauf('readonly', st => st.getAll(), 'historie').then(l => l || [])
+      .catch(e => { histMerk = null; throw e; });
+    return histMerk.then(l => l.slice());
+  },
+  weg(id){  histMerk = null; return Bilder.lauf('readwrite', st => st.delete(id), 'historie').finally(() => { histMerk = null; }); },
+  leeren(){ histMerk = null; return Bilder.lauf('readwrite', st => st.clear(),    'historie').finally(() => { histMerk = null; }); }
 };
 /* --- PDF-Pläne --------------------------------------------------------------
    Grundrisse liegen meist als PDF vor. Eingebettet ließe sich eine PDF zwar
@@ -5379,8 +5403,11 @@ $('#btnSuche').onclick = () => {
 $('#btnNeu').textContent = '+';
 $('#btnNeu').onclick = () => wahlFenster('Neu', [
     {text:'Aufgabe', tu:() => aufgabeNeu()}, {text:'Termin', tu:terminNeu}, {text:'Ablauf', tu:() => assistentStart()},
-    {text:'Abwesenheit', tu:() => setOeffnen('abwesend')}],
-  e => e.tu());
+    /* Gleich eine neue Abwesenheit (v1.194) – bis dahin landete man oben auf
+       der Seite „Arbeitszeit“ und musste sie dort erst suchen. */
+    {text:'Abwesenheit', tu:() => { setOeffnen('abwesend'); const b = $('#abwNeu'); if(b){ b.click(); abwInsBild(); } }},
+    {text:'Störung', tu:stoerungNeu}],
+  e => e.tu(), {unten:true});
 /* Dunkle Darstellung (v1.112): die App folgt dem Gerät, auch wenn es
    zwischendurch umschaltet (etwa abends automatisch). */
 (function dunkelFolgen(){
@@ -5475,6 +5502,7 @@ function dlgZuruecksetzen(){
   $('#dlgNein').hidden = false;
   $('#dlgNein').textContent = 'Abbrechen';
   $('#dlgJa').classList.remove('gefahr');
+  $('#dlg').classList.remove('unten');
   $('#dlgText').hidden = false;
   $('#dlgKnoepfe').hidden = false;
   $('#dlgListe').hidden = true;
@@ -5483,8 +5511,11 @@ function dlgZuruecksetzen(){
      nicht liegenbleiben, sonst tut ein Knopf etwas Fremdes oder gar nichts. */
   $('#dlgJa').onclick = $('#dlgNein').onclick = null;
 }
-function wahlFenster(titel, eintraege, aufWahl){
+/* Reine Auswahlen (v1.194, Prüfteam E6) kommen auf Wunsch als Blatt von
+   unten – dort, wo der Daumen ist, wie das Aktionsmenü von iOS. */
+function wahlFenster(titel, eintraege, aufWahl, opt = {}){
   dlgZuruecksetzen();
+  $('#dlg').classList.toggle('unten', !!opt.unten);
   $('#dlgTitel').textContent = titel;
   $('#dlgText').hidden = true;
   $('#dlgKnoepfe').hidden = true;
@@ -6161,8 +6192,8 @@ function aufgStand(a){
     .filter(Boolean).join(' · ');
 }
 const aufgabeKnopf = a =>
-  `<button class="btn aufgabe eintrag${a.ring ? ' ring-' + a.ring : ''}" ${a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${a.aufg}"`
-    : `data-nw="${a.k}" data-ziel="${a.ziel}"`}${a.akku ? ' data-akku="1"' : ''}>`
+  `<button class="btn aufgabe eintrag${a.ring ? ' ring-' + a.ring : ''}" ${a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${esc(a.aufg)}"`
+    : `data-nw="${esc(a.k)}" data-ziel="${esc(a.ziel)}"`}${a.akku ? ' data-akku="1"' : ''}>`
   + `<span class="etext">${esc(a.titel)}<small>${esc([a.stand, a.hinweis, fristZeile(a)].filter(Boolean).join(' · '))}</small>${
       (e => e ? `<small>${esc(e)}</small>` : '')(erfFuerEintrag(a))}</span></button>`;
 
@@ -10362,7 +10393,16 @@ function bemFokus(f){
   if(!f) return;
   try{ f.focus({preventScroll:true}); }catch(e){ f.focus(); }
 }
+/* Dieselbe Liste wird auf Heute mehrfach gefragt (Zeile „Heute“, Vorschläge)
+   – einmal gerechnet genügt (v1.194). */
+let vzMerk = null;
 function vorziehenRechnen(liste){
+  if(vzMerk && vzMerk.liste === liste && vzMerk.tag === heute()) return vzMerk.r;
+  const r = vorziehenRechnen0(liste);
+  vzMerk = {liste, tag:heute(), r};
+  return r;
+}
+function vorziehenRechnen0(liste){
   const h0 = tagAnfang(new Date());
   const heuteKap = freiGrund(h0) ? 0 : tagKap(h0);
   const belegt = liste.filter(a => a.gruppe === 'ueber' || a.gruppe === 'heute')
@@ -10549,7 +10589,7 @@ function renderWochenplan(){
       /* Überfälliges bleibt unter „Überfällig“ (v1.99), Einplanen hilft dort nicht. */
       ...(!a.frist || a.frist >= heute() ? [{text:'Auf einen Tag legen …', tu:() => tagWaehlen(a, tage.filter(tg => !a.frist || tg.iso <= a.frist))}] : []),
       ...(a.geplant ? [{text:'Einplanung entfernen', tu:() => { delete a.geplant; saveAufg(); renderWochenplan(); toast('Einplanung entfernt'); }}] : [])],
-      e => e.tu());
+      e => e.tu(), {unten:true});
   });
 }
 const abwKommend = () => (CFG.abwesend || []).filter(x => x.bis && x.bis >= heute());
@@ -10561,7 +10601,7 @@ function tagWaehlen(a, tage){
     toastRueck('Eingeplant für ' + planTagWort(alsDatum(e.iso)), () => {
       if(vor) a.geplant = vor; else delete a.geplant; saveAufg(); if(current === 'wplan') renderWochenplan();
     });
-  });
+  }, {unten:true});
 }
 /* --- Arbeitsnachweis (v1.65, Etappe D1) ------------------------------------------
    Vorerst für Jean selbst, ohne Uhrzeiten; aber so gebaut, dass er einem
@@ -10893,7 +10933,7 @@ function renderAlle(){
     if(n.spaeter) return `<button class="btn" disabled>${esc(n.label)} · folgt</button>`;
     const r = n.art === 'sprinkler' ? ['woche', 'monat'].map(x => ring(n, x)).sort((x, y) => RANG[y] - RANG[x])[0] : ring(n, t);
     const stand = [n.art === 'sprinkler' ? 'Woche · Monat' : '', alleStand(n, liste)].filter(Boolean).join(' · ');
-    return `<button class="btn eintrag${r ? ' ring-' + r : ''}" data-typ="${n.k}"><span class="etext">${esc(n.label)}${
+    return `<button class="btn eintrag${r ? ' ring-' + r : ''}" data-typ="${esc(n.k)}"><span class="etext">${esc(n.label)}${
       stand ? `<small>${esc(stand)}</small>` : ''}</span></button>`;
   };
   const gruppen = [];
@@ -14514,11 +14554,12 @@ function setAbwesend(box){
       <option value="">– ohne Feiertage –</option>
       ${BUNDESLAENDER.map(([k, t]) => `<option value="${k}"${CFG.bundesland === k ? ' selected' : ''}>${t}</option>`).join('')}
     </select></label>
+    <p class="muted small" id="abwLandHinweis" style="margin:-4px 0 10px"${CFG.bundesland ? ' hidden' : ''}>Ohne Bundesland zählt die App keine Feiertage – Fristen und Kalender rechnen sie dann als Arbeitstage.</p>
     <div class="eyebrow mitInfo">Abwesenheiten ${iAbw.knopf}</div>${iAbw.text}
     <button class="btn ghost klein" id="abwNeu" style="margin:0 0 10px">+ Neue Abwesenheit</button>
     <div id="abwKommend">${kommend.map(karte).join('')}</div>
     ${vorbei.length ? `<div class="eyebrow">Vergangen</div><div id="abwVorbei">${vorbei.map(karte).join('')}</div>` : ''}`;
-  $('#abwLand').onchange = e => { CFG.bundesland = e.target.value; saveCfg(); };
+  $('#abwLand').onchange = e => { CFG.bundesland = e.target.value; saveCfg(); $('#abwLandHinweis').hidden = !!CFG.bundesland; };
   box.querySelectorAll('[data-az]').forEach(b => b.onclick = () => {
     CFG.arbeitsMin = Math.max(60, Math.min(720, arbeitsMin() + +b.dataset.az)); saveCfg();
     $('#azWert').textContent = dauerText({m:arbeitsMin()});
@@ -14551,6 +14592,11 @@ function setAbwesend(box){
         'Löschen', () => { CFG.abwesend.splice(+k.dataset.i, 1); saveCfg(); setAbwesend(box); });
     };
   });
+}
+/* Die neue Abwesenheit oben ins Bild holen (v1.194). */
+function abwInsBild(){
+  const k = $(`#abwKommend .abw[data-i="${CFG.abwesend.length - 1}"]`);
+  if(k) bildNach(Math.max(0, imBild(k) - 70));
 }
 function rundgangWahl(box, k){
   const i = info('Sind mindestens zwei dieser Anlagentypen offen, steht auf Heute ein gemeinsamer Rundgang, geordnet nach deinen Wegen und der Lage im Grundriss. Zurechtschieben geht dort mit „Reihenfolge ändern“.'
@@ -15762,16 +15808,29 @@ window.addEventListener('resize', planHoehe);
    Der Punkt zwischen den Fingern bleibt dabei stehen – sonst rutscht einem beim
    Zoomen die Stelle aus dem Bild, die man gerade ansieht. */
 let planZoom = 1;
+/* Ganz sichtbar (v1.194, Prüfteam): ein querformatiger Plan war auf dem
+   iPhone nie ganz zu sehen – der kleinste Zoom passte nur die Höhe ein. Jetzt
+   darf er so klein werden, dass auch die Breite hineinpasst, und ein Plan
+   öffnet so (planZoom 0 = „ganz einpassen“, bis die erste Geste zoomt). Der
+   Ablauf der Geste selbst bleibt, wie er ist. */
+function planZoomMin(){
+  const wrap = $('#planWrap'); if(!wrap || !wrap.clientWidth) return 1;
+  const st = $('#planStreifen'), oben = planSchnitt && st && !st.hidden ? st.offsetHeight + 6 : 0;
+  const breit = (wrap.clientHeight - oben) * (Rahmen.asp || 1);
+  return breit > wrap.clientWidth ? Math.max(.2, wrap.clientWidth / breit) : 1;
+}
+const zoomJetzt = () => planZoom || planZoomMin();
 function planZoomAnwenden(inGeste){
   const wrap = $('#planWrap'), box = $('#planBox');
   if(!wrap || !box) return;
   if(!inGeste) box.style.translate = '';
+  if(!inGeste && planZoom && planZoom < planZoomMin()) planZoom = planZoomMin();   // nach dem Drehen
   /* Beim Zuschneiden liegen Griffe am Rand – der Streifen oben darf sie nicht
      verdecken, der Plan rückt um seine Höhe nach unten (v1.83). */
   const st = $('#planStreifen'), oben = planSchnitt && st && !st.hidden ? st.offsetHeight + 6 : 0;
   box.style.marginTop = oben + 'px';
   /* Ungerundet (v1.142): ganze Pixel ließen den Plan beim Zoomen wackeln. */
-  const hoch = (wrap.clientHeight - oben) * planZoom, breit = hoch * (Rahmen.asp || 1);
+  const hoch = (wrap.clientHeight - oben) * zoomJetzt(), breit = hoch * (Rahmen.asp || 1);
   box.style.height = hoch + 'px';
   box.style.width  = breit + 'px';
   /* Passt der Plan in der Breite ganz ins Bild, steht er in der Mitte statt
@@ -15795,7 +15854,7 @@ function planZoomAnwenden(inGeste){
   wrap.addEventListener('touchstart', e => {
     if(e.touches.length !== 2) return;
     const t = e.touches, r = wrap.getBoundingClientRect();
-    d0 = abstand(t) || 1; z0 = planZoom;
+    d0 = abstand(t) || 1; z0 = zoomJetzt();
     $('#planBox').style.translate = '';
     /* Gemessen ab der linken Kante des Plans, ohne den Rand, der ihn mittig
        hält – der schrumpft beim Vergrößern, sonst lief der Plan weg (v1.142). */
@@ -15807,8 +15866,8 @@ function planZoomAnwenden(inGeste){
     if(e.touches.length !== 2) return;
     e.preventDefault();                       // sonst zoomt die ganze Seite mit
     const t = e.touches, r = wrap.getBoundingClientRect();
-    const neu = Math.min(6, Math.max(1, z0 * (abstand(t) / d0)));
-    const v = neu / planZoom;
+    const neu = Math.min(6, Math.max(planZoomMin(), z0 * (abstand(t) / d0)));
+    const v = neu / zoomJetzt();
     planZoom = neu; planZoomAnwenden(true);
     const mitteX = (t[0].clientX + t[1].clientX) / 2 - r.left;
     const mitteY = (t[0].clientY + t[1].clientY) / 2 - r.top;
@@ -16930,7 +16989,7 @@ async function planZeigen(id, ziel){
      dem bisherigen Zuschnitt oder der gemeinsamen Fläche. */
   if(planSchnitt) schnittRechteck = Object.assign({}, schnittAuf(id) || schnittGemeinsam(id));
   planAktuell = id;
-  planZoom = 1;                                // ein neuer Rahmen beginnt ganz
+  planZoom = 0;                                // ein neuer Rahmen beginnt ganz (v1.194: ganz eingepasst)
   scharfWeg(); scharfPlan = null; tippWeg();
   /* Von außen geöffnet: die Bildverweise der vorigen Sitzung freigeben. Vom
      Regler aus bleiben sie – der Nachbar wird gleich wieder gebraucht. */
@@ -18898,6 +18957,28 @@ function verlaufOeffnen(k, id, titel, vorn){
   verlaufZiel = {k, id, titel, vorn:vorn || ''};
   go('verlauf');
 }
+/* Störung über „+“ (v1.194, Prüfteam E8): erst den Anlagentyp, dann das
+   Objekt wählen, dann steht das Feld der Störung auf seiner Seite offen. */
+function stoerungNeu(){
+  const objs = suchObjekte().filter(o => NW(o.k) && NW(o.k).art !== 'medien');
+  if(!objs.length){ toast('Noch keine Objekte angelegt'); return; }
+  const los = o => {
+    verlaufOeffnen(o.k, o.id, o.titel);
+    stoerForm = {ziel:verlaufZiel, id:'', datum:heute(), was:'', weg:'', vermerk:'', dauer:null};
+    renderVerlauf().then(() => {
+      const f = $('#stoerKarte'); if(f) bildNach(Math.max(0, imBild(f) - 8));
+      const w = $('#stoerWas'); if(w) w.focus();
+    });
+  };
+  const objektWahl = k => {
+    const l = objs.filter(o => o.k === k);
+    if(l.length === 1) los(l[0]);
+    else wahlFenster(`Störung bei … (${NW(k).label})`, l.map(o => ({text:o.titel, o})), e => los(e.o));
+  };
+  const typen = [...new Set(objs.map(o => o.k))];
+  if(typen.length === 1) objektWahl(typen[0]);
+  else wahlFenster('Störung – welcher Anlagentyp?', typen.map(k => ({text:NW(k).label, k})), e => objektWahl(e.k));
+}
 const vZeile = (wann, text) => `<div class="vzeile"><div class="vwann">${esc(wann)}</div>${
   text ? `<div class="small">${esc(text)}</div>` : ''}</div>`;
 const vAbschnitt = (titel, zeilen, leer) => `<div class="card">
@@ -19484,6 +19565,38 @@ function suchPlaeneHolen(){
 /* Listen und Grundrisse als eigene Treffer (v1.146, wie die Einstellungen
    gegliedert): Werkzeug, Material und Akkutypen nach ihrem Namen, Pläne nach
    Name und Kurzname. Ein Tipp öffnet die Liste bzw. den Plan. */
+/* Seiten der App (v1.194, Prüfteam): „Urlaub“, „Passwort“, „Sicherung“ …
+   ergaben „Nichts gefunden“. Je Seite feste Ersatzwörter. */
+const SEITEN = [
+  {titel:'Abwesenheiten', wo:'Kalender › Abwesenheiten', woerter:'urlaub abwesend abwesenheit krank frei ferien feiertag bundesland', tu:() => setOeffnen('abwesend')},
+  {titel:'Arbeitszeit', wo:'Mehr › Einstellungen', woerter:'arbeitszeit stunden zeit je arbeitstag', tu:() => setOeffnen('abwesend')},
+  {titel:'Zugang', wo:'Mehr › Einstellungen', woerter:'passwort kennwort zugang sperre sperren entsperren', tu:() => setOeffnen('zugang')},
+  {titel:'Sicherung', wo:'Mehr › Sicherung', woerter:'sicherung sichern backup datei einlesen wiederherstellen umzug gerät', tu:() => setOeffnen('geraet')},
+  {titel:'Akkutypen', wo:'Mehr › Einstellungen', woerter:'akku akkus akkutyp batterie batterien', tu:() => setOeffnen('akkus')},
+  {titel:'Wetter', wo:'Mehr › Wetter', woerter:'wetter regen vorhersage temperatur wind frost', tu:() => { if(CFG.wetter){ go('wetter'); wetterAbrufen(); } else setOeffnen('adresse'); }},
+  {titel:'Wetter: Grenzwerte und Halbtage', wo:'Mehr › Einstellungen', woerter:'wetter grenzwerte halbtag vormittag nachmittag', tu:() => setOeffnen('wetter')},
+  {titel:'Adresse', wo:'Mehr › Einstellungen', woerter:'adresse standort straße strasse ort hausnummer', tu:() => setOeffnen('adresse')},
+  {titel:'Abholtage', wo:'Mehr › Abholtage', woerter:'abholtage abfall müll muell tonne abfuhr abholung', tu:() => { go('abfall'); abfallAbrufen(); }},
+  {titel:'Abfallkalender einrichten', wo:'Mehr › Einstellungen', woerter:'abfallkalender ics kalender abfall müll muell', tu:() => setOeffnen('abfall')},
+  {titel:'Gebäude und Prüfer', wo:'Mehr › Einstellungen', woerter:'gebäude gebaeude prüfer pruefer name bauteil bauteile kopf blatt', tu:() => setOeffnen('obj')},
+  {titel:'Grundrisse', wo:'Mehr › Einstellungen', woerter:'grundriss grundrisse plan pläne plaene pdf', tu:() => setOeffnen('plaene')},
+  {titel:'Bedienung', wo:'Mehr › Einstellungen', woerter:'bedienung einrasten dunkel', tu:() => setOeffnen('bedienung')},
+  {titel:'Über die App', wo:'Mehr › Einstellungen', woerter:'version update aktualisieren neu laden app', tu:() => setOeffnen('app')},
+  {titel:'Auslöser', wo:'Mehr › Auslöser', woerter:'auslöser ausloeser regel regeln von selbst', tu:() => go('ausloeser')},
+  {titel:'Abläufe', wo:'Mehr › Abläufe', woerter:'ablauf abläufe ablaeufe plan schritte', tu:() => go('ablaeufe')},
+  {titel:'Erledigt', wo:'Mehr › Erledigt', woerter:'erledigt erledigte fertig zurückholen', tu:() => go('erledigt')},
+  {titel:'Arbeitsnachweis', wo:'Mehr › Arbeitsnachweis', woerter:'arbeitsnachweis stundenzettel stunden zeiten', tu:() => { arbZeit = null; go('arbeit'); }},
+  {titel:'Dauern und Arbeitsmittel', wo:'Mehr', woerter:'dauer dauern werkzeug material arbeitsmittel einheiten', tu:() => go('taeten')},
+  {titel:'Termine', wo:'Kalender › Alle Termine', woerter:'termin termine verabredung', tu:() => go('termine')},
+  {titel:'Störungen', wo:'Anlagen › Störungen', woerter:'störung stoerung störungen ausfall defekt', tu:() => go('stoerungen')},
+  {titel:'Ausgegebene Blätter', wo:'Anlagen', woerter:'blatt blätter blaetter ausgegeben historie nachweis protokoll pdf', tu:() => go('historie')},
+  {titel:'Neuer Anlagentyp', wo:'Mehr › Einstellungen', woerter:'anlagentyp neu typ hinzufügen baukasten', tu:() => typWahl()}
+];
+function suchSeiten(frage){
+  const woerter = suchWoerter(frage);
+  if(!woerter.length) return [];
+  return SEITEN.filter(x => woerter.every(w => wortIn(w, x.titel + ' ' + x.woerter)));
+}
 function suchListen(frage){
   const woerter = suchWoerter(frage);
   if(!woerter.length) return [];
@@ -19637,8 +19750,8 @@ function renderSuche(){
   /* Ohne Plannamen erst holen, dann noch einmal (v1.145). */
   if(!suchPlaene){ suchPlaene = new Map(); suchPlaeneHolen().then(renderSuche); }
   suchListe = suchTreffer(q);
-  const aufg = suchAufgaben(q), term = suchTermine(q), listen = suchListen(q), plaene = suchGrundrisse(q);
-  if(!suchListe.length && !aufg.length && !term.length && !listen.length && !plaene.length){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
+  const aufg = suchAufgaben(q), term = suchTermine(q), listen = suchListen(q), plaene = suchGrundrisse(q), seiten = suchSeiten(q);
+  if(!suchListe.length && !aufg.length && !term.length && !listen.length && !plaene.length && !seiten.length){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
   /* Aufgaben zuoberst und ohne Kurzinfo: ihre eigene Seite sagt ohnehin alles. */
   box.innerHTML = (aufg.length
     ? `<div class="eyebrow">Aufgaben</div>`
@@ -19653,7 +19766,10 @@ function renderSuche(){
   + (listen.length ? `<div class="eyebrow">Listen</div>` + listen.map(x =>
       `<button class="btn aufgabe eintrag" data-liste="${esc(x.art)}"><span class="etext">${esc(x.titel)}<small>${esc(x.zeile)}</small></span></button>`).join('') : '')
   + (plaene.length ? `<div class="eyebrow">Grundrisse</div>` + plaene.map(x =>
-      `<button class="btn aufgabe eintrag" data-plan="${esc(x.id)}"><span class="etext">${esc(x.titel)}<small>${esc(x.zeile)}</small></span></button>`).join('') : '');
+      `<button class="btn aufgabe eintrag" data-plan="${esc(x.id)}"><span class="etext">${esc(x.titel)}<small>${esc(x.zeile)}</small></span></button>`).join('') : '')
+  + (seiten.length ? `<div class="eyebrow">Seiten</div>` + seiten.map(x =>
+      `<button class="btn aufgabe eintrag" data-seite="${SEITEN.indexOf(x)}"><span class="etext">${esc(x.titel)}<small>${esc(x.wo)}</small></span></button>`).join('') : '');
+  box.querySelectorAll('[data-seite]').forEach(b => b.onclick = () => { $('#suche').blur(); SEITEN[+b.dataset.seite].tu(); });
   box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { const t = suchListe[+b.dataset.t]; verlaufOeffnen(t.k, t.id, t.titel); });
   box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => aufgabeOeffnen(b.dataset.aufg));
   box.querySelectorAll('[data-termin]').forEach(b => b.onclick = () => terminOeffnen(b.dataset.termin));
