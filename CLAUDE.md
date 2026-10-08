@@ -44,7 +44,7 @@ steht.
 ## Wichtige Eigenheiten (hart erarbeitet)
 
 - **App-Gerüst (v1.94):** Die Seite selbst scrollt nicht. Kopf- und Fußleiste
-  stehen fest, gescrollt wird `#bild`. Bildlauf immer über `bild()`, `bildY()`,
+  (seit v1.184 dazu `#reiter` unten) stehen fest, gescrollt wird `#bild`. Bildlauf immer über `bild()`, `bildY()`,
   `bildNach(y)`, `imBild(el)` – nie `window.scrollTo`/`window.scrollY`.
 - **Statusleiste** `black` statt `black-translucent`: sonst legt iOS 27 einen
   weißen Schleier an die Oberkante. Nicht zurückstellen. Dazu gehört: kein
@@ -65,8 +65,10 @@ steht.
   Speicher, getrennt von Safari. Symbol entfernen löscht alle Daten – vorher
   immer über Einstellungen › Sicherung sichern lassen.
 - **Passwort:** Im Code steht nur ein Prüfwert (`const ZUGANG`, PBKDF2). Ein
-  neues Passwort legt der Nutzer über „Prüfwert berechnen“ auf dem
-  Sperrbildschirm fest und schickt nur die ausgegebene Zeile; das Passwort
+  neues Passwort legt der Nutzer über Einstellungen › Zugang › „Neues
+  Passwort: Prüfwert berechnen“ fest (seit v1.189; `#schlossWerk` wandert
+  beim Entsperren nach `#zugWerk`, auf dem Sperrbildschirm nur ohne
+  hinterlegtes Passwort) und schickt nur die ausgegebene Zeile; das Passwort
   selbst nie erfragen.
 - **Grundrisse:** Marken hängen an `CFG.orte[k|Name]`, ausgerichtete Pläne an
   `CFG.bezug`, der gemeinsame Rahmen an `CFG.zuschnitt`. Jeder Feuerlöscher
@@ -99,6 +101,50 @@ steht.
 - **Ausgabe leert den Nachweis** (`delete DAT[k]` in `ausgeben`). Alles, was
   danach noch gelten soll, braucht einen eigenen Vermerk, z. B.
   `DAT.sprinkler.wocheAus` für den erledigten Wochengang (v1.102).
+
+## Bedienkonzept (v1.183–v1.189, Jean: „alles umsetzen“)
+
+- Konzept als Artifact „Bedienkonzept Betriebsnachweise“; sieben Etappen.
+- Wörterbuch (sichtbar): **Gebäude** (das Haus, `CFG.objekt`), **Objekt**
+  (ein Ding, statt „Anlage“), **Anlagentyp**, **Kontrolle** (das Durchgehen,
+  statt „Runde“), **Blatt** (das Ausgegebene, statt „Fassung“/„Historie“),
+  **Ausgeben**, **Schritt** (im Ablauf, auch im Assistenten), **Info/Aktion**,
+  **Auslöser** (statt Regel/Wetterregel/Wetter-Hinweis), **Vorschlag**,
+  „Übernehmen“ nur für Vorschläge, „Abbrechen“ = nichts geschieht, Löschen
+  rot (`--loeschen`, `.btn.danger`), Entfernen mit Rückgängig. ⚡ nur „von
+  selbst“, „↪ direkt danach“. Intern bleiben die alten Namen.
+- Rahmen (v1.184): `#reiter` unten mit Heute (`home`), Kalender (`wplan`),
+  Anlagen (`alle`), Mehr (`mehr`) – `HAUPT`, Wechsel über `bereich(name)`
+  (Stapel leer). Auf Hauptseiten links `#btnSuche` (Seite `suche`), rechts
+  `#btnNeu` (+) auf Heute/Kalender. Kein Zahnrad mehr; Einstellungen unter
+  Mehr. Beim Tippen `body.tippt` (Leiste weg). `body.reiterAn` fürs Polster.
+- Anlagen (v1.185): `typseite` (`typSeiteOeffnen`, `renderTypSeite`):
+  Kontrolle beginnen, Objekte, „Objekte bearbeiten“ = `setOeffnen('objekte',
+  k)` (`setObjekteSeite`; `setAnlagen/setFremd/setStellen` haben die Teile
+  'typ' und 'objekte'). Objektseite = Ansicht `verlauf` mit Kopf aus
+  `objektInfo` (früher Fenster „Kurzinfo“, entfällt), Wegen `.objWege`
+  (Kontrolle, Grundriss, Störung bzw. Zähler getauscht, Aufgabe), offenen
+  Aufgaben, Arbeitsmitteln. Suche öffnet sie direkt.
+- Aufgabe (v1.186): Angaben als Zeilen `.angZeile`/`.angFeld` (`angAuf`
+  merkt offene); die Felder bleiben im Aufbau (nur `hidden`), damit die
+  Bindungen greifen. Neue Aufgabe: Titel, Objekt, Fällig offen, „Von selbst
+  anlegen lassen“ (data-tart="wetter") statt dritter Wahl am Datum.
+- Kontrolle (v1.187): Leiste nur „Abschließen“ → Seite `abschluss`
+  (`abschlussStand`, `renderAbschluss`); `#sigBlock` wandert dorthin und mit
+  `sigZurueck` zurück. Blattvorschau einer Kontrolle: „Ausgeben und teilen“.
+  Pfeile nur im `reihenModus` („Reihenfolge ändern“), „Verlauf“/„Grundriss“
+  mit Wort, „Zustand zurücksetzen“, Sprinkler „Gang fertig“. Grundriss:
+  „Andere Marke wählen“ (`planWaehlen`) neben dem langen Druck.
+- Heute/Kalender (v1.188): oben `.kopfHinweis`-Zeilen (Warnung, Sicherung,
+  Auslastung), eine Karte `vorschlaegeKarte` (Auslöser, Ergebnisse,
+  Gelegenheit, Vorziehen; alle „Übernehmen“/„Nicht jetzt“). Kalender: Wetter
+  (`wetterTage`) und Abholung je Tag, Urlaub/Feiertag als Zeile, Tipp auf
+  Aufgabe → „Auf einen Tag legen …“ (`tagWaehlen`, nicht bei Überfälligem).
+- Etappe 7 (v1.189): Seite `ausloeser` (alle Auslöser), Bedingungen „Was/
+  Grenze/Zeitraum“, Einstellungen mit `bedienung` und `app` (Neu laden mit
+  Rückfrage, `#btnNeuLaden` bleibt nur als Auslöser), Arbeitsmittel unter
+  Mehr › Dauern und Arbeitsmittel. Werksregel und eigener Auslöser haben
+  weiter getrennte Editoren (Angleichung offen).
 
 ## Aufgabenliste und Planung (Stand v1.102)
 

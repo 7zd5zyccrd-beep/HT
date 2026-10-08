@@ -10,6 +10,19 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.189 08.10.2026 Bedienkonzept, Etappe 7 von 7: Auslöser und
+         Einstellungen. Alle Auslöser stehen auf einer eigenen Seite (Mehr ›
+         Auslöser): die eigenen – auch die, die einen Ablauf starten – und
+         die ab Werk, nicht mehr eingeklappt. Wetter und Abfuhr haben unten
+         denselben Weg „Auslöser dazu“; die Wettertage zeigen mit „›“, dass
+         sich die Stunden aufklappen lassen. Bedingungen heißen überall
+         „Was“, „Grenze“, „Zeitraum“ und prüfen mit ✓/✗. Einstellungen neu
+         gegliedert: Arbeitsmittel unter Mehr › Dauern und Arbeitsmittel
+         (bisher „Tätigkeiten“), „Bedienung“ (Töne, Einrasten, bisher unter
+         Grundrisse) und „Über die App“ (Fassung, „Neueste Fassung laden“
+         mit Rückfrage, bisher ein Symbol oben rechts). „Prüfwert berechnen“
+         steht unter Zugang statt für jeden sichtbar auf dem
+         Sperrbildschirm (dort nur, solange kein Passwort hinterlegt ist).
   v1.188 08.10.2026 Bedienkonzept, Etappe 6 von 7: Heute und Kalender. Heute
          beginnt mit schmalen Zeilen statt Karten (amtliche Warnung,
          „Sicherung fällig“, „Bis … wird es knapp“). Alle Vorschläge stehen
@@ -3394,6 +3407,9 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 .wzeile{-webkit-appearance:none;appearance:none;display:block;width:100%;margin:0;padding:10px 0;
   border:0;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
 .wkopf{display:flex;align-items:baseline;gap:8px}
+/* Ein Tipp zeigt die Stunden – das „›“ sagt es (v1.189). */
+.wtag .wkopf::after{content:'›';margin-left:auto;color:var(--ink-soft);font-size:18px;line-height:1}
+.wtag .wzeile[aria-expanded="true"] .wkopf::after{content:'⌄'}
 .wdat{font-weight:600;font-size:15px;white-space:nowrap}
 .wtend{font-size:13px;color:var(--ink-soft);white-space:nowrap}
 .wlage{margin-left:auto;font-size:15px;text-align:right}
@@ -3556,6 +3572,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
     </section>
     <!-- Abläufe: Liste, ein Plan, eine Stufe (v1.159) -->
     <section class="view" id="view-ablaeufe"><div id="ablaeufeBox"></div></section>
+    <section class="view" id="view-ausloeser"><div id="ausloeserBox"></div></section>
     <section class="view" id="view-ablaufplan"><div id="ablaufPlanBox"></div></section>
     <section class="view" id="view-stufe"><div id="stufeBox"></div></section>
     <section class="view" id="view-ablaufneu"><div id="abNeuBox"></div></section>
@@ -3708,8 +3725,6 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       <div id="blockPlaene" hidden>
         <div class="infozeile"><span class="muted small"></span><button type="button" class="info" aria-label="Erklärung" aria-expanded="false" aria-controls="infPlaene"><span>i</span></button></div>
         <p class="muted small infotext" id="infPlaene" hidden style="margin:-2px 0 12px">Bild oder PDF; eine mehrseitige PDF ergibt einen Plan je Seite, zum Umwandeln ist einmal Netz nötig. Die Reihenfolge folgt der Etage im Namen, mit den Pfeilen legst du sie selbst fest. „Ausrichten“: auf jedem Plan dieselben zwei Stellen antippen, etwa zwei Ecken des Treppenhauses – dann sitzen Aufzugsmarken auf allen Etagen richtig, und am Regler wird zwischen den Plänen überblendet. Die Pläne reisen mit der Sicherung.</p>
-        <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="tonHaken"><span>Töne am Regler</span></label>
-        <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="einrastHaken"><span>Marken beim Verschieben einrasten</span></label>
         <button class="btn ghost klein" id="btnPlanNeu" style="margin:0 0 10px">+ Grundriss hinzufügen</button>
         <div id="planListe"><p class="muted small">wird geladen …</p></div>
         <input type="file" id="planFile" accept="image/*,application/pdf,.pdf" hidden>
@@ -3725,8 +3740,25 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
       <div id="blockZugang" hidden>
         <div class="infozeile"><span class="muted small"></span><button type="button" class="info" aria-label="Erklärung" aria-expanded="false" aria-controls="infZugang"><span>i</span></button></div>
-        <p class="muted small infotext" id="infZugang" hidden style="margin:-2px 0 12px">Nach der einmaligen Eingabe bleibt dieses Gerät offen. Gesperrt verlangt es beim nächsten Öffnen wieder das Passwort; andere Geräte bleiben unberührt.</p>
+        <p class="muted small infotext" id="infZugang" hidden style="margin:-2px 0 12px">Nach der einmaligen Eingabe bleibt dieses Gerät offen. Gesperrt verlangt es beim nächsten Öffnen wieder das Passwort; andere Geräte bleiben unberührt. Ein neues Passwort: hier den Prüfwert berechnen und die ausgegebene Zeile in die Datei einsetzen lassen.</p>
         <button class="btn ghost klein" id="btnSperren">Gerät sperren</button>
+        <!-- Seit v1.189 hier statt für jeden sichtbar auf dem Sperrbildschirm -->
+        <button class="btn ghost klein" id="btnZugWerk" style="margin-top:10px">Neues Passwort: Prüfwert berechnen</button>
+        <div id="zugWerk"></div>
+      </div>
+
+      <!-- Bedienung (v1.189): bisher unter Grundrisse -->
+      <div id="blockBedienung" hidden>
+        <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="tonHaken"><span>Töne am Regler</span></label>
+        <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="einrastHaken"><span>Marken beim Verschieben einrasten</span></label>
+        <p class="muted small" style="margin:0">Beides gilt nur für dieses Gerät.</p>
+      </div>
+
+      <!-- Über die App (v1.189): Fassung und Neu laden, bisher ein Symbol oben rechts -->
+      <div id="blockApp" hidden>
+        <p class="small" id="appFassung" style="margin:0 0 12px"></p>
+        <button class="btn ghost klein" id="btnAppNeu">Neueste Fassung laden</button>
+        <p class="muted small" style="margin:8px 0 0">Lädt die App neu vom Server. Deine Daten bleiben, wie sie sind.</p>
       </div>
     </section>
   </main>
@@ -3780,7 +3812,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.188';
+const VERSION = 'v1.189';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5014,11 +5046,11 @@ function ring(n, takt){
 }
 
 /* ---------- Ansichten ---------- */
-const TITEL = {abschluss:'Abschließen', home:'Heute', alle:'Anlagen', mehr:'Mehr', suche:'Suche', rundgang:'Rundgang', aufgabe:'Aufgabe', ablaeufe:'Abläufe', ablaufplan:'Ablauf', stufe:'Schritt', erledigt:'Erledigt', stoerungen:'Störungen', nachweis:'Kontrolle', blatt:'Blatt',
+const TITEL = {ausloeser:'Auslöser', abschluss:'Abschließen', home:'Heute', alle:'Anlagen', mehr:'Mehr', suche:'Suche', rundgang:'Rundgang', aufgabe:'Aufgabe', ablaeufe:'Abläufe', ablaufplan:'Ablauf', stufe:'Schritt', erledigt:'Erledigt', stoerungen:'Störungen', nachweis:'Kontrolle', blatt:'Blatt',
                historie:'Ausgegebene Blätter', histnw:'Ausgegebene Blätter', verlauf:'Verlauf',
                settings:'Einstellungen', setsub:'Einstellungen',
                plaene:'Grundrisse', plan:'Grundriss', akku:'RWA-Akkus', wetter:'Wetter', wregel:'Auslöser',
-               taeten:'Tätigkeiten', taet:'Tätigkeit', wplan:'Kalender', arbeit:'Arbeitsnachweis',
+               taeten:'Dauern und Arbeitsmittel', taet:'Tätigkeit', wplan:'Kalender', arbeit:'Arbeitsnachweis',
                termin:'Termin', termine:'Termine', abfall:'Abfuhr', ablaufneu:'Neuer Ablauf'};
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
@@ -5076,12 +5108,14 @@ function go(name, push = true){
   $('#btnPlanWahl').classList.add('unsichtbar');
   /* Rechts genau ein Platz (Titel mittig): auf den Hauptseiten das + oder ein
      leerer Platz, in den Einstellungen das Neuladen, sonst der Planknopf. */
-  $('#btnPlanWahl').hidden = inSettings || name === 'home' || name === 'wplan';
+  void inSettings;
+  $('#btnPlanWahl').hidden = name === 'home' || name === 'wplan';
   menueZu();
   /* Zurück in die Grundrissansicht (etwa aus der Blattvorschau): dort baut sich
      nichts neu auf, der Knopf oben rechts muss eigens wieder her (v1.98). */
   if(name === 'plan' && planAktuell) planWahlKnopf();
-  $('#btnNeuLaden').hidden = !inSettings;
+  /* Neu laden steht seit v1.189 unter Einstellungen › Über die App. */
+  $('#btnNeuLaden').hidden = true;
   document.body.classList.toggle('planAn', name === 'plan');
   /* Auf großen Schirmen dürfen Grundriss und Bogen aus der Textspalte heraus –
      welche Ansicht offen ist, sagt der Körper dem Stilblatt. */
@@ -5096,6 +5130,7 @@ function go(name, push = true){
   if(name === 'alle')     renderAlle();
   if(name === 'aufgabe')  renderAufgabe();
   if(name === 'ablaeufe') renderAblaeufe();
+  if(name === 'ausloeser') renderWetterregeln();
   if(name === 'ablaufplan') renderAblaufPlan();
   if(name === 'stufe')    renderStufe();
   if(name === 'ablaufneu') renderAssistent();
@@ -6203,7 +6238,7 @@ function renderMehr(){
     + '<div class="eyebrow">Rückblick</div>'
     + zeile('data-m="erledigt"', 'Erledigt', erledigt ? String(erledigt) : '')
     + zeile('data-m="arbeit"', 'Arbeitsnachweis', '')
-    + zeile('data-m="taeten"', 'Tätigkeiten', taetL.length ? String(taetL.length) : '')
+    + zeile('data-m="taeten"', 'Dauern und Arbeitsmittel', taetL.length ? String(taetL.length) : '')
     + '<div class="eyebrow">Umgebung</div>'
     + zeile('data-m="wetter"', 'Wetter', CFG.wetter ? '' : 'Standort fehlt')
     + zeile('data-m="abfall"', 'Abfuhr', naechste ? `${WOCHENTAG[alsDatum(naechste.tag).getDay()]} ${ttmm(alsDatum(naechste.tag))} ${naechste.art}` : (ABFALL.url ? '' : 'nicht eingerichtet'))
@@ -6211,7 +6246,7 @@ function renderMehr(){
     + zeile('data-m="settings"', 'Einstellungen', '')
     + zeile('data-m="sicherung"', 'Sicherung', l ? dText(l) : 'noch nie')
     + `<p class="muted small" style="margin-top:18px;opacity:.7">${esc(BUILD)}</p>`;
-  const ziel = {ablaeufe:() => go('ablaeufe'), ausloeser:() => { go('ablaeufe'); const b = $('#ausloeserBox'); if(b) bildNach(Math.max(0, imBild(b) - 8)); },
+  const ziel = {ablaeufe:() => go('ablaeufe'), ausloeser:() => go('ausloeser'),
     erledigt:() => go('erledigt'), arbeit:() => { arbZeit = null; go('arbeit'); }, taeten:() => go('taeten'),
     wetter:() => { if(CFG.wetter){ go('wetter'); wetterAbrufen(); } else setOeffnen('adresse'); },
     abfall:() => { go('abfall'); abfallAbrufen(); }, settings:() => go('settings'), sicherung:() => setOeffnen('geraet')};
@@ -7181,12 +7216,12 @@ function renderAblaeufe(){
         ${lauf.length ? `<div class="eyebrow" style="margin:8px 0 2px">Läuft gerade</div>` + lauf.map(a =>
           `<button class="btn eintrag laufEintrag" data-aufg="${esc(a.id)}"><span class="etext">${esc(laufZeile(a))}</span></button>`).join('') : ''}</div>`;
     }).join('')
-    + `<button class="btn" id="ablaufNeu" style="margin-top:10px">+ Neuer Ablauf</button>`
-    + `<div id="ausloeserBox" style="margin-top:14px"></div>`;
+    + `<button class="btn ghost klein" id="ablaufNeu" style="margin-top:10px">+ Neuer Ablauf</button>`
+    + `<button class="btn eintrag" id="zuAusl" style="margin-top:18px"><span class="etext mehrZeile"><span>Auslöser</span><span class="zahl">${alleRegeln().filter(r => !r.aus).length} an</span></span></button>`;
   box.querySelectorAll('[data-pi]').forEach(b => b.onclick = () => planOeffnen(l[+b.dataset.pi].id));
   knoepfeVerdrahten(box);
   $('#ablaufNeu').onclick = ablaufNeu;
-  renderWetterregeln();
+  $('#zuAusl').onclick = () => go('ausloeser');
 }
 /* Neuer Ablauf: der Assistent (v1.182; das Beispiel aus v1.179 entfällt,
    der Assistent erklärt sich selbst – Jean). */
@@ -7831,16 +7866,16 @@ function bedFelderHtml(b, attr, mitAbfuhr){
     const arten = abfallArten().map(t => t.art);
     return `<label class="field"><span>Was</span>${wahl('groesse', WGROESSEN.map(y => [y.k, y.name]), b.groesse)}</label>
       <label class="field"><span>Abfallart</span>${wahl('abfall', [['', 'jede']].concat(arten.concat(b.abfall && !arten.includes(b.abfall) ? [b.abfall] : []).map(a => [a, a])), b.abfall || '')}</label>
-      <div class="field"><span>Abholung in den</span><div class="row ablaufReihe wAkt"><span class="muted small">nächsten</span>${zahl('tage', b.tage)}<span class="muted small">Tagen</span></div></div>`;
+      <div class="field"><span>Zeitraum</span><div class="row ablaufReihe wAkt"><span class="muted small">nächste</span>${zahl('tage', b.tage)}<span class="muted small">Tage</span></div></div>`;
   }
   const zeit = g.quelle !== 'trocken' && g.quelle !== 'warnung';
   return `<label class="field"><span>Was</span>${wahl('groesse', WGROESSEN.filter(y => mitAbfuhr || y.quelle !== 'abfall').map(y => [y.k, y.name]), b.groesse)}</label>
     ${g.quelle === 'lage' ? `<label class="field"><span>Wetterlage</span>${wahl('lage', WLAGEN.map(y => [y[0], y[1]]), b.lage)}</label>` : ''}
     ${g.quelle === 'warnung' ? `<label class="field"><span>Stichwort (freiwillig)</span><input ${attr} data-bf="stichwort" value="${esc(b.stichwort || '')}" placeholder="z. B. Frost"></label>` : ''}
-    ${zeit ? `<div class="field"><span>Zeitraum</span><div class="row ablaufReihe wAkt">${wahl('richtung', [['voraus', 'nächste'], ['zurueck', 'letzte']], b.richtung)}
-      ${zahl('tage', b.tage)}<span class="muted small">Tage</span></div></div>` : ''}
     ${g.quelle !== 'lage' && g.quelle !== 'warnung' ? `<div class="field"><span>Grenze</span><div class="row ablaufReihe wAkt">${wahl('vgl', [['ab', 'ab'], ['unter', 'unter']], b.vgl)}
-      ${zahl('wert', b.wert)}<span class="muted small">${esc(g.einheit)}</span></div></div>` : ''}`;
+      ${zahl('wert', b.wert)}<span class="muted small">${esc(g.einheit)}</span></div></div>` : ''}
+    ${zeit ? `<div class="field"><span>Zeitraum</span><div class="row ablaufReihe wAkt">${wahl('richtung', [['voraus', 'nächste'], ['zurueck', 'letzte']], b.richtung)}
+      ${zahl('tage', b.tage)}<span class="muted small">Tage</span></div></div>` : ''}`;
 }
 /* Ein Feld einer Bedingung übernehmen; eine neue Größe bringt passende
    Vorgaben mit. */
@@ -12477,8 +12512,11 @@ function renderAbfall(){
       l.map(a => `<span>${abfallPunkt(a)}${esc(a)}</span>`).join('')}</span></div>`;
   });
   html += '</div>';
-  box.innerHTML = html + fuss + `<button class="btn ghost klein" id="abfZuEinst" style="margin-top:10px">Abfallkalender einstellen</button>`;
+  box.innerHTML = html + fuss + `<button class="btn ghost klein" id="abfZuEinst" style="margin-top:10px">Abfallkalender einstellen</button>`
+    /* Wie beim Wetter der Weg zu den Auslösern (v1.189). */
+    + `<button class="btn eintrag" id="abfZuAusl" style="margin-top:14px"><span class="etext">Auslöser dazu<small>Was aus Wetter und Abholterminen von selbst Aufgaben macht</small></span></button>`;
   $('#abfZuEinst').onclick = () => setOeffnen('abfall');
+  $('#abfZuAusl').onclick = () => go('ausloeser');
 }
 
 /* ---------- DWD über Bright Sky (v1.53) -------------------------------------
@@ -13214,26 +13252,22 @@ function renderWetterregeln(){
   /* Auf der Wetterseite nur noch der Weg zu den Auslösern (v1.174). */
   const wbox = $('#wetterRegeln');
   if(wbox){
-    wbox.innerHTML = `<div class="eyebrow">Auslöser</div><p class="muted small" style="margin:0 0 8px">Was aus Wetter und Abfuhrterminen Aufgaben macht, steht unter Übersicht › Abläufe.</p>
-      <button class="btn ghost klein" id="zuAusloesern">Zu den Auslösern</button>`;
-    $('#zuAusloesern').onclick = () => go('ablaeufe');
+    wbox.innerHTML = `<button class="btn eintrag" id="zuAusloesern" style="margin-top:14px"><span class="etext">Auslöser dazu<small>Was aus Wetter und Abholterminen von selbst Aufgaben macht</small></span></button>`;
+    $('#zuAusloesern').onclick = () => go('ausloeser');
   }
   const box = $('#ausloeserBox');
   if(!box) return;
   const i = info('Auslöser machen aus Wetter und Abfuhrterminen Aufgaben oder starten einen Ablauf. Einer schlägt entweder vor – dann steht er auf der Startseite unter „Vorschläge“ – oder er legt gleich an. Geprüft wird beim Öffnen der App.', 'margin:-2px 0 10px');
   const zeile = r => `<button class="btn eintrag" data-regel="${esc(r.k)}"><span>${esc(r.name)}</span><span class="zahl">${
     r.aus ? 'aus' : r.modus === 'sofort' ? 'legt gleich an' : 'schlägt vor'}</span></button>`;
-  /* Auslöser, die einen Ablauf starten, stehen seit v1.179 bei ihrem Ablauf
-     („Beginnt“); hier nur die, die eine einzelne Aufgabe anlegen. */
-  const eigene = eigeneRegeln().filter(r => !(r.dann === 'ablauf' && planVon(r.plan))).map(eigenAlsRegel);
-  const zahlAn = HINWEIS_STD.filter(std => !hinweisRegel(std.k).aus).length;
-  box.innerHTML = `<div class="eyebrow mitInfo">Auslöser für Aufgaben ${i.knopf}</div>${i.text}`
-    + (eigene.length ? eigene.map(zeile).join('')
-        : `<p class="muted small" style="margin:0 0 10px">Noch keiner. Auslöser, die einen Ablauf starten, stehen beim Ablauf unter „Beginnt“.</p>`)
+  /* Seit v1.189 alle Auslöser auf einer Seite (Mehr › Auslöser): die
+     eigenen, auch die, die einen Ablauf starten, und die ab Werk. */
+  const eigene = eigeneRegeln().map(eigenAlsRegel);
+  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Eigene ${i.knopf}</div>${i.text}`
     + `<button class="btn ghost klein" id="regelPlus" style="margin:0 0 10px">+ Auslöser</button>`
-    + `<details class="angaben" id="werkAuf"${werkAuf ? ' open' : ''}><summary><span class="zfass">Auslöser ab Werk (Wetter) · ${zahlAn} von ${HINWEIS_STD.length} an</span></summary>`
-    + HINWEIS_STD.map(std => zeile(hinweisRegel(std.k))).join('') + '</details>';
-  $('#werkAuf').ontoggle = e => { werkAuf = e.target.open; };
+    + (eigene.length ? eigene.map(zeile).join('') : `<p class="muted small" style="margin:0 0 10px">Noch keiner.</p>`)
+    + `<div class="eyebrow">Ab Werk (Wetter)</div>`
+    + HINWEIS_STD.map(std => zeile(hinweisRegel(std.k))).join('');
   /* Seit v1.73 auch von hier aus, nicht nur über „+ Aufgabe hinzufügen“. */
   $('#regelPlus').onclick = () => eigenRegelNeu('');
   box.querySelectorAll('[data-regel]').forEach(b => b.onclick = () => {
@@ -13675,7 +13709,7 @@ function bedKarte(b, n, mehr){
   const zeile = (titel, inhalt) => `<div class="wgZeile wgPaar"><span>${esc(titel)}</span><span class="wgWerte">${inhalt}</span></div>`;
   const zahl = (feld, wert, nach) => `<input type="number" step="any" data-f="${feld}" value="${esc(wert)}">${nach ? ' ' + esc(nach) : ''}`;
   return `<div class="wgKarte bedOffen" data-bed="${n}">
-    <div class="wgZeile wgBreit"><span>Größe</span><select data-f="groesse">${
+    <div class="wgZeile wgBreit"><span>Was</span><select data-f="groesse">${
       WGROESSEN.map(x => `<option value="${x.k}"${x.k === g.k ? ' selected' : ''}>${x.name}</option>`).join('')}</select></div>
     ${g.quelle === 'lage' ? `<div class="wgZeile wgBreit"><span>Wetterlage</span><select data-f="lage">${
         WLAGEN.map(l => `<option value="${l[0]}"${l[0] === b.lage ? ' selected' : ''}>${l[1]}</option>`).join('')}</select></div>`
@@ -13684,13 +13718,13 @@ function bedKarte(b, n, mehr){
       : g.quelle === 'abfall' ? `<div class="wgZeile wgBreit"><span>Abfallart</span><select data-f="abfall"><option value="">jede</option>${
           abfallArten().map(x => x.art).concat(b.abfall && !abfallArten().some(x => x.art === b.abfall) ? [b.abfall] : [])
             .map(a => `<option value="${esc(a)}"${a === b.abfall ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select></div>`
-          + zeile('Zeitfenster', `nächste ${zahl('tage', b.tage, 'Tage')}`)
-      : zeile('Vergleich', `<select data-f="vgl">
+          + zeile('Zeitraum', `nächste ${zahl('tage', b.tage, 'Tage')}`)
+      : zeile('Grenze', `<select data-f="vgl">
           <option value="ab"${b.vgl !== 'unter' ? ' selected' : ''}>ab</option>
           <option value="unter"${b.vgl === 'unter' ? ' selected' : ''}>unter</option>
         </select> ${zahl('wert', b.wert, g.einheit)}`)}
     ${g.quelle === 'trocken' || g.quelle === 'warnung' || g.quelle === 'abfall' ? ''
-      : zeile('Zeitfenster', `<select data-f="richtung">
+      : zeile('Zeitraum', `<select data-f="richtung">
           <option value="zurueck"${b.richtung !== 'voraus' ? ' selected' : ''}>letzte</option>
           <option value="voraus"${b.richtung === 'voraus' ? ' selected' : ''}>nächste</option>
         </select> ${zahl('tage', b.tage, 'Tage')}`)}
@@ -13707,14 +13741,14 @@ function setEigenRegel(box, r, neu){
   if(regelSicht.id !== r.id) regelSicht = {id:r.id, bed:neu ? 0 : -1, dann:neu, oft:neu};
   const speichern = () => { if(!neu) saveCfg(); };
   const nochmal = () => setEigenRegel(box, r, neu);
-  const i = info('Der Auslöser löst aus, wenn einer der Fälle zutrifft; ein Fall trifft zu, wenn alle seine Bedingungen zutreffen. „+ und …“ fügt einem Fall eine Bedingung hinzu, „+ oder …“ einen neuen Fall. Ein Tipp auf eine Bedingung zeigt ihre Werte. ✓ und ✕ sind die Probe gegen die aktuellen Wetterdaten. Rückwärts reichen sie 30 Tage, vorwärts 10. Die Ruhezeit verhindert, dass ein tagelanger Zustand wie Trockenheit jeden Tag dieselbe Aufgabe erzeugt. Bei „Abfuhr“ gilt der Auslöser je Abholung einmal.', 'margin:-2px 0 10px');
+  const i = info('Der Auslöser löst aus, wenn einer der Fälle zutrifft; ein Fall trifft zu, wenn alle seine Bedingungen zutreffen. „+ und …“ fügt einem Fall eine Bedingung hinzu, „+ oder …“ einen neuen Fall. Ein Tipp auf eine Bedingung zeigt ihre Werte. ✓ und ✗ sind die Probe gegen die aktuellen Wetterdaten. Rückwärts reichen sie 30 Tage, vorwärts 10. Die Ruhezeit verhindert, dass ein tagelanger Zustand wie Trockenheit jeden Tag dieselbe Aufgabe erzeugt. Bei „Abfuhr“ gilt der Auslöser je Abholung einmal.', 'margin:-2px 0 10px');
   const seg = (feld, wahl) => `<div class="seg">${wahl.map(([w, t]) =>
     `<button type="button" data-seg="${feld}" data-wert="${w}" aria-pressed="${String(r[feld]) === String(w)}">${t}</button>`).join('')}</div>`;
   /* Die Probe je Bedingung – nur mit Standort und Daten. */
   const reihen = (CFG.wetter && wetterDaten()) || ABFALL.termine.length ? hinweisReihen() : null;
   const erg = reihen ? r.bed.map(b => bedPruefen(b, reihen)) : null;
   const faelle = regelFaelle(r), mehr = faelle.length > 1;
-  const zeichen = ok => !erg ? '' : ok ? '<span class="probe ja">✓</span>' : '<span class="probe nein">✕</span>';
+  const zeichen = ok => !erg ? '' : ok ? '<span class="probe ja">✓</span>' : '<span class="probe nein">✗</span>';
   const fallHtml = (fall, fi) => `<div class="card fallKarte">${
       mehr ? `<div class="fallKopf"><span class="eyebrow" style="margin:0">Fall ${fi + 1}</span>${
         erg ? `<span class="small ${fall.every(({i}) => erg[i].ok) ? '' : 'muted'}">${fall.every(({i}) => erg[i].ok) ? 'trifft zu ✓' : 'trifft nicht zu'}</span>` : ''}</div>` : ''}
@@ -13850,7 +13884,7 @@ function setEigenRegel(box, r, neu){
     toast('Auslöser angelegt');
     /* Kam der Weg über „+ Aufgabe hinzufügen“, gehört die Seite nicht mehr in
        den Rückweg; seit v1.174 stehen die Auslöser unter Übersicht › Abläufe. */
-    if(stack[stack.length - 1] === 'aufgabe'){ stack.pop(); go('ablaeufe', false); }
+    if(stack[stack.length - 1] === 'aufgabe'){ stack.pop(); go('ausloeser', false); }
     else zurueck();
   };
   if($('#regWeg')) $('#regWeg').onclick = () =>
@@ -13896,7 +13930,6 @@ function renderSettings(){
     /* Stammlisten für alles (v1.76); die Akkutypen gelten seit v1.149 für alle
        Anlagentypen mit Akkutausch. */
     + '<div class="eyebrow">Listen</div>'
-    + knopf('werkmat', '', 'Arbeitsmittel', TAET.werkzeug.length + TAET.material.length)
     + knopf('akkus', '', 'Akkutypen', akkuTypen().length)
     /* Was die App aus dem Netz holt, unter einer Adresse (v1.170). */
     + '<div class="eyebrow">Online-Dienste</div>'
@@ -13905,8 +13938,10 @@ function renderSettings(){
     + knopf('abfall', '', 'Abfallkalender')
     + '<div class="eyebrow">Gerät</div>'
     + knopf('plaene', '', 'Grundrisse', '…')
+    + knopf('bedienung', '', 'Bedienung')
     + knopf('geraet', '', 'Sicherung')
-    + knopf('zugang', '', 'Zugang');
+    + knopf('zugang', '', 'Zugang')
+    + knopf('app', '', 'Über die App');
   $$('#setMenue [data-art]').forEach(b =>
     b.onclick = () => setOeffnen(b.dataset.art, b.dataset.k));
   if($('#setTypNeu')) $('#setTypNeu').onclick = typWahl;
@@ -13939,7 +13974,9 @@ function setOeffnen(art, k){
            : art === 'tausch' ? 'Zählertausch'
            : art === 'plaene' ? 'Grundrisse'
            : art === 'geraet' ? 'Sicherung'
-           : art === 'zugang' ? 'Zugang' : 'Einstellungen';
+           : art === 'zugang' ? 'Zugang'
+           : art === 'bedienung' ? 'Bedienung'
+           : art === 'app' ? 'Über die App' : 'Einstellungen';
   go('setsub');
 }
 function renderSetSub(){
@@ -13947,8 +13984,12 @@ function renderSetSub(){
   $('#blockPlaene').hidden = a !== 'plaene';
   $('#blockGeraet').hidden = a !== 'geraet';
   $('#blockZugang').hidden = a !== 'zugang';
+  $('#blockBedienung').hidden = a !== 'bedienung';
+  $('#blockApp').hidden = a !== 'app';
   dyn.innerHTML = '';
-  if(a === 'plaene'){ $('#tonHaken').checked = tonAn(); $('#einrastHaken').checked = einrastenAn(); renderPlaene(); return; }
+  if(a === 'plaene'){ renderPlaene(); return; }
+  if(a === 'bedienung'){ $('#tonHaken').checked = tonAn(); $('#einrastHaken').checked = einrastenAn(); return; }
+  if(a === 'app'){ $('#appFassung').textContent = 'Fassung ' + BUILD; return; }
   if(a === 'geraet'){ sicherStandZeigen(); return; }
   if(a === 'zugang') return;
   if(a === 'obj')   { setObjekt(dyn);   return; }
@@ -17493,6 +17534,8 @@ $('#btnNeuLaden').onclick = () => {
      unberührt; replace statt Zuweisung, damit der Zurück-Weg nicht zuwächst. */
   location.replace(location.pathname + '?v=' + Date.now());
 };
+$('#btnAppNeu').onclick = () => frage('Neueste Fassung laden', 'Die App lädt sich neu vom Server. Deine Daten bleiben, wie sie sind.', 'Laden', () => $('#btnNeuLaden').onclick());
+$('#btnZugWerk').onclick = () => { const w = $('#schlossWerk'); if(w) w.hidden = !w.hidden; };
 $('#btnPlanNeu').onclick = () => $('#planFile').click();
 $('#planFile').onchange = async e => {
   const f = e.target.files && e.target.files[0];
@@ -19589,7 +19632,11 @@ async function ableiten(pw, salzHex){
 
 (function zugang(){
   const schloss = $('#schloss'), feld = $('#schlossFeld'), ok = $('#schlossOk');
-  const auf = () => { schloss.remove(); histMedLaden(); renderHome(); go('home', false); wetterAbrufen(); abfallAbrufen(); };
+  /* Das Werkzeug zum Prüfwert wandert beim Öffnen unter Einstellungen › Zugang
+     (v1.189) – auf dem Sperrbildschirm sah es jeder. */
+  const auf = () => { const w = $('#schlossWerk'); w.hidden = true; $('#zugWerk').appendChild(w);
+    schloss.remove(); histMedLaden(); renderHome(); go('home', false); wetterAbrufen(); abfallAbrufen(); };
+  $('#schlossWerkzeug').hidden = true;
 
   if(!window.crypto || !crypto.subtle){
     $('#schlossText').textContent = 'Dieser Browser kann die Prüfung nicht ausführen.';
@@ -19611,7 +19658,7 @@ async function ableiten(pw, salzHex){
     $('#schlossText').textContent = 'Es ist noch kein Passwort hinterlegt. Unten den '
       + 'Prüfwert berechnen und in die Datei eintragen.';
     feld.hidden = ok.hidden = true;
-    $('#schlossWerk').hidden = false;
+    $('#schlossWerk').hidden = false; $('#schlossWerkzeug').hidden = false;
     return;                                  // ohne hinterlegtes Passwort bleibt zu
   }
   if(Store.get('nwFrei', '') === ZUGANG.pruef){ auf(); return; }
