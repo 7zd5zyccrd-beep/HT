@@ -10,6 +10,12 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.209 08.10.2026 Abholtage im Kalender wählbar (Jean): unter Mehr ›
+                    Einstellungen › Abfallkalender › „Im Kalender“ lassen
+                    sie sich ganz ausschalten oder je Abfallart abwählen.
+                    Eine neue Art aus einer neuen Kalenderdatei ist gleich
+                    zu sehen. Auslöser, Abläufe und Mehr › Abholtage nutzen
+                    weiter alle Arten.
   v1.208 08.10.2026 „Zeit übrig?“ auf Heute ist nicht mehr höher als die
                     Einträge darunter (Jean: zu hoch).
   v1.207 08.10.2026 Die Seite eines Anlagentyps rechnet nur noch dessen eigene
@@ -3740,6 +3746,13 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 .abfZeile{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
 .abfZeile:first-child{border-top:0;padding-top:0}
 .abfZeile:last-child{padding-bottom:0}
+/* Auswahl „Im Kalender“ (v1.209): Zeilen wie „Stand“, Haken links. */
+#setSubDyn .abfWahl .haken{margin:0;font-size:16px}
+.abfWahl .abfZeile{padding:10px 0}
+.abfWahl .abfZeile:first-child{padding-top:0}
+.abfWahl .abfZeile:last-child{padding-bottom:0}
+/* Die Arten hängen am Schalter: eingerückt bis zu seinem Text (Haken 22 + Lücke 10). */
+#setSubDyn .abfWahl .abfZeile + .abfZeile{margin-left:32px}
 .abfPunkt{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
 .abfArten .abfPunkt{margin-right:6px}
 .abfArt{flex:1;min-width:0}
@@ -4053,7 +4066,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.208';
+const VERSION = 'v1.209';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10676,7 +10689,7 @@ function renderWochenplan(){
   /* Je Tag Wetter und Abholung (v1.188), und was zwischen zwei Arbeitstagen
      frei ist – Urlaub, Feiertag –, als eigene Zeile. */
   const wd = wetterDaten(), wt = new Map(wd ? wetterTage(wd).map(x => [x.datum, x]) : []);
-  const tagZusatz = iso => { const w = wt.get(iso), ab = ABFALL.termine.filter(x => x.tag === iso).map(x => x.art);
+  const tagZusatz = iso => { const w = wt.get(iso), ab = ABFALL.termine.filter(x => x.tag === iso && abfallZeigen(x.art)).map(x => x.art);
     return [w && w.lage ? `${w.lage}${w.tmax != null ? ' ' + gradText(w.tmax) + '°' : ''}` : '', ab.length ? '♻︎ ' + ab.join(', ') : ''].filter(Boolean); };
   const luecke = (von, bis) => {
     const frei = [];
@@ -12718,6 +12731,11 @@ const ABFALL_FARBEN = [[/glas/i, '#2e9d6b'], [/papier|pappe|ppk|blau/i, '#2f6fd6
   [/sperr|schadstoff|elektro|problem|sonder/i, '#c0503a']];
 const abfallFarbe = art => (ABFALL_FARBEN.find(([r]) => r.test(art)) || [null, '#9a9a9a'])[1];
 const abfallPunkt = art => `<span class="abfPunkt" style="background:${abfallFarbe(art)}" aria-hidden="true"></span>`;
+/* Abholtage im Kalender (v1.209, Jean): ob überhaupt und welche Arten.
+   Gemerkt werden die abgewählten Arten, damit eine neue Art aus einer neuen
+   Kalenderdatei gleich zu sehen ist (Jean). Nur die Anzeige – Auslöser,
+   Abläufe und Mehr › Abholtage kennen weiter alle. */
+const abfallZeigen = art => !CFG.abfallAus && !(CFG.abfallOhne || []).includes(art);
 const abfallDatum = tag => { const d = new Date(tag + 'T12:00:00'); return `${WOCHENTAG[d.getDay()]} ${ttmm(d)}`; };
 function abfallWann(tag){
   const n = Math.round((new Date(tag + 'T12:00:00') - new Date(heute() + 'T12:00:00')) / TAG_MS);
@@ -12841,6 +12859,7 @@ function abfStandFuellen(){
       ${fehler && !abfallLaeuft ? `<p class="small" style="margin:8px 0 0"><b>${esc(fehler)}</b></p>` : ''}
       <div class="knopfzeile abfKn" style="margin-top:12px">${kommend ? `<button class="btn klein" id="abfAnsehen">Ansehen</button>` : ''}<button class="btn danger klein" id="abfWeg">Löschen</button></div>
     </div>` : `<p class="muted small" style="margin:0">Noch kein Abfallkalender eingelesen.</p>`;
+  abfAnzeigeFuellen();
   if($('#abfAnsehen')) $('#abfAnsehen').onclick = () => go('abfall');
   if($('#abfWeg')) $('#abfWeg').onclick = () =>
     frage('Abfallkalender löschen', 'Alle Abfuhrtermine und der Link werden gelöscht.', 'Löschen', () => {
@@ -12848,12 +12867,37 @@ function abfStandFuellen(){
       setAbfall($('#setSubDyn'));
     });
 }
+/* Auswahl „Im Kalender“ (v1.209): oben der Schalter für alle, darunter je
+   Art ein Haken wie die Zeilen von „Stand“. Ohne Abholtage im Kalender
+   fallen die Arten weg – sie würden nichts bewirken. */
+function abfAnzeigeFuellen(){
+  const el = $('#abfAnzeige');
+  if(!el) return;
+  const arten = abfallArten();
+  if(!arten.length){ el.innerHTML = ''; return; }
+  const ohne = CFG.abfallOhne || [];
+  el.innerHTML = `<div class="eyebrow" style="margin-top:22px">Im Kalender</div>
+    <div class="card abfWahl"><label class="haken abfZeile"><input type="checkbox" data-abfan="1"${CFG.abfallAus ? '' : ' checked'}><span>Abholtage zeigen</span></label>${
+      CFG.abfallAus ? '' : arten.map(x => `<label class="haken abfZeile"><input type="checkbox" data-abfart="${esc(x.art)}"${
+        ohne.includes(x.art) ? '' : ' checked'}>${abfallPunkt(x.art)}<span class="abfArt">${esc(x.art)}</span></label>`).join('')}</div>`;
+  el.querySelector('[data-abfan]').onchange = e => {
+    if(e.target.checked) delete CFG.abfallAus; else CFG.abfallAus = true;
+    saveCfg(); abfAnzeigeFuellen();
+  };
+  el.querySelectorAll('[data-abfart]').forEach(c => c.onchange = () => {
+    const art = c.dataset.abfart, l = (CFG.abfallOhne || []).filter(a => a !== art);
+    if(!c.checked) l.push(art);
+    if(l.length) CFG.abfallOhne = l; else delete CFG.abfallOhne;
+    saveCfg();
+  });
+}
 function setAbfall(box){
   const a = adresse();
-  const i = info('Fast jeder Entsorger bietet seinen Abfuhrkalender im Kalenderformat an (.ics, „iCal“) – als Datei zum Herunterladen oder als Link zum Abonnieren. Die App liest beides. Aufgaben entstehen daraus nicht; die Abholtage stehen unter Mehr › Abholtage und im Kalender.', 'margin:-2px 0 10px');
+  const i = info('Fast jeder Entsorger bietet seinen Abfuhrkalender im Kalenderformat an (.ics, „iCal“) – als Datei zum Herunterladen oder als Link zum Abonnieren. Die App liest beides. Aufgaben entstehen daraus nicht; die Abholtage stehen unter Mehr › Abholtage und im Kalender. Welche der Kalender zeigt, legst du unter „Im Kalender“ fest.', 'margin:-2px 0 10px');
   box.innerHTML = `
     <div class="eyebrow mitInfo" style="margin-top:0">Stand ${i.knopf}</div>${i.text}
     <div id="abfStand"></div>
+    <div id="abfAnzeige"></div>
     <div class="eyebrow" style="margin-top:22px">Kalenderdatei</div>
     <p class="muted small" style="margin:0 0 10px">Auf der Abfallseite der Kommune den Kalender für ${
       adrText(a) ? `<b>${esc(adrText(a))}</b>` : 'die Adresse'} als iCal/ICS herunterladen und hier öffnen. Einmal im Jahr wiederholen.</p>
@@ -19785,7 +19829,7 @@ const SEITEN = [
   {titel:'Wetter: Grenzwerte und Halbtage', wo:'Mehr › Einstellungen', woerter:'wetter grenzwerte halbtag vormittag nachmittag', tu:() => setOeffnen('wetter')},
   {titel:'Adresse', wo:'Mehr › Einstellungen', woerter:'adresse standort straße strasse ort hausnummer', tu:() => setOeffnen('adresse')},
   {titel:'Abholtage', wo:'Mehr › Abholtage', woerter:'abholtage abfall müll muell tonne abfuhr abholung', tu:() => { go('abfall'); abfallAbrufen(); }},
-  {titel:'Abfallkalender einrichten', wo:'Mehr › Einstellungen', woerter:'abfallkalender ics kalender abfall müll muell', tu:() => setOeffnen('abfall')},
+  {titel:'Abfallkalender einrichten', wo:'Mehr › Einstellungen', woerter:'abfallkalender ics kalender abfall müll muell abholtage anzeigen ausblenden', tu:() => setOeffnen('abfall')},
   {titel:'Gebäude und Prüfer', wo:'Mehr › Einstellungen', woerter:'gebäude gebaeude prüfer pruefer name bauteil bauteile kopf blatt', tu:() => setOeffnen('obj')},
   {titel:'Grundrisse', wo:'Mehr › Einstellungen', woerter:'grundriss grundrisse plan pläne plaene pdf', tu:() => setOeffnen('plaene')},
   {titel:'Bedienung', wo:'Mehr › Einstellungen', woerter:'bedienung einrasten dunkel', tu:() => setOeffnen('bedienung')},

@@ -443,6 +443,11 @@ steht.
   `f_zeitraum` das laufende Jahr ein, ab November (`ABFALL_NEUES_JAHR`) dazu
   das nächste (Fehlschlag dort zählt nicht). Gespeichert bleibt der Link wie
   eingefügt.
+- Anzeige im Kalender (v1.209, Jean): Einstellungen › Abfallkalender › „Im
+  Kalender“ (`abfAnzeigeFuellen`). `CFG.abfallAus` schaltet alle ab,
+  `CFG.abfallOhne` = abgewählte Arten (neue Arten erscheinen so von selbst).
+  `abfallZeigen(art)` gilt nur für `tagZusatz` im Kalender; auf Heute stehen
+  keine Abholtage (Jean: nein). Auslöser/Abläufe/Mehr › Abholtage: alle Arten.
 
 ## Aktionen mit Daten (v1.172)
 
