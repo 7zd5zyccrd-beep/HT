@@ -10,6 +10,21 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.206 08.10.2026 Übersehenes aus dem Prüfbericht (Jean). Knöpfe und Zeilen
+                    dämpfen sich beim Antippen, langes Drücken markiert in
+                    Leisten keinen Text mehr. Die Leiste unten verschwindet
+                    nur noch bei echter Tastatur (nicht bei Datum oder
+                    Auswahl), ein Seitenwechsel verlässt das Feld. Auslöser
+                    unter Mehr: „Standort fehlt“, solange sie ohne Standort
+                    nichts prüfen. Objektseite mit gezeichneten Symbolen.
+                    Ein einzelnes ⓘ steht jetzt in einer Überschrift. Im
+                    Kalender „~0:30 h“ statt „≈ 0:30 h · geschätzt“ und
+                    „überfällig“ statt „nach der Frist“. „Im iPhone-Kalender
+                    eintragen“, Meldungen „… gespeichert“ statt
+                    „übernommen“, „nächste Fälligkeit“ statt „nächster
+                    Termin“, „Abholtage“ statt „Abfuhr“, überall „z.B.“,
+                    beim Start „Heute“ statt „Aufgaben“, Versionszeile
+                    nicht mehr blass.
   v1.205 08.10.2026 Einstellungen der Anlagentypen einheitlich (Jean): jede
                     Seite in derselben Reihenfolge – Wichtigkeit, Einstellungen
                     (Prüfabstand, Rundgang, Akkutausch), Wege als Liste
@@ -2378,6 +2393,10 @@ html.dunkel #sigpad.aus{background:#D8D8D8}
    Zwei Ausnahmen mit eigener, spaeterer Regel: der Grundriss (er zoomt selbst)
    und die Blattvorschau (dort steht der 1024 px breite Bogen). */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:pan-x pan-y}
+/* Antippen sichtbar (v1.206, Prüfteam T7): kurz gedämpft, solange der Finger
+   liegt. In Leisten und auf Knöpfen markiert langes Drücken keinen Text. */
+button:not([disabled]):active,.angZeile:active,.vsZiel:active,.btn.eintrag:active{opacity:.6}
+button,.btn,header,#reiter,.actionbar{-webkit-user-select:none;user-select:none}
 /* Kein Scroll-Anker (v1.58). Safari kann ihn seit iOS 27: aendert sich etwas
    oberhalb des Bildschirms, verschiebt der Browser die Seite selbst, damit das
    Gelesene stehen bleibt. Die App haelt ihre Lage aber schon selbst (lageHalten,
@@ -3739,7 +3758,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
   <header>
     <button class="back" id="btnBack" aria-label="Zurück">←</button>
     <button class="kopfKnopf" id="btnSuche" aria-label="Suchen" hidden></button>
-    <h1 id="titel">Aufgaben</h1>
+    <h1 id="titel">Heute</h1>
     <button class="kopfKnopf unsichtbar" id="btnPlanWahl" aria-hidden="true" tabindex="-1" aria-label="Objekte und Ausgabe"
       aria-haspopup="menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="m2 13 10 5 10-5"/></svg></button>
     <button class="kopfKnopf" id="btnNeuLaden" aria-label="Neu vom Server laden" hidden></button>
@@ -4027,7 +4046,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.205';
+const VERSION = 'v1.206';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -4042,6 +4061,10 @@ const ORT_SVG = '<svg class="ortIcon" viewBox="0 0 24 24" width="22" height="22"
   + '<path d="M17 2.5a4 4 0 0 0-4 4c0 3 4 6.5 4 6.5s4-3.5 4-6.5a4 4 0 0 0-4-4z"/><circle cx="17" cy="6.5" r="1.3" fill="currentColor" stroke="none"/></svg>';
 /* Uhr für den Verlauf einer Karte. */
 const UHR_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
+/* Wege der Objektseite gezeichnet statt als Schriftzeichen (v1.206, D10). */
+const TAUSCH_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></svg>';
+const STOER_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4 21 19.5H3Z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>';
+const PLUS_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 const HAKEN_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>';
 const LUPE_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>';
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
@@ -5308,7 +5331,13 @@ let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nach
     if(current === 'plan') return;
     if(e.cancelable) e.preventDefault();
   }, {passive:false}));
+/* iOS zeigt :active nur, wenn die Seite auf Berührungen hört (v1.206). */
+document.addEventListener('touchstart', () => {}, {passive:true});
 function go(name, push = true){
+  /* Beim Seitenwechsel das Feld verlassen (v1.206, T9): sonst blieb die
+     Tastatur-Lage hängen und die Leiste unten weg. */
+  const fokus = document.activeElement;
+  if(fokus && fokus !== document.body && /^(INPUT|TEXTAREA|SELECT)$/.test(fokus.tagName) && name !== current) fokus.blur();
   /* Entpackte Pläne nur so lange halten, wie die Grundrissansicht offen ist; in
      die Blattvorschau und zurück bleibt der Vorrat (v1.60). */
   if(current === 'plan' && name !== 'plan' && name !== 'blatt') planVorratFrei();
@@ -5541,7 +5570,8 @@ $('#btnNeu').onclick = () => wahlFenster('Neu', [
   document.addEventListener('focusin', e => {
     if(!istFeld(e.target)) return;
     /* Beim Tippen braucht die Tastatur den Platz der Leiste unten (v1.184). */
-    if(touch) document.body.classList.add('tippt');
+    /* Datum, Uhrzeit und Auswahl bringen keine Tastatur – die Leiste bleibt (v1.206). */
+    if(touch && e.target.tagName !== 'SELECT' && !/^(date|time|datetime-local|month|week)$/.test(e.target.type || '')) document.body.classList.add('tippt');
     if(touch && bild().contains(e.target)){
       if(!platz){ platz = document.createElement('div'); platz.className = 'tastaturPlatz'; platz.setAttribute('aria-hidden', 'true'); }
       platz.style.height = Math.round(window.innerHeight * .5) + 'px';
@@ -6515,7 +6545,7 @@ function renderMehr(){
   $('#mehrBox').innerHTML =
       '<div class="eyebrow" style="margin-top:0">Abläufe</div>'
     + gliste(zeile('data-m="ablaeufe"', 'Abläufe', plaeneListe().length ? (laufen ? `${laufen} ${laufen === 1 ? 'läuft' : 'laufen'}` : `${plaeneListe().length}`) : '')
-    + zeile('data-m="ausloeser"', 'Auslöser', regeln ? `${regeln} an` : ''))
+    + zeile('data-m="ausloeser"', 'Auslöser', regeln ? (CFG.wetter || eigeneRegeln().length ? `${regeln} an` : 'Standort fehlt') : ''))
     + '<div class="eyebrow">Rückblick</div>'
     + gliste(zeile('data-m="erledigt"', 'Erledigt', erledigt ? String(erledigt) : '')
     + zeile('data-m="arbeit"', 'Arbeitsnachweis', '')
@@ -6526,7 +6556,7 @@ function renderMehr(){
     + '<div class="eyebrow">App</div>'
     + gliste(zeile('data-m="settings"', 'Einstellungen', '')
     + zeile('data-m="sicherung"', 'Sicherung', l ? dText(l) : 'noch nie'))
-    + `<p class="muted small" style="margin-top:18px;opacity:.7">${esc(BUILD)}</p>`;
+    + `<p class="muted small" style="margin-top:18px">${esc(BUILD)}</p>`;
   const ziel = {ablaeufe:() => go('ablaeufe'), ausloeser:() => go('ausloeser'),
     erledigt:() => go('erledigt'), arbeit:() => { arbZeit = null; go('arbeit'); }, taeten:() => go('taeten'),
     wetter:() => { if(CFG.wetter){ go('wetter'); wetterAbrufen(); } else setOeffnen('adresse'); },
@@ -6893,7 +6923,7 @@ function renderRundgang(){
 
 /* ---------- Abläufe: Pläne aus Stufen (v1.159, Bedienung v1.160) ------------
    Wunsch von Jean (v1.157 Schritte, v1.158 Zweige, v1.159 diese Form): eine
-   Aufgabe ist z. B. „Zustand prüfen“. Beim Erledigen wählt man das Ergebnis –
+   Aufgabe ist z.B. „Zustand prüfen“. Beim Erledigen wählt man das Ergebnis –
    „in Ordnung“ führt nach 90 Tagen wieder zu „Zustand prüfen“,
    „Handlungsbedarf“ sofort zu „Firma beauftragen“, deren Erledigung wieder
    weiterführt usw. Jede Stufe kann verzweigen und überallhin springen, auch
@@ -6920,9 +6950,9 @@ function renderRundgang(){
 /* Wetter und Abfall (v1.172) sind keine Knöpfe, sondern zeigen auf der
    Aufgabe den aktuellen Stand – entschieden wird weiter über das Ergebnis. */
 const ABLAUF_ARTEN = [['link', 'Link'], ['tel', 'Anruf'], ['mail', 'E-Mail'], ['haken', 'Haken'],
-                      ['wetter', 'Wetter'], ['abfall', 'Abfuhr']];
+                      ['wetter', 'Wetter'], ['abfall', 'Abholtage']];
 const ABLAUF_VORGABE = {link:'Link öffnen', tel:'Anrufen', mail:'E-Mail schreiben', haken:'Schritt',
-                        wetter:'Wetter', abfall:'Abfuhr'};
+                        wetter:'Wetter', abfall:'Abholtage'};
 const AKTION_INFO = ['wetter', 'abfall'];
 const plaeneListe = () => (Array.isArray(CFG.ablaeufe) ? CFG.ablaeufe : (CFG.ablaeufe = []));
 const planVon = id => plaeneListe().find(p => p.id === id) || null;
@@ -7407,7 +7437,7 @@ function sofortZurueck(r){
   Object.keys(a).forEach(k => delete a[k]);
   Object.assign(a, r.vorher);
   saveAufg(); stoerAusAufgabe(a, 'wieder');
-  toast('Abgebrochen – nichts übernommen');
+  toast('Abgebrochen – nichts geändert');
   if(r.dann) r.dann(); else aufgabeOeffnen(a.id);
 }
 
@@ -7491,7 +7521,7 @@ const laufendIn = id => AUFG.filter(a => a.plan === id && !a.erledigt);
 const laufZeile = a => [a.anlage ? anlageName(a) : '', a.titel || 'Aufgabe', a.frist ? 'fällig ' + datumKurz(a.frist) : ''].filter(Boolean).join(' · ');
 function renderAblaeufe(){
   const box = $('#ablaeufeBox'), l = plaeneListe();
-  box.innerHTML = (l.length ? '' : `<p class="muted small" style="margin-top:0">Ein Ablauf ist eine Folge von Schritten. Jeder Schritt endet mit einem Ergebnis, und das Ergebnis bestimmt, was danach kommt – z. B. „in Ordnung → nach 3 Monaten wieder prüfen“, „Mangel → Mangel beheben“.</p>`)
+  box.innerHTML = (l.length ? '' : `<p class="muted small" style="margin-top:0">Ein Ablauf ist eine Folge von Schritten. Jeder Schritt endet mit einem Ergebnis, und das Ergebnis bestimmt, was danach kommt – z.B. „in Ordnung → nach 3 Monaten wieder prüfen“, „Mangel → Mangel beheben“.</p>`)
     + l.map((p, i) => {
       const lauf = laufendIn(p.id).sort((x, y) => String(x.frist).localeCompare(String(y.frist)));
       return `<div class="card ablaufListe"><button class="btn eintrag" data-pi="${i}"><span class="etext">${esc(p.name || 'Ablauf')}<small>${
@@ -7561,7 +7591,7 @@ function renderAblaufPlan(){
         : `→ Ende des Ablaufs${planWdhText(p.wdh) ? `<small>danach wieder von vorn, ${esc(planWdhText(p.wdh))}</small>` : ''}`}${
       (e.bed || []).length ? `<small>⚙ ${esc(e.auto === 'sofort' ? 'erledigt selbst' : 'schlägt vor')}, wenn ${esc(e.bed.map(bedKurz).join(' und '))}</small>` : ''}</span></button>`;
   };
-  box.innerHTML = `<label class="field" style="margin-top:0"><span>Name des Ablaufs</span><input id="ablaufName" value="${esc(p.name || '')}" placeholder="z. B. Dachrinne"></label>
+  box.innerHTML = `<label class="field" style="margin-top:0"><span>Name des Ablaufs</span><input id="ablaufName" value="${esc(p.name || '')}" placeholder="z.B. Dachrinne"></label>
     <div class="eyebrow">So läuft es ab</div><div class="card abBaum">${baumHtml(p)}</div>
     <div class="eyebrow">Beginnt</div>
     <div class="card abBeginn"><p class="small" style="margin:0">▶ Von Hand mit „Starten“ unten</p>
@@ -7698,7 +7728,7 @@ function ergebnisFenster(p, s, j){
   const zeichnen = () => {
     const y = box.scrollTop;
     box.innerHTML = `<div class="ergFrage" style="margin-top:6px">1. Wie lautet das Ergebnis?</div>
-      <input id="ergText" value="${esc(w.text)}" placeholder="z. B. in Ordnung">
+      <input id="ergText" value="${esc(w.text)}" placeholder="z.B. in Ordnung">
       <div class="chips" style="margin-top:6px">${['erledigt', 'in Ordnung', 'Mangel'].map(t => chip(`data-vt="${esc(t)}"`, w.text === t, t)).join('')}</div>
       <div class="ergFrage">2. Was kommt danach?</div>
       ${w.ziele.length ? folgeHtml(w.ziele[0], 0) : folgeHtml({stufe:'', modus:'gleich'}, 0)}
@@ -7901,21 +7931,21 @@ function renderAssistent(){
   if(q.t === 'start'){
     const st = AS.steps[AS.start];
     titel = 'Was ist als Erstes zu tun?';
-    hilfe = 'Das wird der erste Schritt, z. B. „Füllstand prüfen“ oder „Dachrinne kontrollieren“.';
+    hilfe = 'Das wird der erste Schritt, z.B. „Füllstand prüfen“ oder „Dachrinne kontrollieren“.';
     inhalt = feld('id="asTitel" data-titel="1"', st.titel, 'Titel des Schritts');
   }else if(q.t === 'extra'){
     const x = s.extra, an = k => x[k] && x[k].an;
     titel = `Brauchst du bei „${s.titel || 'diesem Schritt'}“ etwas Bestimmtes?`;
     hilfe = 'Freiwillig – alles lässt sich auch später ändern.';
     const blk = (k, html) => an(k) ? `<div class="gruppe asExtra">${html}</div>` : '';
-    inhalt = `<div class="ergFrage klein">Infos zum Entscheiden</div><div class="chips">${chip('data-x="abfall"', an('abfall'), '♻︎ Abfuhr')}${chip('data-x="wetter"', an('wetter'), '☁︎ Wetter')}</div>
+    inhalt = `<div class="ergFrage klein">Infos zum Entscheiden</div><div class="chips">${chip('data-x="abfall"', an('abfall'), '♻︎ Abholtage')}${chip('data-x="wetter"', an('wetter'), '☁︎ Wetter')}</div>
       ${blk('abfall', `<div class="small" style="margin:0 0 6px">Abholtage von (keine gewählt = alle)</div><div class="chips">${arten.map(a => chip(`data-xart="${esc(a)}"`, ((x.abfall || {}).arten || []).includes(a), a)).join('') || '<span class="muted small">Noch kein Abfallkalender – einzurichten unter Mehr › Einstellungen › Abfallkalender.</span>'}</div>`)}
       ${blk('wetter', bedFelderHtml(x.wetter ? x.wetter.bed : bedingungStd(), 'data-xw="0"', false) + `<label class="haken" style="margin:0"><input type="checkbox" data-xgrenze="1"${x.wetter && x.wetter.grenze ? ' checked' : ''}><span>Mit ✓ oder ✗ zeigen, ob es zutrifft</span></label>`)}
       <div class="ergFrage klein">Aktionen zum Ausführen</div><div class="chips">${chip('data-x="tel"', an('tel'), '✆︎ Anruf')}${chip('data-x="mail"', an('mail'), '✉︎ E-Mail')}${chip('data-x="link"', an('link'), '↗ Link')}${chip('data-x="haken"', an('haken'), '☐ Haken')}</div>
-      ${blk('tel', feld('data-xf="tel.text"', x.tel && x.tel.text, 'Beschriftung, z. B. Hausmeisterdienst') + feld('data-xf="tel.nummer"', x.tel && x.tel.nummer, 'Nummer', 'type="tel" style="margin-top:8px"'))}
+      ${blk('tel', feld('data-xf="tel.text"', x.tel && x.tel.text, 'Beschriftung, z.B. Hausmeisterdienst') + feld('data-xf="tel.nummer"', x.tel && x.tel.nummer, 'Nummer', 'type="tel" style="margin-top:8px"'))}
       ${blk('mail', feld('data-xf="mail.an_"', x.mail && x.mail.an_, 'An', 'type="email" autocapitalize="off"') + feld('data-xf="mail.betreff"', x.mail && x.mail.betreff, 'Betreff', 'style="margin-top:8px"')
         + `<textarea data-xf="mail.inhalt" placeholder="Text – {Datum}, {Objekt} und {Titel} werden ersetzt" style="margin-top:8px;min-height:80px">${esc(x.mail && x.mail.inhalt || '')}</textarea>`)}
-      ${blk('link', feld('data-xf="link.text"', x.link && x.link.text, 'Beschriftung') + feld('data-xf="link.url"', x.link && x.link.url, 'Adresse, z. B. portal.beispiel.de', 'inputmode="url" autocapitalize="off" style="margin-top:8px"'))}
+      ${blk('link', feld('data-xf="link.text"', x.link && x.link.text, 'Beschriftung') + feld('data-xf="link.url"', x.link && x.link.url, 'Adresse, z.B. portal.beispiel.de', 'inputmode="url" autocapitalize="off" style="margin-top:8px"'))}
       ${blk('haken', feld('data-xf="haken.text"', x.haken && x.haken.text, 'Was abzuhaken ist'))}
       <div class="ergFrage klein">Notiz</div><textarea data-sn="1" placeholder="freiwillig" style="min-height:70px">${esc(s.notiz || '')}</textarea>
       <div class="ergFrage klein">Wichtigkeit</div><div class="seg asSeg">${WICHTIG.map(([w, t]) => chip(`data-sw="${w}"`, (s.wichtig || 'normal') === w, t)).join('')}</div>`;
@@ -7924,8 +7954,8 @@ function renderAssistent(){
     hilfe = 'Je Ergebnis kann es anders weitergehen.';
     const mehr = s.erg.art === 'mehr';
     inhalt = wahl('data-ea="einfach"', !mehr, 'Nur „erledigt“', 'Es geht immer gleich weiter')
-      + wahl('data-ea="mehr"', mehr, 'Verschiedene Ergebnisse', 'z. B. „voll“ und „nicht voll“, „in Ordnung“ und „Mangel“')
-      + (mehr ? s.erg.liste.map((x, n) => `<div class="row ablaufReihe asErgZeile">${feld(`data-et="${n}"`, x.text, n === 0 ? 'z. B. in Ordnung' : n === 1 ? 'z. B. Mangel' : 'weiteres Ergebnis')}${
+      + wahl('data-ea="mehr"', mehr, 'Verschiedene Ergebnisse', 'z.B. „voll“ und „nicht voll“, „in Ordnung“ und „Mangel“')
+      + (mehr ? s.erg.liste.map((x, n) => `<div class="row ablaufReihe asErgZeile">${feld(`data-et="${n}"`, x.text, n === 0 ? 'z.B. in Ordnung' : n === 1 ? 'z.B. Mangel' : 'weiteres Ergebnis')}${
           s.erg.liste.length > 2 ? `<button type="button" class="btn ghost klein" data-eweg="${n}" style="width:auto;margin:0">Entfernen</button>` : ''}</div>`).join('')
         + `<button type="button" class="btn ghost klein" id="asErgPlus" style="margin-top:8px">+ weiteres Ergebnis</button>` : '');
   }else if(q.t === 'folge'){
@@ -7936,7 +7966,7 @@ function renderAssistent(){
     inhalt = wahl('data-fa="ende"', f.art === 'ende', 'Nichts weiter', 'Der Ablauf endet hier')
       + wahl('data-fa="neu"', f.art === 'neu', 'Es folgt ein neuer Schritt')
       + (f.art === 'neu' ? feld('id="asNeu" data-fneu="1"', (AS.steps[f.neu] || {}).titel, 'Titel des neuen Schritts', 'style="margin:0 0 4px"') + wannHtml(f) : '')
-      + wahl('data-fa="vorh"', f.art === 'vorh', 'Es geht mit einem genannten Schritt weiter', 'z. B. wieder von vorn prüfen')
+      + wahl('data-fa="vorh"', f.art === 'vorh', 'Es geht mit einem genannten Schritt weiter', 'z.B. wieder von vorn prüfen')
       + (f.art === 'vorh' ? `<div class="chips">${andere.map(y => chip(`data-fz="${esc(y.id)}"`, f.ziel === y.id, (y.id === s.id ? 'wieder ' : '') + (y.titel || 'Schritt'))).join('')}</div>` + (f.ziel ? wannHtml(f) : '') : '')
       + (e.bedAuf || e.bed.length ? `<div class="gruppe ergFolge" style="margin-top:14px"><div class="eyebrow" style="margin:0 0 6px">Bedingung</div>
           <p class="muted small" style="margin:0 0 8px">Ist der Schritt fällig und trifft alles zu, wählt die App dieses Ergebnis – als Vorschlag oder gleich erledigt.</p>
@@ -8155,7 +8185,7 @@ function bedFelderHtml(b, attr, mitAbfuhr){
   const zeit = g.quelle !== 'trocken' && g.quelle !== 'warnung';
   return `<label class="field"><span>Was</span>${wahl('groesse', WGROESSEN.filter(y => mitAbfuhr || y.quelle !== 'abfall').map(y => [y.k, y.name]), b.groesse)}</label>
     ${g.quelle === 'lage' ? `<label class="field"><span>Wetterlage</span>${wahl('lage', WLAGEN.map(y => [y[0], y[1]]), b.lage)}</label>` : ''}
-    ${g.quelle === 'warnung' ? `<label class="field"><span>Stichwort (freiwillig)</span><input ${attr} data-bf="stichwort" value="${esc(b.stichwort || '')}" placeholder="z. B. Frost"></label>` : ''}
+    ${g.quelle === 'warnung' ? `<label class="field"><span>Stichwort (freiwillig)</span><input ${attr} data-bf="stichwort" value="${esc(b.stichwort || '')}" placeholder="z.B. Frost"></label>` : ''}
     ${g.quelle !== 'lage' && g.quelle !== 'warnung' ? `<div class="field"><span>Grenze</span><div class="row ablaufReihe wAkt">${wahl('vgl', [['ab', 'ab'], ['unter', 'unter']], b.vgl)}
       ${zahl('wert', b.wert)}<span class="muted small">${esc(g.einheit)}</span></div></div>` : ''}
     ${zeit ? `<div class="field"><span>Zeitraum</span><div class="row ablaufReihe wAkt">${wahl('richtung', [['voraus', 'nächste'], ['zurueck', 'letzte']], b.richtung)}
@@ -8205,7 +8235,7 @@ function renderStufe(){
       ${feld(i, 'text', 'Beschriftung', x.text, `placeholder="${esc(istInfo(x) ? 'freiwillig' : ABLAUF_VORGABE[x.art])}"`)}
       ${x.art === 'wetter' ? wetterAktionFelder(x, i) : ''}
       ${x.art === 'abfall' ? abfallAktionFelder(x, i) : ''}
-      ${x.art === 'link' ? feld(i, 'url', 'Adresse', x.url, 'inputmode="url" autocapitalize="off" placeholder="z. B. portal.beispiel.de"') : ''}
+      ${x.art === 'link' ? feld(i, 'url', 'Adresse', x.url, 'inputmode="url" autocapitalize="off" placeholder="z.B. portal.beispiel.de"') : ''}
       ${x.art === 'tel' ? feld(i, 'nummer', 'Nummer', x.nummer, 'type="tel"') : ''}
       ${x.art === 'mail' ? feld(i, 'an', 'An', x.an, 'type="email" autocapitalize="off"') + feld(i, 'betreff', 'Betreff', x.betreff)
         + `<label class="field"><span>Text</span><textarea data-i="${i}" data-f="inhalt" style="min-height:90px">${esc(x.inhalt || '')}</textarea></label>` : ''}
@@ -8216,7 +8246,7 @@ function renderStufe(){
   const inf = gruppe(true), akt = gruppe(false);
   const ziel = (p.stufen || []).some(x => (x.ergebnisse || []).some(e => (e.ziele || []).some(z => z.stufe === s.id)));
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">${esc(p.name || 'Ablauf')} · Schritt ${nr} ${iPl.knopf}</div>${iPl.text}
-    <label class="field"><span>Titel</span><input id="stTitel" value="${esc(s.titel || '')}" placeholder="z. B. Zustand prüfen"></label>
+    <label class="field"><span>Titel</span><input id="stTitel" value="${esc(s.titel || '')}" placeholder="z.B. Zustand prüfen"></label>
     <div class="eyebrow">Infos</div>${inf.length ? '' : '<p class="muted small" style="margin:0 0 6px">Wetter oder Abholtage, die beim Entscheiden helfen.</p>'}
     ${inf.map(karte).join('')}
     <button class="btn ghost klein" id="infoNeu" style="margin:6px 0 4px">+ Info</button>
@@ -8492,7 +8522,7 @@ function renderAufgabe(){
       </div></div>` : ''}`)}`;
   const vorbFeld = mangel ? '' : `
     <div id="vorbGruppe"${String(v.text || '').trim() ? ' class="gruppe"' : ''}><label class="field"><span>Vorbereitung</span>
-      <input id="vorbText" value="${esc(v.text)}" placeholder="z. B. Firma beauftragen"></label>
+      <input id="vorbText" value="${esc(v.text)}" placeholder="z.B. Firma beauftragen"></label>
     <label class="field" id="vorbWochenFeld"${String(v.text || '').trim() ? '' : ' hidden'}><span>Vorlauf in Wochen${a.von && !mangel ? ' vor Beginn' : ''}</span>
       <input id="vorbWochen" type="number" inputmode="numeric" min="0" value="${esc(v.wochen ?? 4)}"></label></div>`;
   /* Wiederkehrendes fragt nach dem Erledigen im eigenen Fenster nach Dauer und
@@ -8528,7 +8558,7 @@ function renderAufgabe(){
            <div class="row erlAm"><span class="muted">Erledigt am</span><input type="date" id="erlDatum" class="schmal" value="${heute()}" aria-label="Erledigt am"></div>
            ${ergebnisseHtml(a) || '<button class="btn primary" id="erlSetzen" style="margin-top:10px">Als erledigt vermerken</button>'}
            <details class="erlMehr"><summary>+ Vermerk oder Dauer</summary>
-             <input id="erlVermerk" placeholder="Vermerk, z. B. Firma" style="margin-top:8px">
+             <input id="erlVermerk" placeholder="Vermerk, z.B. Firma" style="margin-top:8px">
              ${fragtNachher ? '' : `<div class="field" style="margin:12px 0 0"><span>Dauer (freiwillig)</span><div id="erlDauer"></div></div>`}</details></div>`;
   /* Termin oder Zeitraum (v1.51). Die Umschaltung steht nur bei eigenen
      Aufgaben; ein Mangel hat seinen Termin. */
@@ -8659,7 +8689,7 @@ function renderAufgabe(){
       if(a.wdh) a.wdh.ankerVon = alsDatum(a.von).getDate();
     }
     sichern(); return true;
-  }, v => (zr ? 'Ende ' : 'Fällig am ') + dText(v) + ' übernommen');
+  }, v => (zr ? 'Ende ' : 'Fällig am ') + dText(v) + ' gespeichert');
   const gpFeld = $('#aufgGeplant');
   datumBinden(gpFeld, v => {
     if(v === a.geplant) return false;
@@ -8678,7 +8708,7 @@ function renderAufgabe(){
       if(a.wdh) a.wdh.anker = alsDatum(a.frist).getDate();
     }
     sichern(); return true;
-  }, v => 'Beginn ' + dText(v) + ' übernommen');
+  }, v => 'Beginn ' + dText(v) + ' gespeichert');
   /* Umschalten: der Termin wird zu „von“, „bis“ einen Monat später; zurück gilt
      „bis“ als Termin. Beim Zeitraum zählt die Wiederholung immer ab dem alten
      Termin – ab der Erledigung wanderte der Zeitraum mit jeder Erledigung. */
@@ -8911,7 +8941,7 @@ function termineFuerListe(){
 }
 const termineKommend = () => TERM.map(t => terminNaechstes(t)).filter(Boolean)
   .sort((x, y) => (x.von + terminSchl(x, x.von)).localeCompare(y.von + terminSchl(y, y.von)));
-/* Die Uhrzeit eines Vorkommens als Text, z. B. „10:00–11:30“, mehrtägig mit
+/* Die Uhrzeit eines Vorkommens als Text, z.B. „10:00–11:30“, mehrtägig mit
    den Tagen. */
 function terminZeitText(o, mitTag){
   const t = o.t, tagT = iso => { const d = alsDatum(iso); return `${WOCHENTAG[d.getDay()]} ${ttmm(d)}`; };
@@ -8992,7 +9022,7 @@ function renderTermin(){
      Entwurf eines neuen hat nichts zusammenzufassen, dort stehen sie offen. */
   const felder = `
     <label class="field"><span>Titel</span>
-      <input id="tmTitel" value="${esc(t.titel)}" placeholder="z. B. Absprache Firma Müller"></label>
+      <input id="tmTitel" value="${esc(t.titel)}" placeholder="z.B. Absprache Firma Müller"></label>
     <label class="field"><span>Art</span><select id="tmArt">${
       TERMIN_ARTEN.map(([k, text]) => `<option value="${k}"${t.art === k ? ' selected' : ''}>${text}</option>`).join('')}</select></label>
     <div class="field segfeld terminFeld gruppe"><span>${w ? 'Erstes Datum' : 'Datum'}</span>${seg('tage', [['ein', 'Ein Tag', !mehr], ['mehr', 'Mehrere Tage', mehr]])}
@@ -9005,8 +9035,8 @@ function renderTermin(){
       ${t.ganz ? '' : `<div class="vonBis">
               <label class="field"><span>von</span><input type="time" id="tmZeitVon" value="${esc(t.zeitVon)}" step="300"></label>
               <label class="field"><span>bis</span><input type="time" id="tmZeitBis" value="${esc(t.zeitBis)}" step="300"></label></div>`}</div>
-    <div class="gruppe"><label class="field"><span>Ort</span><input id="tmOrt" value="${esc(t.ort)}" placeholder="z. B. Technikraum, Büro Verwaltung"></label>
-    <label class="field"><span>Mit wem</span><input id="tmMit" value="${esc(t.mit)}" placeholder="z. B. Herr Schmidt, Firma Müller"></label></div>
+    <div class="gruppe"><label class="field"><span>Ort</span><input id="tmOrt" value="${esc(t.ort)}" placeholder="z.B. Technikraum, Büro Verwaltung"></label>
+    <label class="field"><span>Mit wem</span><input id="tmMit" value="${esc(t.mit)}" placeholder="z.B. Herr Schmidt, Firma Müller"></label></div>
     ${gerahmt(anlagen.length, `<label class="field"><span>Anlagentyp</span>
       <select id="tmNw"><option value="">– ohne Bezug –</option>${
         VORLAGEN.filter(x => aktiv(x.k) || x.k === t.k).map(x =>
@@ -9026,7 +9056,7 @@ function renderTermin(){
     <label class="field"><span>Notiz und Ergebnis</span><textarea id="tmNotiz" style="min-height:90px" placeholder="Worum es geht, was besprochen wurde">${esc(t.notiz)}</textarea></label>`;
   const kalender = `
     <div class="eyebrow">iPhone-Kalender</div><div class="card">
-      <label class="haken"><input type="checkbox" id="tmKal"${t.kalender ? ' checked' : ''}> In den Kalender übernehmen</label>
+      <label class="haken"><input type="checkbox" id="tmKal"${t.kalender ? ' checked' : ''}> Im iPhone-Kalender eintragen</label>
       <div id="tmKalTeil"${t.kalender ? '' : ' hidden'}>
         <label class="field" style="margin:8px 0 0"><span>Erinnerung</span><select id="tmErinnern">${
           [['', 'keine'], ['15', '15 Minuten vorher'], ['60', '1 Stunde vorher'], ['1440', '1 Tag vorher']].map(([k, x]) =>
@@ -9375,11 +9405,11 @@ function utensilWahl(box, gewaehlt, bei, material){
   });
   let bearbeiten = false, scharf = '';
   box.innerHTML = `<div class="muted small utKopf">Werkzeug</div><div class="chips" data-teil="wz"></div>
-    <div class="row utNeu"><input data-neu="wz" placeholder="Neues Werkzeug, z. B. Leiter" aria-label="Neues Werkzeug">
+    <div class="row utNeu"><input data-neu="wz" placeholder="Neues Werkzeug, z.B. Leiter" aria-label="Neues Werkzeug">
       <button type="button" class="btn ghost klein" data-plus="wz">Hinzufügen</button></div>
     <div class="muted small utKopf">Verbrauchsmaterial</div><div class="chips" data-teil="mat"></div>
     <div class="utMengen"></div>
-    <div class="row utNeu"><input data-neu="mat" placeholder="Neues Material, z. B. Filtervlies" aria-label="Neues Verbrauchsmaterial">
+    <div class="row utNeu"><input data-neu="mat" placeholder="Neues Material, z.B. Filtervlies" aria-label="Neues Verbrauchsmaterial">
       <button type="button" class="btn ghost klein" data-plus="mat">Hinzufügen</button></div>
     <p class="muted small utHinweis" hidden>Ein Tipp markiert, ein zweiter löscht – aus der Liste und überall, wo es eingetragen ist.</p>
     <button type="button" class="btn ghost klein utBearb">Liste bearbeiten</button>`;
@@ -9744,8 +9774,8 @@ function renderTaeten(){
    Umbenennen und Löschen wirken auf alle Tätigkeiten und Aufgaben, die den
    Eintrag führen. */
 function setWerkMat(box){
-  box.innerHTML = infoZeile('Werkzeug nimmt man mit, Verbrauchsmaterial wird vorher beschafft. Beide Listen gelten für alle Kontrollen und Aufgaben; Umbenennen und Löschen wirken überall, mit „→ Material“ bzw. „→ Werkzeug“ wechselt ein Eintrag die Liste. Die Einheit steht am Material, die Menge an der Tätigkeit.')
-    + `<div class="eyebrow">Werkzeug</div><div id="werkzeugListe"></div>`
+  box.innerHTML = infoKopf('Werkzeug', 'Werkzeug nimmt man mit, Verbrauchsmaterial wird vorher beschafft. Beide Listen gelten für alle Kontrollen und Aufgaben; Umbenennen und Löschen wirken überall, mit „→ Material“ bzw. „→ Werkzeug“ wechselt ein Eintrag die Liste. Die Einheit steht am Material, die Menge an der Tätigkeit.')
+    + `<div id="werkzeugListe"></div>`
     + `<div class="eyebrow">Verbrauchsmaterial</div><div id="materialListe"></div>`;
   const neu = () => setWerkMat(box);
   listeBauen($('#werkzeugListe'), {
@@ -10201,7 +10231,7 @@ function vorbKarteZeigen(box, zeilen, kopf){
     zeilen.map((z, i) => `<label class="haken matPosten${z.an ? ' erledigt' : ''}"><input type="checkbox" data-v="${i}"${z.an ? ' checked' : ''}>
       <span class="etext">${z.html}${z.unten ? `<small>${esc(z.unten)}</small>` : ''}</span></label>${
       z.an && z.vermerk ? `<input class="vorbVermerk" data-vm="${i}" value="${esc(z.vermerk.wert || '')}"
-        placeholder="Vermerk, z. B. ${esc(z.vermerk.beispiel)}" aria-label="Vermerk">` : ''}`).join('')}</div>`;
+        placeholder="Vermerk, z.B. ${esc(z.vermerk.beispiel)}" aria-label="Vermerk">` : ''}`).join('')}</div>`;
   box.querySelectorAll('[data-v]').forEach(c => c.onchange = () => zeilen[+c.dataset.v].setzen(c.checked));
   box.querySelectorAll('[data-vm]').forEach(f => f.onchange = () => zeilen[+f.dataset.vm].vermerk.setzen(f.value.trim()));
 }
@@ -10435,7 +10465,7 @@ function wochenplanRechnen(liste){
       if(teil) noten.push('Wetter gut ' + TEIL_KURZ[teil]);
       else if(wetterNote) noten.push(wetterNote);
       if(belegt.length > 1 || rest > 0) noten.push(`Teil ${i + 1} von ${belegt.length + (rest > 0 ? 1 : 0)}`);
-      if(b.tg.t > x.bis) noten.push('nach der Frist');
+      if(b.tg.t > x.bis) noten.push('überfällig');
       b.tg.posten.push({a:x.a, min:b.min, noten});
     });
     if(rest > 0) uebrig.push({a:x.a, min:rest, noten:[x.m.geschaetzt ? 'geschätzt' : ''].filter(Boolean)});
@@ -10618,7 +10648,8 @@ const planKnopf = (p, blass) => {
   /* Ohne Ziel kein Knopf (v1.183): er sah antippbar aus und tat nichts. */
   const tag = a.vorschau ? 'div' : 'button';
   return `<${tag} class="btn eintrag${a.vorschau ? ' still' : ''}${blass ? ' blass' : ''}" ${ziel}><span class="etext">${esc(a.titel)}<small>${
-    esc(['≈ ' + dauerText({m:p.min})].concat(p.noten.concat(a.vorschau ? ['kommt noch'] : [], blass && a.faellig ? ['fällig ' + ttmm(a.faellig)] : [])).join(' · '))}</small></span></${tag}>`;
+    /* „~“ statt des Wortes „geschätzt“ bei jedem Eintrag (v1.206, D17). */
+    esc([(p.noten.includes('geschätzt') ? '~' : '≈ ') + dauerText({m:p.min})].concat(p.noten.filter(x => x !== 'geschätzt').concat(a.vorschau ? ['kommt noch'] : [], blass && a.faellig ? ['fällig ' + ttmm(a.faellig)] : [])).join(' · '))}</small></span></${tag}>`;
 };
 function renderWochenplan(){
   const box = $('#wplanBox');
@@ -10630,7 +10661,7 @@ function renderWochenplan(){
      ist dieselbe Zahl wie auf Heute. */
   const heuteFrei = vorziehenRechnen(liste).frei;
   const istFaellig = p => p.a.gruppe === 'ueber' || p.a.gruppe === 'heute';
-  const i = info('Ein Plan, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Eingeplantes an seinem Tag, Wetteraufgaben auf gute Halbtage. Termine stehen obenan und nehmen ihre Zeit vom Tag. Die Dauer ist der Durchschnitt der erfassten Dauern, ohne sie gelten 30 Minuten („geschätzt“). Was nicht fällig ist und nur vorgezogen wird, steht heute blass unter „Könnte heute mit“. Die Zeit je Arbeitstag steht unter Mehr › Einstellungen › Arbeitszeit.', 'margin:-2px 0 10px');
+  const i = info('Ein Plan, der bei jedem Öffnen neu gerechnet wird: früheste Frist zuerst, bei gleicher Frist die höhere Wichtigkeit; Eingeplantes an seinem Tag, Wetteraufgaben auf gute Halbtage. Termine stehen obenan und nehmen ihre Zeit vom Tag. Die Dauer ist der Durchschnitt der erfassten Dauern, ohne sie gelten 30 Minuten – dann steht „~“ vor der Dauer (geschätzt). Was nicht fällig ist und nur vorgezogen wird, steht heute blass unter „Könnte heute mit“. Die Zeit je Arbeitstag steht unter Mehr › Einstellungen › Arbeitszeit.', 'margin:-2px 0 10px');
   const kopfVon = j => j === 0 && planTagWort(tage[j].t) === 'heute' ? `Heute · ${WOCHENTAG[tage[j].t.getDay()]} ${ttmm(tage[j].t)}`   // wie auf Heute (v1.201)
                                                                     : `${WOCHENTAG[tage[j].t.getDay()]} ${ttmm(tage[j].t)}`;
   /* Leere Tage am Stück stehen in einer Zeile (v1.73), ohne Balken – zehnmal
@@ -11193,7 +11224,7 @@ async function renderPlaeneWahl(){
   box.querySelectorAll('[data-id]').forEach(b =>
     b.onclick = () => planZeigen(b.dataset.id, null));
 }
-let sprungZiel = '', spAuf = new Set();   // spAuf: aufgeklappte, z. B. "woch:0"
+let sprungZiel = '', spAuf = new Set();   // spAuf: aufgeklappte, z.B. "woch:0"
 
 /* ---------- Fremdprüfung ----------------------------------------------------
    Oben der Sammel-Eintrag: die Firma war da und hat alles geprüft, also steht
@@ -12051,6 +12082,12 @@ function info(text, stil = ''){
     text:`<p class="muted small infotext" id="${id}" hidden${stil ? ` style="${stil}"` : ''}>${text}</p>`
   };
 }
+/* Ein ⓘ ohne Text daneben belegte eine ganze Zeile (v1.206, D13) – es
+   steht jetzt in einer Überschrift. */
+const infoKopf = (titel, text) => {
+  const i = info(text, 'margin:-2px 0 12px');
+  return `<div class="eyebrow mitInfo" style="margin-top:0">${esc(titel)} ${i.knopf}</div>${i.text}`;
+};
 const infoZeile = (text, links = '') => {
   const i = info(text, 'margin:-2px 0 12px');
   return `<div class="infozeile"><span class="muted small">${links}</span>${i.knopf}</div>${i.text}`;
@@ -12490,9 +12527,9 @@ function setAdresse(box){
     /* Die grobe Ortssuche kennt keine Straße – die bisherige bleibt stehen. */
     adresseSetzen({strasse:grob ? alt.strasse || '' : e.strasse, hnr:grob ? alt.hnr || '' : e.hnr,
                    plz:e.plz || (grob ? alt.plz || '' : ''), ort:e.ort, zusatz:e.zusatz, lat:e.lat, lon:e.lon});
-    toast(grob ? 'Ort übernommen – Straße und Nr. bitte prüfen'
+    toast(grob ? 'Ort gespeichert – Straße und Nr. bitte prüfen'
         : !e.strasse ? 'Übernommen – Straße und Nr. bitte ergänzen'
-        : !e.hnr ? 'Übernommen – Hausnummer bitte ergänzen' : 'Adresse übernommen');
+        : !e.hnr ? 'Gespeichert – Hausnummer bitte ergänzen' : 'Adresse gespeichert');
     setAdresse(box);
   };
   const feldS = $('#adrSuche'), treffer = $('#adrTreffer');
@@ -12533,7 +12570,7 @@ function setAdresse(box){
       if(e) uebernehmen(Object.assign(e, {lat, lon}), false);
       else{
         adresseSetzen(Object.assign({}, adresse(), {lat, lon}));
-        toast('Lage übernommen – Adresse bitte von Hand eintragen');
+        toast('Lage gespeichert – Adresse bitte von Hand eintragen');
         setAdresse(box);
       }
     }, err => {
@@ -13788,7 +13825,7 @@ const WGROESSEN = [
   {k:'warnung',   name:'Amtliche Warnung',             einheit:'',      quelle:'warnung'},
   /* Abfuhr aus dem Abfallkalender (v1.174): eine Abholung in den nächsten n
      Tagen (heute mitgezählt), wahlweise nur einer Abfallart. */
-  {k:'abfuhr',    name:'Abfuhr (Abfallkalender)',      einheit:'',      quelle:'abfall'}
+  {k:'abfuhr',    name:'Abholtag (Abfallkalender)',      einheit:'',      quelle:'abfall'}
 ];
 const WLAGEN = [['gewitter', 'Gewitter', [95, 96, 99]], ['hagel', 'Hagel', [96, 99]],
   ['eis', 'Eisregen', [56, 57, 66, 67]], ['schnee', 'Schnee', [71, 73, 75, 77, 85, 86]],
@@ -13875,7 +13912,7 @@ function bedPruefen(b, reihen){
     /* ereignis = Tag der Abholung: je Abholung genau ein Vorschlag. */
     return t ? {ok:true, text:`${t.art} ${abfallDatum(t.tag)}${abfallWann(t.tag) ? ` (${abfallWann(t.tag)})` : ''}`,
                 zeit:alsDatum(t.tag).getTime() + 6 * 3600000, ereignis:t.tag}
-             : {ok:false, text:`keine Abfuhr${b.abfall ? ` von ${b.abfall}` : ''} bis ${dText(bis)}`, zeit:0};
+             : {ok:false, text:`keine Abholung${b.abfall ? ` von ${b.abfall}` : ''} bis ${dText(bis)}`, zeit:0};
   }
   if(g.quelle === 'warnung'){
     const wort = String(b.stichwort || '').trim().toUpperCase();
@@ -14031,7 +14068,7 @@ function bedKurz(b){
   const dauer = g.dauer && Math.round(b.dauer) > 1
     ? `, ${Math.round(b.dauer)} ${g.dauer === 'tage' ? 'Tage' : 'Stunden'} in Folge` : '';
   if(g.quelle === 'warnung') return `Amtliche Warnung${b.stichwort ? ` mit „${b.stichwort}“` : ''}`;
-  if(g.quelle === 'abfall') return `Abfuhr${b.abfall ? ` von ${b.abfall}` : ''} ${abfuhrFenster(b)}`;
+  if(g.quelle === 'abfall') return `Abholung${b.abfall ? ` von ${b.abfall}` : ''} ${abfuhrFenster(b)}`;
   if(g.quelle === 'trocken') return `Trocken seit ${b.vgl === 'unter' ? 'weniger als' : 'mindestens'} ${Math.max(0, +b.wert)} Tagen`;
   if(g.quelle === 'lage') return `${lageNamen(b.lage)}, ${fenster}${dauer}`;
   return `${g.name} ${b.vgl === 'unter' ? 'unter' : 'ab'} ${mmText(+b.wert)} ${g.einheit}, ${fenster}${dauer}`;
@@ -14081,7 +14118,7 @@ function bedKarte(b, n, mehr){
     ${g.quelle === 'lage' ? `<div class="wgZeile wgBreit"><span>Wetterlage</span><select data-f="lage">${
         WLAGEN.map(l => `<option value="${l[0]}"${l[0] === b.lage ? ' selected' : ''}>${l[1]}</option>`).join('')}</select></div>`
       : g.quelle === 'warnung' ? `<div class="wgZeile wgBreit"><span>Stichwort der Warnung</span>
-          <input data-f="stichwort" value="${esc(b.stichwort || '')}" placeholder="z. B. GLÄTTE, leer = jede"></div>`
+          <input data-f="stichwort" value="${esc(b.stichwort || '')}" placeholder="z.B. GLÄTTE, leer = jede"></div>`
       : g.quelle === 'abfall' ? `<div class="wgZeile wgBreit"><span>Abfallart</span><select data-f="abfall"><option value="">jede</option>${
           abfallArten().map(x => x.art).concat(b.abfall && !abfallArten().some(x => x.art === b.abfall) ? [b.abfall] : [])
             .map(a => `<option value="${esc(a)}"${a === b.abfall ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select></div>`
@@ -14144,7 +14181,7 @@ function setEigenRegel(box, r, neu){
     ${r.dann === 'ablauf' ? `<label class="field"><span>Ablauf</span><select id="regPlan"><option value="">– wählen –</option>${
         plaeneListe().map(x => `<option value="${esc(x.id)}"${x.id === r.plan ? ' selected' : ''}>${esc(x.name || 'Ablauf')}</option>`).join('')}</select></label>
       ${plaeneListe().length ? '' : '<p class="muted small" style="margin:-4px 0 10px">Noch kein Ablauf angelegt.</p>'}`
-    : `<label class="field"><span>Titel</span><input id="regTitel" value="${esc(r.titel || '')}" placeholder="z. B. Junge Bäume wässern"></label>
+    : `<label class="field"><span>Titel</span><input id="regTitel" value="${esc(r.titel || '')}" placeholder="z.B. Junge Bäume wässern"></label>
     ${r.objK && NW(r.objK) ? `<p class="muted small" style="margin:-4px 0 10px">Für ${esc([NW(r.objK).label, r.objAnlage].filter(Boolean).join(' · '))}</p>` : ''}
     <div class="field segfeld"><span>Wichtigkeit</span>${seg('wichtig', [['hoch', 'Hoch'], ['normal', 'Normal'], ['niedrig', 'Niedrig']])}</div>`}
     ${gerahmt(r.fristArt === 'tage', `<div class="field segfeld"><span>Fällig</span>${seg('fristArt', [['tage', 'in x Tagen'], ['heute', 'heute'], ['vorher', 'Tag vorher']])}</div>
@@ -14512,12 +14549,12 @@ function setTypBau(box, k){
     const kontrolle = !n.art, fremd = n.art === 'fremd';
     box.innerHTML = `
       <label class="field"><span>Name des Anlagentyps</span>
-        <input id="tbName" value="${esc(n.label)}" placeholder="z. B. Erste-Hilfe-Kästen"></label>
+        <input id="tbName" value="${esc(n.label)}" placeholder="z.B. Erste-Hilfe-Kästen"></label>
       <div class="eyebrow">Art</div>
       ${seg('art', TYP_ARTEN, n.art, hatObjekte)}
       <p class="muted small" style="margin:6px 0 0">${
         kontrolle ? 'Du prüfst selbst: Zustand je Objekt, Checkliste, Blatt zum Ausgeben mit Unterschrift.'
-        : fremd ? 'Eine Firma prüft: je Objekt das Datum der letzten Prüfung, daraus der nächste Termin.'
+        : fremd ? 'Eine Firma prüft: je Objekt das Datum der letzten Prüfung, daraus die nächste Fälligkeit.'
         : 'Keine Prüfung: die Objekte stehen in der Liste, im Grundriss und in der Suche.'}${
         hatObjekte ? ' Die Art lässt sich nicht mehr ändern, weil der Typ schon Objekte hat.' : ''}</p>
       ${kontrolle ? `
@@ -14531,7 +14568,7 @@ function setTypBau(box, k){
             <button type="button" class="btn danger klein" style="width:auto;margin:0" data-weg="${i}" ${n.status.length <= 1 ? ' disabled' : ''}>Löschen</button></div>`).join('')}</div>
         <button type="button" class="btn ghost klein" id="tbZustandPlus" style="margin-top:6px">+ Zustand</button>
         <label class="field" style="margin-top:14px"><span>Kacheln für die Bemerkung</span>
-          <input id="tbKacheln" value="${esc((n.vorschlaege || []).join(', '))}" placeholder="z. B. Gereinigt, Nachgefüllt"></label>
+          <input id="tbKacheln" value="${esc((n.vorschlaege || []).join(', '))}" placeholder="z.B. Gereinigt, Nachgefüllt"></label>
         <p class="muted small" style="margin:-6px 0 10px">Durch Komma getrennt. Erscheinen als Kacheln unter dem Bemerkungsfeld, höchstens eine gilt.</p>
         <label class="field"><span>Überschrift des Blatts</span>
           <input id="tbTitel" value="${esc(n.titelEigen || '')}" placeholder="${esc(typAbleiten(Object.assign({}, n, {titelEigen:''})).titel)}"></label>
@@ -14667,7 +14704,7 @@ function setAbwesend(box){
   const kommend = reihe.filter(r => !r.x.bis || r.x.bis >= h), vorbei = reihe.filter(r => r.x.bis && r.x.bis < h).reverse();
   const karte = ({x, i}) => `<div class="card abw" data-i="${i}">
       <div class="abwKopf">
-        <input data-f="text" value="${esc(x.text || '')}" placeholder="Bezeichnung, z. B. Urlaub">
+        <input data-f="text" value="${esc(x.text || '')}" placeholder="Bezeichnung, z.B. Urlaub">
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
       <div class="vonBis">
@@ -14770,7 +14807,7 @@ function setObjekt(box){
   box.innerHTML =
     `<div class="gruppe"><label class="field"><span class="mitInfo">Gebäude ${i.knopf}</span><input id="setObjekt" placeholder="z.B. Musterhaus, Musterstraße 1"></label>${i.text}
      <label class="field"><span>Prüfer</span><input id="setPruefer" placeholder="Vor- und Nachname"></label></div>
-     <label class="field"><span>Bauteile</span><input id="setBauteile" placeholder="z. B. BT I, BT II"></label>
+     <label class="field"><span>Bauteile</span><input id="setBauteile" placeholder="z.B. BT I, BT II"></label>
      <p class="muted small" style="margin:-6px 0 14px">Durch Komma getrennt. Erscheinen als Kacheln beim Standort eines Feuerlöschers, nach dem Grundriss.</p>`;
   $('#setObjekt').value  = CFG.objekt  || '';
   $('#setPruefer').value = CFG.pruefer || '';
@@ -14788,7 +14825,7 @@ function setObjekt(box){
 const bauteile = () => Array.isArray(CFG.bauteile) ? CFG.bauteile : ['BT I', 'BT II'];
 function setCheck(box, k){
   box.innerHTML =
-    infoZeile('Steht im Protokoll genau so wie hier – Nummern, Spiegelstriche und „&gt;“ bleiben erhalten.')
+    infoKopf('Text der Checkliste', 'Steht auf dem Blatt genau so wie hier – Nummern, Spiegelstriche und „>“ bleiben erhalten.')
     + `<textarea id="setCheckText" style="min-height:340px"></textarea>`;
   const ta = $('#setCheckText');
   ta.value = teilCfg(k).checkliste || '';
@@ -15038,7 +15075,7 @@ function setSprinkler(box, k){
    Art und ändert sich höchstens, wenn sich die Vorschrift ändert. */
 function setFremd(box, k, teil){
   const n = NW(k), t = teilCfg(k);
-  const iAbst = info('Aus dem letzten Prüfdatum und diesem Abstand ergibt sich der nächste Termin – und unter welcher Überschrift der Typ unter „Anlagen“ steht. 12 = jährlich, 24 = alle zwei Jahre.', 'margin:-6px 0 14px');
+  const iAbst = info('Aus dem letzten Prüfdatum und diesem Abstand ergibt sich die nächste Fälligkeit – und unter welcher Überschrift der Typ unter „Anlagen“ steht. 12 = jährlich, 24 = alle zwei Jahre.', 'margin:-6px 0 14px');
   const iObj = info('Neue Objekte hängen sich hinten an. „Grundriss“ zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge.'
     + (akkuAktiv(k) ? ' Unter dem Namen wählst du den Akkutyp, rechts in der Knopfreihe die Anzahl.' : ''), 'margin:-4px 0 6px');
   if(teil !== 'typ'){
@@ -15074,7 +15111,7 @@ function loeFelderZeigen(box, name, zf){
   const hersteller = [...new Set(teilCfg('loescher').anlagen.map(a => String(loeInfo(a).hersteller || '').trim()).filter(Boolean))];
   const lid = 'loeOrte' + Math.random().toString(36).slice(2, 8), hid = lid + 'h';
   box.innerHTML = `
-    <div class="gruppe"><label class="field"><span>Standort</span><input data-l="standort" value="${esc(i.standort || '')}" list="${lid}" placeholder="z. B. EG Treppenhaus">
+    <div class="gruppe"><label class="field"><span>Standort</span><input data-l="standort" value="${esc(i.standort || '')}" list="${lid}" placeholder="z.B. EG Treppenhaus">
       <datalist id="${lid}">${orte.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label>
     <div class="chips loeStKacheln" hidden></div></div>
     <div class="gruppe"><label class="field"><span>Löschmittel</span><select data-l="mittel"><option value="">– offen –</option>${
@@ -15086,7 +15123,7 @@ function loeFelderZeigen(box, name, zf){
       <option value="anders"${anders ? ' selected' : ''}>anderes …</option></select>
       ${anders || i.mengeAnders ? `<input data-l="mengeZahl" inputmode="decimal" class="schmal" style="margin-top:8px" value="${esc(i.menge || '')}" placeholder="${ein}">` : ''}</label></div>
     <div class="gruppe"><label class="field"><span>Inventar- oder Seriennummer</span><input data-l="nr" value="${esc(i.nr || '')}"></label>
-    <label class="field"><span>Baujahr</span><input data-l="baujahr" type="number" inputmode="numeric" class="schmal" value="${esc(i.baujahr || '')}" placeholder="z. B. 2018"></label>
+    <label class="field"><span>Baujahr</span><input data-l="baujahr" type="number" inputmode="numeric" class="schmal" value="${esc(i.baujahr || '')}" placeholder="z.B. 2018"></label>
     <label class="field"><span>Hersteller</span><input data-l="hersteller" value="${esc(i.hersteller || '')}" list="${hid}">
       <datalist id="${hid}">${hersteller.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label></div>`;
   const setzen = (feld, wert) => { const x = loeInfo(name, true); if(wert === '' || wert == null) delete x[feld]; else x[feld] = wert; saveCfg(); };
@@ -15323,7 +15360,7 @@ function objektKarten(box, k, nachZeichnen){
    während man noch darin tippt (wie bei den Zählstellen). */
 function setAkkus(box){
   box.innerHTML =
-    infoZeile('Die Akkutypen gelten für alle Anlagentypen mit Akkutausch, der Abstand steht in Monaten (48 = vier Jahre). Welcher Typ in welchem Objekt steckt und wie viele, stellst du auf der Seite des Anlagentyps bei den Objekten ein.')
+    infoKopf('Akkutypen', 'Die Akkutypen gelten für alle Anlagentypen mit Akkutausch, der Abstand steht in Monaten (48 = vier Jahre). Welcher Typ in welchem Objekt steckt und wie viele, stellst du auf der Seite des Anlagentyps bei den Objekten ein.')
     + `<button class="btn ghost klein" id="akkuTypPlus" style="margin:0 0 10px">+ Neuer Akkutyp</button>
      <div id="akkuTypListe"></div>`;
   akkuTypBasis = akkuTypen().length;
@@ -15516,7 +15553,7 @@ function stellenZeichnen(mitNeuer){
    nur über Speichern" (v0.51) ist hinfällig – es gibt kein Speichern mehr. */
 function setTausch(box){
   box.innerHTML =
-    infoZeile('Zähler anhaken, dann Wechseldatum, neue Nummer sowie Aus- und Einbaustand eintragen. Für die angehakten Zähler wird der Vorquartalsstand verworfen und ab dem Einbaustand gerechnet; alle anderen bleiben unberührt.')
+    infoKopf('Getauschte Zähler', 'Zähler anhaken, dann Wechseldatum, neue Nummer sowie Aus- und Einbaustand eintragen. Für die angehakten Zähler wird der Vorquartalsstand verworfen und ab dem Einbaustand gerechnet; alle anderen bleiben unberührt.')
     + `<div id="tauschListe">${medienNamenListe()}</div>
      <button class="btn primary" id="btnTauschOk" style="margin-top:16px">Tausch vermerken</button>`;
   /* Das Nummernfeld öffnet sich erst mit dem Haken – so ist auf einen Blick zu
@@ -19164,8 +19201,8 @@ async function renderVerlauf(){
   const wege = [
     art === 'bestand' ? '' : `<button type="button" data-ow="kontrolle"><i>${HAKEN_SVG}</i>${art === 'fremd' ? 'Prüfung' : 'Kontrolle'}</button>`,
     `<button type="button" data-ow="plan"><i>${ORT_SVG}</i>Grundriss</button>`,
-    art === 'medien' ? `<button type="button" data-ow="tausch"><i>⇄</i>Zählertausch</button>` : `<button type="button" data-ow="stoer"><i>⚠︎</i>Störung</button>`,
-    `<button type="button" data-ow="aufgabe"><i>+</i>Aufgabe</button>`].filter(Boolean).join('');
+    art === 'medien' ? `<button type="button" data-ow="tausch"><i>${TAUSCH_SVG}</i>Zählertausch</button>` : `<button type="button" data-ow="stoer"><i>${STOER_SVG}</i>Störung</button>`,
+    `<button type="button" data-ow="aufgabe"><i>${PLUS_SVG}</i>Aufgabe</button>`].filter(Boolean).join('');
   const offen = AUFG.filter(a => !a.erledigt && a.k === v.k && (a.anlage === v.id || a.quelle === ort));
   const kopf = `<div class="card objKopf">
       <p class="kopfTyp">${esc(n.label)}</p>
@@ -19296,10 +19333,10 @@ function verlaufStoer(v){
       <div class="vwann">${esc(dText(s.datum))}</div><div class="small">${esc(stoerZeileText(s))}</div></button>`);
   const feld = f ? `<div class="gruppe stoerFeld">
       <label class="field"><span>Am</span><input type="date" id="stoerDatum" class="schmal" value="${esc(f.datum)}"></label>
-      <label class="field"><span>Was war</span><input id="stoerWas" value="${esc(f.was)}" placeholder="z. B. Störmeldung, Klappe öffnete nicht"></label>
+      <label class="field"><span>Was war</span><input id="stoerWas" value="${esc(f.was)}" placeholder="z.B. Störmeldung, Klappe öffnete nicht"></label>
       <div class="field"><span>Behoben durch</span><div class="chips" id="stoerWeg">${
         STOER_WEG.map(([w, t]) => `<button type="button" data-weg="${w}" aria-pressed="${f.weg === w}">${esc(t)}</button>`).join('')}</div></div>
-      <label class="field"><span>Vermerk</span><input id="stoerVermerk" value="${esc(f.vermerk)}" placeholder="z. B. Firma, Teil"></label>
+      <label class="field"><span>Vermerk</span><input id="stoerVermerk" value="${esc(f.vermerk)}" placeholder="z.B. Firma, Teil"></label>
       <div class="field"><span>Dauer (freiwillig)</span><div id="stoerDauer"></div></div>
       <button class="btn primary" id="stoerSpeichern">${f.id ? 'Speichern' : 'Störung vermerken'}</button>
       <button class="btn" id="stoerAbbruch">Abbrechen</button>
@@ -19670,7 +19707,7 @@ function pruefFenster(d, key, gruende, fertig){
   const liste = $('#dlgListe');
   liste.hidden = false;
   liste.innerHTML = `<label class="field" style="margin:12px 0 0"><span>Grund (freiwillig)</span>
-    <input id="pruefGrund" placeholder="z. B. Leerstand" value="${esc((((d.quitt || {})[key]) || {}).grund || '')}"></label>`;
+    <input id="pruefGrund" placeholder="z.B. Leerstand" value="${esc((((d.quitt || {})[key]) || {}).grund || '')}"></label>`;
 }
 /* Einstellungen: Prozent und Mindestmengen, gesichert beim Verlassen des Feldes. */
 function plausEinstellungen(box){
