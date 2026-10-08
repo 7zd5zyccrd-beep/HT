@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.188 08.10.2026 Bedienkonzept, Etappe 6 von 7: Heute und Kalender. Heute
+         beginnt mit schmalen Zeilen statt Karten (amtliche Warnung,
+         „Sicherung fällig“, „Bis … wird es knapp“). Alle Vorschläge stehen
+         in einer Karte – Auslöser, Ergebnisse aus Abläufen, Gute
+         Gelegenheit und „Zeit übrig?“ –, jeder mit „Übernehmen“ und „Nicht
+         jetzt“. Unter „Heute“ ein Balken für die belegte Arbeitszeit. Der
+         Kalender zeigt je Tag Wetter und Abholung, Urlaub und Feiertage als
+         eigene Zeile; ein Tipp auf eine Aufgabe bietet „Auf einen Tag
+         legen …“ und „Einplanung entfernen“. Unten „Alle Termine“ und
+         „Abwesenheiten“, im + auch „Abwesenheit“.
   v1.187 08.10.2026 Bedienkonzept, Etappe 5 von 7: die Kontrolle. Unten nur
          noch „Abschließen“: eine eigene Seite zeigt, was fehlt (ein Tipp
          springt zur Karte), welche Mängel zu Aufgaben werden, nimmt die
@@ -2701,6 +2711,13 @@ button > .ortIcon:only-child{display:block;margin:auto}
 body.reiterAn main{padding-bottom:calc(16px + var(--leiste-h, 0px))}
 header .back[hidden]{display:none}
 .mehrZeile{display:flex;justify-content:space-between;gap:10px}
+/* Schmale Hinweise oben auf Heute (v1.188). */
+.kopfHinweis{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:8px 12px;margin:0 0 8px;color:var(--ink);font:inherit;font-size:15px;line-height:1.35;cursor:pointer}
+.kopfHinweis span{color:var(--ink-soft);font-size:14px}
+.kopfHinweis.warn{border-left:5px solid #C0392B}
+.vorzZeile{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 0 2px;color:var(--ink);font:inherit;cursor:pointer}
+.vorschlaege .hzeile + .vorzZeile{border-top:1px solid var(--line);margin-top:4px;padding-top:10px}
 /* Angaben der Aufgabe als Zeilen (v1.186), wie in den iPhone-Einstellungen. */
 .angListe{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 0 6px}
 .angZeile{display:flex;width:100%;align-items:baseline;justify-content:space-between;gap:12px;padding:11px 14px;
@@ -3763,7 +3780,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.187';
+const VERSION = 'v1.188';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5188,7 +5205,8 @@ $('#btnSuche').onclick = () => {
 };
 $('#btnNeu').textContent = '+';
 $('#btnNeu').onclick = () => wahlFenster('Neu', [
-    {text:'Aufgabe', tu:() => aufgabeNeu()}, {text:'Termin', tu:terminNeu}, {text:'Ablauf', tu:() => assistentStart()}],
+    {text:'Aufgabe', tu:() => aufgabeNeu()}, {text:'Termin', tu:terminNeu}, {text:'Ablauf', tu:() => assistentStart()},
+    {text:'Abwesenheit', tu:() => setOeffnen('abwesend')}],
   e => e.tu());
 /* Dunkle Darstellung (v1.112): die App folgt dem Gerät, auch wenn es
    zwischendurch umschaltet (etwa abends automatisch). */
@@ -6053,8 +6071,10 @@ function heuteZeile(liste){
   const rest = frei ? (frei.art === 'wochenende' ? 'Wochenende' : frei.art === 'feiertag' ? 'Feiertag'
                         : (frei.ab && frei.ab.text) || 'Abwesend')
     : `Arbeitszeit übrig ≈ ${dauerText({m:tagKap(h0)})}`;
+  const cap = frei ? 0 : tagKap(h0), anteil = cap ? Math.min(100, Math.round(min / cap * 100)) : 0;
   return `<button type="button" class="heuteZeile" data-wplan="1">${
-    esc([teile.length ? teile.join(' · ') : 'Nichts für heute', rest].join(' · '))} · Kalender ›</button>`;
+    esc([teile.length ? teile.join(' · ') : 'Nichts für heute', rest].join(' · '))} · Kalender ›</button>${
+    cap ? `<div class="planBalken" style="margin:2px 0 10px"><span style="width:${anteil}%"></span></div>` : ''}`;
 }
 function renderHome(){
   listeGebaut = true;
@@ -6115,8 +6135,8 @@ function renderHome(){
      unter dem Überfälligen, sonst vor der ersten Gruppe. */
   const vorz = vorziehenHtml(liste);
   const vorzNach = gruppen.some(x => x.g === 'heute') ? 'heute' : gruppen.some(x => x.g === 'ueber') ? 'ueber' : '';
-  let inhalt = abwesenheitsKarte(liste) + (gruppen.length && gruppen[0].g === 'ueber' ? '' : gelegen)
-    + (vorzNach ? '' : vorz)
+  void gelegen; void vorz; void vorzNach;
+  let inhalt = abwesenheitsKarte(liste)
     + gruppen.map(({g, titel, teil, vor}) => {
     /* Was die Gruppe an Zeit braucht (v1.63), aus den Erfahrungswerten. */
     /* „≈ 0:30 h“ bricht nicht mehr vor dem „h“ um (v1.143). */
@@ -6126,21 +6146,22 @@ function renderHome(){
        „dazu Sprinkler-…“ darunter störte (v1.144, Jean). */
     const summe = minVon(teil) + minVon(vor);
     if(g === 'heute') return `<div class="eyebrow" style="margin-bottom:2px">${esc(titel)}</div>` + heuteZeile(liste)
-        + teil.map(a => a.istTermin ? terminKnopf(a.o, true) : aufgabeKnopf(a)).join('') + (g === vorzNach ? vorz : '');
+        + teil.map(a => a.istTermin ? terminKnopf(a.o, true) : aufgabeKnopf(a)).join('');
     return `<div class="eyebrow">${esc(titel)}${summe ? ` <span class="summe">· ${esc(dauerFest(summe))}</span>` : ''}</div>`
-        + teil.map(a => a.istTermin ? terminKnopf(a.o, g === 'heute' || g === 'morgen') : aufgabeKnopf(a)).join('') + (g === 'ueber' ? gelegen : '') + (g === vorzNach ? vorz : '');
+        + teil.map(a => a.istTermin ? terminKnopf(a.o, g === 'heute' || g === 'morgen') : aufgabeKnopf(a)).join('');
   }).join('');
   if(!liste.length && !term.length) inhalt += gibt
     ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Anlagen“.</p>`
     : `<p class="muted small">Noch nichts eingetragen. Unter Mehr › Einstellungen fügst du mit „Neuer Anlagentyp“ hinzu, was im Haus geprüft wird.</p>`;
   /* Neues über das + oben rechts, alles Übrige unter Mehr (v1.184). */
-  $('#homeListe').innerHTML = warnKarte() + hinweisKarte(hinweise) + planKarte(liste) + sicherungsKarte(gibt) + inhalt
+  $('#homeListe').innerHTML = warnZeile() + sicherungZeile(gibt) + auslastungZeile(liste)
+    + vorschlaegeKarte(hinweise, gelegenheiten(liste), liste) + inhalt
     + matStartHtml();
   knoepfeVerdrahten($('#homeListe'));
   matStartVerdrahten();
   const sich = $('#homeListe [data-sichern]');
   if(sich) sich.onclick = alsDateiSichern;
-  $('#homeListe').querySelectorAll('[data-wplan]').forEach(b => b.onclick = () => go('wplan'));
+  $('#homeListe').querySelectorAll('[data-wplan]').forEach(b => b.onclick = () => bereich('wplan'));
   const wk = $('#homeListe [data-warn]');
   if(wk) wk.onclick = () => { go('wetter'); wetterAbrufen(); };
   $('#homeListe').querySelectorAll('[data-hja]').forEach(b => b.onclick = () => {
@@ -10184,6 +10205,67 @@ function vorziehenHtml(liste){
     ${zeigen.length < vorschlaege.length ? '<button class="btn ghost klein" data-vorzmehr="1" style="margin-top:10px">Mehr zeigen</button>' : ''}
   </div>` + knopf;
 }
+/* Alle Vorschläge in einer Karte (v1.188, Etappe 6): Auslöser, Ergebnisse
+   aus Abläufen, Gute Gelegenheit und Vorziehen – jeder mit „Übernehmen“ und
+   „Nicht jetzt“. Vorher standen sie in drei Karten mit drei Bedienweisen. */
+function vorschlaegeKarte(hinweise, gel, liste){
+  const vz = vorziehenRechnen(liste);
+  const zeilen = hinweise.map(h => `<div class="hzeile">
+      <p style="margin:0 0 2px"><b>${esc(h.titel || dannText(h.regel))}</b></p>
+      <p class="muted small" style="margin:0 0 8px">${esc(h.grund)}</p>
+      <div class="hknoepfe"><button class="btn ghost klein" data-hja="${esc(h.schluessel)}">Übernehmen</button>
+        <button class="btn ghost klein" data-hnein="${esc(h.schluessel)}">Nicht jetzt</button></div></div>`)
+    .concat(gel.map(g => {
+      const tag = planTagWort(g.tg.t), a = g.a;
+      return `<div class="hzeile"><div data-aufg="${esc(a.aufg)}" style="cursor:pointer">
+        <p style="margin:0 0 2px"><b>${esc(a.titel)}</b> <span class="muted small">›</span></p>
+        <p class="muted small" style="margin:0 0 8px">${esc([`Gute Gelegenheit: ${tag} ${TEIL_KURZ[g.teil]} gutes Wetter`,
+          `≈ ${dauerText({m:g.min})}, noch ${dauerText({m:Math.floor(g.frei / 15) * 15})} frei`].join(' · '))} – Vorschlag: ${esc(tag)} erledigen</p></div>
+        <div class="hknoepfe"><button class="btn ghost klein" data-gja="${esc(a.aufg + '|' + g.tg.iso)}">Übernehmen</button>
+          <button class="btn ghost klein" data-gnein="${esc(a.aufg + '|' + g.tg.iso)}">Nicht jetzt</button></div></div>`;
+    }));
+  let vorz = '';
+  if(vz.kand.length){
+    const freiText = dauerText({m:Math.floor(vz.frei / 15) * 15});
+    vorz = `<button type="button" class="hzeile vorzZeile" data-vorz="1"><b>Zeit übrig?</b> <span class="muted small">${
+      vz.frei >= VORZ_AB ? `heute noch ≈ ${esc(freiText)} frei – ` : ''}${vorziehenAuf ? 'zuklappen' : 'etwas vorziehen ›'}</span></button>`;
+    if(vorziehenAuf){
+      const zeigen = vorziehenAlle ? vz.vorschlaege : vz.vorschlaege.slice(0, VORZ_ZAHL);
+      vorz += zeigen.map(({a, min, wetter}) => {
+        const ziel = a.rundgang ? 'data-rundgang="1"' : a.aufg ? `data-aufg="${esc(a.aufg)}"`
+                   : `data-nw="${esc(a.k)}" data-ziel="${esc(a.ziel || '')}"${a.akku ? ' data-akku="1"' : ''}`;
+        const termin = a.fenster ? `Zeitraum bis ${ttmm(a.faellig)}` : `fällig ${ttmm(a.faellig)}`;
+        return `<div class="hzeile"><div ${ziel} style="cursor:pointer">
+            <p style="margin:0 0 2px"><b>${esc(a.titel)}</b> <span class="muted small">›</span></p>
+            <p class="muted small" style="margin:0${a.aufg ? ' 0 8px' : ''}">${esc(['≈ ' + dauerText({m:min}), wetter, termin].filter(Boolean).join(' · '))}${a.aufg ? ' – Vorschlag: heute erledigen' : ''}</p></div>
+          ${a.aufg ? `<div class="hknoepfe"><button class="btn ghost klein" data-gja="${esc(a.aufg + '|' + heute())}">Übernehmen</button></div>` : ''}</div>`;
+      }).join('') || '<p class="muted small" style="margin:6px 0 0">Nichts, was in die freie Zeit passt.</p>';
+      if(zeigen.length < vz.vorschlaege.length) vorz += '<button class="btn ghost klein" data-vorzmehr="1" style="margin-top:10px">Mehr zeigen</button>';
+    }
+  }
+  if(!zeilen.length && !vorz) return '';
+  return `<div class="card vorschlaege"><div class="eyebrow" style="margin:0 0 6px">Vorschläge${
+    zeilen.length ? ` <span class="summe">· ${zeilen.length}</span>` : ''}</div>${zeilen.join('')}${vorz}</div>`;
+}
+/* Schmale Zeilen oben auf Heute (v1.188) statt großer Karten. */
+function warnZeile(){
+  const l = dwdWarnungen(); if(!l.length) return '';
+  const w = l[0];
+  return `<button type="button" class="kopfHinweis warn" data-warn="1"><b>${esc(w.kopf || w.ereignis || 'Warnung')}</b> <span>${
+    esc([warnZeitraum(w), l.length > 1 ? `${l.length - 1} weitere` : '', 'DWD'].filter(Boolean).join(' · '))} ›</span></button>`;
+}
+function sicherungZeile(gibt){
+  if(!gibt) return '';
+  const l = letzteSicherung(), h = heute();
+  if(l && tagPlus(l, SICHERUNG_TAGE) > h) return '';
+  return `<button type="button" class="kopfHinweis" data-sichern="1"><b>Sicherung fällig</b> <span>${
+    l ? 'zuletzt ' + esc(dText(l)) : 'noch nie gesichert'} · Jetzt sichern ›</span></button>`;
+}
+function auslastungZeile(liste){
+  const p = planPruefen(liste); if(!p) return '';
+  return `<button type="button" class="kopfHinweis" data-wplan="1"><b>Bis ${esc(planTagWort(p.bis))} wird es knapp</b> <span>≈ ${
+    esc(dauerText({m:auf15(p.noetig)}))} offen, ${esc(dauerText({m:Math.floor(p.verf / 15) * 15}))} frei · Kalender ›</span></button>`;
+}
 function gelegenheitKarte(liste){
   if(!liste.length) return '';
   return `<div class="card"><div class="eyebrow" style="margin:0 0 6px">Gute Gelegenheit</div>${liste.map(g => {
@@ -10221,32 +10303,71 @@ function renderWochenplan(){
                                                                     : `${WOCHENTAG[tage[j].t.getDay()]} ${ttmm(tage[j].t)}`;
   /* Leere Tage am Stück stehen in einer Zeile (v1.73), ohne Balken – zehnmal
      „Nichts eingeplant“ untereinander sagte nichts. */
+  /* Je Tag Wetter und Abholung (v1.188), und was zwischen zwei Arbeitstagen
+     frei ist – Urlaub, Feiertag –, als eigene Zeile. */
+  const wd = wetterDaten(), wt = new Map(wd ? wetterTage(wd).map(x => [x.datum, x]) : []);
+  const tagZusatz = iso => { const w = wt.get(iso), ab = ABFALL.termine.filter(x => x.tag === iso).map(x => x.art);
+    return [w && w.lage ? `${w.lage}${w.tmax != null ? ' ' + gradText(w.tmax) + '°' : ''}` : '', ab.length ? '♻ ' + ab.join(', ') : ''].filter(Boolean); };
+  const luecke = (von, bis) => {
+    const frei = [];
+    for(let t = new Date(von.getFullYear(), von.getMonth(), von.getDate() + 1); t < bis; t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)){
+      const g = freiGrund(t);
+      if(g && g.art !== 'wochenende') frei.push({t:new Date(t), text:g.art === 'feiertag' ? 'Feiertag' : (g.ab && g.ab.text) || 'Abwesend'});
+    }
+    if(!frei.length) return '';
+    const a = frei[0], z = frei[frei.length - 1], tx = [...new Set(frei.map(f => f.text))].join(', ');
+    const k = t => `${WOCHENTAG[t.getDay()]} ${ttmm(t)}`;
+    return `<div class="eyebrow">${esc(k(a.t))}${frei.length > 1 ? ' – ' + esc(k(z.t)) : ''} <span class="summe">· ${esc(tx)}</span></div>`;
+  };
   let html = '';
   for(let j = 0; j < tage.length; j++){
     const tg = tage[j];
+    if(j > 0) html += luecke(tage[j - 1].t, tg.t);
     /* Ein Tag nur mit Terminen ist nicht leer (v1.103). */
     const leer = x => !x.posten.length && !x.termine.length;
     if(leer(tg)){
       let bis = j;
       while(bis + 1 < tage.length && leer(tage[bis + 1])) bis++;
-      html += `<div class="eyebrow">${esc(kopfVon(j))}${bis > j ? ' bis ' + esc(kopfVon(bis)) : ''} <span class="summe">· nichts eingeplant</span></div>`;
+      const zs = bis === j ? tagZusatz(tg.iso) : [];
+      html += `<div class="eyebrow">${esc(kopfVon(j))}${bis > j ? ' bis ' + esc(kopfVon(bis)) : ''} <span class="summe">· ${esc(['nichts eingeplant'].concat(zs).join(' · '))}</span></div>`;
       j = bis;
       continue;
     }
     const belegt = tg.cap - tg.frei, anteil = tg.cap ? Math.min(100, Math.round(belegt / tg.cap * 100)) : 100;
     const frei = tg.posten.length || tg.cap ? `${dauerText({m:belegt})} von ${dauerText({m:tg.cap})}` : 'keine Zeit frei';
-    html += `<div class="eyebrow">${esc(kopfVon(j))} <span class="summe">· ${esc(frei)}</span></div>
+    html += `<div class="eyebrow">${esc(kopfVon(j))} <span class="summe">· ${esc([frei].concat(tagZusatz(tg.iso)).join(' · '))}</span></div>
         <div class="planBalken"><span style="width:${anteil}%"></span></div>`
       + tg.termine.map(o => terminKnopf(o, true)).join('') + tg.posten.map(planKnopf).join('');
   }
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Nächste ${tage.length} Arbeitstage ${i.knopf}</div>${i.text}`
     + html
     + (uebrig.length ? `<div class="eyebrow">Passt nicht mehr hinein</div>` + uebrig.map(planKnopf).join('') : '')
-    /* Die Termine gehören seit v1.184 zum Kalender. */
-    + `<div class="eyebrow">Termine</div><button class="btn eintrag" data-termine="1"><span class="etext mehrZeile"><span>Alle Termine</span>${
-        termineKommend().length ? `<span class="zahl">${termineKommend().length} kommend</span>` : ''}</span></button>`;
+    /* Die Termine gehören seit v1.184 zum Kalender, die Abwesenheiten seit v1.188. */
+    + `<div class="eyebrow">Mehr</div><button class="btn eintrag" data-termine="1"><span class="etext mehrZeile"><span>Alle Termine</span>${
+        termineKommend().length ? `<span class="zahl">${termineKommend().length} kommend</span>` : ''}</span></button>
+       <button class="btn eintrag" data-abw="1"><span class="etext mehrZeile"><span>Abwesenheiten</span>${
+        abwKommend().length ? `<span class="zahl">${abwKommend().length} geplant</span>` : ''}</span></button>`;
   knoepfeVerdrahten(box);
   box.querySelector('[data-termine]').onclick = () => go('termine');
+  box.querySelector('[data-abw]').onclick = () => setOeffnen('abwesend');
+  /* Einplanen per Tipp (v1.188): eine Aufgabe auf einen anderen Tag legen,
+     ohne sie erst zu öffnen. */
+  box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => {
+    const a = AUFG.find(x => x.id === b.dataset.aufg); if(!a) return;
+    wahlFenster(a.titel || 'Aufgabe', [{text:'Öffnen', tu:() => aufgabeOeffnen(a.id)},
+      /* Überfälliges bleibt unter „Überfällig“ (v1.99), Einplanen hilft dort nicht. */
+      ...(!a.frist || a.frist >= heute() ? [{text:'Auf einen Tag legen …', tu:() => tagWaehlen(a, tage.filter(tg => !a.frist || tg.iso <= a.frist))}] : []),
+      ...(a.geplant ? [{text:'Einplanung entfernen', tu:() => { delete a.geplant; saveAufg(); renderWochenplan(); toast('Einplanung entfernt'); }}] : [])],
+      e => e.tu());
+  });
+}
+const abwKommend = () => (CFG.abwesend || []).filter(x => x.bis && x.bis >= heute());
+function tagWaehlen(a, tage){
+  wahlFenster('Erledigen am …', tage.map(tg => ({text:`${WOCHENTAG[tg.t.getDay()]} ${ttmm(tg.t)}${
+    tg.iso === heute() ? ' (heute)' : ''} · ${dauerText({m:Math.max(0, Math.floor(tg.frei / 15) * 15)})} frei`, iso:tg.iso})), e => {
+    a.geplant = e.iso; saveAufg(); renderWochenplan();
+    toast('Eingeplant für ' + planTagWort(alsDatum(e.iso)));
+  });
 }
 /* --- Arbeitsnachweis (v1.65, Etappe D1) ------------------------------------------
    Vorerst für Jean selbst, ohne Uhrzeiten; aber so gebaut, dass er einem
