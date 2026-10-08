@@ -136,7 +136,8 @@ steht.
   mit Wort, „Zustand zurücksetzen“, Sprinkler „Gang fertig“. Grundriss:
   „Andere Marke wählen“ (`planWaehlen`) neben dem langen Druck.
 - Heute/Kalender (v1.188): oben `.kopfHinweis`-Zeilen (Warnung, Sicherung,
-  Auslastung), eine Karte `vorschlaegeKarte` (Auslöser, Ergebnisse,
+  Auslastung; seit v1.199 über `kopfZeile` gebaut wie ein `.btn.eintrag`,
+  „Vorschläge“ als Überschrift über dem Kasten), eine Karte `vorschlaegeKarte` (Auslöser, Ergebnisse,
   Gelegenheit, Vorziehen; alle „Übernehmen“/„Nicht jetzt“). Kalender: Wetter
   (`wetterTage`) und Abholung je Tag, Urlaub/Feiertag als Zeile, Tipp auf
   Aufgabe → „Auf einen Tag legen …“ (`tagWaehlen`, nicht bei Überfälligem).

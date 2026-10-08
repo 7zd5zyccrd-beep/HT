@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.199 08.10.2026 Heute: „Vorschläge“ steht als Überschrift über seinem
+                    Kasten wie alle anderen Abschnitte. „Sicherung fällig“,
+                    „Bis … wird es knapp“, die Wetterwarnung und „Zeit
+                    übrig?“ sind gebaut wie jeder Eintrag: oben der Titel in
+                    gleicher Größe und Stärke, darunter grau die Angaben,
+                    rechts ›. Vorher fett mit angehängtem Text – das wirkte
+                    wie eine andere Schrift (Jean).
   v1.198 08.10.2026 Grundriss: Kleiner zoomen als die Höhe geht auch in der
                     Übersicht nicht mehr – der Zoom ist wieder genau wie vor
                     v1.194 (Jean).
@@ -2856,13 +2863,17 @@ body.reiterAn main{padding-bottom:calc(16px + var(--leiste-h, 0px))}
 header .back[hidden]{display:none}
 .mehrZeile{display:flex;justify-content:space-between;gap:10px}
 /* Schmale Hinweise oben auf Heute (v1.188). */
-.kopfHinweis{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;
-  padding:8px 12px;margin:0 0 8px;color:var(--ink);font:inherit;font-size:15px;line-height:1.35;cursor:pointer}
-.kopfHinweis span{color:var(--ink-soft);font-size:14px}
+.btn.kopfHinweis{margin:0 0 8px}
+.btn.kopfHinweis + .btn.kopfHinweis{margin-top:0}
 .kopfHinweis.warn{border-left:5px solid var(--dringend)}
 .kalMit{margin:10px 0 4px}
 .btn.eintrag.blass{opacity:.6}
-.vorzZeile{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 0 2px;color:var(--ink);font:inherit;cursor:pointer}
+.vorzZeile{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;padding:4px 0 2px;color:var(--ink);font:inherit;font-weight:500;cursor:pointer}
+.vorzZeile .etext{flex:1;min-width:0}
+.vorzZeile small{display:block;margin-top:3px;font-size:14px;font-weight:400;color:var(--ink-soft)}
+.vorzZeile::after{content:'›';flex:0 0 auto;font-size:22px;line-height:1;color:var(--ink-soft)}
+.vorzZeile[aria-expanded="true"]::after{transform:rotate(90deg)}
+.vorschlaege b{font-weight:500}
 .vorschlaege .hzeile + .vorzZeile{border-top:1px solid var(--line);margin-top:4px;padding-top:10px}
 /* Angaben der Aufgabe als Zeilen (v1.186), wie in den iPhone-Einstellungen. */
 .angListe{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 0 6px}
@@ -3958,7 +3969,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.198';
+const VERSION = 'v1.199';
 const BUILD   = VERSION + ' · 08.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -10467,8 +10478,8 @@ function vorschlaegeKarte(hinweise, gel, liste){
     }));
   let vorz = '';
   if(vz.kand.length){
-    vorz = `<button type="button" class="hzeile vorzZeile" data-vorz="1"><b>Zeit übrig?</b> <span class="muted small">${
-      vz.frei >= VORZ_AB ? `heute ${esc(freiText(vz.frei))} – ` : ''}${vorziehenAuf ? 'zuklappen' : 'etwas vorziehen ›'}</span></button>`;
+    vorz = `<button type="button" class="hzeile vorzZeile" data-vorz="1" aria-expanded="${vorziehenAuf}"><span class="etext">Zeit übrig?<small>${
+      vz.frei >= VORZ_AB ? `heute ${esc(freiText(vz.frei))} – ` : ''}${vorziehenAuf ? 'zuklappen' : 'etwas vorziehen'}</small></span></button>`;
     if(vorziehenAuf){
       const zeigen = vorziehenAlle ? vz.vorschlaege : vz.vorschlaege.slice(0, VORZ_ZAHL);
       vorz += zeigen.map(({a, min, wetter}) => {
@@ -10486,27 +10497,32 @@ function vorschlaegeKarte(hinweise, gel, liste){
     }
   }
   if(!zeilen.length && !vorz) return '';
-  return `<div class="card vorschlaege"><div class="eyebrow" style="margin:0 0 6px">Vorschläge${
-    zeilen.length ? ` <span class="summe">· ${zeilen.length}</span>` : ''}</div>${zeilen.join('')}${vorz}</div>`;
+  /* Die Überschrift steht seit v1.199 über dem Kasten wie alle anderen (Jean). */
+  return `<div class="eyebrow">Vorschläge${
+    zeilen.length ? ` <span class="summe">· ${zeilen.length}</span>` : ''}</div><div class="card vorschlaege">${zeilen.join('')}${vorz}</div>`;
 }
 /* Schmale Zeilen oben auf Heute (v1.188) statt großer Karten. */
+/* Seit v1.199 (Jean) gebaut wie jeder Eintrag der Liste: oben der Titel,
+   darunter grau die Angaben, rechts ›. Vorher fett mit angehängtem Text –
+   das wirkte wie eine andere Schrift. */
+const kopfZeile = (klasse, attr, titel, zeile) =>
+  `<button type="button" class="btn eintrag ${klasse}" ${attr}><span class="etext">${esc(titel)}<small>${esc(zeile)}</small></span></button>`;
 function warnZeile(){
   const l = dwdWarnungen(); if(!l.length) return '';
   const w = l[0];
-  return `<button type="button" class="kopfHinweis warn" data-warn="1"><b>${esc(w.kopf || w.ereignis || 'Warnung')}</b> <span>${
-    esc([warnZeitraum(w), l.length > 1 ? `${l.length - 1} weitere` : '', 'DWD'].filter(Boolean).join(' · '))} ›</span></button>`;
+  return kopfZeile('kopfHinweis warn', 'data-warn="1"', w.kopf || w.ereignis || 'Warnung',
+    [warnZeitraum(w), l.length > 1 ? `${l.length - 1} weitere` : '', 'DWD'].filter(Boolean).join(' · '));
 }
 function sicherungZeile(gibt){
   if(!gibt) return '';
   const l = letzteSicherung(), h = heute();
   if(l && tagPlus(l, SICHERUNG_TAGE) > h) return '';
-  return `<button type="button" class="kopfHinweis" data-sichern="1"><b>Sicherung fällig</b> <span>${
-    l ? 'zuletzt ' + esc(dText(l)) : 'noch nie gesichert'} · <span style="white-space:nowrap">Jetzt sichern ›</span></span></button>`;
+  return kopfZeile('kopfHinweis', 'data-sichern="1"', 'Sicherung fällig', `${l ? 'zuletzt ' + dText(l) : 'noch nie gesichert'} · Jetzt sichern`);
 }
 function auslastungZeile(liste){
   const p = planPruefen(liste); if(!p) return '';
-  return `<button type="button" class="kopfHinweis" data-wplan="1"><b>Bis ${esc(planTagWort(p.bis))} wird es knapp</b> <span>≈ ${
-    esc(dauerText({m:auf15(p.noetig)}))} offen, ${esc(dauerText({m:Math.floor(p.verf / 15) * 15}))} frei · Kalender ›</span></button>`;
+  return kopfZeile('kopfHinweis', 'data-wplan="1"', `Bis ${planTagWort(p.bis)} wird es knapp`,
+    `≈ ${dauerText({m:auf15(p.noetig)})} offen, ${dauerText({m:Math.floor(p.verf / 15) * 15})} frei · Kalender`);
 }
 const planKnopf = (p, blass) => {
   const a = p.a;
