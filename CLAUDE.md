@@ -238,6 +238,10 @@ steht.
 - „Zeit übrig? Vorziehen“ (`vorziehenRechnen`): freie Zeit heute =
   `heuteRest()` minus Überfälliges und Heutiges; Vorschläge ab Morgen, nichts
   Ungesehenes außerhalb der Liste (vom Nutzer so entschieden).
+- Geschätzte Dauer (v1.211, Jean): `a.schaetz` (Dauer wie `dauerWahl`), Zeile
+  „Geschätzte Dauer“ in den Angaben (`schaetzZeigen`: nicht im Ablauf, nicht
+  sobald `taetSchnitt` etwas hat). `eintragMinuten` nimmt sie vor den 30 min
+  (`schaetzGilt`), ohne „geschätzt“-Vermerk – also „≈“ statt „~“.
 - Arbeitsmittel je Objekt: `CFG.mittel[Schlüssel] = {ut, mat}`, Schlüssel wie
   bei Mängeln (`k|Anlage`, `medien|Zählerschlüssel`,
   `sprinkler|woch|Punkt`). Eingetragen im Nachweis an der Karte, bewusst nicht

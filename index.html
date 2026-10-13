@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.211 13.10.2026 Geschätzte Dauer einer Aufgabe (Jean): Neue Zeile
+                    „Geschätzte Dauer“ unter den Angaben – beim Anlegen und
+                    später –, eingestellt mit dem gewohnten Dauer-Wähler.
+                    Sie zählt im Kalender, auf Heute, bei „Zeit übrig?“ und
+                    in der Auslastung statt der 30 Minuten und steht dort mit
+                    „≈“; „~“ bleibt für Aufgaben ohne Angabe. Sobald eine
+                    Dauer erfasst ist, gilt deren Schnitt und die Zeile
+                    verschwindet. Schritte eines Ablaufs behalten ihre Dauer
+                    am Schritt.
   v1.210 13.10.2026 Akkutausch je Objekt (Jean): Auf der Seite eines Objekts
                     ist „Akkus tauschen“ unter „Akkutausch“ antippbar und
                     öffnet eine eigene Ansicht – Akkutyp, Anzahl, letzter
@@ -4078,7 +4087,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.210';
+const VERSION = 'v1.211';
 const BUILD   = VERSION + ' · 13.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -8633,7 +8642,8 @@ function renderAufgabe(){
     titel:[a.titel || '–', n ? n.label : '', anl].filter(Boolean).join(' · '),
     frist:aufgTerminText(a), geplant:a.geplant ? planTagWort(alsDatum(a.geplant)) : '–',
     wichtig:wi ? wi[1] : 'Normal', wdh:a.wdh ? wdhText(a.wdh) : 'nein', wetter:wp ? wp[1] : 'nicht wetterabhängig',
-    vorb:String(v.text || '').trim() || '–', notiz:String(a.notiz || '').trim().split('\n')[0] || '–'};
+    vorb:String(v.text || '').trim() || '–', notiz:String(a.notiz || '').trim().split('\n')[0] || '–',
+    schaetz:a.schaetz ? dauerText(a.schaetz) : '–'};
   const angZeile = (key, label, feld) => `<button type="button" class="angZeile" data-az="${key}" aria-expanded="${angAuf.has(key)}"><span>${esc(label)}</span><span class="angWert">${esc(angWerte[key])}</span></button>
       <div class="angFeld" data-af="${key}"${angAuf.has(key) ? '' : ' hidden'}>${feld}</div>`;
   const aktZeile = (id, label, wert) => `<button type="button" class="angZeile" id="${id}"><span>${esc(label)}</span><span class="angWert">${esc(wert)}</span></button>`;
@@ -8641,6 +8651,8 @@ function renderAufgabe(){
   const mittelWert = tKeyA ? (aufgMehrText(a).replace(/^Mehr:? ?/, '') || '–') : (eigenA ? eigenA.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '–');
   const angaben = (neu ? '' : (mangel ? '' : angZeile('titel', 'Titel und Objekt', kopf)) + angZeile('frist', 'Fällig', terminFeld) + (planFeld ? angZeile('geplant', 'Eingeplant für', planFeld) : ''))
     + angZeile('wichtig', 'Wichtigkeit', wichtigFeld)
+    /* Geschätzte Dauer (v1.211, Jean) – nur, solange keine erfasst ist. */
+    + (!a.erledigt && schaetzZeigen(a) ? angZeile('schaetz', 'Geschätzte Dauer', '<div id="aufgSchaetz"></div>') : '')
     + (mangel ? '' : angZeile('wdh', 'Wiederholen', wdhFeld) + angZeile('wetter', 'Wetter', wetterFeld) + angZeile('vorb', 'Vorbereitung', vorbFeld))
     + (tKeyA ? aktZeile('aufgTaet', 'Dauer und Arbeitsmittel', mittelWert)
        : !neu && !a.erledigt ? aktZeile('aufgEigen', 'Arbeitsmittel', mittelWert) : '')
@@ -8684,7 +8696,8 @@ function renderAufgabe(){
     const werte = {titel:[a.titel || '–', a.k && NW(a.k) ? NW(a.k).label : '', anl2].filter(Boolean).join(' · '),
       frist:aufgTerminText(a), geplant:a.geplant ? planTagWort(alsDatum(a.geplant)) : '–', wichtig:wi2 ? wi2[1] : 'Normal',
       wdh:a.wdh ? wdhText(a.wdh) : 'nein', wetter:wp2 ? wp2[1] : 'nicht wetterabhängig',
-      vorb:String((a.vorb || {}).text || '').trim() || '–', notiz:String(a.notiz || '').trim().split('\n')[0] || '–'};
+      vorb:String((a.vorb || {}).text || '').trim() || '–', notiz:String(a.notiz || '').trim().split('\n')[0] || '–',
+      schaetz:a.schaetz ? dauerText(a.schaetz) : '–'};
     box.querySelectorAll('[data-az]').forEach(z => { if(werte[z.dataset.az] != null && z.dataset.az !== 'ablauf') z.querySelector('.angWert').textContent = werte[z.dataset.az]; });
   };
 
@@ -8820,6 +8833,11 @@ function renderAufgabe(){
     toast('Aufgabe angelegt'); zurueck();
   };
   if($('#erlDauer')) dauerWahl($('#erlDauer'), null, true, w => { erlDauer = w; });
+  if($('#aufgSchaetz')) dauerWahl($('#aufgSchaetz'), a.schaetz || null, true, w => {
+    if(w) a.schaetz = w; else delete a.schaetz;
+    sichern();
+    const z = box.querySelector('[data-az="schaetz"] .angWert'); if(z) z.textContent = w ? dauerText(w) : '–';
+  });
   if($('#aufgTaet')) $('#aufgTaet').onclick = () => { taetAktiv = {key:tKeyA, name:a.titel || 'Aufgabe'}; go('taet'); };
   if($('#aufgEigen')) $('#aufgEigen').onclick = () => {
     frage('Arbeitsmittel', '', 'Speichern', () => {
@@ -10357,6 +10375,10 @@ function sprinklerVorschau(bis){
   }
   return raus;
 }
+/* Geschätzte Dauer einer Aufgabe (v1.211): nicht bei Schritten eines
+   Ablaufs – die haben ihre Dauer am Schritt. */
+const schaetzGilt = x => !!(x && x.schaetz && dauerMin(x.schaetz) > 0 && !(x.plan && x.stufe));
+const schaetzZeigen = a => !(a.plan && a.stufe) && !(taetSchluessel(a, false) && taetSchnitt(taetSchluessel(a, false)));
 function eintragMinuten(a){
   const teil = (key, anteil) => {
     const s = key && taetSchnitt(key);
@@ -10367,7 +10389,10 @@ function eintragMinuten(a){
   else if(a.rundgang) teile = (a.teilK || []).map(k => teil('nw:' + k, restAnteil(k)));
   else if(a.aufg){
     const x = AUFG.find(y => y.id === a.aufg);
-    teile = [teil(x ? taetSchluessel(x, false) : '', 1)];
+    const key = x ? taetSchluessel(x, false) : '';
+    /* Eigene Schätzung (v1.211, Jean): gilt, solange keine Dauer erfasst
+       ist; zählt ohne „~“, das bleibt für „nichts angegeben, 30 min“. */
+    teile = !(key && taetSchnitt(key)) && schaetzGilt(x) ? [{min:planMin(x.schaetz), g:false}] : [teil(key, 1)];
   }else{
     const n = a.k && NW(a.k);
     if(!n || n.art === 'fremd') return null;
