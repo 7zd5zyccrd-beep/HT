@@ -290,7 +290,15 @@ steht.
   Sicherungen). Nicht in DAT, weil die Ausgabe eigener Kontrollen DAT leert.
 - `akkuAktiv(k)`: eigene Typen `n.akku`, Vorlagen `CFG.teile[k].akku`
   (Schalter auf der Typseite) oder Vorgabe `n.akku` (RWA). Nie Sprinkler/Medien.
-- Ansicht `akku` je Typ (`akkuK`, `akkuOeffnen(k)`, Titel `akkuTitel`).
+- Seit v1.210 (Jean) keine Sammelseite mehr: Tausch je Objekt in der Ansicht
+  `akkutausch` (`akkuTauschOeffnen(k, a)`, `renderAkkuTausch`, `akkuZiel`),
+  geöffnet über die Zeile „Akkus tauschen“ in `verlaufAkku` (Objektseite).
+  Akkutyp/Anzahl nur unter „Objekte bearbeiten“ (Jean). `akkuOeffnen(k)`
+  (Listeneintrag `data-akku` auf Heute/Kalender) öffnet das eine anstehende
+  Objekt oder `wahlFenster`. Anlagen: Akkustand und Ring im Eintrag des Typs
+  (keine Gruppe „Eigene Wartung“), Typseite/Suche über `akkuKurz` in
+  `suchStand0`. „Alle getauscht“ entfiel; Vorbereiten nur noch auf Heute.
+  `datumAbloesen` gibt den Verlaufseintrag zurück (Rückgängig).
   Tätigkeit/Material-Schlüssel `akkuTaet(k)` und Anlass-IDs `akkuAnlassVor`:
   die RWA behält ihre alten (`akku`, `akku:<Objekt>@`), sonst mit Typ.
 - Markenfarbe: `ortStatus` = knappere Lage aus `ortStatus0` und Akkufrist.
