@@ -10,6 +10,14 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.215 14.10.2026 „Mit Kalenderdatei senden“ bleibt (Jeans Test): Der
+                    Doppelklick auf den Anhang scheitert am Firmen-PC, das
+                    Ziehen auf den Kalender klappt. Hinweis auf der
+                    Terminseite und Satz in der Mail sagen jetzt „auf den
+                    Kalender ziehen“; die Serie steckt in der Datei. Eine
+                    geänderte Datei ersetzt den Termin nicht – der Hinweis,
+                    den alten zu löschen, bleibt. Normaler Weg bleibt der
+                    Link.
   v1.214 14.10.2026 Versuch (Jean, klassisches Outlook am PC): Auf der
                     Terminseite neuer Knopf „Mit Kalenderdatei senden“ –
                     dieselbe Mail über das Teilen-Menü mit dem Termin als
@@ -4115,7 +4123,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.214';
+const VERSION = 'v1.215';
 const BUILD   = VERSION + ' · 14.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -9157,7 +9165,7 @@ function renderTermin(){
       ${an ? '' : '<p class="muted small" style="margin:6px 0 0">Den Empfänger legst du unter Mehr › Einstellungen › Outlook fest.</p>'}
       ${neu ? '' : `<button class="btn klein" id="tmOutlookSenden" style="margin-top:10px">An Outlook senden</button>
         <button class="btn klein" id="tmOutlookDatei" style="margin-top:8px">Mit Kalenderdatei senden</button>
-        <p class="muted small" style="margin:6px 0 0">Versuch: im Teilen-Menü „Mail“ wählen und den Empfänger eintragen. Am PC öffnet ein Doppelklick auf den Anhang das Terminfenster von Outlook.</p>`}
+        <p class="muted small" style="margin:6px 0 0">Im Teilen-Menü „Mail“ wählen und den Empfänger eintragen. Am PC den Anhang in Outlook auf den Kalender ziehen – so kommt auch eine Serie mit. Ein geänderter Termin ersetzt den alten nicht; den alten bitte löschen.</p>`}
     </div>`;
   box.innerHTML = neu ? felder + kalender + `<button class="btn primary" id="tmAnlegen">Termin anlegen</button>`
     : `<div id="tmKopf"></div>` + kalender
@@ -9297,7 +9305,7 @@ const terminDateiname = t => `${(t.titel || 'Termin').replace(/[\\/:*?"<>|]+/g, 
    das Teilen-Menü – eine per mailto geöffnete Mail nimmt keinen Anhang.
    Muss im Tipp starten (iOS), also vor jedem await. */
 async function outlookDateiSenden(t){
-  const nr = t.outlook ? (t.outlook.nr || 0) + 1 : 0, m = outlookText(t);
+  const nr = t.outlook ? (t.outlook.nr || 0) + 1 : 0, m = outlookText(t, false, true);
   const datei = new File([new Blob([terminIcs(t, nr)], {type:'text/calendar'})], terminDateiname(t), {type:'text/calendar'});
   const daten = {title:m.betreff, text:m.text, files:[datei]};
   if(!navigator.share || (navigator.canShare && !navigator.canShare(daten))){ toast('Teilen mit Datei geht hier nicht'); return; }
@@ -9333,18 +9341,21 @@ function outlookLink(t, o){
   return 'https://outlook.office.com/calendar/0/deeplink/compose?' + p.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
 }
 /* Betreff und Text der Mail. */
-function outlookText(t, absage){
+function outlookText(t, absage, mitDatei){
   const {o, text:wann} = outlookWann(t), n = t.k ? NW(t.k) : null, alt = t.outlook;
   const geaendert = !absage && alt && alt.kern !== outlookKern(t);
   const betreff = `${absage ? 'Abgesagt' : geaendert ? 'Geändert' : 'Termin'}: ${t.titel || 'Termin'} · ${wann}`;
   const zeilen = [t.titel || 'Termin', wann,
     t.ort ? 'Ort: ' + t.ort : '', t.mit ? 'Mit: ' + t.mit : '',
     n ? 'Objekt: ' + n.label + (t.anlage ? ' · ' + anlageName(t) : '') : '',
-    t.wdh && !absage ? `Wiederholt sich ${wdhText(t.wdh)} – in Outlook bitte als Serie einstellen.` : '',
+    t.wdh && !absage ? `Wiederholt sich ${wdhText(t.wdh)}${mitDatei ? ' – die Serie steckt in der Kalenderdatei.' : ' – in Outlook bitte als Serie einstellen.'}` : '',
     String(t.notiz || '').trim() ? '\n' + String(t.notiz).trim() : ''].filter(Boolean);
   if(absage) zeilen.push('', `Der Termin ist abgesagt – bitte in Outlook löschen${alt && alt.wann ? ` („${alt.titel} · ${alt.wann}“)` : ''}.`);
   else{
-    zeilen.push('', 'In Outlook eintragen:', outlookLink(t, o));
+    /* Mit Datei (v1.215, Jeans Test): Doppelklick scheitert am Firmen-PC,
+       Ziehen auf den Kalender klappt. */
+    if(mitDatei) zeilen.push('', 'Am PC den Anhang in Outlook auf den Kalender ziehen.', '', 'Oder im Browser eintragen:', outlookLink(t, o));
+    else zeilen.push('', 'In Outlook eintragen:', outlookLink(t, o));
     if(geaendert) zeilen.push('', `Ersetzt den bisherigen Termin „${alt.titel} · ${alt.wann}“ – den bitte in Outlook löschen.`);
   }
   return {betreff, text:zeilen.join('\n'), wann};
