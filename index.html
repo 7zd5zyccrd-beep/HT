@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.214 14.10.2026 Versuch (Jean, klassisches Outlook am PC): Auf der
+                    Terminseite neuer Knopf „Mit Kalenderdatei senden“ –
+                    dieselbe Mail über das Teilen-Menü mit dem Termin als
+                    Datei im Anhang. Ein Doppelklick darauf soll den Termin
+                    im Outlook-Programm statt im Browser öffnen, samt
+                    Wiederholung. Zu prüfen auch: ersetzt eine geänderte
+                    Datei den Termin, statt einen zweiten anzulegen?
   v1.213 14.10.2026 Termine an Outlook direkt als Mail (Jean): Der Kurzbefehl
                     machte ein PDF daraus, der Link war nicht klickbar. Jetzt
                     öffnet die App selbst eine fertige Mail an die Adresse
@@ -4108,7 +4115,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.213';
+const VERSION = 'v1.214';
 const BUILD   = VERSION + ' · 14.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -9148,7 +9155,9 @@ function renderTermin(){
       <p class="small" style="margin:0">${neu ? `Nach dem Anlegen öffnet sich eine Mail${an ? ' an ' + esc(an) : ''} mit dem Link „In Outlook eintragen“.`
         : og ? `An Outlook übergeben am ${esc(dText(og.am))}.` : 'Noch nicht an Outlook übergeben.'}</p>
       ${an ? '' : '<p class="muted small" style="margin:6px 0 0">Den Empfänger legst du unter Mehr › Einstellungen › Outlook fest.</p>'}
-      ${neu ? '' : `<button class="btn klein" id="tmOutlookSenden" style="margin-top:10px">An Outlook senden</button>`}
+      ${neu ? '' : `<button class="btn klein" id="tmOutlookSenden" style="margin-top:10px">An Outlook senden</button>
+        <button class="btn klein" id="tmOutlookDatei" style="margin-top:8px">Mit Kalenderdatei senden</button>
+        <p class="muted small" style="margin:6px 0 0">Versuch: im Teilen-Menü „Mail“ wählen und den Empfänger eintragen. Am PC öffnet ein Doppelklick auf den Anhang das Terminfenster von Outlook.</p>`}
     </div>`;
   box.innerHTML = neu ? felder + kalender + `<button class="btn primary" id="tmAnlegen">Termin anlegen</button>`
     : `<div id="tmKopf"></div>` + kalender
@@ -9215,6 +9224,7 @@ function renderTermin(){
     if(t.wdh && zahlN >= 1){ t.wdh.n = zahlN; sichern(); }
   };
   if($('#tmOutlookSenden')) $('#tmOutlookSenden').onclick = () => { endeAngleichen(); outlookSenden(t); };
+  if($('#tmOutlookDatei')) $('#tmOutlookDatei').onclick = () => { endeAngleichen(); outlookDateiSenden(t); };
   if($('#tmAnlegen')) $('#tmAnlegen').onclick = () => {
     if(!t.titel.trim()){ toast('Bitte einen Titel eintragen'); $('#tmTitel').focus(); return; }
     endeAngleichen();
@@ -9250,6 +9260,51 @@ function renderTermine(){
   knoepfeVerdrahten($('#termineBox'));
   $('#termineBox [data-neutermin]').onclick = terminNeu;
 }
+/* --- Kalenderdatei (v1.103; seit v1.214 wieder, als Versuch für Outlook) ---
+   Jean nutzt das klassische Outlook am Firmen-PC: ein Doppelklick auf eine
+   angehängte .ics öffnet dort Outlooks eigenes Terminfenster. Ohne Zeitzone –
+   Outlook nimmt die Zeiten als Ortszeit. Die Kennung bleibt je Termin gleich,
+   SEQUENCE zählt mit, damit Outlook eine Änderung vielleicht als solche
+   erkennt (Versuch). */
+function terminIcs(t, folge = 0){
+  const text = s => String(s || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/[,;]/g, m => '\\' + m);
+  const tag = iso => iso.replace(/-/g, '');
+  const zeit = hm => hm.replace(':', '') + '00';
+  const j = new Date(), z = n => String(n).padStart(2, '0');
+  const stempel = `${j.getUTCFullYear()}${z(j.getUTCMonth() + 1)}${z(j.getUTCDate())}T${z(j.getUTCHours())}${z(j.getUTCMinutes())}${z(j.getUTCSeconds())}Z`;
+  const bis = t.bis || t.von;
+  const n = t.k ? NW(t.k) : null;
+  const beschreibung = [terminArt(t), t.mit ? 'Mit: ' + t.mit : '', n ? n.label + (t.anlage ? ' · ' + anlageName(t) : '') : '', t.notiz]
+    .filter(Boolean).join('\n');
+  const zeilen = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Betriebsnachweise//Termine//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'BEGIN:VEVENT', `UID:${t.id}@betriebsnachweise`, `DTSTAMP:${stempel}`, `SEQUENCE:${folge}`,
+    ...(t.ganz ? [`DTSTART;VALUE=DATE:${tag(t.von)}`, `DTEND;VALUE=DATE:${tag(tagPlus(bis, 1))}`]
+               : [`DTSTART:${tag(t.von)}T${zeit(t.zeitVon)}`, `DTEND:${tag(bis)}T${zeit(t.zeitBis)}`]),
+    `SUMMARY:${text(t.titel || 'Termin')}`];
+  if(t.ort) zeilen.push(`LOCATION:${text(t.ort)}`);
+  if(beschreibung) zeilen.push(`DESCRIPTION:${text(beschreibung)}`);
+  if(t.wdh) zeilen.push(`RRULE:FREQ=${{woche:'WEEKLY', monat:'MONTHLY', jahr:'YEARLY'}[t.wdh.einheit]};INTERVAL=${Math.max(1, Math.round(+t.wdh.n) || 1)}`);
+  const vorher = +t.erinnern;
+  if(vorher > 0) zeilen.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${text(t.titel || 'Termin')}`,
+    `TRIGGER:-${vorher >= 1440 ? 'P' + vorher / 1440 + 'D' : vorher >= 60 ? 'PT' + vorher / 60 + 'H' : 'PT' + vorher + 'M'}`, 'END:VALARM');
+  zeilen.push('END:VEVENT', 'END:VCALENDAR');
+  /* Lange Zeilen werden nach der Norm gefaltet: Umbruch, dann ein Leerzeichen. */
+  return zeilen.map(l => l.length <= 70 ? l : l.match(/.{1,70}/g).join('\r\n ')).join('\r\n') + '\r\n';
+}
+const terminDateiname = t => `${(t.titel || 'Termin').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 40) || 'Termin'}.ics`;
+
+/* Versuch (v1.214): dieselbe Mail mit der Kalenderdatei im Anhang. Nur über
+   das Teilen-Menü – eine per mailto geöffnete Mail nimmt keinen Anhang.
+   Muss im Tipp starten (iOS), also vor jedem await. */
+async function outlookDateiSenden(t){
+  const nr = t.outlook ? (t.outlook.nr || 0) + 1 : 0, m = outlookText(t);
+  const datei = new File([new Blob([terminIcs(t, nr)], {type:'text/calendar'})], terminDateiname(t), {type:'text/calendar'});
+  const daten = {title:m.betreff, text:m.text, files:[datei]};
+  if(!navigator.share || (navigator.canShare && !navigator.canShare(daten))){ toast('Teilen mit Datei geht hier nicht'); return; }
+  outlookMerken(t, m, nr);
+  try{ await navigator.share(daten); }catch(e){ /* Abbruch */ }
+}
+
 /* --- An Outlook (v1.212, Jean: Firmenkonto; seit v1.213 als Mail direkt) --
    Ein Link auf „Outlook im Web“ legt den Termin ausgefüllt an; Jean klickt
    nur „Speichern“. Ein Link ändert nichts Bestehendes – eine Änderung geht
@@ -9299,8 +9354,11 @@ function outlookText(t, absage){
 function outlookSenden(t, absage){
   const m = outlookText(t, absage);
   location.href = `mailto:${encodeURIComponent(CFG.outlookAn || '').replace(/%40/g, '@')}?subject=${encodeURIComponent(m.betreff)}&body=${encodeURIComponent(m.text)}`;
-  if(absage) return;
-  t.outlook = {nr:t.outlook ? (t.outlook.nr || 0) + 1 : 0, am:heute(), kern:outlookKern(t), titel:t.titel || 'Termin', wann:m.wann};
+  if(!absage) outlookMerken(t, m, t.outlook ? (t.outlook.nr || 0) + 1 : 0);
+}
+/* Vermerkt die Übergabe – ob die Mail hinausgeht, sieht die App nicht. */
+function outlookMerken(t, m, nr){
+  t.outlook = {nr, am:heute(), kern:outlookKern(t), titel:t.titel || 'Termin', wann:m.wann};
   if(TERM.includes(t)) saveTerm();
   if(terminAktiv === t){ tmStand = outlookKern(t); if(current === 'termin') renderTermin(); }
 }

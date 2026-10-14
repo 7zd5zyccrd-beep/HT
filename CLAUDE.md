@@ -578,6 +578,12 @@ steht.
   „Geändert: …“ nennt den alten zum Löschen, Absage beim Löschen.
   `terminVerlassen` (aus `go()`) zeigt `toastKnopf` „An Outlook senden“,
   wenn sich etwas geändert hat (`tmStand`).
+- Versuch (v1.214, Jean: klassisches Outlook am PC – Links öffnen dort den
+  Browser): Knopf „Mit Kalenderdatei senden“ (`outlookDateiSenden`) teilt
+  Text + .ics (`terminIcs(t, folge)`, SEQUENCE zählt mit) übers Teilen-Menü,
+  Jean wählt „Mail“. Offen, ob der Doppelklick das Terminfenster öffnet und
+  ob eine geänderte Datei den Termin ersetzt. Je nach Ergebnis Standardweg
+  oder wieder heraus.
 - Datumsfelder auf Seiten mit Kopfkarte: übernehmen bei `input`, neu aufbauen
   gar nicht (`datumBinden`, auch nicht bei `blur` – iOS meldet es schon beim Öffnen der Wahl); sonst verrutscht das Feld unter der
   offenen iOS-Datumswahl.
