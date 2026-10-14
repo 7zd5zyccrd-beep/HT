@@ -568,15 +568,16 @@ steht.
   (`termineFuerListe`, obenan in der Tagesgruppe über `listenGruppe`).
 - `tagKap(t)` = Arbeitszeit minus `terminBelegt`; gilt für Wochenplan,
   Auslastung und „Vorziehen“.
-- Outlook statt iPhone-Kalender (v1.212, Jean: Firmenkonto, Kurzbefehl):
-  `t.outlookAn` (Haken), `outlookSenden(t, absage)` teilt {title, text,
-  files:[.ics]} – erste Textzeile = Betreff, darin `outlookLink` (Deeplink
-  outlook.office.com/calendar/0/deeplink/compose, Zeiten mit Versatz).
-  `t.outlook` {nr, am, kern, titel, wann} merkt den gesendeten Stand
-  (`outlookKern`); „Geändert: …“ nennt den alten zum Löschen, Absage beim
-  Löschen. `terminVerlassen` (aus `go()`) zeigt `toastKnopf` „An Outlook
-  senden“, wenn sich etwas geändert hat (`tmStand`). Teilen nur im Tipp
-  (iOS) – vor jedem await. `terminIcs(t, folge)` mit SEQUENCE.
+- Outlook statt iPhone-Kalender (v1.212/213, Jean: Firmenkonto). Der
+  Kurzbefehl machte ein PDF (Link tot), darum seit v1.213 `mailto:` direkt:
+  `outlookSenden(t, absage)` öffnet die Mail an `CFG.outlookAn`
+  (Einstellungen › Online-Dienste › Outlook, `setOutlook`), Text mit
+  `outlookLink` (Deeplink outlook.office.com/calendar/0/deeplink/compose,
+  Zeiten mit Versatz). Kein Haken, keine .ics mehr. `t.outlook` {nr, am,
+  kern, titel, wann} wird beim Öffnen der Mail gesetzt („übergeben am“);
+  „Geändert: …“ nennt den alten zum Löschen, Absage beim Löschen.
+  `terminVerlassen` (aus `go()`) zeigt `toastKnopf` „An Outlook senden“,
+  wenn sich etwas geändert hat (`tmStand`).
 - Datumsfelder auf Seiten mit Kopfkarte: übernehmen bei `input`, neu aufbauen
   gar nicht (`datumBinden`, auch nicht bei `blur` – iOS meldet es schon beim Öffnen der Wahl); sonst verrutscht das Feld unter der
   offenen iOS-Datumswahl.

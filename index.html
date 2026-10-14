@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.213 14.10.2026 Termine an Outlook direkt als Mail (Jean): Der Kurzbefehl
+                    machte ein PDF daraus, der Link war nicht klickbar. Jetzt
+                    öffnet die App selbst eine fertige Mail an die Adresse
+                    unter Mehr › Einstellungen › Outlook – Betreff, Angaben
+                    und der Link „In Outlook eintragen“; nur noch „Senden“.
+                    Der Haken „An Outlook senden“ entfällt: jeder neue
+                    Termin öffnet die Mail, jede Änderung bietet sie beim
+                    Verlassen an. Vermerkt wird „An Outlook übergeben am …“
+                    beim Öffnen der Mail – vorher blieb „Noch nicht
+                    gesendet“ stehen. Die Kalenderdatei fällt weg.
   v1.212 14.10.2026 Termine an Outlook (Jean, Firmenkonto): Statt „Im
                     iPhone-Kalender eintragen“ hat jeder Termin den Haken „An
                     Outlook senden“. Beim Anlegen öffnet sich das
@@ -4098,7 +4108,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.212';
+const VERSION = 'v1.213';
 const BUILD   = VERSION + ' · 14.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -9055,7 +9065,7 @@ function terminNeu(){
   const e = wetterEinst(), beginn = Math.max(8, Math.ceil(e.vormVon)) * 60;
   terminAktiv = {id:neueId(), titel:'', art:'besprechung', von:tagPlus(heute(), 1), bis:tagPlus(heute(), 1),
     ganz:false, zeitVon:minHm(beginn), zeitBis:minHm(beginn + 60), ort:'', mit:'', k:'', anlage:'', anlageText:'',
-    notiz:'', erinnern:'', angelegt:heute(), entwurf:true, outlookAn:true};
+    notiz:'', erinnern:'', angelegt:heute(), entwurf:true};
   go('termin');
 }
 /* Kopfkarte eines gespeicherten Termins (v1.111), wie bei der Aufgabe: Titel,
@@ -9128,16 +9138,16 @@ function renderTermin(){
         </select>
       </div></label>
     <label class="field"><span>Notiz und Ergebnis</span><textarea id="tmNotiz" style="min-height:90px" placeholder="Worum es geht, was besprochen wurde">${esc(t.notiz)}</textarea></label>`;
-  /* Outlook (v1.212, Jean): statt des iPhone-Kalenders. Das Teilen-Menü
-     bekommt Text mit Link und die Kalenderdatei; Jeans Kurzbefehl macht
-     daraus die Mail, der Link legt den Termin in Outlook an. */
-  const og = t.outlook;
+  /* Outlook (v1.212/213, Jean): statt des iPhone-Kalenders. Seit v1.213
+     öffnet die App die Mail selbst – Jeans Kurzbefehl machte ein PDF
+     daraus, der Link war dann nicht klickbar. Kein Haken mehr: jeder Termin
+     geht an Outlook. */
+  const og = t.outlook, an = CFG.outlookAn;
   const kalender = `
     <div class="eyebrow">Outlook</div><div class="card">
-      <label class="haken"><input type="checkbox" id="tmOutlook"${t.outlookAn ? ' checked' : ''}> An Outlook senden</label>
-      <p class="muted small" style="margin:8px 0 0">${neu ? 'Beim Anlegen öffnet sich das Teilen-Menü mit dem Termin – von dort per Kurzbefehl als Mail. Ein Klick auf den Link darin trägt ihn in Outlook ein.'
-        : og ? `Zuletzt gesendet am ${esc(dText(og.am))}. Nach einer Änderung bietet die App beim Verlassen an, sie zu senden.`
-             : 'Noch nicht an Outlook gesendet.'}</p>
+      <p class="small" style="margin:0">${neu ? `Nach dem Anlegen öffnet sich eine Mail${an ? ' an ' + esc(an) : ''} mit dem Link „In Outlook eintragen“.`
+        : og ? `An Outlook übergeben am ${esc(dText(og.am))}.` : 'Noch nicht an Outlook übergeben.'}</p>
+      ${an ? '' : '<p class="muted small" style="margin:6px 0 0">Den Empfänger legst du unter Mehr › Einstellungen › Outlook fest.</p>'}
       ${neu ? '' : `<button class="btn klein" id="tmOutlookSenden" style="margin-top:10px">An Outlook senden</button>`}
     </div>`;
   box.innerHTML = neu ? felder + kalender + `<button class="btn primary" id="tmAnlegen">Termin anlegen</button>`
@@ -9204,7 +9214,6 @@ function renderTermin(){
     const zahlN = Math.round(+e.target.value);
     if(t.wdh && zahlN >= 1){ t.wdh.n = zahlN; sichern(); }
   };
-  $('#tmOutlook').onchange = e => { if(e.target.checked) t.outlookAn = true; else delete t.outlookAn; sichern(); };
   if($('#tmOutlookSenden')) $('#tmOutlookSenden').onclick = () => { endeAngleichen(); outlookSenden(t); };
   if($('#tmAnlegen')) $('#tmAnlegen').onclick = () => {
     if(!t.titel.trim()){ toast('Bitte einen Titel eintragen'); $('#tmTitel').focus(); return; }
@@ -9212,7 +9221,7 @@ function renderTermin(){
     delete t.entwurf; TERM.push(t); saveTerm();
     /* Das Teilen-Menü zuerst, solange der Tipp noch als Tipp gilt – iOS lässt
        es sonst nicht zu. */
-    if(t.outlookAn) outlookSenden(t);
+    outlookSenden(t);
     tmStand = outlookKern(t);
     toast('Termin angelegt'); zurueck();
   };
@@ -9241,43 +9250,12 @@ function renderTermine(){
   knoepfeVerdrahten($('#termineBox'));
   $('#termineBox [data-neutermin]').onclick = terminNeu;
 }
-/* --- Kalenderdatei (v1.103, seit v1.212 für Outlook) ------------------------
-   Eine Kalenderdatei (.ics) mit dem Termin, auf Wunsch mit Erinnerung und
-   Wiederholung. Die Zeiten stehen ohne Zeitzone – der Kalender nimmt sie als
-   Ortszeit, wie sie eingetragen sind. Die Kennung bleibt je Termin gleich,
-   damit eine zweite Übergabe denselben Termin meint. */
-function terminIcs(t, folge = 0){
-  const text = s => String(s || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/[,;]/g, m => '\\' + m);
-  const tag = iso => iso.replace(/-/g, '');
-  const zeit = hm => hm.replace(':', '') + '00';
-  const j = new Date(), z = n => String(n).padStart(2, '0');
-  const stempel = `${j.getUTCFullYear()}${z(j.getUTCMonth() + 1)}${z(j.getUTCDate())}T${z(j.getUTCHours())}${z(j.getUTCMinutes())}${z(j.getUTCSeconds())}Z`;
-  const bis = t.bis || t.von;
-  const n = t.k ? NW(t.k) : null;
-  const beschreibung = [terminArt(t), t.mit ? 'Mit: ' + t.mit : '', n ? n.label + (t.anlage ? ' · ' + anlageName(t) : '') : '', t.notiz]
-    .filter(Boolean).join('\n');
-  const zeilen = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Betriebsnachweise//Termine//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-    'BEGIN:VEVENT', `UID:${t.id}@betriebsnachweise`, `DTSTAMP:${stempel}`, `SEQUENCE:${folge}`,
-    ...(t.ganz ? [`DTSTART;VALUE=DATE:${tag(t.von)}`, `DTEND;VALUE=DATE:${tag(tagPlus(bis, 1))}`]
-               : [`DTSTART:${tag(t.von)}T${zeit(t.zeitVon)}`, `DTEND:${tag(bis)}T${zeit(t.zeitBis)}`]),
-    `SUMMARY:${text(t.titel || 'Termin')}`];
-  if(t.ort) zeilen.push(`LOCATION:${text(t.ort)}`);
-  if(beschreibung) zeilen.push(`DESCRIPTION:${text(beschreibung)}`);
-  if(t.wdh) zeilen.push(`RRULE:FREQ=${{woche:'WEEKLY', monat:'MONTHLY', jahr:'YEARLY'}[t.wdh.einheit]};INTERVAL=${Math.max(1, Math.round(+t.wdh.n) || 1)}`);
-  const vorher = +t.erinnern;
-  if(vorher > 0) zeilen.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${text(t.titel || 'Termin')}`,
-    `TRIGGER:-${vorher >= 1440 ? 'P' + vorher / 1440 + 'D' : vorher >= 60 ? 'PT' + vorher / 60 + 'H' : 'PT' + vorher + 'M'}`, 'END:VALARM');
-  zeilen.push('END:VEVENT', 'END:VCALENDAR');
-  /* Lange Zeilen werden nach der Norm gefaltet: Umbruch, dann ein Leerzeichen. */
-  return zeilen.map(l => l.length <= 70 ? l : l.match(/.{1,70}/g).join('\r\n ')).join('\r\n') + '\r\n';
-}
-const terminDateiname = t => `${(t.titel || 'Termin').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 40) || 'Termin'}.ics`;
-/* --- An Outlook (v1.212, Jean: Firmenkonto, per Kurzbefehl als Mail) -------
+/* --- An Outlook (v1.212, Jean: Firmenkonto; seit v1.213 als Mail direkt) --
    Ein Link auf „Outlook im Web“ legt den Termin ausgefüllt an; Jean klickt
    nur „Speichern“. Ein Link ändert nichts Bestehendes – eine Änderung geht
    als „Geändert: …“ mit dem Hinweis, welcher alte Termin zu löschen ist.
    Wiederholung und Erinnerung kennt der Link nicht; die Serie steht als
-   Hinweis im Text, die angehängte Kalenderdatei trägt sie mit. */
+   Hinweis im Text. */
 let tmStand = '';
 /* Was an Outlook geht – daran erkennt die App eine Änderung. */
 const outlookKern = t => JSON.stringify([t.titel, t.von, t.bis, t.ganz, t.zeitVon, t.zeitBis, t.ort, t.mit, t.k, t.anlage, t.notiz, t.wdh || null]);
@@ -9299,17 +9277,16 @@ function outlookLink(t, o){
     ['path', '/calendar/action/compose'], ['rru', 'addevent']].filter(([, v]) => v !== '');
   return 'https://outlook.office.com/calendar/0/deeplink/compose?' + p.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
 }
-/* Text der Mail; die erste Zeile ist der Betreff. */
+/* Betreff und Text der Mail. */
 function outlookText(t, absage){
   const {o, text:wann} = outlookWann(t), n = t.k ? NW(t.k) : null, alt = t.outlook;
   const geaendert = !absage && alt && alt.kern !== outlookKern(t);
   const betreff = `${absage ? 'Abgesagt' : geaendert ? 'Geändert' : 'Termin'}: ${t.titel || 'Termin'} · ${wann}`;
-  const zeilen = [betreff, ''].concat([
-    t.titel || 'Termin', wann,
+  const zeilen = [t.titel || 'Termin', wann,
     t.ort ? 'Ort: ' + t.ort : '', t.mit ? 'Mit: ' + t.mit : '',
     n ? 'Objekt: ' + n.label + (t.anlage ? ' · ' + anlageName(t) : '') : '',
-    t.wdh && !absage ? `Wiederholt sich ${wdhText(t.wdh)} – in Outlook bitte als Serie einstellen (die angehängte Datei trägt sie mit).` : '',
-    String(t.notiz || '').trim() ? '\n' + String(t.notiz).trim() : ''].filter(Boolean));
+    t.wdh && !absage ? `Wiederholt sich ${wdhText(t.wdh)} – in Outlook bitte als Serie einstellen.` : '',
+    String(t.notiz || '').trim() ? '\n' + String(t.notiz).trim() : ''].filter(Boolean);
   if(absage) zeilen.push('', `Der Termin ist abgesagt – bitte in Outlook löschen${alt && alt.wann ? ` („${alt.titel} · ${alt.wann}“)` : ''}.`);
   else{
     zeilen.push('', 'In Outlook eintragen:', outlookLink(t, o));
@@ -9317,30 +9294,15 @@ function outlookText(t, absage){
   }
   return {betreff, text:zeilen.join('\n'), wann};
 }
-/* Über das Teilen-Menü an den Kurzbefehl: Text und – außer bei der Absage –
-   die Kalenderdatei. Muss im Tipp starten (iOS), also vor jedem await. */
-async function outlookSenden(t, absage){
-  const nr = t.outlook ? (t.outlook.nr || 0) + 1 : 0;
+/* Öffnet eine fertige Mail in der Mail-App (v1.213). Ob sie wirklich
+   hinausgeht, sieht die App nicht – vermerkt wird die Übergabe. */
+function outlookSenden(t, absage){
   const m = outlookText(t, absage);
-  const merken = () => {
-    if(absage) return;
-    t.outlook = {nr, am:heute(), kern:outlookKern(t), titel:t.titel || 'Termin', wann:m.wann};
-    if(TERM.includes(t)) saveTerm();
-    if(terminAktiv === t){ tmStand = outlookKern(t); if(current === 'termin') renderTermin(); }
-  };
-  const datei = absage ? null : new File([new Blob([terminIcs(t, nr)], {type:'text/calendar'})], terminDateiname(t), {type:'text/calendar'});
-  const daten = Object.assign({title:m.betreff, text:m.text}, datei ? {files:[datei]} : {});
-  try{
-    if(navigator.share && (!navigator.canShare || navigator.canShare(daten))){
-      try{ await navigator.share(daten); merken(); }catch(e){ /* Abbruch – nichts gesendet */ }
-    }else if(navigator.share){
-      try{ await navigator.share({title:m.betreff, text:m.text}); merken(); }catch(e){ /* Abbruch */ }
-    }else{
-      /* Ohne Teilen-Menü (Rechner): die Mail-App mit Betreff und Text. */
-      location.href = 'mailto:?subject=' + encodeURIComponent(m.betreff) + '&body=' + encodeURIComponent(m.text.split('\n').slice(2).join('\n'));
-      merken();
-    }
-  }catch(e){ toast('Übergabe nicht möglich'); }
+  location.href = `mailto:${encodeURIComponent(CFG.outlookAn || '').replace(/%40/g, '@')}?subject=${encodeURIComponent(m.betreff)}&body=${encodeURIComponent(m.text)}`;
+  if(absage) return;
+  t.outlook = {nr:t.outlook ? (t.outlook.nr || 0) + 1 : 0, am:heute(), kern:outlookKern(t), titel:t.titel || 'Termin', wann:m.wann};
+  if(TERM.includes(t)) saveTerm();
+  if(terminAktiv === t){ tmStand = outlookKern(t); if(current === 'termin') renderTermin(); }
 }
 /* Beim Verlassen eines geänderten Termins (v1.212): Meldung mit Knopf –
    der Tipp darauf startet das Teilen-Menü. */
@@ -9349,7 +9311,7 @@ function terminVerlassen(){
   if(!t || t.entwurf || !TERM.includes(t) || !tmStand) return;
   const jetzt = outlookKern(t), war = tmStand;
   tmStand = jetzt;
-  if(!t.outlookAn || jetzt === war || (t.outlook && t.outlook.kern === jetzt)) return;
+  if(jetzt === war || (t.outlook && t.outlook.kern === jetzt)) return;
   setTimeout(() => toastKnopf('Termin geändert', 'An Outlook senden', () => outlookSenden(t), 8000), 0);
 }
 
@@ -12975,6 +12937,14 @@ function abfAnzeigeFuellen(){
     saveCfg();
   });
 }
+/* Empfänger der Termin-Mails (v1.213, Jean). */
+function setOutlook(box){
+  const i = info('Nach dem Anlegen oder Ändern eines Termins öffnet die App eine fertige Mail an diese Adresse. Der Link darin trägt den Termin in Outlook (Firmenkonto) ein. Gesendet wird mit dem Konto der Mail-App.', 'margin:-2px 0 10px');
+  box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Empfänger ${i.knopf}</div>${i.text}
+    <label class="field" style="margin-top:0"><span>E-Mail-Adresse</span><input id="olAdresse" type="email" inputmode="email" autocomplete="email"
+      autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="z.B. vorname.nachname@firma.de" value="${esc(CFG.outlookAn || '')}"></label>`;
+  $('#olAdresse').oninput = e => { const v = e.target.value.trim(); if(v) CFG.outlookAn = v; else delete CFG.outlookAn; saveCfg(); };
+}
 function setAbfall(box){
   const a = adresse();
   const i = info('Fast jeder Entsorger bietet seinen Abfuhrkalender im Kalenderformat an (.ics, „iCal“) – als Datei zum Herunterladen oder als Link zum Abonnieren. Die App liest beides. Aufgaben entstehen daraus nicht; die Abholtage stehen unter Mehr › Abholtage und im Kalender. Welche der Kalender zeigt, legst du unter „Im Kalender“ fest.', 'margin:-2px 0 10px');
@@ -14482,7 +14452,8 @@ function renderSettings(){
     + '<div class="eyebrow">Online-Dienste</div>'
     + gliste(knopf('adresse', '', 'Adresse')
     + knopf('wetter', '', 'Wetter')
-    + knopf('abfall', '', 'Abfallkalender'))
+    + knopf('abfall', '', 'Abfallkalender')
+    + knopf('outlook', '', 'Outlook'))
     + '<div class="eyebrow">Gerät</div>'
     + gliste(knopf('plaene', '', 'Grundrisse', '…')
     + knopf('bedienung', '', 'Bedienung')
@@ -14513,6 +14484,7 @@ function setOeffnen(art, k){
            : art === 'wetter' ? 'Wetter'
            : art === 'adresse' ? 'Adresse'
            : art === 'abfall' ? 'Abfallkalender'
+           : art === 'outlook' ? 'Outlook'
            : art === 'check'  ? 'Checkliste'
            : art === 'akkus'  ? 'Akkutypen'
            : art === 'werkmat' ? 'Arbeitsmittel'
@@ -14545,6 +14517,7 @@ function renderSetSub(){
   if(a === 'wetter'){ setWetter(dyn); return; }
   if(a === 'adresse'){ setAdresse(dyn); return; }
   if(a === 'abfall'){ setAbfall(dyn); return; }
+  if(a === 'outlook'){ setOutlook(dyn); return; }
   if(a === 'check') { setCheck(dyn, k); return; }
   if(a === 'tausch'){ setTausch(dyn);   return; }
   if(a === 'akkus') { setAkkus(dyn);     return; }
@@ -19923,6 +19896,7 @@ const SEITEN = [
   {titel:'Wetter: Grenzwerte und Halbtage', wo:'Mehr › Einstellungen', woerter:'wetter grenzwerte halbtag vormittag nachmittag', tu:() => setOeffnen('wetter')},
   {titel:'Adresse', wo:'Mehr › Einstellungen', woerter:'adresse standort straße strasse ort hausnummer', tu:() => setOeffnen('adresse')},
   {titel:'Abholtage', wo:'Mehr › Abholtage', woerter:'abholtage abfall müll muell tonne abfuhr abholung', tu:() => { go('abfall'); abfallAbrufen(); }},
+  {titel:'Outlook', wo:'Mehr › Einstellungen', woerter:'outlook mail e-mail termine kalender empfänger adresse', tu:() => setOeffnen('outlook')},
   {titel:'Abfallkalender einrichten', wo:'Mehr › Einstellungen', woerter:'abfallkalender ics kalender abfall müll muell abholtage anzeigen ausblenden', tu:() => setOeffnen('abfall')},
   {titel:'Gebäude und Prüfer', wo:'Mehr › Einstellungen', woerter:'gebäude gebaeude prüfer pruefer name bauteil bauteile kopf blatt', tu:() => setOeffnen('obj')},
   {titel:'Grundrisse', wo:'Mehr › Einstellungen', woerter:'grundriss grundrisse plan pläne plaene pdf', tu:() => setOeffnen('plaene')},
