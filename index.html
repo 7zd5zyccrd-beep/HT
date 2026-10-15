@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.218 15.10.2026 Der Griff zum Ziehen steht jetzt ohne Rahmen in der
+                    rechten oberen Ecke jeder Karte, auf Höhe des Namens –
+                    nicht mehr als Knopf zwischen „Grundriss“ und „Löschen“
+                    (Jean: Position wirkte eigenartig). An allen Stellen
+                    gleich.
   v1.217 15.10.2026 Ziehen statt Pfeile (Jean, im Prüfassistenten bewährt):
                     Überall, wo bisher ↑ ↓ sortierten, steht ein Griff ≡ –
                     Kontrolle, gemeinsamer Rundgang und Ablesung (über
@@ -2838,7 +2843,17 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
 .pos .pfeile button[disabled]{opacity:.4}
 /* Griff zum Ziehen (v1.217): fängt den Finger, statt die Seite zu rollen. */
 .griff{touch-action:none;cursor:grab;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-soft)}
-.btn.griff{width:var(--feld-h);padding:0}
+/* Seit v1.218 (Jean: „Position wirkt eigenartig“) steht der Griff ohne Rahmen
+   in der rechten oberen Ecke der Karte, auf Höhe des Namens – wie in
+   iPhone-Listen, und überall an derselben Stelle. Im Aufbau bleibt er, wo er
+   war; gesetzt wird er hier. Die erste Zeile macht ihm Platz. */
+.pos:has(.griff),.stelle:has(.griff),.schrittKarte:has(.griff){position:relative}
+.griff,.pos .pfeile button.griff{position:absolute;top:12px;right:8px;width:40px;min-width:0;height:40px;padding:0;margin:0;border:0;background:none;box-shadow:none}
+.schrittKarte .griff{top:10px;right:6px}
+.pos .griff,.pos .pfeile button.griff{top:4px}   /* auf Höhe von „Verlauf“ */
+.pos:has(> .typ) .griff,.pos:has(> .typ) .pfeile button.griff{top:24px}   /* Rundgang: unter der Typzeile */
+.stelle:has(.griff) > textarea:first-child,.stelle:has(.griff) > input:first-child{width:calc(100% - 44px)}
+.pos:has(.griff) > .name,.pos:has(.griff) > .typ,.stelle:has(.griff) > .akkuTypZeile,.schrittKarte:has(.griff) > :first-child{padding-right:44px}
 .zieht{position:relative;z-index:6;box-shadow:0 10px 28px rgba(0,0,0,.22);transition:none!important}
 .ziehNachbar{transition:transform .15s ease}
 body.ziehtGerade,body.ziehtGerade *{-webkit-user-select:none;user-select:none}
@@ -4147,7 +4162,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.217';
+const VERSION = 'v1.218';
 const BUILD   = VERSION + ' · 15.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -8412,7 +8427,7 @@ function renderStufe(){
       ${x.art === 'mail' ? feld(i, 'an', 'An', x.an, 'type="email" autocapitalize="off"') + feld(i, 'betreff', 'Betreff', x.betreff)
         + `<label class="field"><span>Text</span><textarea data-i="${i}" data-f="inhalt" style="min-height:90px">${esc(x.inhalt || '')}</textarea></label>` : ''}
       <div class="row ablaufReihe">
-        ${gruppe(istInfo(x)).length > 1 ? griffHtml('btn quadrat') : ''}
+        ${gruppe(istInfo(x)).length > 1 ? griffHtml() : ''}
         <button type="button" class="btn danger klein" data-weg="${i}">Entfernen</button></div></div>`;
   const inf = gruppe(true), akt = gruppe(false);
   const ziel = (p.stufen || []).some(x => (x.ergebnisse || []).some(e => (e.ziele || []).some(z => z.stufe === s.id)));
@@ -15118,7 +15133,7 @@ function listeBauen(box, opt){
     ? `<div class="stelle" data-i="${i}">
        <textarea rows="1"${i < 0 ? ` placeholder="${esc(opt.wort)}"` : ''}>${esc(text)}</textarea>
        <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
-         ${i >= 0 && i < basis && basis > 1 ? griffHtml('btn ghost klein quadrat') : ''}
+         ${i >= 0 && i < basis && basis > 1 ? griffHtml() : ''}
          <button class="btn danger klein" data-weg="1" style="margin-left:auto">Löschen</button></div>
      </div>`
     : `<div class="zeile" data-i="${i}">
@@ -15500,7 +15515,7 @@ function objektKarten(box, k, nachZeichnen){
         esc(loeZusammenfassung(text))}</span></summary><div class="loeFelder"></div></details>` : ''}
       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
         <button class="btn ghost klein mitWort" data-ort="1"${i < 0 ? ' disabled' : ''}>${ORT_SVG}<span>Grundriss</span></button>
-        ${i >= 0 && i < basis && basis > 1 ? griffHtml('btn ghost klein quadrat') : ''}
+        ${i >= 0 && i < basis && basis > 1 ? griffHtml() : ''}
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
     </div>`;
@@ -15619,7 +15634,7 @@ function akkuTypZeichnen(mitNeuer){
         <label class="field"><span>Typ</span><input data-f="name" value="${esc(x.name)}"${
           i < 0 ? ' placeholder="12 Ah"' : ''}></label>
         <label class="field"><span>Monate</span><input data-f="monate" type="number" min="1" max="240" step="1" inputmode="numeric" value="${x.monate}"></label>
-        <span class="akkuTypKnoepfe">${i >= 0 && i < akkuTypBasis && akkuTypBasis > 1 ? griffHtml('btn ghost klein quadrat') : ''}
+        <span class="akkuTypKnoepfe">${i >= 0 && i < akkuTypBasis && akkuTypBasis > 1 ? griffHtml() : ''}
         <button class="btn danger klein" data-weg="1">Löschen</button></span>
     </div></div>`;
   box.innerHTML = (mitNeuer ? karte({name:'', monate:48}, -1, t.akkus.length) : '')
@@ -16052,7 +16067,7 @@ async function renderPlaene(){
       <div class="planBezug"><span class="muted small">${bezugVon(pl.id) ? 'Ausgerichtet' : 'Nicht ausgerichtet'}</span>
         <button class="btn ghost klein" data-richt="1">Ausrichten</button></div>
       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
-        ${n > 1 ? griffHtml('btn ghost klein quadrat') : ''}
+        ${n > 1 ? griffHtml() : ''}
         <button class="btn klein" data-sehen="1" style="margin-left:auto">Ansehen</button>
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>

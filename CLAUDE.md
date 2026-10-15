@@ -213,6 +213,10 @@ steht.
   Platz über `schrittweise(i, j, tausch)` (Sprinkler `beiTausch`, Aktionen
   je Gruppe). Nur „alte“ Einträge (`i < basis`) bekommen einen Griff. Neue
   Sortierlisten so bauen, keine Pfeile mehr.
+  Seit v1.218 (Jean) steht der Griff per Stil ohne Rahmen rechts oben in der
+  Karte (`.pos/.stelle/.schrittKarte:has(.griff)`, absolut; im Aufbau bleibt
+  er an alter Stelle), die erste Zeile hat 44 px Platz; Höhe je Karte
+  nachgemessen (Prüfkarten 4 px, Rundgang 24 px wegen Typzeile).
 - Von Jean abgelehnt: kräftigerer aktiver Reiter unten (D9), weiße statt
   graue Unterschriftfläche nach dem Unterschreiben (D8), „Zurücknehmen“
   bleibt im Fenster „Weiter“. Zurückgestellt: iPad-Feinschliff (E9).
