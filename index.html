@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.216 15.10.2026 Suche verbessert (Jean: alles umsetzen): Umlaute und ß
+                    sind egal („loscher“ findet „Löscher“, „strasse“ die
+                    „Straße“). Bei leerem Feld stehen die zuletzt über die
+                    Suche geöffneten Treffer (nur dieses Gerät, „Leeren“).
+                    Lange Gruppen zeigen erst fünf und „Alle n zeigen“, die
+                    Überschrift nennt die Zahl. Erledigte Aufgaben und
+                    behobene Mängel stehen unten unter „Erledigt“. Findet
+                    sich genau nichts, sucht sie mit kleinen Tippfehlern
+                    weiter („Keine genauen Treffer – Ähnliches“).
   v1.215 14.10.2026 „Mit Kalenderdatei senden“ bleibt (Jeans Test): Der
                     Doppelklick auf den Anhang scheitert am Firmen-PC, das
                     Ziehen auf den Kalender klappt. Hinweis auf der
@@ -4123,8 +4132,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.215';
-const BUILD   = VERSION + ' · 14.10.2026';
+const VERSION = 'v1.216';
+const BUILD   = VERSION + ' · 15.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -19936,7 +19945,12 @@ function plausEinstellungen(box){
    gehören zu jedem Objekt auch der Name seiner Anlage und die Grundrisse, auf
    denen es liegt (Name und Kurzname), dazu seine Arbeitsmittel. Die Wörter
    dürfen sich auf all das verteilen. */
-const suchNorm = t => String(t || '').toLocaleLowerCase('de');
+/* Umlaute und ß sind egal (v1.216, Jean): „loscher“, „loescher“ und
+   „Löscher“ treffen sich, ebenso „strasse“ und „Straße“. Frage und Text
+   werden gleich gefaltet, darum darf auch „ue“ zu „u“ werden. */
+const suchNorm = t => String(t || '').toLocaleLowerCase('de')
+  .replace(/ß/g, 'ss').replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u')
+  .replace(/ae/g, 'a').replace(/oe/g, 'o').replace(/ue/g, 'u');
 const nurZeichen = t => suchNorm(t).replace(/[\s\-–./_,;:]+/g, '');
 /* Die Grundrisse liegen im Bilderspeicher, der nur verzögert antwortet. Die
    Suche merkt sich deren Namen (v1.145) und holt sie bei jedem Antippen des
@@ -20053,7 +20067,24 @@ const suchWoerter = frage => suchNorm(frage).split(/\s+/).filter(Boolean);
 /* Passt ein Wort in diesen Text? Bei Wörtern mit Ziffern zählen Leerzeichen,
    Striche und Punkte nicht. */
 const wortIn = (w, text) => suchNorm(text).includes(w)
-  || (/\d/.test(w) && nurZeichen(text).includes(nurZeichen(w)));
+  || (/\d/.test(w) && nurZeichen(text).includes(nurZeichen(w)))
+  || (suchUnscharf && w.length >= 5 && aehnlichIn(w, suchNorm(text)));
+/* Kleine Tippfehler (v1.216): nur, wenn genau nichts gefunden wurde, und
+   nur für Wörter ab fünf Zeichen. Ein Wort trifft, wenn ein Wortanfang im
+   Text höchstens einen Buchstaben anders, zu viel oder zu wenig hat. */
+let suchUnscharf = false;
+function einFehler(a, b){
+  if(Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, f = 0;
+  while(i < a.length && j < b.length){
+    if(a[i] === b[j]){ i++; j++; continue; }
+    if(++f > 1) return false;
+    if(a.length > b.length) i++; else if(b.length > a.length) j++; else { i++; j++; }
+  }
+  return f + (a.length - i) + (b.length - j) <= 1;
+}
+const aehnlichIn = (w, text) => text.split(/[^a-z0-9]+/).some(t =>
+  t.length >= w.length - 1 && [w.length - 1, w.length, w.length + 1].some(l => einFehler(w, t.slice(0, l))));
 function suchTreffer(frage){
   const woerter = suchWoerter(frage);
   if(!woerter.length) return [];
@@ -20079,6 +20110,17 @@ function suchAufgaben(frage){
                   a.vorb ? a.vorb.text : ''].filter(Boolean).join(' ');
     return woerter.every(w => wortIn(w, text));
   }).sort((x, y) => (x.frist || '9999').localeCompare(y.frist || '9999'));
+}
+/* Erledigte Aufgaben und behobene Mängel (v1.216, Jean): zum Nachschlagen,
+   wann etwas gemacht wurde – das Neueste zuerst, ganz unten in der Liste. */
+function suchErledigt(frage){
+  const woerter = suchWoerter(frage);
+  if(!woerter.length) return [];
+  return AUFG.filter(a => a.erledigt).filter(a => {
+    const n = a.k ? NW(a.k) : null;
+    const text = [aufgTitel(a), a.text, a.notiz, a.vermerk, n ? n.label : '', a.anlage ? anlageName(a) : ''].filter(Boolean).join(' ');
+    return woerter.every(w => wortIn(w, text));
+  }).sort((x, y) => String(y.erledigt).localeCompare(String(x.erledigt)));
 }
 /* Termine in der Suche (v1.103): kommende nach Beginn, Vergangenes danach. */
 function suchTermine(frage){
@@ -20137,42 +20179,90 @@ function suchStand00(o){
           m ? `Mangel seit ${dText(m.festgestellt)}` : ''].filter(Boolean).join(' · ');
 }
 let suchListe = [];
+/* Zuletzt geöffnet (v1.216, Jean): bei leerem Feld stehen die letzten
+   Treffer, die über die Suche geöffnet wurden – nur auf diesem Gerät. */
+const SUCH_ZULETZT = 6, SUCH_GRUPPE = 5;
+let suchAuf = new Set(), suchAufFrage = '';
+function suchMerken(e){
+  const l = (Store.get('nwSuchZuletzt', []) || []).filter(x => !(x.art === e.art && x.id === e.id && (x.k || '') === (e.k || '')));
+  l.unshift(e); Store.set('nwSuchZuletzt', l.slice(0, SUCH_ZULETZT));
+}
+/* Was davon noch da ist, als Zeile mit Öffnen. */
+function suchZuletzt(){
+  const raus = [];
+  (Store.get('nwSuchZuletzt', []) || []).forEach(e => {
+    if(e.art === 'obj'){ const o = suchObjekte().find(x => x.k === e.k && x.id === e.id); if(o) raus.push({e, titel:o.titel, zeile:[NW(o.k).label, suchStand(o)].filter(Boolean).join(' · '), tu:() => verlaufOeffnen(o.k, o.id, o.titel)}); }
+    else if(e.art === 'aufg'){ const a = AUFG.find(x => x.id === e.id); if(a) raus.push({e, titel:aufgTitel(a), zeile:a.erledigt ? 'erledigt am ' + dText(a.erledigt) : suchAufgStand(a), tu:() => aufgabeOeffnen(a.id)}); }
+    else if(e.art === 'termin'){ const t = TERM.find(x => x.id === e.id); if(t){ const o = terminNaechstes(t); raus.push({e, titel:t.titel || 'Termin', zeile:o ? terminZeitText(o, true) : 'vorbei · ' + dText(t.von), tu:() => terminOeffnen(t.id)}); } }
+    else if(e.art === 'seite'){ const x = SEITEN.find(y => y.titel === e.id); if(x) raus.push({e, titel:x.titel, zeile:x.wo, tu:() => x.tu()}); }
+    else if(e.art === 'liste') raus.push({e, titel:e.titel, zeile:'Liste', tu:() => setOeffnen(e.id, '')});
+    else if(e.art === 'plan') raus.push({e, titel:e.titel, zeile:'Grundriss', tu:() => { planListe = suchPlanListe.map(x => x.p); planZeigen(e.id, null); }});
+  });
+  return raus;
+}
 function renderSuche(){
   const feld = $('#suche'), box = $('#sucheListe');
   if(!feld || !box) return;
   const q = feld.value.trim();
   $('#sucheLeeren').hidden = !feld.value;
-  box.hidden = !q;
-  if(!q){ box.innerHTML = ''; suchListe = []; return; }
+  if(q !== suchAufFrage){ suchAuf = new Set(); suchAufFrage = q; }
+  if(!q){
+    suchListe = [];
+    const z = suchZuletzt();
+    box.hidden = !z.length;
+    box.innerHTML = z.length ? `<div class="eyebrow" style="margin-top:0">Zuletzt geöffnet</div>`
+      + z.map((x, i) => `<button class="btn aufgabe eintrag" data-z="${i}"><span class="etext">${esc(x.titel)}<small>${esc(x.zeile)}</small></span></button>`).join('')
+      + `<button type="button" class="btn ghost klein" id="suchZuletztWeg" style="margin:6px 0 0">Liste leeren</button>` : '';
+    box.querySelectorAll('[data-z]').forEach(b => b.onclick = () => { const x = z[+b.dataset.z]; $('#suche').blur(); suchMerken(x.e); x.tu(); });
+    if($('#suchZuletztWeg')) $('#suchZuletztWeg').onclick = () => { Store.set('nwSuchZuletzt', []); renderSuche(); };
+    return;
+  }
+  box.hidden = false;
   /* Ohne Plannamen erst holen, dann noch einmal (v1.145). */
   if(!suchPlaene){ suchPlaene = new Map(); suchPlaeneHolen().then(renderSuche); }
-  suchListe = suchTreffer(q);
-  const aufg = suchAufgaben(q), term = suchTermine(q), listen = suchListen(q), plaene = suchGrundrisse(q), seiten = suchSeiten(q);
-  if(!suchListe.length && !aufg.length && !term.length && !listen.length && !plaene.length && !seiten.length){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
+  const alles = () => ({liste:suchTreffer(q), aufg:suchAufgaben(q), term:suchTermine(q), listen:suchListen(q),
+                        plaene:suchGrundrisse(q), seiten:suchSeiten(q), erl:suchErledigt(q)});
+  const leer = r => !r.liste.length && !r.aufg.length && !r.term.length && !r.listen.length && !r.plaene.length && !r.seiten.length && !r.erl.length;
+  let r = alles(), unscharf = false;
+  /* Nichts genau gefunden: noch einmal mit kleinen Tippfehlern (v1.216). */
+  if(leer(r) && suchWoerter(q).some(w => w.length >= 5)){
+    suchUnscharf = true;
+    try{ r = alles(); }finally{ suchUnscharf = false; }
+    unscharf = !leer(r);
+  }
+  suchListe = r.liste;
+  if(leer(r)){ box.innerHTML = `<p class="muted small">Nichts gefunden.</p>`; return; }
+  /* Je Gruppe erst fünf, dann „Alle n zeigen“ (v1.216); die Überschrift
+     nennt die Zahl. */
+  const gruppe = (schl, titel, zeilen) => {
+    if(!zeilen.length) return '';
+    const auf = suchAuf.has(schl) || zeilen.length <= SUCH_GRUPPE + 1;
+    return `<div class="eyebrow">${esc(titel)}${zeilen.length > 1 ? ` <span class="summe">· ${zeilen.length}</span>` : ''}</div>`
+      + (auf ? zeilen : zeilen.slice(0, SUCH_GRUPPE)).join('')
+      + (auf ? '' : `<button class="btn ghost klein" data-alle="${esc(schl)}" style="margin:2px 0 6px">Alle ${zeilen.length} zeigen</button>`);
+  };
+  const knopf = (attr, titel, zeile) => `<button class="btn aufgabe eintrag" ${attr}><span class="etext">${esc(titel)}<small>${esc(zeile)}</small></span></button>`;
   /* Aufgaben zuoberst und ohne Kurzinfo: ihre eigene Seite sagt ohnehin alles. */
-  box.innerHTML = (aufg.length
-    ? `<div class="eyebrow">Aufgaben</div>`
-      + aufg.map(a => `<button class="btn aufgabe eintrag" data-aufg="${esc(a.id)}"><span class="etext">${esc(aufgTitel(a))}<small>${esc(suchAufgStand(a))}</small></span></button>`).join('')
-    : '')
-  + (term.length ? `<div class="eyebrow">Termine</div>` + term.map(o => terminKnopf(o, false)).join('') : '')
-  + TYPEN_AKTIV.filter(n => suchListe.some(t => t.k === n.k)).map(n =>
-    `<div class="eyebrow">${esc(n.art === 'medien' ? 'Zähler' : n.label)}</div>`
-    + suchListe.map((t, i) => t.k !== n.k ? '' :
-        `<button class="btn aufgabe eintrag" data-t="${i}"><span class="etext">${esc(t.titel)}<small>${esc(suchStand(t))}</small></span></button>`).join('')
-  ).join('')
-  + (listen.length ? `<div class="eyebrow">Listen</div>` + listen.map(x =>
-      `<button class="btn aufgabe eintrag" data-liste="${esc(x.art)}"><span class="etext">${esc(x.titel)}<small>${esc(x.zeile)}</small></span></button>`).join('') : '')
-  + (plaene.length ? `<div class="eyebrow">Grundrisse</div>` + plaene.map(x =>
-      `<button class="btn aufgabe eintrag" data-plan="${esc(x.id)}"><span class="etext">${esc(x.titel)}<small>${esc(x.zeile)}</small></span></button>`).join('') : '')
-  + (seiten.length ? `<div class="eyebrow">Seiten</div>` + seiten.map(x =>
-      `<button class="btn aufgabe eintrag" data-seite="${SEITEN.indexOf(x)}"><span class="etext">${esc(x.titel)}<small>${esc(x.wo)}</small></span></button>`).join('') : '');
-  box.querySelectorAll('[data-seite]').forEach(b => b.onclick = () => { $('#suche').blur(); SEITEN[+b.dataset.seite].tu(); });
-  box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { const t = suchListe[+b.dataset.t]; verlaufOeffnen(t.k, t.id, t.titel); });
-  box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => aufgabeOeffnen(b.dataset.aufg));
-  box.querySelectorAll('[data-termin]').forEach(b => b.onclick = () => terminOeffnen(b.dataset.termin));
-  box.querySelectorAll('[data-liste]').forEach(b => b.onclick = () =>
-    setOeffnen(b.dataset.liste, ''));
+  box.innerHTML = (unscharf ? '<p class="muted small" style="margin:0 0 6px">Keine genauen Treffer – Ähnliches:</p>' : '')
+  + gruppe('aufg', 'Aufgaben', r.aufg.map(a => knopf(`data-aufg="${esc(a.id)}"`, aufgTitel(a), suchAufgStand(a))))
+  + gruppe('term', 'Termine', r.term.map(o => terminKnopf(o, false)))
+  + TYPEN_AKTIV.filter(n => r.liste.some(t => t.k === n.k)).map(n =>
+      gruppe('t:' + n.k, n.art === 'medien' ? 'Zähler' : n.label,
+        r.liste.map((t, i) => t.k !== n.k ? '' : knopf(`data-t="${i}"`, t.titel, suchStand(t))).filter(Boolean))).join('')
+  + gruppe('listen', 'Listen', r.listen.map(x => knopf(`data-liste="${esc(x.art)}" data-ltitel="${esc(x.titel)}"`, x.titel, x.zeile)))
+  + gruppe('plaene', 'Grundrisse', r.plaene.map(x => knopf(`data-plan="${esc(x.id)}" data-ptitel="${esc(x.titel)}"`, x.titel, x.zeile)))
+  + gruppe('seiten', 'Seiten', r.seiten.map(x => knopf(`data-seite="${SEITEN.indexOf(x)}"`, x.titel, x.wo)))
+  + gruppe('erl', 'Erledigt', r.erl.map(a => knopf(`data-aufg="${esc(a.id)}"`, aufgTitel(a),
+      ['erledigt am ' + dText(a.erledigt), aufgStand(a)].filter(Boolean).join(' · '))));
+  box.querySelectorAll('[data-alle]').forEach(b => b.onclick = () => { suchAuf.add(b.dataset.alle); renderSuche(); });
+  box.querySelectorAll('[data-seite]').forEach(b => b.onclick = () => { $('#suche').blur(); const x = SEITEN[+b.dataset.seite]; suchMerken({art:'seite', id:x.titel}); x.tu(); });
+  box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { const t = suchListe[+b.dataset.t]; suchMerken({art:'obj', k:t.k, id:t.id}); verlaufOeffnen(t.k, t.id, t.titel); });
+  box.querySelectorAll('[data-aufg]').forEach(b => b.onclick = () => { suchMerken({art:'aufg', id:b.dataset.aufg}); aufgabeOeffnen(b.dataset.aufg); });
+  box.querySelectorAll('[data-termin]').forEach(b => b.onclick = () => { suchMerken({art:'termin', id:b.dataset.termin}); terminOeffnen(b.dataset.termin); });
+  box.querySelectorAll('[data-liste]').forEach(b => b.onclick = () => {
+    suchMerken({art:'liste', id:b.dataset.liste, titel:b.dataset.ltitel}); setOeffnen(b.dataset.liste, ''); });
   box.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => {
+    suchMerken({art:'plan', id:b.dataset.plan, titel:b.dataset.ptitel});
     planListe = suchPlanListe.map(x => x.p);  // von hier aus wird geblättert
     planZeigen(b.dataset.plan, null);
   });

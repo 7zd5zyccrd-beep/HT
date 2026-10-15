@@ -558,6 +558,13 @@ steht.
 - Eigene Treffer (v1.146): „Listen“ (`suchListen`: Werkzeug, Material,
   Akkutypen → `setOeffnen('werkmat'|'akkus')`) und „Grundrisse“
   (`suchGrundrisse` aus `suchPlanListe` → `planZeigen`), unter den Objekten.
+- Verbesserungen (v1.216, Jean): `suchNorm` faltet ß/ä/ö/ü und ae/oe/ue
+  (Frage und Text gleich). Leeres Feld: „Zuletzt geöffnet“ aus Store
+  `nwSuchZuletzt` (nur Gerät, `suchMerken` bei jedem Treffer-Tipp,
+  `suchZuletzt`). Gruppen über `gruppe()` mit 5 + „Alle n zeigen“
+  (`suchAuf`, je Frage). „Erledigt“ = `suchErledigt`. Nichts gefunden und ein
+  Wort ≥ 5 Zeichen → zweiter Lauf mit `suchUnscharf` (`aehnlichIn`/
+  `einFehler`, ein Fehler am Wortanfang), Hinweis „Ähnliches“.
 
 ## Termine (v1.103)
 
