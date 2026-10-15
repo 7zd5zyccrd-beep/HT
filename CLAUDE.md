@@ -217,6 +217,8 @@ steht.
   Karte (`.pos/.stelle/.schrittKarte:has(.griff)`, absolut; im Aufbau bleibt
   er an alter Stelle), die erste Zeile hat 44 px Platz; Höhe je Karte
   nachgemessen (Prüfkarten 4 px, Rundgang 24 px wegen Typzeile).
+  Seit v1.219 in den Einstellungs-Karten (`.stelle`, `.schrittKarte`) unten
+  rechts in der Knopfzeile (die macht 44 px Platz), Felder oben voll breit.
 - Von Jean abgelehnt: kräftigerer aktiver Reiter unten (D9), weiße statt
   graue Unterschriftfläche nach dem Unterschreiben (D8), „Zurücknehmen“
   bleibt im Fenster „Weiter“. Zurückgestellt: iPad-Feinschliff (E9).
