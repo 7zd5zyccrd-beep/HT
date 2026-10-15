@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.217 15.10.2026 Ziehen statt Pfeile (Jean, im Prüfassistenten bewährt):
+                    Überall, wo bisher ↑ ↓ sortierten, steht ein Griff ≡ –
+                    Kontrolle, gemeinsamer Rundgang und Ablesung (über
+                    „Reihenfolge ändern“), Objekte bearbeiten, Prüfpunkte des
+                    Sprinklers, Akkutypen, Grundrisse und die Aktionen eines
+                    Schritts. Finger auf den Griff, die Karte hebt sich ab
+                    und folgt, die anderen rücken zur Seite; am Rand rollt
+                    die Liste mit. Loslassen speichert. Sprinkler: schon
+                    Erfasstes zieht mit.
   v1.216 15.10.2026 Suche verbessert (Jean: alles umsetzen): Umlaute und ß
                     sind egal („loscher“ findet „Löscher“, „strasse“ die
                     „Straße“). Bei leerem Feld stehen die zuletzt über die
@@ -2827,6 +2836,12 @@ input.dat{flex:0 0 165px;width:165px;padding:8px 10px;font-size:16px}
   -webkit-appearance:none;appearance:none;
 }
 .pos .pfeile button[disabled]{opacity:.4}
+/* Griff zum Ziehen (v1.217): fängt den Finger, statt die Seite zu rollen. */
+.griff{touch-action:none;cursor:grab;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-soft)}
+.btn.griff{width:var(--feld-h);padding:0}
+.zieht{position:relative;z-index:6;box-shadow:0 10px 28px rgba(0,0,0,.22);transition:none!important}
+.ziehNachbar{transition:transform .15s ease}
+body.ziehtGerade,body.ziehtGerade *{-webkit-user-select:none;user-select:none}
 /* Werkzeuge mit Wort (v1.187): „Grundriss“ statt des Symbols allein. */
 .pos .pfeile button.mitWort{width:auto;padding:0 10px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:14px}
 /* „Verlauf“ und „Grundriss“ gleich breit (v1.194). */
@@ -4132,7 +4147,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.216';
+const VERSION = 'v1.217';
 const BUILD   = VERSION + ' · 15.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5779,6 +5794,76 @@ const bildY = () => bild().scrollTop;
 const bildNach = y => { bild().scrollTop = Math.max(0, Math.round(y)); };
 /* Lage eines Elements im Bildlaufbereich (statt im Dokument). */
 const imBild = el => el.getBoundingClientRect().top - bild().getBoundingClientRect().top + bild().scrollTop;
+/* --- Ziehen zum Sortieren (v1.217, Jean: im Prüfassistenten bewährt) -------
+   Statt ↑ ↓ ein Griff ≡ an jeder Karte, die sich verschieben lässt. Finger
+   auf den Griff: die Karte hebt sich ab und folgt, die Nachbarn rücken zur
+   Seite; am Rand rollt #bild mit. Beim Loslassen meldet ziehenSortieren den
+   Platz von und nach (in der Reihe der ziehbaren Karten derselben Gruppe,
+   data-zg) und die Bildschirmhöhe, an der die Karte liegen bleibt – die
+   Seite ordnet ihre Daten selbst und baut neu auf. Gezogen wird nur am Griff,
+   damit Felder, Knöpfe und das Wischen in der Karte bleiben, wie sie sind. */
+const GRIFF_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 8h14M5 12h14M5 16h14"/></svg>';
+const griffHtml = (klasse = '') => `<button type="button" class="griff ${klasse}" aria-label="Zum Verschieben ziehen">${GRIFF_SVG}</button>`;
+function ziehenSortieren(box, sel, fertig){
+  if(!box) return;
+  box.querySelectorAll(sel).forEach(el => {
+    const g = el.querySelector('.griff');
+    if(!g || g.closest(sel) !== el) return;
+    g.onclick = e => e.preventDefault();
+    g.onpointerdown = e => {
+      if(e.button > 0) return;
+      e.preventDefault();
+      const zg = el.dataset.zg || '';
+      const reihe = [...box.querySelectorAll(sel)].filter(x => x.parentElement === el.parentElement
+        && (x.dataset.zg || '') === zg && x.querySelector('.griff'));
+      const von = reihe.indexOf(el);
+      if(von < 0 || reihe.length < 2) return;
+      const b = bild(), s0 = b.scrollTop;
+      const pos = reihe.map(x => { const r = x.getBoundingClientRect(); return {top:r.top + s0, h:r.height}; });
+      const luecke = Math.max(0, pos[1].top - (pos[0].top + pos[0].h));
+      const schub = pos[von].h + luecke;
+      let y = e.clientY, ziel = von, lauf = true;
+      try{ g.setPointerCapture(e.pointerId); }catch(x){ /* ohne Fangen */ }
+      el.classList.add('zieht'); document.body.classList.add('ziehtGerade');
+      reihe.forEach(x => { if(x !== el) x.classList.add('ziehNachbar'); });
+      const zeichnen = () => {
+        const dy = (y - e.clientY) + (b.scrollTop - s0);
+        el.style.transform = `translateY(${dy}px)`;
+        const mitte = pos[von].top + pos[von].h / 2 + dy;
+        ziel = von;
+        for(let k = von + 1; k < reihe.length; k++) if(mitte > pos[k].top + pos[k].h / 2) ziel = k;
+        for(let k = von - 1; k >= 0; k--) if(mitte < pos[k].top + pos[k].h / 2) ziel = k;
+        reihe.forEach((x, k) => {
+          if(x === el) return;
+          x.style.transform = k > von && k <= ziel ? `translateY(${-schub}px)` : k < von && k >= ziel ? `translateY(${schub}px)` : '';
+        });
+      };
+      /* Am oberen oder unteren Rand rollt die Liste mit. */
+      const rollen = () => {
+        if(!lauf) return;
+        /* Unten zählt, was über Leiste und Reitern sichtbar bleibt. */
+        const r = b.getBoundingClientRect(), rand = 56;
+        const unten = ['#bar', '#reiter'].map(x => document.querySelector(x))
+          .filter(x => x && !x.hidden && x.offsetHeight).reduce((m, x) => Math.min(m, x.getBoundingClientRect().top), r.bottom);
+        const v = y < r.top + rand ? -Math.ceil((r.top + rand - y) / 4) : y > unten - rand ? Math.ceil((y - unten + rand) / 4) : 0;
+        if(v){ b.scrollTop += v; zeichnen(); }
+        requestAnimationFrame(rollen);
+      };
+      requestAnimationFrame(rollen);
+      g.onpointermove = ev => { y = ev.clientY; zeichnen(); };
+      g.onpointerup = g.onpointercancel = () => {
+        lauf = false; g.onpointermove = g.onpointerup = g.onpointercancel = null;
+        const oben = (ziel > von ? pos[ziel].top + pos[ziel].h - pos[von].h : pos[ziel].top) - b.scrollTop;
+        reihe.forEach(x => { x.style.transform = ''; x.classList.remove('zieht', 'ziehNachbar'); });
+        document.body.classList.remove('ziehtGerade');
+        if(ziel !== von) fertig(von, ziel, reihe, oben);
+      };
+    };
+  });
+}
+/* Ein Eintrag wandert von i nach j, Schritt für Schritt über tausch(a, b) –
+   so ziehen Daten, die je Platz hängen (Sprinkler-Werte), richtig mit. */
+const schrittweise = (i, j, tausch) => { for(let k = i; k !== j; k += j > i ? 1 : -1) tausch(k, k + (j > i ? 1 : -1)); };
 function lageHalten(vorherTop, wiederfinden){
   const el = wiederfinden();
   if(!el || vorherTop == null) return;
@@ -6809,9 +6894,7 @@ function renderRundgang(){
     const k = offene.indexOf(w);
     mitPfeilen = mitPfeilen && reihenModus;
     return `<span class="pfeile">
-        <button type="button" data-ort="1" class="mitWort">${ORT_SVG}<span>Grundriss</span></button>${mitPfeilen ? `
-        <button type="button" data-hoch="1" aria-label="nach oben"${k <= 0 ? ' disabled' : ''}>↑</button>
-        <button type="button" data-runter="1" aria-label="nach unten"${k < 0 || k >= offene.length - 1 ? ' disabled' : ''}>↓</button>` : ''}
+        <button type="button" data-ort="1" class="mitWort">${ORT_SVG}<span>Grundriss</span></button>${mitPfeilen && k >= 0 ? griffHtml() : ''}
       </span>`;
   };
   const karte = w => {
@@ -6901,6 +6984,16 @@ function renderRundgang(){
     if(ziel) lageHalten(top, () => $(`#rgListe .pos[data-w="${CSS.escape(ziel)}"]`));
   };
   const naechsteOffene = w => { const i = offene.indexOf(w); return i >= 0 ? offene[i + 1] : null; };
+  /* Ziehen (v1.217): die Karte rückt im gemeinsamen Weg vor bzw. hinter
+     die offene Karte, an deren Platz sie losgelassen wurde. */
+  ziehenSortieren($('#rgListe'), '.pos', (von, nach, reihe, top) => {
+    const w = reihe[von].dataset.w, nb = reihe[nach].dataset.w;
+    const neu = wegAktuell().filter(x => x !== w);
+    const j = neu.indexOf(nb);
+    neu.splice(nach < von ? j : j + 1, 0, w);
+    CFG.weg = neu; saveCfg();
+    neuUndHalten(top, w);
+  });
 
   $$('#rgListe .pos').forEach(box => {
     const w = box.dataset.w, o = obj.get(w), d = DAT[o.k];
@@ -6915,20 +7008,6 @@ function renderRundgang(){
       const z = o.k === 'medien' ? stellenListe.find(x => x.key === o.id) : null;
       verlaufOeffnen(o.k, o.id, z ? `${z.partei} · ${namen[o.id] || z.medium}` : o.id);
     };
-    /* Pfeile: Tausch mit der benachbarten offenen Karte – im gemeinsamen Weg. */
-    const schieben = richtung => {
-      const k = offene.indexOf(w), nb = offene[k + richtung];
-      if(k < 0 || !nb) return;
-      const top = box.getBoundingClientRect().top;
-      const neu = wegAktuell().filter(x => x !== w);
-      const j = neu.indexOf(nb);
-      neu.splice(richtung < 0 ? j : j + 1, 0, w);
-      CFG.weg = neu; saveCfg();
-      neuUndHalten(top, w);
-    };
-    const hoch = box.querySelector('[data-hoch]'), runter = box.querySelector('[data-runter]');
-    if(hoch)   hoch.onclick   = () => schieben(-1);
-    if(runter) runter.onclick = () => schieben(1);
 
     if(o.k === 'medien'){
       if(box.classList.contains('kompakt')){
@@ -6964,12 +7043,7 @@ function renderRundgang(){
         const erste = $('#rgListe .pos');
         if(erste && erste !== kl) $('#rgListe').insertBefore(kl, erste);
         const i = offene.indexOf(w); if(i >= 0) offene.splice(i, 1);
-        $$('#rgListe .pos').forEach(el => {
-          const k = offene.indexOf(el.dataset.w);
-          const h = el.querySelector('[data-hoch]'), r = el.querySelector('[data-runter]');
-          if(h) h.disabled = k <= 0;
-          if(r) r.disabled = k < 0 || k >= offene.length - 1;
-        });
+        const gr = kl.querySelector('.griff'); if(gr) gr.remove();   // oben steht sie fest (v1.217)
         if(nach) lageHalten(top, () => nach);
       };
       feld.onblur = () => standPruefen(d, o.id, box, umhaengen);
@@ -8327,7 +8401,7 @@ function renderStufe(){
   /* Je Gruppe ihre eigenen Arten; ↑ ↓ ordnen innerhalb der Gruppe. */
   const gruppe = info => l.map((x, i) => ({x, i})).filter(({x}) => istInfo(x) === info);
   const nachbar = (i, schritt) => { const g = gruppe(istInfo(l[i])).map(y => y.i), k = g.indexOf(i) + schritt; return k >= 0 && k < g.length ? g[k] : -1; };
-  const karte = ({x, i}) => `<div class="gruppe schrittKarte">
+  const karte = ({x, i}) => `<div class="gruppe schrittKarte" data-i="${i}" data-zg="${istInfo(x) ? 'info' : 'akt'}">
       <div class="field segfeld"><div class="seg">${ABLAUF_ARTEN.filter(([w]) => AKTION_INFO.includes(w) === istInfo(x)).map(([w, t]) =>
         `<button type="button" data-i="${i}" data-art="${w}" aria-pressed="${x.art === w}">${t}</button>`).join('')}</div></div>
       ${feld(i, 'text', 'Beschriftung', x.text, `placeholder="${esc(istInfo(x) ? 'freiwillig' : ABLAUF_VORGABE[x.art])}"`)}
@@ -8338,8 +8412,7 @@ function renderStufe(){
       ${x.art === 'mail' ? feld(i, 'an', 'An', x.an, 'type="email" autocapitalize="off"') + feld(i, 'betreff', 'Betreff', x.betreff)
         + `<label class="field"><span>Text</span><textarea data-i="${i}" data-f="inhalt" style="min-height:90px">${esc(x.inhalt || '')}</textarea></label>` : ''}
       <div class="row ablaufReihe">
-        <button type="button" class="btn quadrat" data-hoch="${i}" aria-label="nach oben"${nachbar(i, -1) < 0 ? ' disabled' : ''}>↑</button>
-        <button type="button" class="btn quadrat" data-runter="${i}" aria-label="nach unten"${nachbar(i, 1) < 0 ? ' disabled' : ''}>↓</button>
+        ${gruppe(istInfo(x)).length > 1 ? griffHtml('btn quadrat') : ''}
         <button type="button" class="btn danger klein" data-weg="${i}">Entfernen</button></div></div>`;
   const inf = gruppe(true), akt = gruppe(false);
   const ziel = (p.stufen || []).some(x => (x.ergebnisse || []).some(e => (e.ziele || []).some(z => z.stufe === s.id)));
@@ -8393,9 +8466,12 @@ function renderStufe(){
     x.arten = (x.arten || []).includes(a) ? x.arten.filter(y => y !== a) : (x.arten || []).concat(a);
     sichern(); neu();
   });
-  const tausch = (i, k) => { if(k < 0) return; [l[i], l[k]] = [l[k], l[i]]; sichern(); neu(); };
-  box.querySelectorAll('[data-hoch]').forEach(b => b.onclick = () => tausch(+b.dataset.hoch, nachbar(+b.dataset.hoch, -1)));
-  box.querySelectorAll('[data-runter]').forEach(b => b.onclick = () => tausch(+b.dataset.runter, nachbar(+b.dataset.runter, 1)));
+  /* Ziehen (v1.217): innerhalb der Gruppe (Infos bzw. Aktionen). */
+  ziehenSortieren(box, '.schrittKarte', (von, nach, reihe) => {
+    const g = reihe.map(r => +r.dataset.i);
+    schrittweise(von, nach, (a, b) => { [l[g[a]], l[g[b]]] = [l[g[b]], l[g[a]]]; });
+    sichern(); neu();
+  });
   /* Entfernen mit Rückgängig (v1.183): ohne Rückfrage, aber nicht verloren. */
   box.querySelectorAll('[data-weg]').forEach(b => b.onclick = () => {
     const i = +b.dataset.weg, x = l.splice(i, 1)[0]; sichern(); neu();
@@ -11755,9 +11831,7 @@ function renderNachweis(){
        zählt, die Pfeile. In der zugeklappten Karte steht davon nichts – dort
        geht es ums Nachsehen, nicht ums Ändern. */
     const pfeile = `<span class="pfeile">
-          <button type="button" data-ort="1" class="mitWort">${ORT_SVG}<span>Grundriss</span></button>${n.sortierbar && !z.n && reihenModus ? `
-          <button type="button" data-hoch="1" aria-label="nach oben"${nachbarOffen(i, -1) < 0 ? ' disabled' : ''}>↑</button>
-          <button type="button" data-runter="1" aria-label="nach unten"${nachbarOffen(i, 1) < 0 ? ' disabled' : ''}>↓</button>` : ''}
+          <button type="button" data-ort="1" class="mitWort">${ORT_SVG}<span>Grundriss</span></button>${n.sortierbar && !z.n && reihenModus ? griffHtml() : ''}
         </span>`;
     /* Bewertete Anlagen zeigen sich klein: Name, darunter Datum und Urteil. Ein
        Tipp auf die Karte holt sie in voller Größe zurück, ein Tipp auf die
@@ -11835,17 +11909,14 @@ function renderNachweis(){
     box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
     box.querySelector('[data-feld="bem"]').oninput    = e => { z.bem   = e.target.value; saveDat(); vorschlagZeigen(box, n, z.bem); };
     vorschlagVerdrahten(box, n, z);
-    if(n.sortierbar && !z.n && reihenModus){
-      const tausch = j => {
-        if(j < 0 || j >= t.anlagen.length) return;
-        const top = box.getBoundingClientRect().top;
-        t.anlagen.splice(j, 0, t.anlagen.splice(i, 1)[0]);
-        saveCfg(); renderNachweis();
-        lageHalten(top, () => $(`#nwListe .pos[data-i="${j}"]`));
-      };
-      box.querySelector('[data-hoch]').onclick   = () => tausch(nachbarOffen(i, -1));
-      box.querySelector('[data-runter]').onclick = () => tausch(nachbarOffen(i, 1));
-    }
+  });
+  /* Ziehen (v1.217): an den Platz der offenen Karte, über der losgelassen
+     wurde – Erledigtes dazwischen rückt mit, wie früher bei den Pfeilen. */
+  if(n.sortierbar && reihenModus) ziehenSortieren($('#nwListe'), '.pos', (von, nach, reihe, top) => {
+    const i = +reihe[von].dataset.i, j = +reihe[nach].dataset.i;
+    t.anlagen.splice(j, 0, t.anlagen.splice(i, 1)[0]);
+    saveCfg(); renderNachweis();
+    lageHalten(top, () => $(`#nwListe .pos[data-i="${j}"]`));
   });
   if(n.sortierbar){ $('#nwListe').insertAdjacentHTML('beforeend', reihenKnopfHtml()); reihenKnopfVerdrahten(renderNachweis); }
   renderSig();
@@ -11901,9 +11972,7 @@ function renderMedien(){
         <span class="muted small" style="flex:0 0 auto">${esc(z.einheit)}</span>
         <span class="pfeile">
           <button type="button" data-ort="1" class="mitWort">${ORT_SVG}<span>Grundriss</span></button>
-${reihenModus ? `
-          <button type="button" data-hoch="1" aria-label="nach oben"${i === 0 ? ' disabled' : ''}>↑</button>
-          <button type="button" data-runter="1" aria-label="nach unten"${i === liste.length - 1 ? ' disabled' : ''}>↓</button>` : ''}
+${reihenModus && liste.length > 1 ? griffHtml() : ''}
         </span>
       </div>
       <div class="muted small" style="margin-top:6px">${
@@ -11964,19 +12033,6 @@ ${reihenModus ? `
        bestätigt ist. */
     feld.onblur = () => standPruefen(d, z.key, box, zuklappen);
     pruefVerdrahten(d, z.key, box, zuklappen);
-    /* Ein Schritt im Laufweg, gleich ob die Nachbarkarte offen oder zu ist. */
-    const tausch = j => {
-      if(j < 0 || j >= liste.length) return;
-      const top = box.getBoundingClientRect().top;
-      const neu = liste.slice();
-      neu.splice(j, 0, neu.splice(i, 1)[0]);
-      folgeSpeichern(neu); renderMedien();
-      lageHalten(top, () => $(`#nwListe .pos[data-i="${j}"]`));
-    };
-    if(reihenModus){
-      box.querySelector('[data-hoch]').onclick   = () => tausch(i - 1);
-      box.querySelector('[data-runter]').onclick = () => tausch(i + 1);
-    }
     box.querySelector('[data-ort]').onclick = () => verorten(z.key, titel(z));
     box.querySelector('[data-verlauf]').onclick = e => {
       e.stopPropagation();
@@ -11984,6 +12040,14 @@ ${reihenModus ? `
     };
   };
   $$('#nwListe .pos').forEach(verdrahten);
+  /* Ziehen (v1.217): ein Platz im Laufweg, gleich ob offen oder zu. */
+  if(reihenModus) ziehenSortieren($('#nwListe'), '.pos', (von, nach, reihe, top) => {
+    const i = +reihe[von].dataset.i, j = +reihe[nach].dataset.i;
+    const neu = liste.slice();
+    neu.splice(j, 0, neu.splice(i, 1)[0]);
+    folgeSpeichern(neu); renderMedien();
+    lageHalten(top, () => $(`#nwListe .pos[data-i="${j}"]`));
+  });
   $('#medDatum').onchange = e => { d.datum = e.target.value; saveDat(); renderBar(); };
   /* Beim Betreten zur ersten offenen Karte; das Abgelesene davor ist zu. */
   listenSprung(p => String(d.stand[liste[p].key] ?? '').trim() === '');
@@ -15054,8 +15118,7 @@ function listeBauen(box, opt){
     ? `<div class="stelle" data-i="${i}">
        <textarea rows="1"${i < 0 ? ` placeholder="${esc(opt.wort)}"` : ''}>${esc(text)}</textarea>
        <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
-         <button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= basis ? ' disabled' : ''}>↑</button>
-         <button class="btn ghost klein quadrat" data-runter="1" aria-label="nach unten"${i < 0 || i >= basis - 1 ? ' disabled' : ''}>↓</button>
+         ${i >= 0 && i < basis && basis > 1 ? griffHtml('btn ghost klein quadrat') : ''}
          <button class="btn danger klein" data-weg="1" style="margin-left:auto">Löschen</button></div>
      </div>`
     : `<div class="zeile" data-i="${i}">
@@ -15074,21 +15137,15 @@ function listeBauen(box, opt){
       + (mitNeuer ? zeile('', -1) : '')
       + anzeigeFolge(liste.length, basis).map(i => zeile(liste[i], i)).join('');
     if(opt.nachZeichnen) opt.nachZeichnen(box);
+    /* Ziehen (v1.217); Erfasstes zieht Schritt für Schritt mit (beiTausch). */
+    if(opt.karte) ziehenSortieren(box, reihe, (von, nach, rr, top) => {
+      const l = opt.liste(), i = +rr[von].dataset.i, j = +rr[nach].dataset.i;
+      schrittweise(i, j, (a, b) => { [l[a], l[b]] = [l[b], l[a]]; if(opt.beiTausch) opt.beiTausch(a, b); });
+      saveCfg(); zeichnen(false);
+      lageHalten(top, () => box.querySelector(`${reihe}[data-i="${j}"]`));
+    });
     box.querySelectorAll(reihe + '[data-i]').forEach(r => {
       const ta = r.querySelector('textarea'), i = +r.dataset.i, neu = i < 0;
-      const tausch = j => {
-        const l = opt.liste();
-        if(i < 0 || j < 0 || i >= basis || j >= basis) return;
-        const top = r.getBoundingClientRect().top;
-        [l[i], l[j]] = [l[j], l[i]];
-        if(opt.beiTausch) opt.beiTausch(i, j);
-        saveCfg(); zeichnen(false);
-        lageHalten(top, () => box.querySelector(`${reihe}[data-i="${j}"]`));
-      };
-      if(r.querySelector('[data-hoch]')){
-        r.querySelector('[data-hoch]').onclick = () => tausch(i - 1);
-        r.querySelector('[data-runter]').onclick = () => tausch(i + 1);
-      }
       feldHoehe(ta);
       ta.oninput  = () => feldHoehe(ta);
       ta.onchange = () => {
@@ -15144,7 +15201,7 @@ function setAnlagen(box, k){
   /* Seit v1.205 (Jean) dieselben Karten wie bei Feuerlöscher und RWA: Name,
      was der Typ braucht, darunter Grundriss, ↑ ↓ und Löschen. Die Pfeile
      ändern dieselbe Reihenfolge wie „Reihenfolge ändern“ beim Prüfen. */
-  const i = info((bestand ? 'Neue Objekte hängen sich hinten an. „Grundriss“ zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge.'
+  const i = info((bestand ? 'Neue Objekte hängen sich hinten an. „Grundriss“ zeigt oder setzt die Stelle im Grundriss, der Griff ≡ ändert die Reihenfolge – daran ziehen.'
       : 'Neue Objekte hängen sich hinten an. „Grundriss“ zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge – dieselbe wie beim Prüfen.')
     + (mitEtagen ? ' Unter jedem Objekt wählst du seine Etagen. Die Marke gilt auf allen und wandert beim Verschieben mit. Sind die Etagenpläne unterschiedlich geschnitten, richte sie unter Grundrisse aus.' : ''), 'margin:-4px 0 6px');
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Objekte ${i.knopf}</div>${i.text}
@@ -15225,7 +15282,7 @@ function etagenKnoepfe(box, plaene, k = 'aufzuege'){
    an seinem Text: ein gelöschter Punkt muss deshalb auch aus den laufenden
    Kontrollgängen heraus, sonst rutschen die Werte dahinter um einen weiter. */
 function setSprinkler(box, k){
-  const i = info('Endet ein Punkt auf „(bar)“, bekommt er beim Erfassen ein Zahlenfeld statt der Zustandswahl – wöchentlich wie monatlich. Die Pfeile ändern die Reihenfolge, auch auf dem Blatt; schon Erfasstes zieht mit.', 'margin:-4px 0 6px');
+  const i = info('Endet ein Punkt auf „(bar)“, bekommt er beim Erfassen ein Zahlenfeld statt der Zustandswahl – wöchentlich wie monatlich. Der Griff ≡ ändert die Reihenfolge (daran ziehen), auch auf dem Blatt; schon Erfasstes zieht mit.', 'margin:-4px 0 6px');
   box.innerHTML =
     `<div class="eyebrow mitInfo">Wöchentliche Punkte ${i.knopf}</div>${i.text}
      <div id="setWoch"></div>
@@ -15262,7 +15319,7 @@ function setSprinkler(box, k){
 function setFremd(box, k, teil){
   const n = NW(k), t = teilCfg(k);
   const iAbst = info('Aus dem letzten Prüfdatum und diesem Abstand ergibt sich die nächste Fälligkeit – und unter welcher Überschrift der Typ unter „Anlagen“ steht. 12 = jährlich, 24 = alle zwei Jahre.', 'margin:-6px 0 14px');
-  const iObj = info('Neue Objekte hängen sich hinten an. „Grundriss“ zeigt oder setzt die Stelle im Grundriss, die Pfeile ändern die Reihenfolge.'
+  const iObj = info('Neue Objekte hängen sich hinten an. „Grundriss“ zeigt oder setzt die Stelle im Grundriss, der Griff ≡ ändert die Reihenfolge – daran ziehen.'
     + (akkuAktiv(k) ? ' Unter dem Namen wählst du den Akkutyp, rechts in der Knopfreihe die Anzahl.' : ''), 'margin:-4px 0 6px');
   if(teil !== 'typ'){
     box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Objekte ${iObj.knopf}</div>${iObj.text}<div id="setListe"></div>`;
@@ -15443,8 +15500,7 @@ function objektKarten(box, k, nachZeichnen){
         esc(loeZusammenfassung(text))}</span></summary><div class="loeFelder"></div></details>` : ''}
       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
         <button class="btn ghost klein mitWort" data-ort="1"${i < 0 ? ' disabled' : ''}>${ORT_SVG}<span>Grundriss</span></button>
-        <button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= basis ? ' disabled' : ''}>↑</button>
-        <button class="btn ghost klein quadrat" data-runter="1" aria-label="nach unten"${i < 0 || i >= basis - 1 ? ' disabled' : ''}>↓</button>
+        ${i >= 0 && i < basis && basis > 1 ? griffHtml('btn ghost klein quadrat') : ''}
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
     </div>`;
@@ -15456,14 +15512,12 @@ function objektKarten(box, k, nachZeichnen){
       + anzeigeFolge(liste.length, basis).map(i => karte(liste[i], i, liste.length)).join('');
     /* Die bewegte Karte bleibt auf dem Schirm stehen, die anderen wandern daran
        vorbei – wie beim Verschieben in den Nachweisen (v0.53). */
-    const tausch = (i, j) => {
-      const l = teilCfg(k).anlagen;
-      if(i < 0 || j < 0 || i >= basis || j >= basis) return;
-      const karteJetzt = box.querySelector(`.stelle[data-i="${i}"]`);
-      const top = karteJetzt ? karteJetzt.getBoundingClientRect().top : null;
-      [l[i], l[j]] = [l[j], l[i]]; saveCfg(); zeichnen(false);
+    /* Ziehen (v1.217): nur Objekte, die schon vor dem Öffnen da waren. */
+    ziehenSortieren(box, '.stelle', (von, nach, rr, top) => {
+      const l = teilCfg(k).anlagen, i = +rr[von].dataset.i, j = +rr[nach].dataset.i;
+      l.splice(j, 0, l.splice(i, 1)[0]); saveCfg(); zeichnen(false);
       lageHalten(top, () => box.querySelector(`.stelle[data-i="${j}"]`));
-    };
+    });
     box.querySelectorAll('.stelle').forEach(r => {
       const i = +r.dataset.i, neu = i < 0;
       const ta = r.querySelector('textarea');
@@ -15514,8 +15568,6 @@ function objektKarten(box, k, nachZeichnen){
         kenn.ontoggle = () => { if(kenn.open) loeKennAuf.add(name); else loeKennAuf.delete(name); };
         loeFelderZeigen(kenn.querySelector('.loeFelder'), name, kenn.querySelector('.loeZf'));
       }
-      r.querySelector('[data-hoch]').onclick   = () => tausch(i, i - 1);
-      r.querySelector('[data-runter]').onclick = () => tausch(i, i + 1);
       r.querySelector('[data-weg]').onpointerdown = () => { if(neu) verworfen = true; };
       r.querySelector('[data-weg]').onclick = () => {
         if(neu){ zeichnen(false); return; }
@@ -15567,21 +15619,19 @@ function akkuTypZeichnen(mitNeuer){
         <label class="field"><span>Typ</span><input data-f="name" value="${esc(x.name)}"${
           i < 0 ? ' placeholder="12 Ah"' : ''}></label>
         <label class="field"><span>Monate</span><input data-f="monate" type="number" min="1" max="240" step="1" inputmode="numeric" value="${x.monate}"></label>
-        <span class="akkuTypKnoepfe"><button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 || i >= akkuTypBasis ? ' disabled' : ''}>↑</button>
-        <button class="btn ghost klein quadrat" data-runter="1" aria-label="nach unten"${i < 0 || i >= akkuTypBasis - 1 ? ' disabled' : ''}>↓</button>
+        <span class="akkuTypKnoepfe">${i >= 0 && i < akkuTypBasis && akkuTypBasis > 1 ? griffHtml('btn ghost klein quadrat') : ''}
         <button class="btn danger klein" data-weg="1">Löschen</button></span>
     </div></div>`;
   box.innerHTML = (mitNeuer ? karte({name:'', monate:48}, -1, t.akkus.length) : '')
     + anzeigeFolge(t.akkus.length, akkuTypBasis).map(i => karte(t.akkus[i], i, t.akkus.length)).join('');
   /* Die Reihenfolge bestimmt, in welcher Folge die Typknöpfe unter "Akkus je
      Anlage" stehen. Die bewegte Karte bleibt dabei auf dem Schirm stehen. */
-  const tausch = (i, j) => {
-    if(i < 0 || j < 0 || i >= akkuTypBasis || j >= akkuTypBasis) return;
-    const karteJetzt = box.querySelector(`.stelle[data-i="${i}"]`);
-    const top = karteJetzt ? karteJetzt.getBoundingClientRect().top : null;
-    [t.akkus[i], t.akkus[j]] = [t.akkus[j], t.akkus[i]]; saveCfg(); akkuTypZeichnen(false);
+  /* Ziehen (v1.217). */
+  ziehenSortieren(box, '.stelle', (von, nach, rr, top) => {
+    const i = +rr[von].dataset.i, j = +rr[nach].dataset.i;
+    t.akkus.splice(j, 0, t.akkus.splice(i, 1)[0]); saveCfg(); akkuTypZeichnen(false);
     lageHalten(top, () => box.querySelector(`.stelle[data-i="${j}"]`));
-  };
+  });
   box.querySelectorAll('.stelle').forEach(r => {
     const i = +r.dataset.i, neu = i < 0;
     const feld = f => r.querySelector(`[data-f="${f}"]`);
@@ -15605,8 +15655,6 @@ function akkuTypZeichnen(mitNeuer){
       if(!r.contains(document.activeElement) && !verworfen) sichern();
     }, 0));
     r.querySelectorAll('[data-f]').forEach(f => f.onchange = () => { if(!neu) sichern(); });
-    r.querySelector('[data-hoch]').onclick   = () => tausch(i, i - 1);
-    r.querySelector('[data-runter]').onclick = () => tausch(i, i + 1);
     r.querySelector('[data-weg]').onpointerdown = () => { if(neu) verworfen = true; };
     r.querySelector('[data-weg]').onclick = () => {
       if(neu){ akkuTypZeichnen(false); return; }
@@ -16004,8 +16052,7 @@ async function renderPlaene(){
       <div class="planBezug"><span class="muted small">${bezugVon(pl.id) ? 'Ausgerichtet' : 'Nicht ausgerichtet'}</span>
         <button class="btn ghost klein" data-richt="1">Ausrichten</button></div>
       <div class="zeile knopfreihe" style="border-top:0;padding:10px 0 0">
-        <button class="btn ghost klein quadrat" data-hoch="1" aria-label="nach oben"${i <= 0 ? ' disabled' : ''}>↑</button>
-        <button class="btn ghost klein quadrat" data-runter="1" aria-label="nach unten"${i >= n - 1 ? ' disabled' : ''}>↓</button>
+        ${n > 1 ? griffHtml('btn ghost klein quadrat') : ''}
         <button class="btn klein" data-sehen="1" style="margin-left:auto">Ansehen</button>
         <button class="btn danger klein" data-weg="1">Löschen</button>
       </div>
@@ -16017,16 +16064,14 @@ async function renderPlaene(){
     : `<p class="muted small">Noch kein Grundriss hinterlegt.</p>`;
   /* Verschieben legt die ganze sichtbare Reihenfolge fest. Die bewegte Karte
      bleibt auf dem Schirm stehen, wie überall beim Verschieben (v0.53). */
-  const tausch = async (i, j) => {
-    if(j < 0 || j >= n) return;
-    const karte = box.querySelector(`.planKarte[data-i="${i}"]`);
-    const top = karte ? karte.getBoundingClientRect().top : null;
+  /* Ziehen (v1.217): legt die ganze sichtbare Reihenfolge fest. */
+  ziehenSortieren(box, '.planKarte', async (von, nach, rr, top) => {
     const ids = liste.map(p => p.id);
-    [ids[i], ids[j]] = [ids[j], ids[i]];
+    ids.splice(nach, 0, ids.splice(von, 1)[0]);
     CFG.planOrdnung = ids; saveCfg();
     await renderPlaene();
-    lageHalten(top, () => box.querySelector(`.planKarte[data-i="${j}"]`));
-  };
+    lageHalten(top, () => box.querySelector(`.planKarte[data-i="${nach}"]`));
+  });
   box.querySelectorAll('.planKarte').forEach(r => {
     const id = r.dataset.id, i = +r.dataset.i;
     r.querySelector('[data-name]').onchange = async e => {
@@ -16039,8 +16084,6 @@ async function renderPlaene(){
       liste = planSortieren(liste.map(p => p.id === id ? Object.assign({}, p, {name:pl.name}) : p));
       if(liste.map(p => p.id).join() !== vorher) renderPlaene();
     };
-    r.querySelector('[data-hoch]').onclick   = () => tausch(i, i - 1);
-    r.querySelector('[data-runter]').onclick = () => tausch(i, i + 1);
     r.querySelector('[data-sehen]').onclick = () => {
       planListe = liste;                      // von hier aus wird geblättert
       planZeigen(id, null);

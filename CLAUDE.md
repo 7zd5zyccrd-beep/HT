@@ -205,6 +205,14 @@ steht.
   Ein ⓘ ohne Nachbarn über `infoKopf(titel, text)`. Kalender: „~“ vor der
   Dauer statt „geschätzt“. `suchObjekte(nurK)` für die Typseite.
 - Schreibweise (Jean): „z.B.“ ohne Leerzeichen, in allen sichtbaren Texten.
+- Ziehen statt ↑ ↓ (v1.217, Jean, überall): `griffHtml(klasse)` (Griff ≡,
+  `touch-action:none`) und `ziehenSortieren(box, sel, fertig(von, nach,
+  reihe, top))` – von/nach zählen in der Reihe der Karten mit Griff im selben
+  Elternteil und gleicher `data-zg`; `top` für `lageHalten`. Mitrollen am
+  Rand von `#bild` (oben) bzw. über `#bar`/`#reiter`. Tauschlogik mit Daten je
+  Platz über `schrittweise(i, j, tausch)` (Sprinkler `beiTausch`, Aktionen
+  je Gruppe). Nur „alte“ Einträge (`i < basis`) bekommen einen Griff. Neue
+  Sortierlisten so bauen, keine Pfeile mehr.
 - Von Jean abgelehnt: kräftigerer aktiver Reiter unten (D9), weiße statt
   graue Unterschriftfläche nach dem Unterschreiben (D8), „Zurücknehmen“
   bleibt im Fenster „Weiter“. Zurückgestellt: iPad-Feinschliff (E9).
