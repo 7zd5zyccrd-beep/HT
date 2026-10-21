@@ -717,6 +717,12 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
 
 ## Offen / bekannt (Stand v1.142)
 
+- Stand v1.220, nur auf dem Gerät prüfbar bzw. offen: ob der Outlook-Link am
+  Firmen-PC die richtige Uhrzeit setzt; Ziehen bei Grundrissen (im
+  Testbrowser keine Pläne); Fingergefühl von Griff, Mitrollen und den − +
+  Reglern. Neuer Termin ist weiter mit „Besprechung“ vorbelegt, „Firma im
+  Haus“ steht nur zuerst in der Liste.
+
 - iPad mit Tastatur-Trackpad: Kneifen erreicht die Seite nicht (iPadOS
   behandelt es selbst) – weder Grundriss noch Blattvorschau zoomen damit.
 - Sammelmarken nur in der App, das Blatt hat seine eigene Beschriftung
