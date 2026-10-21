@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.220 21.10.2026 Termine (Jean): Mehrere Termine an einem Tag stehen auf
+                    Heute und im Kalender zusammen in einem Kasten („3
+                    Termine“). Neue Art „Firma im Haus“ an erster Stelle:
+                    angerechnet werden 5 Minuten je angefangene Stunde – im
+                    Arbeitsnachweis und in der Tagesplanung, wo nur diese
+                    Zeit vom Tag abgeht. Auf der Terminseite lässt sich unter
+                    „Firma im Haus“ einstellen, wann sie tatsächlich da war
+                    (Beginn und Ende in halben Stunden). Ist das Ende vorbei
+                    und nichts eingestellt, fragt Heute oben „Wie lange war
+                    die Firma da?“ – mit „Wie geplant“ oder „Speichern“.
   v1.219 15.10.2026 In den Einstellungs-Karten (Objekte, Prüfpunkte,
                     Akkutypen, Grundrisse, Aktionen) steht der Griff unten
                     rechts in der Knopfzeile hinter „Löschen“; das Feld oben
@@ -3051,6 +3061,11 @@ header .back[hidden]{display:none}
 .btn.kopfHinweis + .btn.kopfHinweis{margin-top:0}
 .kopfHinweis.warn{border-left:5px solid var(--dringend)}
 .kalMit{margin:10px 0 4px}
+/* Mehrere Termine an einem Tag (v1.220) und der Regler der Firma. */
+.terminZahl{margin:0 0 4px}
+.gliste.terminGliste{margin-bottom:10px}
+.firmaRegler{display:flex;gap:12px;flex-wrap:wrap}
+.firmaRegler .field{flex:1 1 140px;margin:0}
 /* Typ über dem Titel einer Kopfkarte (v1.202): leise, ohne Versalien. */
 .kopfTyp{margin:0 0 4px;font-size:14px;color:var(--ink-soft)}
 .btn.eintrag.blass{opacity:.6}
@@ -4170,8 +4185,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.219';
-const BUILD   = VERSION + ' · 15.10.2026';
+const VERSION = 'v1.220';
+const BUILD   = VERSION + ' · 21.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -6665,21 +6680,28 @@ function renderHome(){
        „dazu Sprinkler-…“ darunter störte (v1.144, Jean). */
     const summe = minVon(teil) + minVon(vor);
     if(g === 'heute') return `<div class="eyebrow" style="margin-bottom:2px">${esc(titel)}</div>` + heuteZeile(liste)
-        + teil.map(a => a.istTermin ? terminKnopf(a.o, true) : aufgabeKnopf(a)).join('');
+        + listeMitTerminen(teil, true, aufgabeKnopf);
     return `<div class="eyebrow">${esc(titel)}${summe ? ` <span class="summe">· ${esc(dauerFest(summe))}</span>` : ''}</div>`
-        + teil.map(a => a.istTermin ? terminKnopf(a.o, g === 'heute' || g === 'morgen') : aufgabeKnopf(a)).join('');
+        + listeMitTerminen(teil, g === 'heute' || g === 'morgen', aufgabeKnopf);
   }).join('');
   if(!liste.length && !term.length) inhalt += gibt
     ? `<p class="muted small">Nichts offen. Was später fällig wird, steht unter „Anlagen“.</p>`
     : `<p class="muted small">Noch nichts eingetragen. Unter Mehr › Einstellungen fügst du mit „Neuer Anlagentyp“ hinzu, was im Haus geprüft wird.</p>`;
   /* Neues über das + oben rechts, alles Übrige unter Mehr (v1.184). */
-  $('#homeListe').innerHTML = warnZeile() + sicherungZeile(gibt) + auslastungZeile(liste)
+  /* Firma im Haus (v1.220): nach dem Ende fragen, wie lange sie da war. */
+  const firmaZeilen = firmaOffen().map(({t, iso}) => kopfZeile('kopfHinweis', `data-firma="${esc(t.id + '|' + iso)}"`,
+    'Wie lange war die Firma da?', `${t.titel || 'Termin'} · ${firmaTagText(iso)} · geplant ${t.zeitVon}–${t.zeitBis}`)).join('');
+  $('#homeListe').innerHTML = warnZeile() + firmaZeilen + sicherungZeile(gibt) + auslastungZeile(liste)
     + vorschlaegeKarte(hinweise, gelegenheiten(liste), liste) + inhalt
     + matStartHtml();
   knoepfeVerdrahten($('#homeListe'));
   matStartVerdrahten();
   const sich = $('#homeListe [data-sichern]');
   if(sich) sich.onclick = alsDateiSichern;
+  $('#homeListe').querySelectorAll('[data-firma]').forEach(b => b.onclick = () => {
+    const [id, iso] = b.dataset.firma.split('|'), t = TERM.find(x => x.id === id);
+    if(t) firmaFenster(t, iso, renderHome);
+  });
   $('#homeListe').querySelectorAll('[data-wplan]').forEach(b => b.onclick = () => bereich('wplan'));
   const wk = $('#homeListe [data-warn]');
   if(wk) wk.onclick = () => { go('wetter'); wetterAbrufen(); };
@@ -9076,9 +9098,12 @@ function renderAufgabe(){
    ganztägig, auf Wunsch wiederkehrend. In der Liste steht je Termin sein
    nächstes Vorkommen obenan in der Tagesgruppe; im Wochenplan nimmt er seine
    Zeit vom Tag. Gespeichert in TERM (nwTermine), reist in der Sicherung. */
-const TERMIN_ARTEN = [['besprechung', 'Besprechung'], ['absprache', 'Absprache'],
+/* „Firma im Haus“ an erster Stelle (v1.220, Jean): ein Dienstleister ist
+   da, man begleitet ihn nebenher – angerechnet werden nur 5 Minuten je
+   angefangene Stunde (firmaMin). */
+const TERMIN_ARTEN = [['firma', 'Firma im Haus'], ['besprechung', 'Besprechung'], ['absprache', 'Absprache'],
                       ['vorort', 'Vor-Ort-Termin'], ['sonst', 'Sonstiges']];
-const terminArt = t => (TERMIN_ARTEN.find(x => x[0] === t.art) || TERMIN_ARTEN[3])[1];
+const terminArt = t => (TERMIN_ARTEN.find(x => x[0] === t.art) || TERMIN_ARTEN.find(x => x[0] === 'sonst'))[1];
 const hmMin = s => { const [h, m] = String(s || '').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
 const minHm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 /* Die Vorkommen eines Termins, die in die Tage ab…bis (ISO) hineinreichen.
@@ -9101,6 +9126,68 @@ function terminVorkommen(t, ab, bis){
 /* Beginn und Ende eines Vorkommens als Zeitpunkt; ganztägig von 0 bis 24 Uhr. */
 const vkBeginn = o => { const d = alsDatum(o.von); if(!o.t.ganz) d.setMinutes(hmMin(o.t.zeitVon)); return d; };
 const vkEnde = o => { const d = alsDatum(o.bis); d.setMinutes(o.t.ganz ? 1440 : hmMin(o.t.zeitBis)); return d; };
+/* --- Firma im Haus (v1.220, Jean) --------------------------------------------
+   Angerechnet werden FIRMA_TAKT Minuten je angefangene Stunde Anwesenheit –
+   in der Tagesplanung statt der ganzen Dauer und im Arbeitsnachweis. Bei
+   einem Termin an einem Tag mit Uhrzeit zählt die tatsächliche Zeit, wenn sie
+   eingestellt ist (t.ist[Tag] = {von, bis}, grob in halben Stunden); sonst
+   die geplante. Ganztägig und mehrtägig gilt je Arbeitstag die Arbeitszeit.
+   Ist das Ende vorbei und nichts eingestellt, fragt Heute nach. */
+const FIRMA_TAKT = 5;
+const istFirma = t => !!t && t.art === 'firma';
+const firmaEinTag = t => !t.ganz && (t.bis || t.von) === t.von;
+function firmaZeit(t, iso){
+  const i = (t.ist || {})[iso];
+  return i ? {von:i.von, bis:i.bis, ist:true} : {von:t.zeitVon, bis:t.zeitBis, ist:false};
+}
+const firmaStunden = min => min > 0 ? Math.ceil(min / 60) * FIRMA_TAKT : 0;
+function firmaMin(t, iso){
+  if(!istFirma(t)) return 0;
+  if(!firmaEinTag(t)) return firmaStunden(tagMinuten());
+  const z = firmaZeit(t, iso);
+  return firmaStunden(hmMin(z.bis) - hmMin(z.von));
+}
+/* Vorbei und noch ohne tatsächliche Zeit: höchstens zwei Wochen zurück. */
+function firmaOffen(){
+  const h = heute(), ab = tagPlus(h, -14), jetzt = new Date(), raus = [];
+  TERM.filter(t => istFirma(t) && firmaEinTag(t)).forEach(t => terminVorkommen(t, ab, h).forEach(o => {
+    if(o.von < (t.angelegt || '') || (t.ist || {})[o.von] || vkEnde(o) > jetzt) return;
+    raus.push({t, iso:o.von});
+  }));
+  return raus.sort((x, y) => x.iso.localeCompare(y.iso));
+}
+const firmaTagText = iso => { const d = alsDatum(iso); return `${WOCHENTAG[d.getDay()]} ${ttmm(d)}`; };
+/* Beginn und Ende mit − + in halben Stunden; bei(von, bis) bei jeder Änderung. */
+function firmaRegler(box, von, bis, bei){
+  let a = hmMin(von), b = hmMin(bis);
+  const zeichnen = () => {
+    box.innerHTML = `<div class="firmaRegler">
+      ${[['a', 'Beginn', a], ['b', 'Ende', b]].map(([k, w, m]) => `<div class="field"><span>${w}</span><div class="dauerWahl"><div class="stufe">
+        <button type="button" data-fr="${k}" data-s="-30" aria-label="früher"${(k === 'a' ? m - 30 < 0 : m - 30 <= a) ? ' disabled' : ''}>−</button>
+        <span class="wert">${esc(minHm(m))}</span>
+        <button type="button" data-fr="${k}" data-s="30" aria-label="später"${(k === 'a' ? m + 30 >= b : m + 30 > 1440) ? ' disabled' : ''}>+</button></div></div></div>`).join('')}
+      </div><p class="muted small" style="margin:0">Angerechnet ${esc(dauerText({m:firmaStunden(b - a)}))} (${FIRMA_TAKT} Minuten je angefangene Stunde)</p>`;
+    box.querySelectorAll('[data-fr]').forEach(x => x.onclick = () => {
+      if(x.dataset.fr === 'a') a += +x.dataset.s; else b += +x.dataset.s;
+      bei(minHm(a), minHm(b)); zeichnen();
+    });
+  };
+  zeichnen();
+}
+/* Nachfrage von Heute und Ändern im Arbeitsnachweis: ein Fenster. */
+function firmaFenster(t, iso, danach){
+  const z = firmaZeit(t, iso);
+  let von = z.von, bis = z.bis;
+  const setzen = (a, b) => { t.ist = t.ist || {}; t.ist[iso] = {von:a, bis:b}; saveTerm(); if(danach) danach(); };
+  frage('Wie lange war die Firma da?', `${t.titel || 'Termin'} · ${firmaTagText(iso)} · geplant ${t.zeitVon}–${t.zeitBis}`, 'Speichern', () => {
+    setzen(von, bis); toast('Gespeichert');
+  });
+  const box = $('#dlgListe');
+  box.hidden = false;
+  box.innerHTML = '<div id="firmaDlg"></div><button type="button" class="btn ghost klein" id="firmaGeplant" style="margin-top:4px">Wie geplant</button>';
+  firmaRegler($('#firmaDlg'), von, bis, (a, b) => { von = a; bis = b; });
+  $('#firmaGeplant').onclick = () => { $('#dlg').hidden = true; setzen(t.zeitVon, t.zeitBis); toast('Wie geplant gespeichert'); };
+}
 /* Das nächste noch nicht vorbeie Vorkommen; null, wenn keins mehr kommt. */
 function terminNaechstes(t){
   const jetzt = new Date(), h = heute();
@@ -9122,7 +9209,14 @@ function terminBelegt(iso, abMin){
   const e = wetterEinst(), a0 = Math.max(e.vormVon * 60, abMin || 0), b0 = e.nachmBis * 60;
   if(b0 <= a0) return 0;
   const stuecke = [];
+  let firma = 0;
   TERM.forEach(t => terminVorkommen(t, iso, iso).forEach(o => {
+    /* Firma im Haus (v1.220): nur die angerechnete Zeit, nicht die ganze
+       Anwesenheit; schon Vorbeiges zählt für „ab jetzt“ nicht mehr. */
+    if(istFirma(t)){
+      if(!abMin || !firmaEinTag(t) || hmMin(firmaZeit(t, iso).bis) > abMin) firma += firmaMin(t, iso);
+      return;
+    }
     const s = t.ganz || o.von < iso ? 0 : hmMin(t.zeitVon);
     const en = t.ganz || o.bis > iso ? 1440 : hmMin(t.zeitBis);
     const x = Math.max(s, a0), y = Math.min(en, b0);
@@ -9131,7 +9225,7 @@ function terminBelegt(iso, abMin){
   stuecke.sort((p, q) => p[0] - q[0]);
   let sum = 0, bis = -1;
   stuecke.forEach(([x, y]) => { if(y <= bis) return; sum += y - Math.max(x, bis); bis = y; });
-  return sum;
+  return Math.min(b0 - a0, sum + firma);
 }
 /* Die Zeilen für die Liste: je Termin das nächste Vorkommen. Einmalige stehen
    immer da, wiederkehrende ab acht Wochen vorher – wie bei den Aufgaben. Ein
@@ -9160,6 +9254,26 @@ function terminZeitText(o, mitTag){
 }
 /* Eine Terminzeile: links die Uhrzeit, daneben Titel und das Übrige. Unter
    „Heute“ und „Morgen“ sagt die Überschrift den Tag, sonst steht er dabei. */
+/* Mehrere Termine an einem Tag (v1.220, Jean: „übersichtlich
+   zusammengefasst“): ab zwei in einem Kasten als Zeilen, darüber die Zahl. */
+function termineBlock(os, ohneTag){
+  if(os.length < 2) return os.map(o => terminKnopf(o, ohneTag)).join('');
+  return `<p class="muted small terminZahl">${os.length} Termine</p><div class="gliste terminGliste">${os.map(o => terminKnopf(o, ohneTag)).join('')}</div>`;
+}
+/* Für Listen aus Terminen und Aufgaben: aufeinanderfolgende Termine
+   desselben Tages kommen zusammen in einen Block. */
+function listeMitTerminen(teil, ohneTag, knopf){
+  let html = '', puffer = [], tag = '';
+  const leeren = () => { if(puffer.length) html += termineBlock(puffer, ohneTag); puffer = []; };
+  teil.forEach(a => {
+    if(!a.istTermin){ leeren(); html += knopf(a); return; }
+    const t = a.schl.slice(0, 10);
+    if(t !== tag) leeren();
+    tag = t; puffer.push(a.o);
+  });
+  leeren();
+  return html;
+}
 function terminKnopf(o, ohneTag){
   const t = o.t, einTag = o.von === o.bis, jetzt = new Date();
   const laeuft = vkBeginn(o) <= jetzt && vkEnde(o) > jetzt;
@@ -9275,17 +9389,35 @@ function renderTermin(){
         <button class="btn klein" id="tmOutlookDatei" style="margin-top:8px">Mit Kalenderdatei senden</button>
         <p class="muted small" style="margin:6px 0 0">Im Teilen-Menü „Mail“ wählen und den Empfänger eintragen. Am PC den Anhang in Outlook auf den Kalender ziehen – so kommt auch eine Serie mit. Ein geänderter Termin ersetzt den alten nicht; den alten bitte löschen.</p>`}
     </div>`;
-  box.innerHTML = neu ? felder + kalender + `<button class="btn primary" id="tmAnlegen">Termin anlegen</button>`
-    : `<div id="tmKopf"></div>` + kalender
+  /* Firma im Haus (v1.220): was angerechnet wird, und die tatsächliche Zeit
+     des letzten begonnenen (sonst des nächsten) Vorkommens. */
+  let firmaTag = '';
+  if(istFirma(t) && !neu && firmaEinTag(t)){
+    const jetzt = new Date(), l = terminVorkommen(t, tagPlus(heute(), -14), tagPlus(heute(), 400));
+    const o = l.filter(x => vkBeginn(x) <= jetzt).pop() || l[0];
+    firmaTag = o ? o.von : '';
+  }
+  const firmaKarte = !istFirma(t) ? ''
+    : `<div class="eyebrow">Firma im Haus</div><div class="card">${firmaTag
+        ? `<p class="small" style="margin:0 0 8px">Tatsächlich da am ${esc(firmaTagText(firmaTag))}</p><div id="tmFirma"></div>`
+        : `<p class="small" style="margin:0">${firmaEinTag(t)
+            ? `Angerechnet ${esc(dauerText({m:firmaStunden(hmMin(t.zeitBis) - hmMin(t.zeitVon))}))} – ${FIRMA_TAKT} Minuten je angefangene Stunde. Die tatsächliche Zeit lässt sich danach grob einstellen.`
+            : `Angerechnet je Arbeitstag ${esc(dauerText({m:firmaStunden(tagMinuten())}))} – ${FIRMA_TAKT} Minuten je angefangene Stunde der Arbeitszeit.`}</p>`}</div>`;
+  box.innerHTML = neu ? felder + firmaKarte + kalender + `<button class="btn primary" id="tmAnlegen">Termin anlegen</button>`
+    : `<div id="tmKopf"></div>` + firmaKarte + kalender
       + `<details class="angaben" id="tmAngaben"${tmAngabenAuf === t.id ? ' open' : ''}><summary>Angaben bearbeiten</summary>${felder}</details>`
       + `<div class="knopfzeile"><button class="btn danger klein" id="tmWeg">Löschen</button></div>`;
   terminKopfZeigen(t);
+  if($('#tmFirma')){
+    const z = firmaZeit(t, firmaTag);
+    firmaRegler($('#tmFirma'), z.von, z.bis, (a, b) => { t.ist = t.ist || {}; t.ist[firmaTag] = {von:a, bis:b}; saveTerm(); });
+  }
   /* Beim Zuklappen zieht die Kopfkarte nach; während die Angaben offen sind,
      baut sich darüber nichts neu auf (Lehre aus v1.104). */
   if($('#tmAngaben')) $('#tmAngaben').ontoggle = e => { tmAngabenAuf = e.target.open ? t.id : ''; if(!e.target.open) terminKopfZeigen(t); };
 
   $('#tmTitel').oninput = e => { t.titel = e.target.value; sichern(); };
-  $('#tmArt').onchange = e => { t.art = e.target.value; sichern(); };
+  $('#tmArt').onchange = e => { const war = istFirma(t); t.art = e.target.value; sichern(); if(war !== istFirma(t)) renderTermin(); };
   $('#tmOrt').oninput = e => { t.ort = e.target.value; sichern(); };
   $('#tmMit').oninput = e => { t.mit = e.target.value; sichern(); };
   $('#tmNotiz').oninput = e => { t.notiz = e.target.value; sichern(); };
@@ -10983,7 +11115,7 @@ function renderWochenplan(){
     const frei = tg.cap ? freiText(freiMin) : 'keine Zeit frei';
     html += `<div class="eyebrow">${esc(kopfVon(j))} <span class="summe">· ${esc([frei].concat(tagZusatz(tg.iso)).join(' · '))}</span></div>
         <div class="planBalken"><span style="width:${anteil}%"></span></div>`
-      + tg.termine.map(o => terminKnopf(o, true)).join('') + fest.map(p => planKnopf(p)).join('')
+      + termineBlock(tg.termine, true) + fest.map(p => planKnopf(p)).join('')
       + (mit.length ? `<p class="muted small kalMit">Könnte heute mit</p>` + mit.map(p => planKnopf(p, true)).join('') : '');
   }
   box.innerHTML = `<div class="eyebrow mitInfo" style="margin-top:0">Nächste ${tage.length} Arbeitstage ${i.knopf}</div>${i.text}`
@@ -11098,6 +11230,16 @@ function arbEintraege(){
       + (s.weg === 'offen' && s.erledigt && s.erledigt !== s.datum ? ' (behoben am ' + dText(s.erledigt) + ')' : ''),
     w:stoerDauer(s)}); });
   TAET.arb.eigen.forEach(x => raus.push({id:'e:' + x.id, quelle:'eigen', x, datum:x.datum, name:x.text, w:nurDauer(x), eigen:true}));
+  /* Firma im Haus (v1.220): je vergangenem Tag die angerechnete Zeit;
+     mehrtägig nur an Arbeitstagen. */
+  const jetzt = new Date(), h = heute();
+  TERM.filter(istFirma).forEach(t => terminVorkommen(t, t.von, h).forEach(o => {
+    for(let iso = o.von; iso <= o.bis && iso <= h; iso = tagPlus(iso, 1)){
+      if(o.von !== o.bis && freiGrund(alsDatum(iso))) continue;
+      if(iso === o.bis && vkEnde(o) > jetzt) continue;
+      raus.push({id:`f:${t.id}:${iso}`, quelle:'termin', t, iso, datum:iso, name:'Firma im Haus: ' + (t.titel || 'Termin'), w:{m:firmaMin(t, iso)}});
+    }
+  }));
   const weg = new Set(TAET.arb.weg);
   return arbAblaeufeBuendeln(raus.filter(r => r.datum && !weg.has(r.id)));
 }
@@ -11181,6 +11323,9 @@ function renderArbeit(){
     const r = liste.find(x => x.id === row.dataset.id);
     row.querySelector('[data-aendern]').onclick = () => {
       if(r.quelle === 'ablauf') return arbAblaufAendern(r);
+      /* Firma im Haus (v1.220): die tatsächliche Zeit, daraus die Anrechnung. */
+      if(r.quelle === 'termin') return firmaEinTag(r.t) ? firmaFenster(r.t, r.iso, renderArbeit)
+        : hinweis('Ganztägig', 'Bei ganztägigen und mehrtägigen Terminen gilt je Tag die Arbeitszeit. Ändern lässt sich das an der Uhrzeit des Termins.');
       const start = r.w || {m:30};
       if(r.quelle === 'eigen') return dauerFenster('Eintrag ändern', start, r.datum, (w, datum, text) => {
         Object.keys(r.x).forEach(k => { if(k === 'm' || k === 't') delete r.x[k]; });

@@ -606,6 +606,15 @@ steht.
   Ziehen auf den Kalender klappt (Text sagt das, `outlookText(…, mitDatei)`).
   Eine geänderte Datei legt einen zweiten Termin an (gleiche UID/SEQUENCE
   helfen nicht) – Link bleibt der normale Weg.
+- Firma im Haus (v1.220, Jean): Art `firma` (erste in `TERMIN_ARTEN`).
+  `firmaMin(t, iso)` = 5 min (`FIRMA_TAKT`) je angefangene Stunde, aus
+  `t.ist[Tag] = {von, bis}` (tatsächlich) oder der Planung; ganz-/mehrtägig
+  je Arbeitstag `tagMinuten()`. `terminBelegt` zählt für sie nur das, nicht
+  die Anwesenheit. `arbEintraege` Quelle `termin` (id `f:Termin:Tag`, Ändern →
+  `firmaFenster`). Nachfrage: `firmaOffen()` (vorbei, ≤ 14 Tage, ohne
+  `t.ist`) als `kopfZeile` auf Heute. Regler `firmaRegler` (30 min).
+- Zusammenfassen (v1.220): ab zwei Terminen je Tag `termineBlock` (gliste,
+  darüber „n Termine“); auf Heute über `listeMitTerminen`.
 - Datumsfelder auf Seiten mit Kopfkarte: übernehmen bei `input`, neu aufbauen
   gar nicht (`datumBinden`, auch nicht bei `blur` – iOS meldet es schon beim Öffnen der Wahl); sonst verrutscht das Feld unter der
   offenen iOS-Datumswahl.
