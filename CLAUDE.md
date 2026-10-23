@@ -705,6 +705,13 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   Wischen den Plan schiebt; kurzer Tipp zeigt weiter den Namen. Marken tragen
   `data-key`. Nicht in der Übersicht (vom Nutzer so entschieden).
 
+- Beschriftung der Marken (v1.221, Jean): `teilCfg(k).beschrift` 'name'|
+  'abc'|'nr', ohne Wahl `beschriftVon` = 'name', wenn jedes Objekt eine
+  eigene Zahl im Namen hat (`nameNummer`: letzte Zahl, auch „2.14“).
+  Doppelte/fehlende → Buchstaben (`beschriftHinweis`). `katOrte` liefert
+  `nr` (Reihenfolge, zum Sortieren) und `zeichen` (Anzeige; Marke, Tipp,
+  Sammelmarke, Blatt, Legende). Lange Zeichen: `.marke.nummer.lang`, keine
+  gedrehte Kapsel. Zähler immer fortlaufend.
 - Sammelmarken (v1.132): `sammelnAuffrischen` fasst in der Übersicht
   Nummernmarken zusammen, sobald eine die Ziffern der anderen verdecken würde
   (`sammelNoetig`, Schirmpixel, seit v1.134; überlappende Kreise allein

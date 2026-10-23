@@ -10,6 +10,18 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.221 23.10.2026 Beschriftung der Marken im Grundriss (Jean: Objekte
+                    tragen oft schon eine Nummer im Namen, die fortlaufende
+                    Nummer der Marke verwechselt man damit). Je Anlagentyp
+                    unter Einstellungen › Typ › „Beschriftung im Grundriss“:
+                    „Aus dem Namen“ (letzte Zahl im Namen, „RWA 7“ → 7),
+                    „Buchstaben“ (A, B, C …) oder „Fortlaufend“ wie bisher.
+                    Ohne eigene Wahl gilt „Aus dem Namen“, sobald jedes Objekt
+                    eine eigene Nummer im Namen hat. Objekte ohne oder mit
+                    doppelter Nummer bekommen dann einen Buchstaben; das steht
+                    als Hinweis bei der Wahl und über den Objekten. Gilt für
+                    Marken, Sammelmarken, Blatt und Legende; längere Nummern
+                    stehen in einer länglichen Marke. Zähler bleiben fortlaufend.
   v1.220 21.10.2026 Termine (Jean): Mehrere Termine an einem Tag stehen auf
                     Heute und im Kalender zusammen in einem Kasten („3
                     Termine“). Neue Art „Firma im Haus“ an erster Stelle:
@@ -3453,6 +3465,9 @@ body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-ar
   display:flex;align-items:center;justify-content:center;
   font-family:var(--f-label);font-size:12px;font-weight:700;line-height:1;
 }
+/* Längere Beschriftung (v1.221, „2.14“, „103“): länglich statt rund, mittig. */
+:is(#planBox,#planLupe) .marke.nummer.lang{width:auto;min-width:22px;padding:0 5px;box-sizing:border-box;
+  border-radius:11px;margin:0;transform:translate(-50%, -50%);white-space:nowrap}
 /* Sammelmarke (v1.132): weißer Grund als gemeinsamer Ring, darin die Nummern
    als Kreise dicht an dicht. Die Kapsel dreht sich mit der Reihe, die Ziffern
    drehen zurück und stehen aufrecht. */
@@ -3462,7 +3477,7 @@ body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-ar
 #planBox .sammel.kapsel{border-radius:13px;flex-direction:row}
 #planBox .sammel.kaestchen{border-radius:13px;flex-direction:column;transform:translate(-50%, -50%)}
 #planBox .sammel.kaestchen > div{display:flex;gap:2px;justify-content:center}
-#planBox .sammel span{width:22px;height:22px;border-radius:50%;flex:0 0 22px;
+#planBox .sammel span{min-width:22px;height:22px;border-radius:11px;flex:0 0 auto;padding:0 5px;box-sizing:border-box;white-space:nowrap;
   background:var(--kat,#333);color:#fff;display:flex;align-items:center;justify-content:center;
   font-family:var(--f-label);font-size:12px;font-weight:700;line-height:1}
 #planBox .sammel.kapsel span{transform:rotate(var(--gegen, 0deg))}
@@ -3577,11 +3592,11 @@ body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-ar
   background:var(--kat,#333);border:1.5px solid #fff;box-sizing:content-box}
 .paper .planblatt .pmSchild{position:absolute;transform:translate(-50%, -50%);display:grid;gap:3px;padding:3px;
   background:#fff;border:1.5px solid #000;border-radius:12px}
-.paper .planblatt .pmSchild span{width:20px;height:20px;border-radius:50%;background:var(--kat,#333);color:#fff;
+.paper .planblatt .pmSchild span{min-width:20px;height:20px;border-radius:10px;padding:0 4px;box-sizing:border-box;white-space:nowrap;background:var(--kat,#333);color:#fff;
   display:flex;align-items:center;justify-content:center;font-family:var(--f-label);font-size:10px;font-weight:700;line-height:1}
 .paper .planblatt .pm{
   position:absolute;transform:translate(-50%, -50%);
-  width:26px;height:26px;border-radius:50%;border:2px solid #fff;
+  min-width:26px;height:26px;border-radius:13px;border:2px solid #fff;padding:0 4px;box-sizing:border-box;white-space:nowrap;
   background:var(--kat,#333);color:#fff;
   display:flex;align-items:center;justify-content:center;
   font-family:var(--f-label);font-size:12px;font-weight:700;line-height:1;
@@ -3603,7 +3618,7 @@ body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-ar
   line-height:1.2;break-after:avoid}
 .paper .lzeile{font-size:10pt;line-height:1.35;display:flex;align-items:center;gap:9px;
   padding:2px 0;break-inside:avoid}
-.paper .lnr{flex:0 0 auto;width:22px;height:22px;margin-left:1px;border-radius:50%;
+.paper .lnr{flex:0 0 auto;min-width:22px;height:22px;margin-left:1px;border-radius:11px;padding:0 4px;white-space:nowrap;
   background:var(--kat,#333);color:#fff;border:2px solid #fff;box-shadow:0 0 0 1px var(--kat,#333);box-sizing:border-box;
   display:flex;align-items:center;justify-content:center;
   font-family:var(--f-label);font-size:10px;font-weight:700;line-height:1}
@@ -4185,8 +4200,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.220';
-const BUILD   = VERSION + ' · 21.10.2026';
+const VERSION = 'v1.221';
+const BUILD   = VERSION + ' · 23.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -14857,6 +14872,22 @@ function renderSetSub(){
       const y = bildY(); renderSetSub(); bildNach(y);
     };
   }
+  /* Beschriftung der Marken im Grundriss (v1.221). */
+  if(beschriftWaehlbar(k)){
+    opt.insertAdjacentHTML('beforeend', '<div id="setBeschrift"></div>');
+    const zeichnen = () => {
+      const art = beschriftVon(k), h = beschriftHinweis(k);
+      $('#setBeschrift').innerHTML = `<div class="eyebrow" style="margin-top:0">Beschriftung im Grundriss</div>
+        <div class="segfeld"><div class="seg">${BESCHRIFT.map(([w, t]) =>
+          `<button type="button" data-beschrift="${w}" aria-pressed="${w === art}">${esc(t)}</button>`).join('')}</div></div>
+        <p class="muted small" style="margin:6px 0 14px">${esc(art === 'name' ? 'Die letzte Zahl im Namen, z.B. „RWA 7“ → 7.'
+          : art === 'abc' ? 'A, B, C … in der Reihenfolge der Liste.' : '1, 2, 3 … in der Reihenfolge der Liste.')}${h ? ' ' + esc(h) : ''}</p>`;
+      $$('#setBeschrift [data-beschrift]').forEach(b => b.onclick = () => {
+        teilCfg(k).beschrift = b.dataset.beschrift; saveCfg(); zeichnen();
+      });
+    };
+    zeichnen();
+  }
   const wort = n.art === 'sprinkler' ? 'Prüfpunkte' : n.art === 'medien' ? 'Zähler' : 'Objekte';
   const wege = [];
   if(n.eigen) wege.push(['Typ bearbeiten', '', () => setOeffnen('typbau', k)]);
@@ -14886,6 +14917,9 @@ function setObjekteSeite(dyn, k){
   else if(n.art === 'fremd')     setFremd(box, k, 'objekte');
   else if(n.art === 'sprinkler') setSprinkler(box, k);
   else                           setAnlagen(box, k);
+  /* Wer im Grundriss einen Buchstaben statt der Nummer trägt (v1.221). */
+  const bh = beschriftWaehlbar(k) ? beschriftHinweis(k) : '';
+  if(bh) box.insertAdjacentHTML('afterbegin', `<p class="muted small" style="margin:0 0 10px">Grundriss: ${esc(bh)}</p>`);
   /* Eben hinzugefügt: gleich das Feld für das erste Objekt öffnen. */
   if(typFrisch === k){
     typFrisch = null;
@@ -16711,7 +16745,7 @@ function markenZeichnen(planId, ziehen){
        Plan steht – je Kategorie eine Farbe, je Marke ihre Nummer. */
     if(!planZiel){
       katWahl().forEach(kat => katOrte(kat.k, pid)
-        .forEach(o => eintragen('n|' + o.key, o, 'nummer', o.nr, kat.farbe)));
+        .forEach(o => eintragen('n|' + o.key, o, 'nummer' + (o.zeichen.length > 2 ? ' lang' : ''), o.zeichen, kat.farbe)));
       return;
     }
     andereOrte(pid, planZiel.key)
@@ -16807,7 +16841,8 @@ function sammelnAuffrischen(){
     if(w <= -Math.PI / 2 + 1e-6) w += Math.PI; if(w > Math.PI / 2) w -= Math.PI;
     const ux = Math.cos(w), uy = Math.sin(w);
     const quer = p => Math.abs(-(p.x - mx) * uy + (p.y - my) * ux), laengs = p => (p.x - mx) * ux + (p.y - my) * uy;
-    const linie = g.every(p => quer(p) < 6);
+    /* Längere Beschriftungen (v1.221) passen nicht in die gedrehte Kapsel. */
+    const linie = g.every(p => quer(p) < 6) && g.every(p => p.m.textContent.length <= 2);
     const zelle = p => `<span style="--kat:${p.m.style.getPropertyValue('--kat') || '#333'}">${esc(p.m.textContent)}</span>`;
     const el = document.createElement('div');
     el.className = 'sammel';
@@ -17011,7 +17046,57 @@ function katOrte(k, planId){
     if(!nummer[key]) nummer[key] = ++nr;
     if(id === planId) raus.push(Object.assign({key, kat:k, nr:nummer[key]}, ortAuf(key, planId)));
   }));
+  const zeichen = markenZeichen(k, nummer);
+  raus.forEach(o => { o.zeichen = zeichen[o.key]; });
   return raus;
+}
+/* Beschriftung der Marken (v1.221, Jean): Viele Objekte tragen schon eine
+   Nummer im Namen („RWA 7“). Eine fortlaufende 3 auf der Marke von „RWA 7“
+   lädt zur Verwechslung ein. Je Typ wählbar: die Nummer aus dem Namen,
+   Buchstaben oder fortlaufend wie bisher. Ohne eigene Wahl gilt die Nummer
+   aus dem Namen, sobald jedes Objekt des Typs eine eigene hat. Wer im
+   Namensfall keine oder eine doppelte Nummer hat, bekommt einen Buchstaben.
+   Zähler bleiben fortlaufend – ihre Zählernummern sind zu lang. Die Reihenfolge
+   (nr) bleibt die alte; geändert wird nur, was auf der Marke steht. */
+const BESCHRIFT = [['name', 'Aus dem Namen'], ['abc', 'Buchstaben'], ['nr', 'Fortlaufend']];
+const nameNummer = name => { const m = String(name).match(/\d+(?:[.,]\d+)*/g); return m ? m[m.length - 1] : ''; };
+const buchstabe = i => { let s = ''; for(i++; i > 0; i = Math.floor((i - 1) / 26)) s = String.fromCharCode(65 + (i - 1) % 26) + s; return s; };
+function namenNummern(k){
+  const namen = teilCfg(k).anlagen || [], zahl = {}, wie = {};
+  namen.forEach(a => { zahl[a] = nameNummer(a); if(zahl[a]) wie[zahl[a]] = (wie[zahl[a]] || 0) + 1; });
+  return {namen, zahl, ohne:namen.filter(a => !zahl[a]), doppelt:namen.filter(a => zahl[a] && wie[zahl[a]] > 1)};
+}
+const beschriftWaehlbar = k => k !== 'medien' && kategorien().some(kat => kat.k === k);
+function beschriftVon(k){
+  if(!beschriftWaehlbar(k)) return 'nr';
+  const w = teilCfg(k).beschrift;
+  if(BESCHRIFT.some(([x]) => x === w)) return w;
+  const n = namenNummern(k);
+  return n.namen.length && !n.ohne.length && !n.doppelt.length ? 'name' : 'nr';
+}
+/* nummer: Schlüssel → laufende Nummer (aus katOrte). */
+function markenZeichen(k, nummer){
+  const art = beschriftVon(k), raus = {};
+  const keys = Object.keys(nummer).sort((a, b) => nummer[a] - nummer[b]);
+  if(art !== 'name'){
+    keys.forEach(key => { raus[key] = art === 'abc' ? buchstabe(nummer[key] - 1) : String(nummer[key]); });
+    return raus;
+  }
+  const n = namenNummern(k);
+  let b = 0;
+  keys.forEach(key => {
+    const a = key.slice(k.length + 1);
+    raus[key] = n.zahl[a] && !n.doppelt.includes(a) ? n.zahl[a] : buchstabe(b++);
+  });
+  return raus;
+}
+/* Hinweis unter der Wahl: wer im Namensfall einen Buchstaben bekommt. */
+function beschriftHinweis(k){
+  if(beschriftVon(k) !== 'name') return '';
+  const n = namenNummern(k), teile = [];
+  if(n.ohne.length) teile.push('ohne Nummer im Namen: ' + n.ohne.join(', '));
+  if(n.doppelt.length) teile.push('Nummer doppelt: ' + n.doppelt.join(', '));
+  return teile.length ? 'Mit Buchstaben, weil ' + teile.join('; ') + '.' : '';
 }
 /* Was gehört zur selben Kategorie? Bei den Zählern alle übrigen Zählstellen,
    sonst alles, dessen Schlüssel mit demselben Nachweis beginnt. */
@@ -17056,7 +17141,7 @@ function tippZeigen(o){
   /* In der Übersicht steht vor dem Namen, was die Marke selbst sagt: ihre
      Nummer und die Kategorie – sonst müsste man die Farbe im Kopf zuordnen. */
   f.textContent = o.text ? o.text
-               : o.nr ? `${o.nr} · ${NW(o.kat).label} · ${ortName(o.key)}`
+               : o.nr ? `${o.zeichen || o.nr} · ${NW(o.kat).label} · ${ortName(o.key)}`
                        : ortName(o.key);
   f.style.left = (o.x * 100) + '%';
   f.style.top  = (o.y * 100) + '%';
@@ -18342,7 +18427,7 @@ $('#planBox').onclick = e => {
       const drin = keys.map(k => alle.find(x => x.key === k)).filter(Boolean).sort((a, b) => a.kat === b.kat ? a.nr - b.nr : 0);
       const r = $('#planBox').getBoundingClientRect(), q = sm.getBoundingClientRect();
       tippZeigen({x:(q.left + q.width / 2 - r.left) / r.width, y:(q.top - r.top + 11) / r.height,
-        text:drin.map(x => `${x.nr} · ${NW(x.kat).label} · ${ortName(x.key)}`).join('\n')});
+        text:drin.map(x => `${x.zeichen} · ${NW(x.kat).label} · ${ortName(x.key)}`).join('\n')});
       return;
     }
     if(o) tippZeigen(o); else { tippWeg(); planHinweisen(); }
@@ -19080,7 +19165,7 @@ async function planSeite(id){
   const hoch = breit * bh / bw;
   const punkte = gruppen.reduce((alle, g) => alle.concat(g.orte.map(o => {
     const x = quer ? 1 - o.y : o.x, y = quer ? o.x : o.y;
-    return {nr:o.nr, farbe:g.kat.farbe, x:x * breit, y:y * hoch};
+    return {nr:o.nr, zeichen:o.zeichen, farbe:g.kat.farbe, x:x * breit, y:y * hoch};
   })), []);
   const marken = markenHtml(markenLegen(punkte, breit, hoch), breit, hoch);
   return {
@@ -19191,9 +19276,9 @@ function markenHtml(l, W, H){
       + `<line x1="${x.x1.toFixed(1)}" y1="${x.y1.toFixed(1)}" x2="${x.x2.toFixed(1)}" y2="${x.y2.toFixed(1)}" stroke="${x.farbe}" stroke-width="1.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`).join('')}</svg>` : '';
   return svg
     + l.punkte.map(p => `<div class="pmPunkt" style="--kat:${p.farbe};left:${pz(p.x, W)};top:${pz(p.y, H)}"></div>`).join('')
-    + l.marken.map(m => `<div class="pm" style="--kat:${m.p.farbe};left:${pz(m.x, W)};top:${pz(m.y, H)}">${m.p.nr}</div>`).join('')
-    + l.schilder.map(s2 => `<div class="pmSchild" style="left:${pz(s2.x, W)};top:${pz(s2.y, H)};grid-template-columns:repeat(${s2.sp}, 20px)">${
-        s2.nrn.map(p => `<span style="--kat:${p.farbe}">${p.nr}</span>`).join('')}</div>`).join('');
+    + l.marken.map(m => `<div class="pm" style="--kat:${m.p.farbe};left:${pz(m.x, W)};top:${pz(m.y, H)}">${esc(m.p.zeichen)}</div>`).join('')
+    + l.schilder.map(s2 => `<div class="pmSchild" style="left:${pz(s2.x, W)};top:${pz(s2.y, H)};grid-template-columns:repeat(${s2.sp}, auto)">${
+        s2.nrn.map(p => `<span style="--kat:${p.farbe}">${esc(p.zeichen)}</span>`).join('')}</div>`).join('');
 }
 const blattKopf = (titel, zusatz, teil) => `<h2>${esc(titel)}</h2>
   <div class="meta">${esc(CFG.objekt || '')}${zusatz ? ' · ' + esc(zusatz) : ''}${
@@ -19207,7 +19292,9 @@ function legendeHtml(abschnitte, planName){
   const zeilen = [];
   abschnitte.forEach(a => {
     zeilen.push({titel:NW(a.k).label, farbe:a.farbe});
-    a.eintraege.sort((x, y) => x.nr - y.nr).forEach(e => zeilen.push(Object.assign({farbe:a.farbe}, e)));
+    /* Nummern aus dem Namen der Größe nach, sonst in der Reihenfolge der Liste. */
+    const nachName = beschriftVon(a.k) === 'name';
+    a.eintraege.sort((x, y) => nachName ? String(x.zeichen).localeCompare(String(y.zeichen), 'de', {numeric:true}) : x.nr - y.nr).forEach(e => zeilen.push(Object.assign({farbe:a.farbe}, e)));
   });
   const seiten = [];
   let seite = [], platz = LEGENDE_PLATZ;
@@ -19220,7 +19307,7 @@ function legendeHtml(abschnitte, planName){
   return seiten.map((eintraege, i) => {
     const inhalt = eintraege.map(z => z.titel
       ? `</div><div class="lgruppe" style="--kat:${z.farbe}"><div class="ltitel">${esc(z.titel)}</div>`
-      : `<div class="lzeile"><span class="lnr">${z.nr}</span><span>${esc(z.text)}${
+      : `<div class="lzeile"><span class="lnr">${esc(z.zeichen)}</span><span>${esc(z.text)}${
           z.plan ? ' · ' + esc(z.plan) : ''}</span></div>`).join('');
     return `<div class="paper">${blattKopf('Legende', planName,
         seiten.length > 1 ? ` · Blatt ${i + 1} von ${seiten.length}` : '')}
@@ -19245,7 +19332,7 @@ async function planBlattZeigen(ids){
       g.orte.forEach(o => {
         const da = a.eintraege.find(e => e.key === o.key);
         if(da){ if(!da.plaene.includes(teil.name)) da.plaene.push(teil.name); return; }
-        a.eintraege.push({key:o.key, nr:o.nr, text:ortName(o.key), plaene:[teil.name]});
+        a.eintraege.push({key:o.key, nr:o.nr, zeichen:o.zeichen, text:ortName(o.key), plaene:[teil.name]});
       });
     });
   }
