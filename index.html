@@ -10,6 +10,19 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.222 23.10.2026 Ein Grundriss für alles (Jean: das Grundriss-Symbol tat je
+                    nach Ort Verschiedenes). Überall öffnet es dieselbe
+                    Übersicht mit nummerierten Marken und Menü; aus einem
+                    Objekt heraus steht es pulsierend in der Mitte, sein Typ
+                    ist für diesen Besuch eingeblendet. Ein Tipp auf eine
+                    Marke zeigt eine Karte mit Name und Stand, „Öffnen ›“
+                    führt auf die Objektseite (zurück an dieselbe Stelle),
+                    „Marke verschieben“ erst macht sie ziehbar, „Fertig“
+                    beendet das. Ohne Marke geht es wie bisher gleich ans
+                    Setzen; unter „Objekte bearbeiten“ immer. In einer
+                    angefangenen Kontrolle tragen noch offene Objekte einen
+                    dünnen gelben Ring. Neu oben rechts auf Anlagen: das
+                    Grundriss-Symbol öffnet die zuletzt gezeigte Etage.
   v1.221 23.10.2026 Beschriftung der Marken im Grundriss (Jean: Objekte
                     tragen oft schon eine Nummer im Namen, die fortlaufende
                     Nummer der Marke verwechselt man damit). Je Anlagentyp
@@ -3468,6 +3481,12 @@ body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-ar
 /* Längere Beschriftung (v1.221, „2.14“, „103“): länglich statt rund, mittig. */
 :is(#planBox,#planLupe) .marke.nummer.lang{width:auto;min-width:22px;padding:0 5px;box-sizing:border-box;
   border-radius:11px;margin:0;transform:translate(-50%, -50%);white-space:nowrap}
+/* Gesuchtes Objekt (v1.222): pulst in seiner Farbe; noch offen in der
+   laufenden Kontrolle: dünner gelber Ring außen. */
+:is(#planBox,#planLupe) .marke.nummer.fokus{z-index:4}
+:is(#planBox,#planLupe) .marke.nummer.fokus::after{content:'';position:absolute;inset:-4px;border-radius:999px;
+  border:3px solid var(--kat,#333);animation:puls 2.4s ease-out infinite}
+:is(#planBox,#planLupe) .marke.nummer.offen{box-shadow:0 0 0 2px #fff, 0 0 0 4px #E3A81F, 0 1px 4px rgba(0,0,0,.35)}
 /* Sammelmarke (v1.132): weißer Grund als gemeinsamer Ring, darin die Nummern
    als Kreise dicht an dicht. Die Kapsel dreht sich mit der Reihe, die Ziffern
    drehen zurück und stehen aufrecht. */
@@ -3500,9 +3519,25 @@ body.blattAn #blattWrap{flex:1 0 auto;padding-bottom:calc(12px + max(env(safe-ar
   pointer-events:none;
 }
 #planBox .planTipp::after{
-  content:'';position:absolute;left:50%;top:100%;margin-left:-5px;
+  content:'';position:absolute;left:50%;top:100%;margin-left:calc(-5px + var(--pfeil, 0px));
   border:5px solid transparent;border-top-color:rgba(20,20,20,.92);
 }
+/* Infokarte (v1.222): antippbar, links bündig, Knöpfe in Weiß. */
+#planBox .planTipp.karte{pointer-events:auto;text-align:left;width:max-content;max-width:250px;white-space:normal;
+  font-family:var(--f-body);font-size:13px;padding:8px 12px 10px}
+#planBox .planTipp.karte > span{display:block;font-family:var(--f-label);letter-spacing:.03em;opacity:.8}
+#planBox .planTipp.karte > b{display:block;font-size:15px;font-weight:600;margin:1px 0 2px}
+#planBox .planTipp.karte > small{display:block;opacity:.85;font-size:12px}
+#planBox .planTipp.karte .tippKnoepfe{display:flex;gap:6px;margin-top:8px}
+#planBox .planTipp.karte .tippKnoepfe button{white-space:nowrap}
+#planBox .planTipp.karte button{font:inherit;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);
+  border-radius:8px;padding:6px 10px;cursor:pointer}
+#planBox .planTipp.karte button[data-t="auf"]{background:#fff;color:#111;border-color:#fff;font-weight:600}
+#planBox .planTipp.karte button[data-zeile]{display:block;width:100%;text-align:left;margin:0 0 4px;background:none;border-color:rgba(255,255,255,.25)}
+#planBox .planTipp.karte button[data-zeile] span{display:block;font-family:var(--f-label);font-size:12px;opacity:.8}
+#planBox .planTipp.karte button[data-zeile] b{font-weight:600}
+#planBox .planTipp.unten{transform:translate(-50%, 0);margin-top:16px}
+#planBox .planTipp.unten::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:rgba(20,20,20,.92)}
 @keyframes puls{
   0%{transform:scale(1);opacity:.85}
   70%{transform:scale(2.4);opacity:0}
@@ -3917,6 +3952,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       aria-haspopup="menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="m2 13 10 5 10-5"/></svg></button>
     <button class="kopfKnopf" id="btnNeuLaden" aria-label="Neu vom Server laden" hidden></button>
     <button class="kopfKnopf" id="btnNeu" aria-label="Neu anlegen" hidden></button>
+    <button class="kopfKnopf" id="btnGrund" aria-label="Grundriss" hidden></button>
   </header>
 
   <div id="bild">
@@ -4070,6 +4106,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
             <button class="btn ghost klein" id="btnPlanRicht" hidden>Abbrechen</button>
             <button class="btn ghost klein" id="btnPlanZieh">Verschieben</button>
             <button class="btn ghost klein" id="btnPlanAndere" hidden>Andere Marke wählen</button>
+            <button class="btn ghost klein" id="btnPlanFertig" hidden>Fertig</button>
           </div>
         </div>
         <div id="planRegler" role="slider" tabindex="0" aria-label="Grundriss"
@@ -4200,7 +4237,7 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.221';
+const VERSION = 'v1.222';
 const BUILD   = VERSION + ' · 23.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5520,6 +5557,7 @@ function go(name, push = true){
   bb.disabled = !stack.length;
   $('#btnSuche').hidden = !haupt;
   $('#btnNeu').hidden = !(name === 'home' || name === 'wplan');
+  $('#btnGrund').hidden = name !== 'alle';           // (v1.222)
   $('#reiter').hidden = !haupt;
   document.body.classList.toggle('reiterAn', haupt);
   $$('#reiter [data-reiter]').forEach(b => b.dataset.reiter === name ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
@@ -5533,7 +5571,7 @@ function go(name, push = true){
   /* Rechts genau ein Platz (Titel mittig): auf den Hauptseiten das + oder ein
      leerer Platz, in den Einstellungen das Neuladen, sonst der Planknopf. */
   void inSettings;
-  $('#btnPlanWahl').hidden = name === 'home' || name === 'wplan';
+  $('#btnPlanWahl').hidden = name === 'home' || name === 'wplan' || name === 'alle';
   menueZu();
   /* Zurück in die Grundrissansicht (etwa aus der Blattvorschau): dort baut sich
      nichts neu auf, der Knopf oben rechts muss eigens wieder her (v1.98). */
@@ -5663,6 +5701,18 @@ $('#btnSuche').onclick = () => {
   const f = $('#suche'); f.focus();
 };
 $('#btnNeu').textContent = '+';
+/* Grundriss auf Anlagen (v1.222, Jean): öffnet gleich die zuletzt gezeigte
+   Etage, gewechselt wird über den Regler. Gemerkt nur auf dem Gerät. */
+$('#btnGrund').innerHTML = ORT_SVG;
+$('#btnGrund').onclick = async () => {
+  let liste = [];
+  try{ liste = (await Bilder.alle()) || []; }catch(e){}
+  if(!liste.length){ toast('Erst einen Grundriss hinterlegen'); return; }
+  liste = planSortieren(liste);
+  const zuletzt = Store.get('nwPlanZuletzt', '');
+  planListe = liste;
+  planZeigen(liste.some(p => p.id === zuletzt) ? zuletzt : liste[0].id, null);
+};
 $('#btnNeu').onclick = () => wahlFenster('Neu', [
     {text:'Aufgabe', tu:() => aufgabeNeu()}, {text:'Termin', tu:terminNeu}, {text:'Ablauf', tu:() => assistentStart()},
     /* Gleich eine neue Abwesenheit (v1.194) – bis dahin landete man oben auf
@@ -11628,6 +11678,7 @@ async function hausKnopf(){
   let liste = [];
   try{ liste = (await Bilder.alle()) || []; }catch(e){ return; }
   /* Seit v1.184 unter Anlagen, mit Störungen und ausgegebenen Blättern. */
+  $('#btnGrund').classList.toggle('unsichtbar', !liste.length);
   const box = $('#alleGrund');
   if(!liste.length || current !== 'alle' || !box || box.querySelector('[data-plaene]')) return;
   liste = planSortieren(liste);
@@ -15748,7 +15799,7 @@ function objektKarten(box, k, nachZeichnen){
         if(neu) return;
         const a = teilCfg(k).anlagen[i];
         objPlanWeg = {key:k + '|' + a, hatteMarke:!!CFG.orte[k + '|' + a], basis};
-        verorten(k + '|' + a, a);
+        verorten(k + '|' + a, a, true);
       };
       /* Typ und Anzahl: die Karte wird nie ersetzt, nur die Knöpfe nachgezogen –
          ein zweiter Tipp auf den gewählten Typ nimmt ihn zurück. */
@@ -15967,7 +16018,7 @@ function stellenZeichnen(mitNeuer){
     /* Grundriss auch hier (v1.205), wie bei allen Objekten. */
     if(r.querySelector('[data-ort]')) r.querySelector('[data-ort]').onclick = () => {
       const z = stelleLesen(t.stellen[i]);
-      verorten(z.key, [z.partei, z.medium].filter(Boolean).join(' · '));
+      verorten(z.key, [z.partei, z.medium].filter(Boolean).join(' · '), true);
     };
     r.querySelector('[data-weg]').onpointerdown = () => { if(neu) verworfen = true; };
     r.querySelector('[data-weg]').onclick = () => {
@@ -16322,6 +16373,13 @@ async function quellenAufraeumen(){
   }catch(e){ /* ohne Aufräumen liegt eben eine Quelle zu viel herum */ }
 }
 let planZiel = null;          // planZiel: Schlüssel der Sache, die verortet wird
+/* Ein Grundriss für alles (v1.222, Jean): aus einem Objekt heraus öffnet die
+   Übersicht, das Objekt steht hervorgehoben in der Mitte (planFokus). Sein Typ
+   ist für diesen Besuch eingeblendet, ohne die gemerkte Auswahl zu ändern.
+   Verschoben wird nur nach „Marke verschieben“; planVonKarte heißt: „Fertig“
+   führt zurück in die Übersicht. */
+let planFokus = null, planVonKarte = false;
+const ortTyp = key => stellen().some(z => z.key === key) ? 'medien' : String(key).split('|')[0];
 /* Bildverweise je Plan: beim Schieben wird der Nachbar sofort gebraucht. Ein
    Verweis kostet nur den gespeicherten Plan, entpackt wird erst beim Zeigen.
    Freigegeben wird, wenn die Grundrissansicht neu geöffnet wird. */
@@ -16745,7 +16803,8 @@ function markenZeichnen(planId, ziehen){
        Plan steht – je Kategorie eine Farbe, je Marke ihre Nummer. */
     if(!planZiel){
       katWahl().forEach(kat => katOrte(kat.k, pid)
-        .forEach(o => eintragen('n|' + o.key, o, 'nummer' + (o.zeichen.length > 2 ? ' lang' : ''), o.zeichen, kat.farbe)));
+        .forEach(o => eintragen('n|' + o.key, o, 'nummer' + (o.zeichen.length > 2 ? ' lang' : '')
+          + (o.key === planFokus ? ' fokus' : '') + (inKontrolleOffen(o.key) ? ' offen' : ''), o.zeichen, kat.farbe)));
       return;
     }
     andereOrte(pid, planZiel.key)
@@ -16819,7 +16878,7 @@ const sammelNoetig = (a, b) => {
 function sammelnAuffrischen(){
   const box = $('#planBox'); if(!box) return;
   box.querySelectorAll('.sammel').forEach(x => x.remove());
-  const marken = [...box.querySelectorAll('.marke.nummer')];
+  const marken = [...box.querySelectorAll('.marke.nummer:not(.fokus)')];   // die gesuchte bleibt einzeln (v1.222)
   marken.forEach(m => m.classList.remove('gesammelt'));
   const r = box.getBoundingClientRect();
   if(planZiel || marken.length < 2 || !r.width) return;
@@ -16869,6 +16928,14 @@ function sammelnAuffrischen(){
     }
     box.appendChild(el);
   });
+}
+/* In der laufenden Kontrolle noch offen (v1.222): dünner gelber Ring in der
+   Übersicht – auf dem Rundgang sieht man so weiter, was fehlt. Nur, wenn die
+   Kontrolle angefangen ist; Prüfungen der Firma und Bestand haben keine. */
+function inKontrolleOffen(key){
+  const n = NW(ortTyp(key));
+  if(!n || ['fremd', 'bestand', 'sprinkler'].includes(n.art) || !begonnen(n)) return false;
+  return ortStatus0(key) !== 'gruen';
 }
 function markenAuffrischen(){
   if(planRicht) return;
@@ -17022,7 +17089,7 @@ const KATEGORIEN = [
 /* Nur, was als Anlagentyp hinzugefügt ist (v1.147: abhängig von CFG.typen). */
 const kategorien = () => KATEGORIEN.concat(eigeneTypen().map(n => ({k:n.k, farbe:n.farbe || TYP_FARBEN[0]})))
   .filter(kat => aktiv(kat.k));
-const katWahl = () => kategorien().filter(kat => (CFG.planWahl || []).includes(kat.k));
+const katWahl = () => kategorien().filter(kat => (CFG.planWahl || []).includes(kat.k) || (planFokus && kat.k === ortTyp(planFokus)));
 /* Die Objekte einer Kategorie in der Reihenfolge ihrer Liste – also des Weges. */
 const katSchluessel = k => k === 'medien'
   ? stellenSortiert().map(z => z.key)
@@ -17132,6 +17199,60 @@ function ortName(key){
 function tippWeg(){
   const f = $('#planBox') && $('#planBox').querySelector('.planTipp');
   if(f) f.remove();
+}
+/* Infokarte (v1.222, Jean): in der Übersicht führt ein Tipp auf eine Marke
+   weiter – Name, Stand, „Öffnen ›“ auf die Objektseite und „Marke
+   verschieben“. Bei einer Sammelmarke je Objekt eine Zeile, die zur Karte
+   dieses Objekts führt. */
+function infoKarte(o, orte){
+  tippWeg();
+  const box = $('#planBox'); if(!box) return;
+  const f = document.createElement('div');
+  f.className = 'planTipp karte';
+  const kopf = x => `${x.zeichen} · ${NW(x.kat).label}`;
+  if(orte){
+    f.innerHTML = orte.map((x, i) => `<button type="button" data-zeile="${i}"><span>${esc(kopf(x))}</span><b>${esc(ortName(x.key))}</b></button>`).join('');
+    f.querySelectorAll('[data-zeile]').forEach(b => b.onclick = e => {
+      e.stopPropagation(); infoKarte(Object.assign({}, orte[+b.dataset.zeile], {x:o.x, y:o.y}));
+    });
+  }else{
+    const obj = suchObjekte(o.kat).find(x => x.ort === o.key);
+    const stand = obj ? suchStand0(obj) : '';
+    f.innerHTML = `<span>${esc(kopf(o))}</span><b>${esc(obj ? obj.titel : ortName(o.key))}</b>${stand ? `<small>${esc(stand)}</small>` : ''}
+      <div class="tippKnoepfe">${obj ? '<button type="button" data-t="auf">Öffnen ›</button>' : ''}<button type="button" data-t="zieh">Marke verschieben</button></div>`;
+    const auf = f.querySelector('[data-t="auf"]');
+    if(auf) auf.onclick = e => { e.stopPropagation(); tippWeg(); verlaufOeffnen(obj.k, obj.id, obj.titel); };
+    f.querySelector('[data-t="zieh"]').onclick = e => { e.stopPropagation(); markeVerschieben(o.key, obj ? obj.titel : ortName(o.key)); };
+  }
+  f.style.left = (o.x * 100) + '%';
+  f.style.top  = (o.y * 100) + '%';
+  box.appendChild(f);
+  /* Am Rand nicht abschneiden: seitlich einrücken, oben unter die Marke. */
+  const w = $('#planWrap').getBoundingClientRect(), r = f.getBoundingClientRect();
+  if(r.top < w.top + 4) f.classList.add('unten');
+  const dx = r.left < w.left + 8 ? w.left + 8 - r.left : r.right > w.right - 8 ? w.right - 8 - r.right : 0;
+  if(dx){ f.style.marginLeft = dx + 'px'; f.style.setProperty('--pfeil', -dx + 'px'); }
+}
+/* Aus der Infokarte heraus: die Marke ziehen, „Fertig“ führt zurück. */
+function markeVerschieben(key, titel){
+  tippWeg();
+  planZiel = {key, titel}; planFokus = key; planVonKarte = true;
+  const pl = planListe.find(p => p.id === planAktuell);
+  $('#planName').textContent = titel;
+  $('#planWelcher').textContent = pl ? pl.name : '';
+  markenZeichnen(planAktuell, false);
+  planHinweisen();
+}
+function verschiebenFertig(){
+  const key = planZiel && planZiel.key;
+  planZiel = null; planVonKarte = false; planWaehlen = false; planZiehen = false;
+  planFokus = key || planFokus;
+  const pl = planListe.find(p => p.id === planAktuell);
+  $('#planName').textContent = pl ? pl.name : '';
+  planWahlKnopf();
+  planKopfUebersicht();
+  markenZeichnen(planAktuell, false);
+  planHinweisen();
 }
 function tippZeigen(o){
   tippWeg();
@@ -17341,6 +17462,7 @@ function ebenenStellen(){
 function planImRahmen(id){
   const pl = planListe.find(p => p.id === id); if(!pl) return;
   planAktuell = id; planZiehen = false; tippWeg();
+  Store.set('nwPlanZuletzt', id);
   $('#planName').textContent    = planZiel ? planZiel.titel : pl.name;
   $('#planWelcher').textContent = planZiel ? pl.name : '';
   if(!planZiel) planKopfUebersicht();
@@ -17356,10 +17478,11 @@ function planImRahmen(id){
    rücken; nach dem Zoomen wird auch dort mittig gestellt. */
 function planZurStelle(){
   const wrap = $('#planWrap'), box = $('#planBox');
-  if(!wrap || !box || !planZiel) return;
-  const o0 = CFG.orte[planZiel.key];
-  if(!o0 || o0.x == null || !ortPlaene(planZiel.key).includes(planAktuell)) return;
-  const p = ortAuf(planZiel.key, planAktuell), o = inRahmen(planAktuell, p.x, p.y);
+  const key = planZiel ? planZiel.key : planFokus;
+  if(!wrap || !box || !key) return;
+  const o0 = CFG.orte[key];
+  if(!o0 || o0.x == null || !ortPlaene(key).includes(planAktuell)) return;
+  const p = ortAuf(key, planAktuell), o = inRahmen(planAktuell, p.x, p.y);
   const bw = box.offsetWidth, bh = box.offsetHeight;
   if(!bw || !bh) return;
   wrap.scrollLeft = Math.max(0, Math.min(bw - wrap.clientWidth,  o.x * bw - wrap.clientWidth  / 2));
@@ -17529,7 +17652,7 @@ function reglerFolgen(){
   if(!id) return;
   const imRahmen = Rahmen.ids.includes(id) && Rahmen.ids.includes(planAktuell) && !!$('#planBox .ebenen');
   if(!imRahmen){
-    if(id !== planAktuell){ Regler.eigen = true; planZeigen(id, planZiel); }
+    if(id !== planAktuell){ Regler.eigen = true; planZeigen(id, planZiel, planFokus); }
     return;
   }
   if(id !== planAktuell) planImRahmen(id);
@@ -17651,12 +17774,14 @@ function tonTick(){
     if(e.target.checked){ tonBereit(); setTimeout(tonTick, 60); }   // gleich zum Hören
   };
 })();
-async function planZeigen(id, ziel){
+async function planZeigen(id, ziel, fokus){
   /* Beim Schieben folgen die Aufrufe dicht aufeinander: ein älterer, dessen
      Bild erst später kommt, darf den neueren nicht überschreiben. */
   const lauf = ++planLauf;
   const vomRegler = Regler.eigen; Regler.eigen = false;
   planZiel = ziel || null;
+  planFokus = fokus || null;
+  if(!ziel) planVonKarte = false;
   planZiehen = false;
   planSchnitt = planSchnittStart && !ziel && !!bezugVon(id);
   planRicht = planRichtStart && !ziel && !planSchnitt ? (bezugVon(id) ? 3 : 1) : 0;
@@ -17676,6 +17801,7 @@ async function planZeigen(id, ziel){
   const pl = await planBild(id);
   if(lauf !== planLauf) return;
   if(!pl){ toast('Plan nicht gefunden'); return; }
+  if(!planRicht && !planSchnitt) Store.set('nwPlanZuletzt', id);
   /* Erst die Ansicht, dann das Bild: planHoehe() rechnet nur, wenn die
      Grundrissansicht schon die aktuelle ist. */
   go('plan');
@@ -17734,6 +17860,7 @@ function planHinweisen(ausRegler){
   const richt = $('#btnPlanRicht'), neu = $('#btnPlanRichtNeu');
   richt.hidden = neu.hidden = true;
   $('#btnPlanAndere').hidden = true;
+  $('#btnPlanFertig').hidden = true;
   ['#btnPlanSchnitt', '#btnSchnittGem', '#btnSchnittOhne', '#btnSchnittFertig'].forEach(k => { $(k).hidden = true; });
   $('#planStreifen').classList.toggle('umbruch', planSchnitt && !GROSSER_SCHIRM());
   if(planSchnitt){
@@ -17778,8 +17905,9 @@ function planHinweisen(ausRegler){
   const andere = $('#btnPlanAndere');
   andere.hidden = !planAktuell || !andereOrte(planAktuell, planZiel.key).length;
   andere.textContent = planWaehlen ? 'Abbrechen' : 'Andere Marke wählen';
+  $('#btnPlanFertig').hidden = !planVonKarte;
   /* Solange nichts steht, wird der Hinweis gebraucht – dann bleibt er. */
-  zeigen(!planGesetzt() || planZiehen || planWaehlen || !andere.hidden);
+  zeigen(!planGesetzt() || planZiehen || planWaehlen || !andere.hidden || planVonKarte);
 }
 /* Knopf oben rechts (v1.95): nur in der Übersicht, nicht beim Setzen einer
    Marke, beim Ausrichten oder Zuschneiden. */
@@ -17871,6 +17999,7 @@ $('#btnPlanObjekte').onclick = () => {
    sich mit Safaris eigenem Menü und mit dem Zoomen, und der Knopf sagt
    ohnehin deutlicher, was er tut. */
 $('#btnPlanAndere').onclick = () => { planWaehlen = !planWaehlen; planHinweisen(); };
+$('#btnPlanFertig').onclick = verschiebenFertig;
 $('#btnPlanZieh').onclick = () => {
   planZiehen = true; markenZeichnen(planAktuell, true); planHinweisen();
 };
@@ -18415,6 +18544,7 @@ $('#planBox').onclick = e => {
   }
   /* In der Übersicht sagt ein Tipp auf eine Marke, was dort steht; daneben
      holt er den Streifen zurück. Gesetzt wird hier nichts. */
+  if(e.target.closest('.planTipp')) return;   // Tipp in die Infokarte (v1.222)
   if(!planZiel){
     const o = markeNah(e, katWahl().reduce((alle, kat) => alle.concat(katOrte(kat.k, id)), []));
     /* Eine Sammelmarke nennt alle, die in ihr stecken (v1.132). */
@@ -18426,11 +18556,10 @@ $('#planBox').onclick = e => {
       const alle = katWahl().reduce((a, kat) => a.concat(katOrte(kat.k, id)), []), keys = sm.dataset.keys.split('\n');
       const drin = keys.map(k => alle.find(x => x.key === k)).filter(Boolean).sort((a, b) => a.kat === b.kat ? a.nr - b.nr : 0);
       const r = $('#planBox').getBoundingClientRect(), q = sm.getBoundingClientRect();
-      tippZeigen({x:(q.left + q.width / 2 - r.left) / r.width, y:(q.top - r.top + 11) / r.height,
-        text:drin.map(x => `${x.zeichen} · ${NW(x.kat).label} · ${ortName(x.key)}`).join('\n')});
+      infoKarte({x:(q.left + q.width / 2 - r.left) / r.width, y:(q.top - r.top + 11) / r.height}, drin);
       return;
     }
-    if(o) tippZeigen(o); else { tippWeg(); planHinweisen(); }
+    if(o) infoKarte(o); else { tippWeg(); planHinweisen(); }
     return;
   }
   const nachbar = markeNah(e, andereOrte(id, planZiel.key));
@@ -18451,7 +18580,10 @@ $('#planBox').onclick = e => {
   else planHinweisen();                       // steht schon: Streifen zurückholen
 };
 /* Aus einer Karte heraus: gibt es mehrere Pläne, wird oben gewählt. */
-async function verorten(key, titel){
+/* setzen: aus „Objekte bearbeiten“ (v1.222) – dort wird eingerichtet, die
+   Marke lässt sich gleich ziehen. Sonst öffnet die Übersicht mit dem Objekt
+   in der Mitte; nur ohne Marke geht es gleich ans Setzen. */
+async function verorten(key, titel, setzen){
   let liste = [];
   try{ liste = (await Bilder.alle()) || []; }catch(e){}
   if(!liste.length){ toast('Erst einen Grundriss hinterlegen'); return; }
@@ -18473,6 +18605,8 @@ async function verorten(key, titel){
      heraus und zeigt die falsche Unterseite. */
   if(current === 'setsub') setStack.push({seite:setSeite, titel:setTitel});
   planListe = liste;
+  planVonKarte = false;
+  if(!setzen && ortPlaene(key).includes(id)){ await planZeigen(id, null, key); return; }
   await planZeigen(id, {key, titel});
 }
 $('#btnNeuLaden').innerHTML = FRISCH_SVG;

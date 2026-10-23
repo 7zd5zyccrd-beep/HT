@@ -712,6 +712,14 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   `nr` (Reihenfolge, zum Sortieren) und `zeichen` (Anzeige; Marke, Tipp,
   Sammelmarke, Blatt, Legende). Lange Zeichen: `.marke.nummer.lang`, keine
   gedrehte Kapsel. Zähler immer fortlaufend.
+- Ein Grundriss für alles (v1.222, Jean): `verorten(key, titel, setzen)`
+  öffnet mit Marke die Übersicht mit `planFokus` (pulst, mittig, Typ über
+  `katWahl` nur für diesen Besuch, nie gesammelt); ohne Marke oder mit
+  `setzen` (Objekte bearbeiten) wie bisher `planZiel`. Tipp in der
+  Übersicht → `infoKarte` (Stand aus `suchStand0`, „Öffnen ›“ =
+  `verlaufOeffnen`, „Marke verschieben“ = `markeVerschieben`, `planVonKarte`,
+  `#btnPlanFertig` → `verschiebenFertig`). `inKontrolleOffen` = gelber Ring.
+  `#btnGrund` oben rechts auf Anlagen öffnet `nwPlanZuletzt` (nur Gerät).
 - Sammelmarken (v1.132): `sammelnAuffrischen` fasst in der Übersicht
   Nummernmarken zusammen, sobald eine die Ziffern der anderen verdecken würde
   (`sammelNoetig`, Schirmpixel, seit v1.134; überlappende Kreise allein
