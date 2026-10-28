@@ -262,6 +262,19 @@ steht.
   derselben Art direkt danach blendet nur den Inhalt. Von unten bewegt
   sich der Schleier über `backgroundColor`, nicht opacity (sonst schien der
   Reiter durch).
+- Leiste nach dem Tippen (v1.224): `tippEnde()` im resize von `hoeheBinden`
+  (kein Feld aktiv), Leiste gleitet von unten herein.
+- Etappe 2 (v1.225): `weichMerken(box, sel, schl)` vor dem Neuaufbau, gibt
+  `spielen()` für danach (nach `lageHalten`). Nachweis (`data-i`), Rundgang
+  (`data-w`, `neuUndHalten(top, ziel, still)`), Zähler-Umhängen. Nicht bei
+  Mangel mit Fokus, nicht nach dem Ziehen. `weichStopp` im click-Capture
+  (nicht pointerdown – sonst sprang die Karte unter dem Finger weg und der
+  Tipp ging verloren). Heute: `zeileWeg(knopf, tu, frisch)` blendet eine
+  Vorschlagszeile aus; `weichVormerken` (auch in `toastRueck`) → nächster
+  `renderHome` (≤ 3 s, gleiche Seite) über `homeWeichAnfang/-Ende`
+  (`homeSchl`, `HOME_SEL`); neue `data-aufg` leuchten (`.leuchtet`,
+  `leuchtend` hält es über einen zweiten Aufbau). `renderHome` löscht einen
+  wartenden `listeNachziehen`.
 
 ## Aufgabenliste und Planung (Stand v1.102)
 

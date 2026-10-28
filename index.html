@@ -10,6 +10,16 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.225 28.10.2026 Sanfte Übergänge, Etappe 2. In der Kontrolle gleitet nach
+                    „In Ordnung“ die nächste Karte an ihren Platz, statt
+                    hinzuspringen; ebenso beim Auf- und Zuklappen, im
+                    Gemeinsamen Rundgang und beim Zuklappen eines Zählers.
+                    Bei einem Mangel bleibt es, wie es war (dort geht die
+                    Tastatur auf). Auf Heute blendet ein beantworteter
+                    Vorschlag aus, die Liste rückt weich nach, und was neu
+                    dazukommt oder eingeplant wurde, leuchtet einmal kurz auf.
+                    Ebenso nach „Rückgängig“: das Zurückgeholte leuchtet auf.
+                    Die App rollt dafür nicht von selbst.
   v1.224 28.10.2026 Leiste unten nach dem Tippen ruhiger (Jean: zurück aus
                     der Suche flackerte es, ein roter Ring stand kurz, wo
                     gleich darauf die Leiste erschien). Sie kommt jetzt in
@@ -3974,6 +3984,12 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 html.ruhig{--dauer-kurz:0ms;--dauer-mittel:0ms}
 html.ruhig *,html.ruhig *::before,html.ruhig *::after{transition-duration:0s!important;animation-duration:0s!important;animation-iteration-count:1!important}
 html.ruhig :is(#planBox,#planLupe) .marke::after{animation:none!important}
+/* Aufleuchten (v1.225): Neues oder Zurückgeholtes in der Liste hinterlegt
+   sich einmal kurz, damit man sieht, wo es steht. */
+:root{--leuchten:#fbe7a6}
+html.dunkel{--leuchten:#4d4113}
+.leuchtet{animation:leuchten .9s ease-out}
+@keyframes leuchten{from{background-color:var(--leuchten)}}
 </style>
 </head>
 <body>
@@ -4272,7 +4288,7 @@ html.ruhig :is(#planBox,#planLupe) .marke::after{animation:none!important}
 
 <script>
 'use strict';
-const VERSION = 'v1.224';
+const VERSION = 'v1.225';
 const BUILD   = VERSION + ' · 28.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5810,6 +5826,98 @@ function seiteBewegen(von, name, art){
   else if(art === 'zurueck') bewegen(v, [{opacity:0, transform:'translateX(-20px)'}, {opacity:1, transform:'none'}], DAUER.mittel);
   else bewegen(v, [{opacity:0, transform:'translateX(28px)'}, {opacity:1, transform:'none'}], 240);
 }
+/* Weiches Nachrücken (v1.225, Etappe 2): vor einem Neuaufbau die Lage jeder
+   Karte merken, danach den Unterschied als kurze Bewegung zurückspielen. Die
+   Listen bauen per innerHTML neu, darum über Schlüssel statt Elemente. Nur
+   nach einer Handlung, nie beim Öffnen einer Seite. Bewegt wird nur, was im
+   Bild steht; wer von weit her käme, blendet nur ein. */
+let weichLaeuft = [];
+function weichStopp(){ weichLaeuft.forEach(a => { try{ a.finish(); }catch(e){} }); weichLaeuft = []; }
+/* Ein Tipp beendet laufende Bewegungen, bevor seine Handlung misst
+   (lageHalten rechnet mit der Lage auf dem Schirm). Erst beim click, nicht
+   schon beim Aufsetzen: sonst spränge die Karte unter dem Finger weg und
+   der Tipp ginge ins Leere. */
+document.addEventListener('click', weichStopp, true);
+function weichMerken(box, sel, schl){
+  if(!box || !bewegungAn()) return () => {};
+  weichStopp();
+  const m = new Map();
+  box.querySelectorAll(sel).forEach(el => { const k = schl(el); if(k != null) m.set(k, el.getBoundingClientRect().top); });
+  return () => {
+    const h = window.innerHeight;
+    box.querySelectorAll(sel).forEach(el => {
+      const k = schl(el); if(k == null) return;
+      const r = el.getBoundingClientRect();
+      if(r.bottom < 0 || r.top > h) return;
+      const alt = m.get(k), dy = alt == null ? null : alt - r.top;
+      if(dy != null && Math.abs(dy) < 1) return;
+      const a = dy == null || Math.abs(dy) > h * .8
+        ? bewegen(el, [{opacity:0}, {opacity:1}], 160, 'ease-out')
+        : bewegen(el, [{transform:`translateY(${dy}px)`}, {transform:'none'}], DAUER.mittel);
+      if(a) weichLaeuft.push(a);
+    });
+  };
+}
+/* Heute nach Übernehmen, Nicht jetzt oder Rückgängig (v1.225): die Handlung
+   merkt vor, der nächste Aufbau von Heute (in den nächsten Sekunden, auf
+   derselben Seite) rückt weich nach. Neu erschienene Einträge leuchten auf;
+   die App rollt dafür nicht (Jean). */
+let weichVor = null, leuchtend = null;
+const weichVormerken = frisch => { weichVor = {bis:Date.now() + 3000, seite:current, frisch}; };
+function homeSchl(el){
+  const d = el.dataset;
+  if(el.classList.contains('hzeile')){
+    const k = el.querySelector('[data-hja],[data-gja],[data-vnein],[data-vorz],[data-aufg],[data-nw]');
+    return k ? 'h:' + [...k.attributes].filter(x => x.name.startsWith('data-')).map(x => x.name + '=' + x.value).join('&') : null;
+  }
+  if(el.classList.contains('eyebrow')) return 'e:' + (el.firstChild ? el.firstChild.textContent : '');
+  if(el.classList.contains('vorschlaege')) return 'vk';
+  if(d.aufg) return 'a:' + d.aufg;
+  if(d.nw) return 'n:' + d.nw + '|' + (d.ziel || '') + (d.akku ? '|akku' : '');
+  return null;
+}
+const HOME_SEL = '.eyebrow, .hzeile, .card.vorschlaege, .btn.eintrag[data-aufg], .btn.eintrag[data-nw]';
+function homeWeichAnfang(box){
+  const v = weichVor;
+  if(!v || Date.now() > v.bis || v.seite !== current || current !== 'home') return null;
+  weichVor = null;
+  const vorher = new Set([...box.querySelectorAll('.btn.eintrag[data-aufg]')].map(b => b.dataset.aufg));
+  return {spielen:weichMerken(box, HOME_SEL, homeSchl), vorher, frisch:v.frisch};
+}
+function homeWeichEnde(box, w){
+  if(w){
+    w.spielen();
+    const neu = [...box.querySelectorAll('.btn.eintrag[data-aufg]')].map(b => b.dataset.aufg)
+      .filter(id => !w.vorher.has(id)).concat(w.frisch ? [w.frisch] : []);
+    if(neu.length && bewegungAn()) leuchtend = {ids:new Set(neu), ab:Date.now()};
+  }
+  /* Baut die Liste gleich noch einmal, leuchtet es weiter, wo es war. */
+  if(!leuchtend) return;
+  const um = Date.now() - leuchtend.ab;
+  if(um > 900){ leuchtend = null; return; }
+  leuchtend.ids.forEach(id => box.querySelectorAll(`.btn.eintrag[data-aufg="${CSS.escape(id)}"]`).forEach(b => {
+    b.style.animationDelay = -um + 'ms'; b.classList.add('leuchtet');
+  }));
+}
+/* Eine Zeile im Kasten „Vorschläge“ blendet aus, dann geschieht die
+   Handlung und Heute baut sich weich neu. Öffnet die Handlung ein Fenster,
+   kommt die Zeile zurück. */
+function zeileWeg(knopf, tu, frisch){
+  const z = knopf.closest('.hzeile');
+  weichVormerken(frisch);
+  const a = z && bewegen(z, [{opacity:1, transform:'none'}, {opacity:0, transform:'translateY(-4px)'}], 180, KURVE.rein);
+  const los = () => {
+    if(los.lief) return; los.lief = true;
+    tu();
+    if(z && z.isConnected){
+      if(current === 'home' && $('#dlg').hidden) renderHome();
+      else { z.style.opacity = ''; z.style.pointerEvents = ''; }
+    }
+  };
+  if(!a){ los(); return; }
+  z.style.pointerEvents = 'none'; z.style.opacity = '0';
+  a.onfinish = los; setTimeout(los, 300);
+}
 /* Höhe des Gerüsts = sichtbarer Bereich (v1.94). Geht die Tastatur auf, wird
    #bild kürzer, statt dass iOS die ganze Seite samt Kopfleiste hochschiebt;
    das Feld mit dem Cursor bleibt im Bild. */
@@ -6212,7 +6320,7 @@ function toast(t){
 }
 /* Dieselbe Meldung mit „Rückgängig“ (v1.69) – etwas länger stehend und nur
    dann antippbar; sonst ließe sie keinen Tipp auf die Seite darunter durch. */
-function toastRueck(t, aktion){ toastKnopf(t, 'Rückgängig', aktion); }
+function toastRueck(t, aktion){ toastKnopf(t, 'Rückgängig', () => { weichVormerken(); aktion(); }); }   // (v1.225)
 /* Meldung mit eigenem Knopf (v1.212), z.B. „An Outlook senden“. */
 function toastKnopf(t, wort, aktion, ms = 4500){
   const el = $('#toast');
@@ -6829,6 +6937,10 @@ function heuteZeile(liste){
 }
 function renderHome(){
   listeGebaut = true;
+  /* Ein zweiter Aufbau kurz danach (listeNachziehen) bräche die Bewegung ab
+     und tut nichts Neues (v1.225). */
+  if(current === 'home') clearTimeout(listeUhr);
+  const weich = homeWeichAnfang($('#homeListe'));
   sprWocheNachholen();
   /* Von hier aus (Suche) geöffnete Grundrisse und Verläufe merken sich eine
      Lage für die Rückkehr, die auf der Startseite niemand braucht – sie darf
@@ -6905,6 +7017,7 @@ function renderHome(){
   $('#homeListe').innerHTML = warnZeile() + firmaZeilen + sicherungZeile(gibt) + auslastungZeile(liste)
     + vorschlaegeKarte(hinweise, gelegenheiten(liste), liste) + inhalt
     + matStartHtml();
+  homeWeichEnde($('#homeListe'), weich);
   knoepfeVerdrahten($('#homeListe'));
   matStartVerdrahten();
   const sich = $('#homeListe [data-sichern]');
@@ -6916,13 +7029,13 @@ function renderHome(){
   $('#homeListe').querySelectorAll('[data-wplan]').forEach(b => b.onclick = () => bereich('wplan'));
   const wk = $('#homeListe [data-warn]');
   if(wk) wk.onclick = () => { go('wetter'); wetterAbrufen(); };
-  $('#homeListe').querySelectorAll('[data-hja]').forEach(b => b.onclick = () => {
+  $('#homeListe').querySelectorAll('[data-hja]').forEach(b => b.onclick = () => zeileWeg(b, () => {
     const h = hinweise.find(x => x.schluessel === b.dataset.hja);
     if(h && h.erg) ergebnisVorschlagJa(h);
     else if(h) hinweisUebernehmen(h);
-  });
-  $('#homeListe').querySelectorAll('[data-hnein]').forEach(b => b.onclick = () =>
-    b.dataset.hnein.startsWith('erg:') ? ergebnisVorschlagNein(b.dataset.hnein) : hinweisBeantwortet(b.dataset.hnein, false));
+  }));
+  $('#homeListe').querySelectorAll('[data-hnein]').forEach(b => b.onclick = () => zeileWeg(b, () =>
+    b.dataset.hnein.startsWith('erg:') ? ergebnisVorschlagNein(b.dataset.hnein) : hinweisBeantwortet(b.dataset.hnein, false)));
   $('#homeListe').querySelectorAll('[data-vorz]').forEach(b => b.onclick = () => {
     vorziehenAuf = !vorziehenAuf; vorziehenAlle = false; renderHome();
   });
@@ -6930,19 +7043,24 @@ function renderHome(){
   $('#homeListe').querySelectorAll('[data-vnein]').forEach(b => b.onclick = () => {
     const x = AUFG.find(y => y.id === b.dataset.vnein);
     if(!x) return;
-    x.vorzNein = heute(); saveAufg();
-    toastRueck('Heute nicht mehr vorgeschlagen', () => { delete x.vorzNein; saveAufg(); });
+    zeileWeg(b, () => {
+      x.vorzNein = heute(); saveAufg();
+      toastRueck('Heute nicht mehr vorgeschlagen', () => { delete x.vorzNein; saveAufg(); });
+    });
   });
   $('#homeListe').querySelectorAll('[data-gja],[data-gnein]').forEach(b => b.onclick = () => {
     const [id, iso] = (b.dataset.gja || b.dataset.gnein).split('|');
     const x = AUFG.find(y => y.id === id);
     if(!x) return;
-    if(b.dataset.gja){
-      const vor = x.geplant; x.geplant = iso;
-      toastRueck('Eingeplant für ' + planTagWort(alsDatum(iso)), () => { if(vor) x.geplant = vor; else delete x.geplant; saveAufg(); });
-    }
-    else x.gelegenheitNein = iso;
-    saveAufg();
+    /* Eingeplantes leuchtet an seinem neuen Platz auf (v1.225). */
+    zeileWeg(b, () => {
+      if(b.dataset.gja){
+        const vor = x.geplant; x.geplant = iso;
+        toastRueck('Eingeplant für ' + planTagWort(alsDatum(iso)), () => { if(vor) x.geplant = vor; else delete x.geplant; saveAufg(); });
+      }
+      else x.gelegenheitNein = iso;
+      saveAufg();
+    }, b.dataset.gja ? id : null);
   });
 }
 /* ---------- Mehr (v1.184) ----------------------------------------------------
@@ -7235,9 +7353,13 @@ function renderRundgang(){
   if(datum) datum.oninput = datum.onchange = () => { DAT.medien.datum = datum.value; saveDat(); };
 
   /* Nach einem Neuaufbau die Karte wiederfinden, auf die man gerade schaut. */
-  const neuUndHalten = (top, ziel) => {
+  /* still: ohne Nachrücken (v1.225) – nach dem Ziehen und wenn gleich die
+     Tastatur aufgeht. */
+  const neuUndHalten = (top, ziel, still) => {
+    const spielen = still ? () => {} : weichMerken($('#rgListe'), '.pos', el => el.dataset.w);
     renderRundgang();
     if(ziel) lageHalten(top, () => $(`#rgListe .pos[data-w="${CSS.escape(ziel)}"]`));
+    spielen();
   };
   const naechsteOffene = w => { const i = offene.indexOf(w); return i >= 0 ? offene[i + 1] : null; };
   /* Ziehen (v1.217): die Karte rückt im gemeinsamen Weg vor bzw. hinter
@@ -7248,7 +7370,7 @@ function renderRundgang(){
     const j = neu.indexOf(nb);
     neu.splice(nach < von ? j : j + 1, 0, w);
     CFG.weg = neu; saveCfg();
-    neuUndHalten(top, w);
+    neuUndHalten(top, w, true);
   });
 
   $$('#rgListe .pos').forEach(box => {
@@ -7288,6 +7410,7 @@ function renderRundgang(){
         d.n = d.n || {}; if(!schonOben) d.n[o.id] = laufNr(d);
         rgOffen.delete(w); saveDat();
         const top = box.getBoundingClientRect().top, nach = box.nextElementSibling;
+        const spielen = weichMerken($('#rgListe'), '.pos', el => el.dataset.w);   // (v1.225)
         /* Zuklappen durch Austausch der einen Karte (v1.64); ein Tipp klappt
            wieder auf. */
         const hilfe = document.createElement('div');
@@ -7295,12 +7418,13 @@ function renderRundgang(){
         const kl = hilfe.firstElementChild;
         box.replaceWith(kl);
         kl.onclick = () => { const t = kl.getBoundingClientRect().top; rgOffen.add(w); neuUndHalten(t, w); };
-        if(schonOben){ if(nach) lageHalten(top, () => nach); return; }
+        if(schonOben){ if(nach) lageHalten(top, () => nach); spielen(); return; }
         const erste = $('#rgListe .pos');
         if(erste && erste !== kl) $('#rgListe').insertBefore(kl, erste);
         const i = offene.indexOf(w); if(i >= 0) offene.splice(i, 1);
         const gr = kl.querySelector('.griff'); if(gr) gr.remove();   // oben steht sie fest (v1.217)
         if(nach) lageHalten(top, () => nach);
+        spielen();
       };
       feld.onblur = () => standPruefen(d, o.id, box, umhaengen);
       pruefVerdrahten(d, o.id, box, umhaengen);
@@ -7331,7 +7455,7 @@ function renderRundgang(){
       else{ rgOffen.delete(w); if(z.status) rgGeprueft.add(w); }
       saveDat();
       /* Wandert die Karte nach oben, rückt die nächste offene an ihren Platz. */
-      neuUndHalten(top, z.status && !mangel && nach ? nach : w);
+      neuUndHalten(top, z.status && !mangel && nach ? nach : w, z.status && mangel && !z.bem);
       if(z.status && mangel && !z.bem) bemFokus([...$$('#rgListe .pos')].find(x => x.dataset.w === w)?.querySelector('[data-feld="bem"]'));
     });
     box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
@@ -12253,12 +12377,14 @@ function renderNachweis(){
     /* Auf- und Zuklappen; die Karte bleibt dabei an ihrem Platz auf dem Schirm. */
     const umschalten = auf => {
       const top = box.getBoundingClientRect().top;
+      const spielen = weichMerken($('#nwListe'), '.pos', el => el.dataset.i);   // (v1.225)
       if(auf) offenKarten.add(a); else offenKarten.delete(a);
       /* Vor dem Neuaufbau festhalten: dort wird die Laufnummer vergeben, danach
          wäre nicht mehr zu erkennen, dass die Karte gerade wandert. */
       const wandert = !auf && !!n.kompakt && !!z.status && !z.n;
       renderNachweis();
       halten(top, wandert);
+      spielen();
     };
     if(box.classList.contains('kompakt')){ box.onclick = () => umschalten(true); return; }
     const kopf = box.querySelector('.name.zu');
@@ -12279,12 +12405,16 @@ function renderNachweis(){
       const mangel = istMangel(n, z.status);
       if(z.status && mangel) offenKarten.add(a); else offenKarten.delete(a);
       const wandert = !!n.kompakt && !!z.status && !mangel && !z.n;
+      /* Die nächste Karte gleitet an ihren Platz (v1.225) – nicht, wenn
+         gleich die Tastatur aufgeht, dort misst feldZeigen. */
+      const spielen = weichMerken($('#nwListe'), '.pos', el => el.dataset.i);
       /* Die Leiste zählt mit („x Anlagen ohne Zustand“) – bis v1.59 stand sie
          bis zum nächsten Öffnen auf dem alten Stand. */
       saveDat(); renderNachweis(); renderBar();
       halten(top, wandert);
       /* Bei einem Mangel gleich ins Feld „Was ist defekt?“ (v1.191). */
       if(z.status && mangel && !z.bem) bemFokus($(`#nwListe .pos[data-i="${i}"] [data-feld="bem"]`));
+      else spielen();
     });
     box.querySelector('[data-feld="datum"]').onchange = e => { z.datum = e.target.value; saveDat(); };
     box.querySelector('[data-feld="bem"]').oninput    = e => { z.bem   = e.target.value; saveDat(); vorschlagZeigen(box, n, z.bem); };
