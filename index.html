@@ -10,6 +10,14 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.228 28.10.2026 Nach dem Ausgeben ist die Bestätigung zu sehen (Jean: es
+                    erschien „gar nichts“). Das Fenster „Wie lange hat es
+                    gedauert?“ ging im selben Augenblick auf, dunkelte das
+                    Meldungsband ab und ließ die Rückfrage „Wurde das Blatt
+                    verschickt?“ nahtlos in sich übergehen. Jetzt schließt die
+                    Rückfrage, „✓ Blatt ausgegeben“ steht drei Sekunden über
+                    allem, und erst knapp eine Sekunde später fragt die App
+                    nach der Dauer.
   v1.227 28.10.2026 Sanfte Übergänge, Etappe 4 (Feinschliff). Beim Ziehen
                     gleitet die losgelassene Karte vom Finger auf ihren
                     Platz, statt zu springen. Nach dem Ausgeben zeichnet sich
@@ -4013,6 +4021,8 @@ html.dunkel{--leuchten:#4d4113}
 .leuchtet{animation:leuchten .9s ease-out}
 @keyframes leuchten{from{background-color:var(--leuchten)}}
 /* Häkchen im Meldungsband nach dem Ausgeben (v1.227): zeichnet sich einmal. */
+/* Über dem Schleier eines Fensters, damit es nicht untergeht (v1.228). */
+#toast.fertig{z-index:75}
 #toast .fertigHaken{width:16px;height:16px;vertical-align:-2px;margin-right:6px;fill:none;stroke:currentColor;
   stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 </style>
@@ -4313,7 +4323,7 @@ html.dunkel{--leuchten:#4d4113}
 
 <script>
 'use strict';
-const VERSION = 'v1.227';
+const VERSION = 'v1.228';
 const BUILD   = VERSION + ' · 28.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -6436,13 +6446,18 @@ let toastTimer = null;
 function toastFertig(t){
   toast(t);
   const el = $('#toast');
+  /* Länger stehen und über dem Schleier (v1.228, Jean: nach dem Ausgeben
+     erschien „gar nichts“ – das Fenster zur Dauer ging im selben Augenblick
+     auf und dunkelte das Band ab). */
+  el.classList.add('fertig');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on', 'fertig'), 3000);
   el.insertAdjacentHTML('afterbegin', '<svg class="fertigHaken" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" pathLength="20" stroke-dasharray="20"/></svg>');
   bewegen(el.querySelector('.fertigHaken path'), [{strokeDashoffset:20}, {strokeDashoffset:0}], 300, 'ease-out');
 }
 let blattFrisch = 0;   // eben ausgegeben: die Zeile „Ausgegebene Blätter“ leuchtet auf
 function toast(t){
   const el = $('#toast'), stand = el.classList.contains('on');
-  el.textContent = t; el.classList.remove('mitKnopf'); el.classList.add('on');
+  el.textContent = t; el.classList.remove('mitKnopf', 'fertig'); el.classList.add('on');
   if(stand) bewegen(el, [{opacity:1}, {opacity:.6}, {opacity:1}], 160, 'ease-in-out');   // (v1.226)
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), 1800);
 }
@@ -21324,9 +21339,11 @@ async function ausgebenLauf(){
   else toast('Ausgegeben – Blatt nicht in der App gespeichert');
   /* Nach Dauer und Utensilien fragen (v1.61), vorbelegt mit der gemessenen Zeit
      aus dem Tätigkeitsbuch. Der Sprinkler fragt schon je Kontrollgang. */
+  /* Erst einen Augenblick später, damit das Häkchen zu sehen ist und das
+     Fenster nicht nahtlos aus „Wurde das Blatt verschickt?“ wird (v1.228). */
   if(n.art !== 'sprinkler'){
     const b = BUCH.slice().reverse().find(x => x.k === kAus && x.zeitraum === zeitraum);
-    taetFragen({key:'nw:' + kAus, name:n.label, zr:zeitraum, gemessen:b ? +b.minuten || 0 : 0});
+    setTimeout(() => taetFragen({key:'nw:' + kAus, name:n.label, zr:zeitraum, gemessen:b ? +b.minuten || 0 : 0}), 900);
   }
 }
 

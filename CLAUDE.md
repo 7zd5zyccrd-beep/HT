@@ -294,6 +294,10 @@ steht.
   `toastFertig(t)` (Häkchen zeichnet sich) nach dem Ausgeben, `blattFrisch`
   lässt „Ausgegebene Blätter“ auf der Typseite aufleuchten.
   Damit sind alle vier Etappen umgesetzt.
+- v1.228 (Jean: nach dem Ausgeben „gar nichts“): `taetFragen` öffnete im
+  selben Augenblick und dunkelte das Band ab. Jetzt `#toast.fertig`
+  (z-index über `#dlg`, 3 s) und `taetFragen` erst nach 900 ms. Test mit
+  `navigator.share`, das AbortError wirft (wie iOS), `t10.js`.
 
 ## Aufgabenliste und Planung (Stand v1.102)
 
