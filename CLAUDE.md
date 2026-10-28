@@ -267,14 +267,26 @@ steht.
 - Etappe 2 (v1.225): `weichMerken(box, sel, schl)` vor dem Neuaufbau, gibt
   `spielen()` für danach (nach `lageHalten`). Nachweis (`data-i`), Rundgang
   (`data-w`, `neuUndHalten(top, ziel, still)`), Zähler-Umhängen. Nicht bei
-  Mangel mit Fokus, nicht nach dem Ziehen. `weichStopp` im click-Capture
-  (nicht pointerdown – sonst sprang die Karte unter dem Finger weg und der
-  Tipp ging verloren). Heute: `zeileWeg(knopf, tu, frisch)` blendet eine
+  Mangel mit Fokus, nicht nach dem Ziehen. Tippen während des Nachrückens
+  (v1.226, `umTipp`/`tippZiel`): pointerdown beendet die Bewegung; trifft
+  der Finger danach einen `[data-status]`-Knopf, gilt der Tipp ihm (Abhaken
+  im Takt auf derselben Stelle, wie ohne Bewegung – Test `t8.js`), sonst dem
+  vorher Gesehenen; click-Capture leitet um. Ohne das ging ein schneller Tipp
+  verloren. Heute: `zeileWeg(knopf, tu, frisch)` blendet eine
   Vorschlagszeile aus; `weichVormerken` (auch in `toastRueck`) → nächster
   `renderHome` (≤ 3 s, gleiche Seite) über `homeWeichAnfang/-Ende`
   (`homeSchl`, `HOME_SEL`); neue `data-aufg` leuchten (`.leuchtet`,
   `leuchtend` hält es über einen zweiten Aufbau). `renderHome` löscht einen
   wartenden `listeNachziehen`.
+- Etappe 3 (v1.226): `lagen[name#Stapelplatz]` beim Weg tiefer, `zurueck`
+  setzt `zurueckLage`, `go` → `lageWieder(y, seite)` (fasst 0,5 s nach, für
+  die Objektseite). Nicht für nachweis/rundgang/plan/blatt und nicht aus dem
+  Grundriss (eigene Rückkehr). `setOeffnen` von setsub zu setsub setzt
+  `wechselArt`, `go` zählt das als Wechsel (`wechsel`). Meldungsband:
+  `.ablauf`-Linie in `toastKnopf`, Ersatz atmet. Aufklappen: `toggle` im
+  Capture nur nach Tipp auf `summary` (`aufTipp`), `aufklappen(els)` auch für
+  `.angFeld`; „Zeit übrig?“ über `weichVormerken`. `renderVerlauf` behält
+  dasselbe Objekt (`box.dataset.ziel`), „wird geladen“ erst nach 250 ms.
 
 ## Aufgabenliste und Planung (Stand v1.102)
 

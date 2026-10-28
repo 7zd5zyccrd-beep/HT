@@ -10,6 +10,15 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.226 28.10.2026 Sanfte Übergänge, Etappe 3. Zurück führt an dieselbe
+                    Stelle der Liste, aus der man gekommen ist (auch über den
+                    Reiter zurück auf die Hauptseite), statt nach oben. Im
+                    Meldungsband läuft unten eine dünne Linie ab, solange
+                    „Rückgängig“ noch gilt; eine neue Meldung, die eine
+                    stehende ersetzt, atmet einmal kurz. Aufklappen (Angaben,
+                    „Zeit übrig?“ und die übrigen Klappen) blendet den Inhalt
+                    weich ein. Die Objektseite zeigt nicht mehr kurz „wird
+                    geladen“, sondern füllt sich beim Hereingleiten.
   v1.225 28.10.2026 Sanfte Übergänge, Etappe 2. In der Kontrolle gleitet nach
                     „In Ordnung“ die nächste Karte an ihren Platz, statt
                     hinzuspringen; ebenso beim Auf- und Zuklappen, im
@@ -3978,7 +3987,13 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 :where(button,.angZeile,.vsZiel,.btn.eintrag){transition:opacity .15s ease-out}
 :where(button:not([disabled]),.angZeile,.vsZiel,.btn.eintrag):active{transition:none}
 #reiter button{transition:color .15s ease-out,opacity .15s ease-out}
-#toast{transition:opacity var(--dauer-mittel) var(--kurve-raus),transform var(--dauer-mittel) var(--kurve-raus)}
+/* Meldungsband (v1.226): klar herein, leise hinaus. Die dünne Linie unten
+   läuft ab, solange der Knopf darin (Rückgängig …) noch gilt. */
+#toast{transition:opacity .16s var(--kurve-rein),transform .16s var(--kurve-rein)}
+#toast.on{transition:opacity var(--dauer-mittel) var(--kurve-raus),transform var(--dauer-mittel) var(--kurve-raus)}
+#toast .ablauf{position:absolute;left:12px;right:12px;bottom:3px;height:2px;border-radius:1px;
+  background:currentColor;opacity:.4;transform-origin:left center;pointer-events:none}
+html.ruhig #toast .ablauf{display:none}
 /* Ruhig (Gerät „Bewegung reduzieren“ oder Schalter unter Bedienung): alles
    steht sofort da, die Marke im Grundriss trägt einen ruhigen Ring statt Puls. */
 html.ruhig{--dauer-kurz:0ms;--dauer-mittel:0ms}
@@ -4288,7 +4303,7 @@ html.dunkel{--leuchten:#4d4113}
 
 <script>
 'use strict';
-const VERSION = 'v1.225';
+const VERSION = 'v1.226';
 const BUILD   = VERSION + ' · 28.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5560,6 +5575,10 @@ new MutationObserver(titelMitte).observe(document.querySelector('header'),
 addEventListener('resize', titelMitte);
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
 let wechselArt = null;   // 'zurueck'|'blende' für den nächsten go(), sonst nach push (v1.223)
+/* Zurück an dieselbe Stelle (v1.226): beim Weg tiefer merkt sich die Seite
+   ihre Bildlage, Schlüssel = Name und Platz im Stapel. zurueckLage trägt sie
+   in den nächsten go(). */
+let lagen = {}, zurueckLage = null;
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
    nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
    Weg, den WebKit selbst anbietet. Ausgenommen bleiben der Grundriss – er zoomt
@@ -5586,9 +5605,11 @@ function go(name, push = true){
   if(current === 'plan' && name !== 'plan' && name !== 'blatt') planVorratFrei();
   if(current === 'plan' && name !== 'plan') planWaehlen = false;
   if(current === 'termin' && name !== 'termin') terminVerlassen();
-  if(push && current !== name) stack.push(current);
+  if(push && current !== name){ lagen[current + '#' + stack.length] = bildY(); stack.push(current); }
   if(current !== name && !['plan', 'blatt', 'verlauf'].includes(name)) reihenModus = false;
-  const von = current, art = wechselArt || (push ? 'vor' : 'zurueck'), titelVor = $('#titel').textContent;
+  /* Von einer Einstellungs-Unterseite auf die nächste bleibt die Ansicht
+     dieselbe – wechselArt sagt dann, dass es trotzdem ein Wechsel ist. */
+  const von = current, wechsel = von !== name || !!wechselArt, art = wechselArt || (push ? 'vor' : 'zurueck'), titelVor = $('#titel').textContent;
   wechselArt = null;
   current = name;
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
@@ -5672,8 +5693,12 @@ function go(name, push = true){
   if(name === 'setsub')   renderSetSub();
   if(name === 'blatt')    requestAnimationFrame(blattEinpassen);
   renderBar();
-  seiteBewegen(von, name, art);
-  if(von !== name && $('#titel').textContent !== titelVor) bewegen($('#titel'), [{opacity:0}, {opacity:1}], DAUER.kurz, 'ease-out');
+  if(wechsel) seiteBewegen(von === name ? '' : von, name, art);
+  /* Grundriss und Kontrollen haben eigene Rückkehr (listenLage, lageZurueck,
+     listenSprung) – dort nichts zusätzlich. */
+  const zl = zurueckLage; zurueckLage = null;
+  if(zl != null && wechsel && von !== 'plan' && !['nachweis', 'rundgang', 'plan', 'blatt'].includes(name)) lageWieder(zl, name);
+  if(wechsel && $('#titel').textContent !== titelVor) bewegen($('#titel'), [{opacity:0}, {opacity:1}], DAUER.kurz, 'ease-out');
 }
 /* --- Zoom der Blattvorschau (v1.138, vom Nutzer so gewünscht) ---------------
    Beim Öffnen passt der Bogen genau in die Breite; zwei Finger vergrößern bis
@@ -5736,6 +5761,7 @@ function zurueck(){
     return;
   }
   const p = stack.pop();
+  if(p){ zurueckLage = lagen[p + '#' + stack.length]; delete lagen[p + '#' + stack.length]; wechselArt = 'zurueck'; }   // (v1.226)
   /* Führt der Weg auf eine Unterseite der Einstellungen zurück, muss auch deren
      Zustand zurück – sonst stünde dort die zuletzt geöffnete Seite. */
   if(p === 'setsub'){ const v = setStack.pop(); if(v){ setSeite = v.seite; setTitel = v.titel; } }
@@ -5751,7 +5777,8 @@ function bereich(name){
   if(name === current && !stack.length && bildY() > 0 && bewegungAn()){ bild().scrollTo({top:0, behavior:'smooth'}); return; }
   /* Aus einer Unterseite zurück auf die Hauptseite ihres Bereichs: von links. */
   wechselArt = stack[0] === name ? 'zurueck' : 'blende';
-  stack = []; setStack = [];
+  if(stack[0] === name) zurueckLage = lagen[name + '#0'];
+  stack = []; setStack = []; lagen = {};
   go(name, false);
 }
 $$('#reiter [data-reiter]').forEach(b => b.onclick = () => bereich(b.dataset.reiter));
@@ -5826,6 +5853,22 @@ function seiteBewegen(von, name, art){
   else if(art === 'zurueck') bewegen(v, [{opacity:0, transform:'translateX(-20px)'}, {opacity:1, transform:'none'}], DAUER.mittel);
   else bewegen(v, [{opacity:0, transform:'translateX(28px)'}, {opacity:1, transform:'none'}], 240);
 }
+/* Bildlage nach dem Zurückkommen (v1.226). Manche Seiten bauen erst nach
+   einem Augenblick fertig auf (Objektseite) – bis dahin wird nachgefasst,
+   höchstens eine halbe Sekunde und nur, solange niemand selbst rollt. */
+function lageWieder(y, seite){
+  const bis = Date.now() + 500;
+  let selbst = false;
+  const halt = () => { selbst = true; };
+  bild().addEventListener('touchstart', halt, {once:true, passive:true});
+  const versuch = () => {
+    if(selbst || current !== seite) return;
+    bildNach(y);
+    if(Math.abs(bildY() - y) > 2 && Date.now() < bis) requestAnimationFrame(versuch);
+    else bild().removeEventListener('touchstart', halt);
+  };
+  versuch();
+}
 /* Weiches Nachrücken (v1.225, Etappe 2): vor einem Neuaufbau die Lage jeder
    Karte merken, danach den Unterschied als kurze Bewegung zurückspielen. Die
    Listen bauen per innerHTML neu, darum über Schlüssel statt Elemente. Nur
@@ -5833,11 +5876,30 @@ function seiteBewegen(von, name, art){
    Bild steht; wer von weit her käme, blendet nur ein. */
 let weichLaeuft = [];
 function weichStopp(){ weichLaeuft.forEach(a => { try{ a.finish(); }catch(e){} }); weichLaeuft = []; }
-/* Ein Tipp beendet laufende Bewegungen, bevor seine Handlung misst
-   (lageHalten rechnet mit der Lage auf dem Schirm). Erst beim click, nicht
-   schon beim Aufsetzen: sonst spränge die Karte unter dem Finger weg und
-   der Tipp ginge ins Leere. */
-document.addEventListener('click', weichStopp, true);
+/* Tippen während des Nachrückens (v1.226). Wer zügig abhakt, tippt immer
+   auf dieselbe Stelle, an die die nächste Karte gerade gleitet: trifft der
+   Finger dort am Ende einen Zustandsknopf („In Ordnung“, „Mangel“), gilt der
+   Tipp ihm – genau wie ohne Bewegung. Alles andere gilt dem, was man gerade
+   sieht. Beim Aufsetzen enden die Bewegungen; Aufsetzen und Loslassen
+   träfen sonst verschiedene Dinge, und der Tipp ginge ins Leere. */
+let umTipp = null;
+const tippZiel = el => el && el.closest ? el.closest('button, a, summary, label, input, select, textarea, .pos, .btn, .angZeile, .vsZiel') : null;
+document.addEventListener('pointerdown', e => {
+  umTipp = null;
+  if(!weichLaeuft.length) return;
+  const sichtbar = tippZiel(e.target);
+  weichStopp();
+  const amEnde = tippZiel(document.elementFromPoint(e.clientX, e.clientY));
+  const ziel = amEnde && amEnde.matches('[data-status]') ? amEnde : sichtbar;
+  if(ziel) umTipp = {ziel, bis:Date.now() + 800};
+}, true);
+document.addEventListener('click', e => {
+  weichStopp();
+  const u = umTipp; umTipp = null;
+  if(!u || Date.now() > u.bis || !u.ziel.isConnected || tippZiel(e.target) === u.ziel) return;
+  e.preventDefault(); e.stopPropagation();
+  u.ziel.click();
+}, true);
 function weichMerken(box, sel, schl){
   if(!box || !bewegungAn()) return () => {};
   weichStopp();
@@ -5858,6 +5920,17 @@ function weichMerken(box, sel, schl){
     });
   };
 }
+/* Aufklappen (v1.226): der Inhalt blendet ein und gleitet ein wenig herab.
+   Nur nach einem Tipp – ein <details>, das beim Neuaufbau offen entsteht,
+   meldet ebenfalls „toggle“ und soll dabei still bleiben. Zuklappen sofort. */
+let aufTipp = 0;
+document.addEventListener('click', e => { if(e.target.closest && e.target.closest('summary')) aufTipp = Date.now(); }, true);
+const aufklappen = els => els.forEach(el => bewegen(el, [{opacity:0, transform:'translateY(-4px)'}, {opacity:1, transform:'none'}], 140, 'ease-out'));
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if(d.tagName !== 'DETAILS' || !d.open || Date.now() - aufTipp > 600) return;
+  aufklappen([...d.children].filter(x => x.tagName !== 'SUMMARY'));
+}, true);
 /* Heute nach Übernehmen, Nicht jetzt oder Rückgängig (v1.225): die Handlung
    merkt vor, der nächste Aufbau von Heute (in den nächsten Sekunden, auf
    derselben Seite) rückt weich nach. Neu erschienene Einträge leuchten auf;
@@ -6315,7 +6388,9 @@ function listenSprung(istOffen){
 
 let toastTimer = null;
 function toast(t){
-  const el = $('#toast'); el.textContent = t; el.classList.remove('mitKnopf'); el.classList.add('on');
+  const el = $('#toast'), stand = el.classList.contains('on');
+  el.textContent = t; el.classList.remove('mitKnopf'); el.classList.add('on');
+  if(stand) bewegen(el, [{opacity:1}, {opacity:.6}, {opacity:1}], 160, 'ease-in-out');   // (v1.226)
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), 1800);
 }
 /* Dieselbe Meldung mit „Rückgängig“ (v1.69) – etwas länger stehend und nur
@@ -6323,9 +6398,14 @@ function toast(t){
 function toastRueck(t, aktion){ toastKnopf(t, 'Rückgängig', () => { weichVormerken(); aktion(); }); }   // (v1.225)
 /* Meldung mit eigenem Knopf (v1.212), z.B. „An Outlook senden“. */
 function toastKnopf(t, wort, aktion, ms = 4500){
-  const el = $('#toast');
-  el.innerHTML = `${esc(t)}<button type="button" class="toastKnopf">${esc(wort)}</button>`;
+  const el = $('#toast'), stand = el.classList.contains('on');
+  el.innerHTML = `${esc(t)}<button type="button" class="toastKnopf">${esc(wort)}</button><span class="ablauf"></span>`;
   el.classList.add('on', 'mitKnopf');
+  /* So lange gilt der Knopf (v1.226); ersetzt die Meldung eine stehende,
+     atmet das Band einmal, damit man den neuen Text bemerkt. */
+  const ab = el.querySelector('.ablauf');
+  if(bewegen(ab, [{transform:'scaleX(1)'}, {transform:'scaleX(0)'}], ms, 'linear')) ab.style.transform = 'scaleX(0)';   // am Ende leer, nicht wieder voll
+  if(stand) bewegen(el, [{opacity:1}, {opacity:.6}, {opacity:1}], 160, 'ease-in-out');
   const weg = () => el.classList.remove('on', 'mitKnopf');
   el.querySelector('button').onclick = () => { clearTimeout(toastTimer); weg(); aktion(); };
   clearTimeout(toastTimer); toastTimer = setTimeout(weg, ms);
@@ -7036,10 +7116,11 @@ function renderHome(){
   }));
   $('#homeListe').querySelectorAll('[data-hnein]').forEach(b => b.onclick = () => zeileWeg(b, () =>
     b.dataset.hnein.startsWith('erg:') ? ergebnisVorschlagNein(b.dataset.hnein) : hinweisBeantwortet(b.dataset.hnein, false)));
+  /* „Zeit übrig?“ klappt weich auf, die Liste darunter rückt nach (v1.226). */
   $('#homeListe').querySelectorAll('[data-vorz]').forEach(b => b.onclick = () => {
-    vorziehenAuf = !vorziehenAuf; vorziehenAlle = false; renderHome();
+    vorziehenAuf = !vorziehenAuf; vorziehenAlle = false; weichVormerken(); renderHome();
   });
-  $('#homeListe').querySelectorAll('[data-vorzmehr]').forEach(b => b.onclick = () => { vorziehenAlle = true; renderHome(); });
+  $('#homeListe').querySelectorAll('[data-vorzmehr]').forEach(b => b.onclick = () => { vorziehenAlle = true; weichVormerken(); renderHome(); });
   $('#homeListe').querySelectorAll('[data-vnein]').forEach(b => b.onclick = () => {
     const x = AUFG.find(y => y.id === b.dataset.vnein);
     if(!x) return;
@@ -9192,7 +9273,7 @@ function renderAufgabe(){
   box.querySelectorAll('[data-az]').forEach(z => z.onclick = () => {
     const k = z.dataset.az, f = box.querySelector(`[data-af="${k}"]`), auf = f.hidden;
     f.hidden = !auf; z.setAttribute('aria-expanded', String(auf));
-    if(auf) angAuf.add(k); else { angAuf.delete(k); angWertNeu(); kopfNeu(); }
+    if(auf){ angAuf.add(k); aufklappen([f]); } else { angAuf.delete(k); angWertNeu(); kopfNeu(); }
   });
   const angWertNeu = () => {
     const wi2 = WICHTIG.find(x => x[0] === a.wichtig), wp2 = WETTER_PROFILE.find(x => x[0] === a.wetter);
@@ -15128,7 +15209,7 @@ function setOeffnen(art, k){
      Zählertausch) bleibt die Ansicht dieselbe – go() legt dann nichts auf den
      Stapel. Damit der Pfeil trotzdem eine Ebene zurückführt und nicht gleich
      ins Menü springt, wird die verlassene Seite hier selbst gemerkt. */
-  if(current === 'setsub'){ setStack.push({seite:setSeite, titel:setTitel}); stack.push('setsub'); }
+  if(current === 'setsub'){ setStack.push({seite:setSeite, titel:setTitel}); lagen['setsub#' + stack.length] = bildY(); stack.push('setsub'); wechselArt = 'vor'; }
   setSeite = {art, k:k || ''};
   setTitel = art === 'nw'     ? NW(k).label
            : art === 'obj'    ? 'Gebäude und Prüfer'
@@ -20093,11 +20174,18 @@ async function renderVerlauf(){
   const box = $('#verlaufBox'), v = verlaufZiel;
   if(!v || !NW(v.k)){ box.innerHTML = ''; return; }
   const n = NW(v.k), art = n.art, ort = art === 'medien' ? v.id : `${v.k}|${v.id}`;
-  box.innerHTML = `<p class="muted small">wird geladen …</p>`;
+  /* Ohne Flackern (v1.226): dasselbe Objekt bleibt stehen, bis der neue
+     Stand da ist; ein anderes beginnt leer und füllt sich, während die Seite
+     hereingleitet. „wird geladen“ nur, wenn es wirklich dauert. */
+  const schl = v.k + '|' + v.id;
+  if(box.dataset.ziel !== schl){ box.innerHTML = ''; box.dataset.ziel = ''; }
+  const lade = setTimeout(() => { if(current === 'verlauf' && verlaufZiel === v && !box.dataset.ziel) box.innerHTML = `<p class="muted small">wird geladen …</p>`; }, 250);
   let liste = [], info = {zeilen:[], plan:null};
   try{ liste = await Historie.alle(); }catch(e){ /* dann eben nur der laufende Stand */ }
   try{ info = await objektInfo({k:v.k, id:v.id, ort, titel:v.titel}); }catch(e){ /* ohne Kopfzeilen */ }
+  clearTimeout(lade);
   if(current !== 'verlauf' || verlaufZiel !== v) return;
+  box.dataset.ziel = schl;
   const wege = [
     art === 'bestand' ? '' : `<button type="button" data-ow="kontrolle"><i>${HAKEN_SVG}</i>${art === 'fremd' ? 'Prüfung' : 'Kontrolle'}</button>`,
     `<button type="button" data-ow="plan"><i>${ORT_SVG}</i>Grundriss</button>`,
