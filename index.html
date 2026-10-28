@@ -10,6 +10,13 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.227 28.10.2026 Sanfte Übergänge, Etappe 4 (Feinschliff). Beim Ziehen
+                    gleitet die losgelassene Karte vom Finger auf ihren
+                    Platz, statt zu springen. Nach dem Ausgeben zeichnet sich
+                    im Meldungsband ein Häkchen, und auf der Typseite leuchtet
+                    „Ausgegebene Blätter“ einmal auf. Beim Entfernen von
+                    Aktionen und beim Löschen von Objekten und Zählstellen
+                    blendet die Karte aus, die übrigen rücken weich nach.
   v1.226 28.10.2026 Sanfte Übergänge, Etappe 3. Zurück führt an dieselbe
                     Stelle der Liste, aus der man gekommen ist (auch über den
                     Reiter zurück auf die Hauptseite), statt nach oben. Im
@@ -4005,6 +4012,9 @@ html.ruhig :is(#planBox,#planLupe) .marke::after{animation:none!important}
 html.dunkel{--leuchten:#4d4113}
 .leuchtet{animation:leuchten .9s ease-out}
 @keyframes leuchten{from{background-color:var(--leuchten)}}
+/* Häkchen im Meldungsband nach dem Ausgeben (v1.227): zeichnet sich einmal. */
+#toast .fertigHaken{width:16px;height:16px;vertical-align:-2px;margin-right:6px;fill:none;stroke:currentColor;
+  stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 </style>
 </head>
 <body>
@@ -4303,7 +4313,7 @@ html.dunkel{--leuchten:#4d4113}
 
 <script>
 'use strict';
-const VERSION = 'v1.226';
+const VERSION = 'v1.227';
 const BUILD   = VERSION + ' · 28.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5991,6 +6001,22 @@ function zeileWeg(knopf, tu, frisch){
   z.style.pointerEvents = 'none'; z.style.opacity = '0';
   a.onfinish = los; setTimeout(los, 300);
 }
+/* Entfernen (v1.227): die Karte blendet aus, dann geschieht es, und die
+   übrigen rücken weich nach. Erkannt werden sie am Inhalt ihres ersten
+   Feldes (die Nummern data-i verschieben sich beim Löschen). */
+function wegBlenden(karte, tu){
+  const sel = karte && karte.classList.length ? '.' + karte.classList[0] : '';
+  const schl = x => { const f = x.querySelector('input, textarea'); return f ? 'f:' + f.value : 't:' + x.textContent.trim().slice(0, 80); };
+  const los = () => {
+    if(los.lief) return; los.lief = true;
+    const spielen = sel ? weichMerken(bild(), sel, schl) : () => {};
+    tu(); spielen();
+  };
+  const a = karte && bewegen(karte, [{opacity:1, transform:'none'}, {opacity:0, transform:'scale(.98)'}], 160, KURVE.rein);
+  if(!a){ los(); return; }
+  karte.style.pointerEvents = 'none'; karte.style.opacity = '0';
+  a.onfinish = los; setTimeout(los, 260);
+}
 /* Höhe des Gerüsts = sichtbarer Bereich (v1.94). Geht die Tastatur auf, wird
    #bild kürzer, statt dass iOS die ganze Seite samt Kopfleiste hochschiebt;
    das Feld mit dem Cursor bleibt im Bild. */
@@ -6284,12 +6310,30 @@ function ziehenSortieren(box, sel, fertig){
       g.onpointerup = g.onpointercancel = () => {
         lauf = false; g.onpointermove = g.onpointerup = g.onpointercancel = null;
         const oben = (ziel > von ? pos[ziel].top + pos[ziel].h - pos[von].h : pos[ziel].top) - b.scrollTop;
+        const losTop = el.getBoundingClientRect().top;   // wo der Finger die Karte ließ (v1.227)
         reihe.forEach(x => { x.style.transform = ''; x.classList.remove('zieht', 'ziehNachbar'); });
         document.body.classList.remove('ziehtGerade');
         if(ziel !== von) fertig(von, ziel, reihe, oben);
+        ziehLanden(box, sel, losTop, ziel !== von ? oben : null, el);
       };
     };
   });
+}
+/* Landung nach dem Ziehen (v1.227): die losgelassene Karte gleitet vom
+   Finger auf ihren Platz, statt zu springen. Nach dem Neuaufbau ist sie die
+   Karte mit Griff, die oben am Zielplatz steht (lageHalten setzt sie dort
+   hin); findet sie sich nicht genau, bleibt es beim Sprung. */
+function ziehLanden(box, sel, losTop, zielTop, alt){
+  let karte = alt && alt.isConnected ? alt : null;
+  if(zielTop != null){
+    karte = [...box.querySelectorAll(sel)].filter(x => x.querySelector('.griff'))
+      .find(x => Math.abs(x.getBoundingClientRect().top - zielTop) < 4) || null;
+  }
+  if(!karte) return;
+  const dy = losTop - karte.getBoundingClientRect().top;
+  if(Math.abs(dy) < 1) return;
+  const a = bewegen(karte, [{transform:`translateY(${dy}px)`}, {transform:'none'}], 150, 'ease-out');
+  if(a) weichLaeuft.push(a);
 }
 /* Ein Eintrag wandert von i nach j, Schritt für Schritt über tausch(a, b) –
    so ziehen Daten, die je Platz hängen (Sprinkler-Werte), richtig mit. */
@@ -6387,6 +6431,15 @@ function listenSprung(istOffen){
 }
 
 let toastTimer = null;
+/* Der eine echte Fertig-Moment einer Kontrolle (v1.227): ein Häkchen, das
+   sich im Meldungsband zeichnet. Ruhig: es steht einfach da. */
+function toastFertig(t){
+  toast(t);
+  const el = $('#toast');
+  el.insertAdjacentHTML('afterbegin', '<svg class="fertigHaken" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" pathLength="20" stroke-dasharray="20"/></svg>');
+  bewegen(el.querySelector('.fertigHaken path'), [{strokeDashoffset:20}, {strokeDashoffset:0}], 300, 'ease-out');
+}
+let blattFrisch = 0;   // eben ausgegeben: die Zeile „Ausgegebene Blätter“ leuchtet auf
 function toast(t){
   const el = $('#toast'), stand = el.classList.contains('on');
   el.textContent = t; el.classList.remove('mitKnopf'); el.classList.add('on');
@@ -8934,10 +8987,10 @@ function renderStufe(){
     sichern(); neu();
   });
   /* Entfernen mit Rückgängig (v1.183): ohne Rückfrage, aber nicht verloren. */
-  box.querySelectorAll('[data-weg]').forEach(b => b.onclick = () => {
+  box.querySelectorAll('[data-weg]').forEach(b => b.onclick = () => wegBlenden(b.closest('.schrittKarte'), () => {
     const i = +b.dataset.weg, x = l.splice(i, 1)[0]; sichern(); neu();
     toastRueck(istInfo(x) ? 'Info entfernt' : 'Aktion entfernt', () => { l.splice(i, 0, x); sichern(); neu(); });
-  });
+  }));
   $('#schrittNeu').onclick = () => { l.push({id:neueId(), art:'link', text:''}); sichern(); neu(); };
   $('#infoNeu').onclick = () => {
     l.push(ABFALL.termine.length ? {id:neueId(), art:'abfall', text:'', arten:[]}
@@ -12014,6 +12067,7 @@ function renderTypSeite(){
     if(!z || !h || current !== 'typseite' || typK !== k) return;
     h.innerHTML = `<button class="btn eintrag" data-thist="1"><span class="etext mehrZeile"><span>Ausgegebene Blätter</span><span class="zahl">${z}</span></span></button>`;
     h.querySelector('[data-thist]').onclick = () => { histK = k; go('histnw'); };
+    if(Date.now() - blattFrisch < 3000 && bewegungAn()){ blattFrisch = 0; h.firstElementChild.classList.add('leuchtet'); }   // (v1.227)
   }).catch(() => {});
 }
 /* Die Grundrisse gehören inzwischen zum täglichen Handwerkszeug und sollen
@@ -15786,12 +15840,12 @@ function listeBauen(box, opt){
         frage(opt.wort + ' löschen',
           `„${liste[i]}“ verschwindet aus der Liste.`
           + (opt.loeschHinweis ? '\n\n' + opt.loeschHinweis : ''),
-          'Löschen', () => {
+          'Löschen', () => wegBlenden(r, () => {
             if(opt.beiLoeschen) opt.beiLoeschen(i);
             liste.splice(i, 1); if(i < basis) basis--; saveCfg(); toast('Gelöscht');
             zeichnen(false); menueAuffrischen();
             if(opt.nachher) opt.nachher();
-          });
+          }));
       };
     });
     box.querySelector('[data-plus]').onclick = () => {
@@ -16186,10 +16240,10 @@ function objektKarten(box, k, nachZeichnen){
           `„${liste[i]}“ verschwindet aus der Liste.\n\n`
           + (NW(k).art === 'fremd' ? 'Prüfdatum, Bemerkung' : 'Das bisher Erfasste') + ' und die Stelle im Grundriss bleiben gespeichert – '
           + 'wer das Objekt mit demselben Namen wieder anlegt, findet alles wieder.',
-          'Löschen', () => {
+          'Löschen', () => wegBlenden(r, () => {
             liste.splice(i, 1); if(i < basis) basis--; saveCfg(); toast('Gelöscht');
             zeichnen(false); menueAuffrischen();
-          });
+          }));
       };
     });
     box.querySelector('[data-plus]').onclick = () => {
@@ -16385,10 +16439,10 @@ function stellenZeichnen(mitNeuer){
         `„${z.partei} · ${z.medium}${z.nr ? ', ' + z.nr : ''}“ verschwindet aus der Liste.\n\n`
         + 'Der Stand des Vorquartals, der laufende Wert und die Stelle im Grundriss bleiben '
         + 'gespeichert – wer die Zählstelle mit denselben Angaben wieder anlegt, findet alles wieder.',
-        'Löschen', () => {
+        'Löschen', () => wegBlenden(r, () => {
           t.stellen.splice(i, 1); if(i < stellenBasis) stellenBasis--; saveCfg(); toast('Gelöscht');
           stellenZeichnen(false); menueAuffrischen();
-        });
+        }));
     };
   });
 }
@@ -21266,7 +21320,8 @@ async function ausgebenLauf(){
      steht danach wieder die Typseite da – mit dem neuen Stand. */
   if(stack.includes('typseite') && typK === kAus){ stack = ['alle']; go('typseite', false); }
   else { stack = []; go('home', false); }
-  toast(histOk ? 'Blatt ausgegeben' : 'Ausgegeben – Blatt nicht in der App gespeichert');
+  if(histOk){ toastFertig('Blatt ausgegeben'); blattFrisch = Date.now(); }   // (v1.227)
+  else toast('Ausgegeben – Blatt nicht in der App gespeichert');
   /* Nach Dauer und Utensilien fragen (v1.61), vorbelegt mit der gemessenen Zeit
      aus dem Tätigkeitsbuch. Der Sprinkler fragt schon je Kontrollgang. */
   if(n.art !== 'sprinkler'){

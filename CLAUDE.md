@@ -287,6 +287,13 @@ steht.
   Capture nur nach Tipp auf `summary` (`aufTipp`), `aufklappen(els)` auch für
   `.angFeld`; „Zeit übrig?“ über `weichVormerken`. `renderVerlauf` behält
   dasselbe Objekt (`box.dataset.ziel`), „wird geladen“ erst nach 250 ms.
+- Etappe 4 (v1.227): `ziehLanden(box, sel, losTop, zielTop, alt)` am Ende von
+  `ziehenSortieren` (findet die Karte mit Griff am Zielplatz, sonst kein
+  Gleiten). `wegBlenden(karte, tu)` für Aktion entfernen, Objekt/Zählstelle
+  löschen (Schlüssel = Wert des ersten Feldes, nicht data-i).
+  `toastFertig(t)` (Häkchen zeichnet sich) nach dem Ausgeben, `blattFrisch`
+  lässt „Ausgegebene Blätter“ auf der Typseite aufleuchten.
+  Damit sind alle vier Etappen umgesetzt.
 
 ## Aufgabenliste und Planung (Stand v1.102)
 
