@@ -298,6 +298,9 @@ steht.
   selben Augenblick und dunkelte das Band ab. Jetzt `#toast.fertig`
   (z-index über `#dlg`, 3 s) und `taetFragen` erst nach 900 ms. Test mit
   `navigator.share`, das AbortError wirft (wie iOS), `t10.js`.
+- Grundriss- und Arbeitsnachweis-Blatt (nur `dateiTeilen`, nichts wird
+  geleert) bekommen nach dem Teilen bewusst keine Rückmeldung (Jean): iOS
+  meldet auch bei Erfolg einen Abbruch, ein Häkchen wäre nicht ehrlich.
 
 ## Aufgabenliste und Planung (Stand v1.102)
 
