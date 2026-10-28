@@ -10,6 +10,20 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.223 28.10.2026 Sanfte Übergänge, Etappe 1 (Design-Team, Jean: „alles wie
+                    empfohlen“). Eine Unterseite gleitet von rechts herein,
+                    zurück kommt die Seite von links; Heute, Kalender, Anlagen,
+                    Mehr und die Suche blenden nur über, der Titel oben mit.
+                    Ein Tipp auf den Reiter, auf dem man steht, rollt weich
+                    nach oben. Fenster öffnen und schließen weich, die Auswahl
+                    von unten fährt ganz herein und wieder hinaus; folgt gleich
+                    die nächste Auswahl, wechselt nur der Inhalt. Knöpfe lösen
+                    sich beim Loslassen weich. Alles kurz (etwa 0,2 s), nicht im
+                    Grundriss, in der Blattvorschau und auf ausgegebenen
+                    Blättern. Neu unter Einstellungen › Bedienung: „Sanfte
+                    Übergänge“ (nur dieses Gerät); mit „Bewegung reduzieren“
+                    am Gerät steht alles sofort da und die Marke im Grundriss
+                    trägt einen ruhigen Ring statt zu pulsieren.
   v1.222 23.10.2026 Ein Grundriss für alles (Jean: das Grundriss-Symbol tat je
                     nach Ort Verschiedenes). Überall öffnet es dieselbe
                     Übersicht mit nummerierten Marken und Menü; aus einem
@@ -3156,8 +3170,6 @@ header .back[hidden]{display:none}
   max-height:80vh;max-height:min(80vh, 100%);overflow:auto}
 .dlgtitel{font-weight:600;margin-bottom:8px}
 #dlg.unten{align-items:flex-end;padding:0 8px calc(8px + env(safe-area-inset-bottom))}
-#dlg.unten .dlgbox{animation:vonUnten .18s ease-out}
-@keyframes vonUnten{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
 /* Dunkel: Kante und tiefere Abdunklung (v1.194). „Abbrechen“ in Auswahlen
    leiser und abgesetzt – es sah aus wie eine weitere Wahl. */
 html.dunkel #dlg{background:rgba(0,0,0,.72)}
@@ -3941,6 +3953,23 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
   color:var(--ink);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer;
 }
 </style>
+<!-- Bewegung (v1.223, Design-Team, Etappe 1): ein gemeinsames Tempo für alle
+     Übergänge. Bewegt wird nur transform und opacity, nie Höhen. Ausgegebene
+     Blätter nehmen diesen Block nicht mit (blattDokument). -->
+<style id="bewegung">
+:root{--dauer-kurz:120ms;--dauer-mittel:220ms;--kurve-raus:cubic-bezier(.2,.8,.2,1);--kurve-rein:cubic-bezier(.4,0,1,1)}
+/* Knöpfe: der Druck dämpft sofort, beim Loslassen kehrt die Farbe weich
+   zurück. :where hält die Regel schwach – eigene Übergänge gehen vor. */
+:where(button,.angZeile,.vsZiel,.btn.eintrag){transition:opacity .15s ease-out}
+:where(button:not([disabled]),.angZeile,.vsZiel,.btn.eintrag):active{transition:none}
+#reiter button{transition:color .15s ease-out,opacity .15s ease-out}
+#toast{transition:opacity var(--dauer-mittel) var(--kurve-raus),transform var(--dauer-mittel) var(--kurve-raus)}
+/* Ruhig (Gerät „Bewegung reduzieren“ oder Schalter unter Bedienung): alles
+   steht sofort da, die Marke im Grundriss trägt einen ruhigen Ring statt Puls. */
+html.ruhig{--dauer-kurz:0ms;--dauer-mittel:0ms}
+html.ruhig *,html.ruhig *::before,html.ruhig *::after{transition-duration:0s!important;animation-duration:0s!important;animation-iteration-count:1!important}
+html.ruhig :is(#planBox,#planLupe) .marke::after{animation:none!important}
+</style>
 </head>
 <body>
 <div class="app">
@@ -4176,7 +4205,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
       <div id="blockBedienung" hidden>
         <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="tonHaken"><span>Töne am Regler</span></label>
         <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="einrastHaken"><span>Marken beim Verschieben einrasten</span></label>
-        <p class="muted small" style="margin:0">Beides gilt nur für dieses Gerät.</p>
+        <label class="haken" style="margin:0 0 12px"><input type="checkbox" id="bewegHaken"><span>Sanfte Übergänge</span></label>
+        <p class="muted small" style="margin:0">Alles gilt nur für dieses Gerät. Ist am Gerät „Bewegung reduzieren“ eingeschaltet, bleibt die App ohne Übergänge.</p>
       </div>
 
       <!-- Über die App (v1.189): Fassung und Neu laden, bisher ein Symbol oben rechts -->
@@ -4237,8 +4267,8 @@ input::placeholder,textarea::placeholder{color:var(--placeholder);opacity:1}
 
 <script>
 'use strict';
-const VERSION = 'v1.222';
-const BUILD   = VERSION + ' · 23.10.2026';
+const VERSION = 'v1.223';
+const BUILD   = VERSION + ' · 28.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
 /* Zwei gestapelte Ebenen. Die Zeichnung ist bewusst so gelegt, dass sie das
@@ -5508,6 +5538,7 @@ new MutationObserver(titelMitte).observe(document.querySelector('header'),
   {subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['hidden', 'class', 'disabled']});
 addEventListener('resize', titelMitte);
 let current = 'home', stack = [], offen = null;   // offen = Schlüssel des Nachweises
+let wechselArt = null;   // 'zurueck'|'blende' für den nächsten go(), sonst nach push (v1.223)
 /* Safaris eigene Kneif-Geste, doppelt genäht: die Regel touch-action greift
    nicht in jeder iOS-Fassung verlässlich, gesturestart und Geschwister sind der
    Weg, den WebKit selbst anbietet. Ausgenommen bleiben der Grundriss – er zoomt
@@ -5536,6 +5567,8 @@ function go(name, push = true){
   if(current === 'termin' && name !== 'termin') terminVerlassen();
   if(push && current !== name) stack.push(current);
   if(current !== name && !['plan', 'blatt', 'verlauf'].includes(name)) reihenModus = false;
+  const von = current, art = wechselArt || (push ? 'vor' : 'zurueck'), titelVor = $('#titel').textContent;
+  wechselArt = null;
   current = name;
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   $('#titel').textContent = name === 'nachweis' && offen ? NW(offen).label.split(' / ')[0]
@@ -5618,6 +5651,8 @@ function go(name, push = true){
   if(name === 'setsub')   renderSetSub();
   if(name === 'blatt')    requestAnimationFrame(blattEinpassen);
   renderBar();
+  seiteBewegen(von, name, art);
+  if(von !== name && $('#titel').textContent !== titelVor) bewegen($('#titel'), [{opacity:0}, {opacity:1}], DAUER.kurz, 'ease-out');
 }
 /* --- Zoom der Blattvorschau (v1.138, vom Nutzer so gewünscht) ---------------
    Beim Öffnen passt der Bogen genau in die Breite; zwei Finger vergrößern bis
@@ -5690,6 +5725,11 @@ $('#btnBack').onclick = zurueck;
 /* Die vier Bereiche (v1.184): ein Tipp wechselt, der Weg dorthin beginnt neu. */
 const HAUPT = ['home', 'wplan', 'alle', 'mehr'];
 function bereich(name){
+  /* Tipp auf den Reiter, auf dem man steht: weich nach oben statt Sprung
+     (v1.223). Steht man schon oben, baut er wie bisher neu auf. */
+  if(name === current && !stack.length && bildY() > 0 && bewegungAn()){ bild().scrollTo({top:0, behavior:'smooth'}); return; }
+  /* Aus einer Unterseite zurück auf die Hauptseite ihres Bereichs: von links. */
+  wechselArt = stack[0] === name ? 'zurueck' : 'blende';
   stack = []; setStack = [];
   go(name, false);
 }
@@ -5729,6 +5769,42 @@ $('#btnNeu').onclick = () => wahlFenster('Neu', [
   if(mq && mq.addEventListener) mq.addEventListener('change', setzen);
   else if(mq && mq.addListener) mq.addListener(setzen);
 })();
+/* Bewegung (v1.223, Design-Team): kurze, ruhige Übergänge. Aus, wenn das Gerät
+   „Bewegung reduzieren“ meldet oder unter Einstellungen › Bedienung „Sanfte
+   Übergänge“ abgeschaltet ist (nur dieses Gerät, Store nwBewegung). */
+const DAUER = {kurz:120, mittel:220};
+const KURVE = {raus:'cubic-bezier(.2,.8,.2,1)', rein:'cubic-bezier(.4,0,1,1)'};
+const bewegungAn = () => !document.documentElement.classList.contains('ruhig');
+/* Nie mit fill:'forwards' – ein liegenbleibendes transform verfälscht
+   imBild, lageHalten und feldZeigen. */
+function bewegen(el, schritte, ms = DAUER.mittel, kurve = KURVE.raus){
+  if(!el || !el.animate || !bewegungAn()) return null;
+  try{ return el.animate(schritte, {duration:ms, easing:kurve}); }catch(e){ return null; }
+}
+const bewegungFolgen = (function(){
+  const mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  const setzen = () => document.documentElement.classList.toggle('ruhig',
+    !!(mq && mq.matches) || Store.get('nwBewegung', true) === false);
+  setzen();
+  if(mq && mq.addEventListener) mq.addEventListener('change', setzen);
+  else if(mq && mq.addListener) mq.addListener(setzen);
+  return setzen;
+})();
+/* Seitenwechsel (v1.223): nur die neue Seite bewegt sich, die alte ist sofort
+   weg – go() bleibt so synchron wie bisher (Fokus der Lupe, bildNach, imBild
+   gleich danach). Tiefer kommt von rechts, zurück von links, die vier Bereiche
+   und die Suche blenden nur über. Seitlich statt senkrecht, damit die Höhen-
+   messungen (feldZeigen, lageHalten) stimmen. Grundriss und Blattvorschau
+   haben eigene Gesten und bleiben still. */
+function seiteBewegen(von, name, art){
+  if(von === name || name === 'plan' || name === 'blatt' || !bewegungAn()) return;
+  const v = $('#view-' + name); if(!v) return;
+  if((HAUPT.includes(von) && HAUPT.includes(name)) || name === 'suche') art = 'blende';
+  if(v.getAnimations) v.getAnimations().forEach(a => a.cancel());
+  if(art === 'blende') bewegen(v, [{opacity:0}, {opacity:1}], 150, 'ease-out');
+  else if(art === 'zurueck') bewegen(v, [{opacity:0, transform:'translateX(-20px)'}, {opacity:1, transform:'none'}], DAUER.mittel);
+  else bewegen(v, [{opacity:0, transform:'translateX(28px)'}, {opacity:1, transform:'none'}], 240);
+}
 /* Höhe des Gerüsts = sichtbarer Bereich (v1.94). Geht die Tastatur auf, wird
    #bild kürzer, statt dass iOS die ganze Seite samt Kopfleiste hochschiebt;
    das Feld mit dem Cursor bleibt im Bild. */
@@ -5824,6 +5900,60 @@ function dlgZuruecksetzen(){
      nicht liegenbleiben, sonst tut ein Knopf etwas Fremdes oder gar nichts. */
   $('#dlgJa').onclick = $('#dlgNein').onclick = null;
 }
+/* Fenster weich auf und zu (v1.223, Design-Team). Geschlossen wird an vielen
+   Stellen über $('#dlg').hidden = true – das Setzen fängt dieser Riegel ab,
+   statt jede Stelle umzubauen. Die Logik schließt sofort wie bisher; sichtbar
+   geht eine Kopie hinter dem Fenster her, die keine Tipps annimmt (sie steht
+   im Baum nach #dlg, $('#…') findet also weiter das echte). Öffnet gleich das
+   nächste Fenster derselben Art (Typ → Objekt, Rückfrage → Rückfrage), fällt
+   die Kopie weg und nur der Inhalt blendet über. */
+(function dlgBewegen(){
+  const dlg = $('#dlg'), d = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'hidden');
+  if(!dlg || !d || !d.set) return;
+  const box = dlg.querySelector('.dlgbox');
+  let abgang = null, abgangUnten = false;
+  const abgangWeg = () => { if(abgang){ abgang.remove(); abgang = null; } };
+  function zuBewegen(){
+    abgangWeg();
+    const k = dlg.cloneNode(true), unten = dlg.classList.contains('unten');
+    /* Eingaben und Bildlage mit; ohne name, sonst nähmen Optionsfelder der
+       Kopie den echten ihre Wahl. */
+    const fo = dlg.querySelectorAll('input,textarea,select'), fk = k.querySelectorAll('input,textarea,select');
+    fk.forEach((f, i) => { f.removeAttribute('name'); if(fo[i]){ if(f.type === 'checkbox' || f.type === 'radio') f.checked = fo[i].checked; else f.value = fo[i].value; } });
+    k.setAttribute('aria-hidden', 'true'); k.style.pointerEvents = 'none';
+    dlg.after(k);
+    const kb = k.querySelector('.dlgbox'); if(kb && box) kb.scrollTop = box.scrollTop;
+    abgang = k; abgangUnten = unten;
+    const ms = unten ? 180 : DAUER.kurz;
+    /* Von unten bleibt das Fenster deckend, nur der Schleier geht. */
+    if(unten) bewegen(k, [{backgroundColor:getComputedStyle(dlg).backgroundColor}, {backgroundColor:'rgba(0,0,0,0)'}], ms, KURVE.rein);
+    else bewegen(k, [{opacity:1}, {opacity:0}], ms, KURVE.rein);
+    const a = bewegen(kb, unten ? [{transform:'none'}, {transform:'translateY(calc(100% + 40px))'}] : [{transform:'none'}, {transform:'scale(.98)'}], ms, KURVE.rein);
+    const weg = () => { if(abgang === k) abgangWeg(); else k.remove(); };
+    if(a) a.onfinish = weg;
+    setTimeout(weg, ms + 200);   // falls die Bewegung abbricht
+  }
+  function aufBewegen(war){
+    const unten = dlg.classList.contains('unten');
+    if(!war || (abgang && abgangUnten === unten)){   // offen geblieben bzw. gleich das nächste
+      abgangWeg();
+      bewegen(box, [{opacity:0}, {opacity:1}], DAUER.kurz, 'ease-out');
+      return;
+    }
+    abgangWeg();
+    bewegen(dlg, [{backgroundColor:'rgba(0,0,0,0)'}, {backgroundColor:getComputedStyle(dlg).backgroundColor}], unten ? 200 : 180, 'ease-out');
+    bewegen(box, unten ? [{transform:'translateY(calc(100% + 40px))'}, {transform:'none'}]
+                       : [{opacity:0, transform:'scale(.96)'}, {opacity:1, transform:'none'}], unten ? 260 : 180);
+  }
+  Object.defineProperty(dlg, 'hidden', {configurable:true,
+    get(){ return d.get.call(this); },
+    set(wert){
+      const war = d.get.call(this);
+      if(wert && !war && bewegungAn()) zuBewegen();
+      d.set.call(this, wert);
+      if(!wert && bewegungAn()) aufBewegen(war);
+    }});
+})();
 /* Reine Auswahlen (v1.194, Prüfteam E6) kommen auf Wunsch als Blatt von
    unten – dort, wo der Daumen ist, wie das Aktionsmenü von iOS. */
 function wahlFenster(titel, eintraege, aufWahl, opt = {}){
@@ -14883,7 +15013,7 @@ function renderSetSub(){
   $('#blockApp').hidden = a !== 'app';
   dyn.innerHTML = '';
   if(a === 'plaene'){ renderPlaene(); return; }
-  if(a === 'bedienung'){ $('#tonHaken').checked = tonAn(); $('#einrastHaken').checked = einrastenAn(); return; }
+  if(a === 'bedienung'){ $('#tonHaken').checked = tonAn(); $('#einrastHaken').checked = einrastenAn(); $('#bewegHaken').checked = Store.get('nwBewegung', true) !== false; return; }
   if(a === 'app'){ $('#appFassung').textContent = 'Version ' + BUILD; return; }
   if(a === 'geraet'){ sicherStandZeigen(); return; }
   /* Das Werkzeug zum Prüfwert steht jedes Mal leer und zu da (v1.190). */
@@ -17769,6 +17899,8 @@ function tonTick(){
     rg.addEventListener(art, tonBereit, {passive:true}));
   const eh = $('#einrastHaken');
   if(eh) eh.onchange = e => Store.set('nwEinrasten', e.target.checked);
+  const bh = $('#bewegHaken');
+  if(bh) bh.onchange = e => { Store.set('nwBewegung', e.target.checked); bewegungFolgen(); };   // (v1.223)
   if(h) h.onchange = e => {
     Store.set('nwReglerTon', e.target.checked);
     if(e.target.checked){ tonBereit(); setTimeout(tonTick, 60); }   // gleich zum Hören
@@ -20415,7 +20547,7 @@ const SEITEN = [
   {titel:'Abfallkalender einrichten', wo:'Mehr › Einstellungen', woerter:'abfallkalender ics kalender abfall müll muell abholtage anzeigen ausblenden', tu:() => setOeffnen('abfall')},
   {titel:'Gebäude und Prüfer', wo:'Mehr › Einstellungen', woerter:'gebäude gebaeude prüfer pruefer name bauteil bauteile kopf blatt', tu:() => setOeffnen('obj')},
   {titel:'Grundrisse', wo:'Mehr › Einstellungen', woerter:'grundriss grundrisse plan pläne plaene pdf', tu:() => setOeffnen('plaene')},
-  {titel:'Bedienung', wo:'Mehr › Einstellungen', woerter:'bedienung einrasten dunkel', tu:() => setOeffnen('bedienung')},
+  {titel:'Bedienung', wo:'Mehr › Einstellungen', woerter:'bedienung einrasten dunkel übergänge bewegung animation', tu:() => setOeffnen('bedienung')},
   {titel:'Über die App', wo:'Mehr › Einstellungen', woerter:'version update aktualisieren neu laden app', tu:() => setOeffnen('app')},
   {titel:'Auslöser', wo:'Mehr › Auslöser', woerter:'auslöser ausloeser regel regeln von selbst', tu:() => go('ausloeser')},
   {titel:'Abläufe', wo:'Mehr › Abläufe', woerter:'ablauf abläufe ablaeufe plan schritte', tu:() => go('ablaeufe')},
@@ -20798,7 +20930,8 @@ const blattFreigeben = html => {
   return html.includes(BLATT_FREI) || !/<\/style>/.test(html) ? html : html.replace(/<\/style>/, BLATT_FREI + '</style>');
 };
 function blattDokument(titel, inhalt, breite){
-  const stil = [...document.querySelectorAll('style:not(#schriften)')].map(s => s.textContent).join('\n')
+  /* Ohne #bewegung: Blätter bleiben ruhig (v1.223). */
+  const stil = [...document.querySelectorAll('style:not(#schriften):not(#bewegung)')].map(s => s.textContent).join('\n')
     .replace(/\/\*[\s\S]*?\*\//g, '');
   return `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8">
 <title>${esc(titel)}</title>
