@@ -301,6 +301,12 @@ steht.
 - Grundriss- und Arbeitsnachweis-Blatt (nur `dateiTeilen`, nichts wird
   geleert) bekommen nach dem Teilen bewusst keine Rückmeldung (Jean): iOS
   meldet auch bei Erfolg einen Abbruch, ein Häkchen wäre nicht ehrlich.
+- Kalender (v1.229, Jean): `renderWochenplan` nutzt `homeWeichAnfang/-Ende`
+  (gilt für 'home' und 'wplan'); `tagWaehlen`, „Einplanung entfernen“ und
+  die Rückgängig-Wege des Einplanens rufen `weichVormerken(a.id)`, damit die
+  Aufgabe auch ohne neue Zeile aufleuchtet. Weitere Vorschläge des Teams
+  (Ausgeben-Knopf hervorheben, Ausblenden in Akkutypen/Zuständen/Bedingungen)
+  bewusst nicht umgesetzt.
 
 ## Aufgabenliste und Planung (Stand v1.102)
 
