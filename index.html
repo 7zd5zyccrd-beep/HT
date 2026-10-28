@@ -10,6 +10,11 @@
   wöchentlich und monatlich) und hat deshalb eine eigene Ansicht.
 
   ÄNDERUNGEN
+  v1.224 28.10.2026 Leiste unten nach dem Tippen ruhiger (Jean: zurück aus
+                    der Suche flackerte es, ein roter Ring stand kurz, wo
+                    gleich darauf die Leiste erschien). Sie kommt jetzt in
+                    dem Moment zurück, in dem die Tastatur weg ist, und
+                    gleitet von unten herein statt aufzuspringen.
   v1.223 28.10.2026 Sanfte Übergänge, Etappe 1 (Design-Team, Jean: „alles wie
                     empfohlen“). Eine Unterseite gleitet von rechts herein,
                     zurück kommt die Seite von links; Heute, Kalender, Anlagen,
@@ -4267,7 +4272,7 @@ html.ruhig :is(#planBox,#planLupe) .marke::after{animation:none!important}
 
 <script>
 'use strict';
-const VERSION = 'v1.223';
+const VERSION = 'v1.224';
 const BUILD   = VERSION + ' · 28.10.2026';
 /* Zahnrad wie im E-Assistenten: auf der Startseite trägt die Schaltfläche links
    das Symbol und führt in die Einstellungen, sonst den Pfeil zurück. */
@@ -5831,6 +5836,10 @@ function seiteBewegen(von, name, art){
   const setzen = () => {
     const h = vv ? vv.height : window.innerHeight;
     document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
+    /* Tastatur zu und kein Feld mehr aktiv: die Leiste unten im selben Zug
+       zurück, in dem #bild wächst (v1.224, Jean) – sonst stand kurz Inhalt,
+       wo gleich darauf die Leiste erschien, und das flackerte. */
+    if(!istFeld(document.activeElement)) tippEnde();
     if(window.scrollY) window.scrollTo(0, 0);
     feldZeigen();
   };
@@ -5859,7 +5868,14 @@ function seiteBewegen(von, name, art){
     }
     setTimeout(feldZeigen, 60); setTimeout(feldZeigen, 400);
   });
-  document.addEventListener('focusout', () => setTimeout(() => { if(!istFeld(document.activeElement)){ platzWeg(); document.body.classList.remove('tippt'); } }, 200));
+  document.addEventListener('focusout', () => setTimeout(() => { if(!istFeld(document.activeElement)){ platzWeg(); tippEnde(); } }, 200));
+  /* Die Leiste kommt nach dem Tippen von unten herein statt aufzuspringen. */
+  function tippEnde(){
+    if(!document.body.classList.contains('tippt')) return;
+    document.body.classList.remove('tippt');
+    const r = $('#reiter');
+    if(r && !r.hidden) bewegen(r, [{transform:'translateY(100%)'}, {transform:'none'}], 200);
+  }
 })();
 /* Kommt die App aus dem Hintergrund zurück, kann ein neuer Tag begonnen haben –
    Fristen und Gruppen der Liste rechnen dann neu. */
