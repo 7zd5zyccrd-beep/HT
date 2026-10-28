@@ -237,6 +237,32 @@ steht.
   `qs/fix/t_ausgabe.js`. `t_leer.js` endet mit einer Zeitüberschreitung
   (klickt einen verborgenen Zurück-Knopf) – kein Fehler der App.
 
+## Bewegung (v1.223, Design-Team, Konzept als Artifact „Bewegungskonzept Betriebsnachweise“)
+
+- Jean: „alles wie empfohlen“; vier Etappen, je eine Version, nach jeder
+  Blick am iPhone. Geräte: iPad Pro M4, iPhone Air (neu genug für alles).
+  1 (v1.223): Fundament, Seitenwechsel, Reiter, Fenster, Knöpfe. 2: Kontrolle
+  nachrücken (FLIP), Vorschläge/Rückgängig aufleuchten (ohne Hinrollen).
+  3: Zurück an dieselbe Stelle (stackY), Meldungsband mit ablaufender Linie,
+  Aufklappen, Objektseite ohne „wird geladen“. 4: Ziehen-Landung,
+  Ausgeben-✓, Entfernen.
+- `<style id="bewegung">` (Tempo `--dauer-kurz/-mittel`, `--kurve-raus/
+  -rein`), `blattDokument` lässt ihn weg. `html.ruhig` = Gerät „Bewegung
+  reduzieren“ oder Schalter „Sanfte Übergänge“ (Store `nwBewegung`, nur
+  Gerät) über `bewegungFolgen`; dann Puls im Grundriss als ruhiger Ring.
+- JS: `bewegen(el, schritte, ms, kurve)` (Web Animations, nie
+  `fill:'forwards'`), `bewegungAn()`, `DAUER`, `KURVE`.
+- Seitenwechsel: `go()` bleibt synchron, am Ende `seiteBewegen(von, name,
+  art)` bewegt nur die neue `.view` waagrecht (nie senkrecht – feldZeigen,
+  lageHalten). Richtung aus `push` oder `wechselArt` ('zurueck'|'blende',
+  gesetzt von `bereich`). Keine View Transitions (asynchron: Fokus der Lupe
+  ging verloren). `plan`/`blatt` bleiben still.
+- Fenster: Riegel auf `#dlg.hidden` (`dlgBewegen`) – Schließen legt eine
+  Kopie (gleiche Ids, im Baum nach #dlg, ohne `name`) hinterher, Öffnen
+  derselben Art direkt danach blendet nur den Inhalt. Von unten bewegt
+  sich der Schleier über `backgroundColor`, nicht opacity (sonst schien der
+  Reiter durch).
+
 ## Aufgabenliste und Planung (Stand v1.102)
 
 - Gruppen nach Tag (`aufgaben()`, `gruppeVon`): Überfällig, Heute, Morgen,
@@ -664,7 +690,7 @@ steht.
 
 ## Testen
 
-Chromium liegt unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`,
+Chromium liegt unter `/opt/pw-browsers/` (`chromium.launch()` ohne Pfad findet es),
 Playwright ist global installiert (`npm root -g`). Bewährt hat sich:
 `index.html` über einen kleinen lokalen HTTP-Server ausliefern, im
 Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
