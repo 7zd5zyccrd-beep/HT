@@ -738,6 +738,12 @@ Init-Skript `localStorage.nwFrei` auf den Prüfwert aus `const ZUGANG` setzen
   Reglern. Neuer Termin ist weiter mit „Besprechung“ vorbelegt, „Firma im
   Haus“ steht nur zuerst in der Liste.
 
+- Stand v1.222, nur auf dem Gerät prüfbar: Treffen der Knöpfe in der
+  Infokarte, ob nach „Öffnen ›“ und Zurück Stelle und Zoom des Grundrisses
+  bleiben (im Testbrowser ja), lange Nummern in dichten Trauben auf dem
+  Blatt. Gleiche Buchstaben bei verschiedenen Typen unterscheiden sich nur
+  durch die Farbe (bewusst so gelassen).
+
 - iPad mit Tastatur-Trackpad: Kneifen erreicht die Seite nicht (iPadOS
   behandelt es selbst) – weder Grundriss noch Blattvorschau zoomen damit.
 - Sammelmarken nur in der App, das Blatt hat seine eigene Beschriftung
